@@ -37,15 +37,12 @@ def setup_cli_logger():
     class CLILogger:
         def log(self, message):
             log.info(message)
-        def status(self, message):
-            log.info(f"状态: {message}")
-        def clear(self):
-            # 在CLI中，我们通常不清除屏幕，所以这个方法什么都不做
-            pass
             
     return CLILogger()
 
 # --- 命令处理函数 ---
+
+# ====== Mod Updating ======
 
 def handle_update(args, logger):
     """处理 'update' 命令的逻辑。"""
@@ -103,6 +100,45 @@ def handle_update(args, logger):
     else:
         logger.log(f"❌ 操作失败: {message}")
 
+def setup_update_parser(subparsers: argparse._SubParsersAction) -> None:
+    """为 'update' 命令配置参数解析器。"""
+    update_parser = subparsers.add_parser(
+        'update', 
+        help='一键更新 Mod，将旧 Mod 的资源移植到新版游戏文件中。',
+        formatter_class=argparse.RawTextHelpFormatter,
+        description='''
+示例:
+  # 自动搜索新文件并更新
+  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --game-dir "C:\\path\\to\\game_data" --output-dir "C:\\path\\to\\output"
+
+  # 手动指定新文件并更新
+  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --new-bundle "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
+
+  # 指定替换多种资源
+  python maincli.py update --old-mod "..." --new-bundle "..." --output-dir "..." --asset-types Texture2D TextAsset
+'''
+    )
+    update_parser.add_argument('--old-mod', required=True, help='旧版 Mod bundle 文件的路径。')
+    update_parser.add_argument('--new-bundle', help='新版游戏资源 bundle 文件的路径 (如果提供，则优先于 --game-dir)。')
+    update_parser.add_argument('--game-dir', help='游戏资源目录的路径，用于自动查找匹配的新版 bundle 文件。')
+    update_parser.add_argument('--output-dir', default='./output/', help='保存生成的新 Mod 文件的目录 (默认: ./output/)。')
+    update_parser.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
+    update_parser.add_argument(
+        '--asset-types', 
+        nargs='+', 
+        default=['Texture2D', 'TextAsset', 'Mesh'], 
+        choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'],
+        help='要替换的资源类型列表。可选: Texture2D, TextAsset, Mesh, ALL。'
+    )
+    update_parser.add_argument(
+        '--compression', 
+        default='lzma', 
+        choices=['lzma', 'lz4', 'original', 'none'],
+        help='Bundle 文件的压缩方式 (默认: lzma)。可选: lzma, lz4, original(保持原始), none(不压缩)。'
+    )
+    update_parser.set_defaults(func=handle_update)
+
+# ====== Asset Packer ======
 
 def handle_asset_packing(args, logger):
     """处理 'pack' 命令的逻辑。"""
@@ -145,6 +181,31 @@ def handle_asset_packing(args, logger):
     else:
         logger.log(f"❌ 操作失败: {message}")
 
+def setup_asset_packer_parser(subparsers: argparse._SubParsersAction) -> None:
+    """为 'pack' 命令配置参数解析器。"""
+    pack_parser = subparsers.add_parser(
+        'pack', 
+        help='将资源文件夹中的内容打包到目标 bundle 文件中。',
+        formatter_class=argparse.RawTextHelpFormatter,
+        description='''
+示例:
+  python maincli.py pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
+'''
+    )
+    pack_parser.add_argument('--bundle', required=True, help='要修改的目标 bundle 文件路径。')
+    pack_parser.add_argument('--folder', required=True, help='包含资源文件的文件夹路径。资源文件名 (不含扩展名) 需与 bundle 内资源名匹配。')
+    pack_parser.add_argument('--output-dir', required=False, default='./output/', help='保存修改后 bundle 文件的目录 (默认: ./output/)。')
+    pack_parser.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
+    pack_parser.add_argument(
+        '--compression', 
+        default='lzma', 
+        choices=['lzma', 'lz4', 'original', 'none'],
+        help='Bundle 文件的压缩方式 (默认: lzma)。可选: lzma, lz4, original(保持原始), none(不压缩)。'
+    )
+    pack_parser.set_defaults(func=handle_asset_packing)
+
+# ====== CRC Tool ======
+
 def handle_crc(args, logger):
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- 开始 CRC 工具 ---")
@@ -179,7 +240,6 @@ def handle_crc(args, logger):
 
     # --- 模式 1: 仅检查/计算 CRC ---
     if args.check_only:
-        logger.status("正在计算CRC...")
         try:
             with open(modified_path, "rb") as f: modified_data = f.read()
             modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
@@ -202,11 +262,9 @@ def handle_crc(args, logger):
         logger.log("❌ 错误: 进行CRC修正时，必须提供 '--original' 原始文件或使用 '--game-dir' 进行自动查找。")
         return
 
-    logger.status("正在进行CRC修正...")
     try:
         if CRCUtils.check_crc_match(original_path, modified_path):
             logger.log("⚠ CRC值已匹配，无需修正。")
-            logger.status("CRC检测完成")
             return
 
         logger.log("CRC值不匹配，开始进行CRC修正...")
@@ -222,76 +280,12 @@ def handle_crc(args, logger):
             logger.log("✅ CRC修正成功！修改后的文件已更新。")
         else:
             logger.log("❌ CRC修正失败。")
-        logger.status("CRC修正完成")
 
     except Exception as e:
         logger.log(f"❌ CRC修正过程中发生错误: {e}")
-        logger.status("CRC修正失败")
 
-def main():
-    """主函数，用于解析命令行参数并分派任务。"""
-    parser = argparse.ArgumentParser(
-        description="BA Modding Toolkit - Command Line Interface.",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    subparsers = parser.add_subparsers(dest='command', required=True, help='可用的命令')
-
-    # --- 'update' 命令 ---
-    update_parser = subparsers.add_parser(
-        'update', 
-        help='一键更新 Mod，将旧 Mod 的资源移植到新版游戏文件中。',
-        description='''
-示例:
-  # 自动搜索新文件并更新
-  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --game-dir "C:\\path\\to\\game_data" --output-dir "C:\\path\\to\\output"
-
-  # 手动指定新文件并更新
-  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --new-bundle "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
-
-  # 指定替换多种资源
-  python maincli.py update --old-mod "..." --new-bundle "..." --output-dir "..." --asset-types Texture2D TextAsset
-'''
-    )
-    update_parser.add_argument('--old-mod', required=True, help='旧版 Mod bundle 文件的路径。')
-    update_parser.add_argument('--new-bundle', help='新版游戏资源 bundle 文件的路径 (如果提供，则优先于 --game-dir)。')
-    update_parser.add_argument('--game-dir', help='游戏资源目录的路径，用于自动查找匹配的新版 bundle 文件。')
-    update_parser.add_argument('--output-dir', default='./output/', help='保存生成的新 Mod 文件的目录 (默认: ./output/)。')
-    update_parser.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
-    update_parser.add_argument(
-        '--asset-types', 
-        nargs='+', 
-        default=['Texture2D', 'TextAsset', 'Mesh'], 
-        choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'],
-        help='要替换的资源类型列表。可选: Texture2D, TextAsset, Mesh, ALL。'
-    )
-    update_parser.add_argument(
-        '--compression', 
-        default='lzma', 
-        choices=['lzma', 'lz4', 'original', 'none'],
-        help='Bundle 文件的压缩方式 (默认: lzma)。可选: lzma, lz4, original(保持原始), none(不压缩)。'
-    )
-
-    # --- 'replace-asset' 命令 ---
-    replace_parser = subparsers.add_parser(
-        'replace-asset', 
-        help='将资源文件夹中的内容替换到目标 bundle 文件中。',
-        description='''
-示例:
-  python maincli.py replace-asset --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
-'''
-    )
-    replace_parser.add_argument('--bundle', required=True, help='要修改的目标 bundle 文件路径。')
-    replace_parser.add_argument('--folder', required=True, help='包含资源文件的文件夹路径。资源文件名 (不含扩展名) 需与 bundle 内资源名匹配。')
-    replace_parser.add_argument('--output-dir', required=False, default='./output/', help='保存修改后 bundle 文件的目录 (默认: ./output/)。')
-    replace_parser.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
-    replace_parser.add_argument(
-        '--compression', 
-        default='lzma', 
-        choices=['lzma', 'lz4', 'original', 'none'],
-        help='Bundle 文件的压缩方式 (默认: lzma)。可选: lzma, lz4, original(保持原始), none(不压缩)。'
-    )
-
-    # --- 'crc' 命令 ---
+def setup_crc_parser(subparsers: argparse._SubParsersAction) -> None:
+    """为 'crc' 命令配置参数解析器。"""
     crc_parser = subparsers.add_parser(
         'crc',
         help='工具，用于修正文件的 CRC32 值或计算/比较 CRC32 值。',
@@ -316,17 +310,37 @@ def main():
     crc_parser.add_argument('--game-dir', help='游戏资源目录的路径，用于自动查找匹配的原始 bundle 文件。')
     crc_parser.add_argument('--check-only', action='store_true', help='仅计算并比较 CRC，不修改任何文件。')
     crc_parser.add_argument('--no-backup', action='store_true', help='在修正文件前不创建备份 (.bak)。')
+    crc_parser.set_defaults(func=handle_crc)
 
-    # --- 'env' 命令 ---
+
+# ====== Print Environment ======
+
+def handle_env(args: argparse.Namespace, logger) -> None:
+    """处理 'env' 命令，打印环境信息。"""
+    logger.log(get_environment_info())
+
+def setup_env_parser(subparsers: argparse._SubParsersAction) -> None:
+    """为 'env' 命令配置参数解析器。"""
     env_parser = subparsers.add_parser(
         'env', 
         help='显示当前环境的系统信息和库版本。',
-        description='''
-示例:
-  python maincli.py env
-'''
+        formatter_class=argparse.RawTextHelpFormatter
     )
+    env_parser.set_defaults(func=handle_env)
 
+def main() -> None:
+    """主函数，用于解析命令行参数并分派任务。"""
+    parser = argparse.ArgumentParser(
+        description="BA Modding Toolkit - Command Line Interface.",
+        formatter_class=argparse.RawTextHelpFormatter
+    )
+    subparsers = parser.add_subparsers(dest='command', required=True, help='可用的命令')
+
+    # 配置各个子命令的解析器
+    setup_update_parser(subparsers)
+    setup_asset_packer_parser(subparsers)
+    setup_crc_parser(subparsers)
+    setup_env_parser(subparsers)
 
     # ==============================================================
 
@@ -335,15 +349,11 @@ def main():
     # 初始化日志记录器
     logger = setup_cli_logger()
 
-    # 根据命令调用相应的处理函数
-    if args.command == 'update':
-        handle_update(args, logger)
-    elif args.command == 'pack':
-        handle_asset_packing(args, logger)
-    elif args.command == 'crc':
-        handle_crc(args, logger)
-    elif args.command == 'env':
-        print(get_environment_info())
+    if hasattr(args, 'func'):
+        args.func(args, logger)
+    else:
+        # 在没有提供子命令时，argparse 默认会显示帮助信息并退出
+        parser.print_help()
 
 if __name__ == "__main__":
     main()
