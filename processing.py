@@ -485,6 +485,9 @@ def find_new_bundle_path(
     """
     # TODO: 只用Texture2D比较好像不太对，但是it works
 
+    if not old_mod_path.exists():
+        return None, f"请检查 '{old_mod_path}' 是否存在。"
+
     log(f"正在为 '{old_mod_path.name}' 搜索对应文件...")
 
     # 1. 提取文件名前缀
@@ -537,7 +540,7 @@ def find_new_bundle_path(
         
         for obj in env.objects:
             if obj.type.name == "Texture2D" and obj.read().m_Name in old_textures_map:
-                msg = f"成功确定新版文件: {candidate_path.name}"
+                msg = f"已确定新版文件: {candidate_path.name}"
                 log(f"  ✅ {msg}")
                 return candidate_path, msg
     

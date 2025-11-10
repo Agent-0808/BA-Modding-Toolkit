@@ -2,12 +2,13 @@ test
 output
 build
 dist
-main.spec
+tools
 testbundle
 old
-absolute
 __pycache__
 SpineConverter
 *.pdn
 *.exe
+*.lnk
 config.ini
+

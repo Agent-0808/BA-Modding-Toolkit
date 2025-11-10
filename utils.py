@@ -238,7 +238,7 @@ def get_environment_info():
         return False # 在非Windows系统上不是管理员
 
     # --- System Information ---
-    lines = []
+    lines: list[str] = []
     lines.append("--- System Information ---")
     lines.append(f"Operating System:  {platform.system()} {platform.release()} ({platform.architecture()[0]})")
     lines.append(f"System Platform:   {sys.platform}")
@@ -300,7 +300,7 @@ def get_skel_version(source: Path | bytes, log = no_log) -> str | None:
         header_text = header_chunk.decode('utf-8', errors='ignore')
 
         # 使用正则表达式查找 "数字.数字.数字" 格式的字符串。
-        match = re.search(r'(\d{1,2}\.\d{1,2}\.\d{1,2})', header_text)
+        match = re.search(r'(\d\.\d+\.\d+)', header_text)
         
         if match:
             version_string = match.group(1)
@@ -312,3 +312,28 @@ def get_skel_version(source: Path | bytes, log = no_log) -> str | None:
     except Exception as e:
         log(f"处理源数据时发生错误: {e}")
         return None
+
+def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
+    """
+    通过检查文件或字节数据头部来判断是否为Unity的.bundle文件
+    """
+    try:
+        data: bytes = b''
+        if isinstance(source, Path):
+            if not source.exists():
+                log(f"错误: 文件不存在 -> {source}")
+                return False
+            with open(str(source), 'rb') as f:
+                # 读取文件的前32个字节，足够检测"UnityFS"标识
+                data = f.read(32)
+        else:
+            data = source
+
+        if b"UnityFS" in data[:32]:
+            return True
+        else:
+            return False
+
+    except Exception as e:
+        log(f"处理源数据时发生错误: {e}")
+        return False

@@ -44,22 +44,22 @@ def setup_cli_logger():
 
 # ====== Mod Updating ======
 
-def handle_update(args, logger):
+def handle_update(args: argparse.Namespace, logger) -> None:
     """处理 'update' 命令的逻辑。"""
-    logger.log("--- 开始一键更新 Mod (CLI) ---")
+    logger.log("--- 开始更新 Mod ---")
 
-    old_mod_path = Path(args.old_mod)
+    old_mod_path = Path(args.old)
     output_dir = Path(args.output_dir)
     
     # 确保输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    new_bundle_path = None
-    if args.new_bundle:
-        new_bundle_path = Path(args.new_bundle)
-    elif args.game_dir:
-        logger.log(f"未提供新版资源文件，将在 '{args.game_dir}' 中自动搜索...")
-        game_dir = Path(args.game_dir)
+    new_bundle_path: Path | None = None
+    if args.target:
+        new_bundle_path = Path(args.target)
+    elif args.resource_dir:
+        logger.log(f"未提供新版资源文件，将在 '{args.resource_dir}' 中自动搜索...")
+        game_dir = Path(args.resource_dir)
         if not game_dir.is_dir():
             logger.log(f"❌ 错误: 游戏资源目录 '{game_dir}' 不存在或不是一个目录。")
             return
@@ -71,7 +71,7 @@ def handle_update(args, logger):
         new_bundle_path = found_path
     
     if not new_bundle_path:
-        logger.log("❌ 错误: 必须提供 '--new-bundle' 或 '--game-dir' 以确定目标资源文件。")
+        logger.log("❌ 错误: 必须提供 '--target' 或 '--resource-dir' 以确定目标资源文件。")
         return
 
     asset_types = set(args.asset_types)
@@ -79,8 +79,14 @@ def handle_update(args, logger):
 
     save_options = processing.SaveOptions(
         perform_crc=not args.no_crc,
-        enable_padding=False,
+        enable_padding=args.padding,
         compression=args.compression
+    )
+    
+    spine_options = processing.SpineOptions(
+        enabled=args.enable_spine_conversion or False,
+        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        target_version=args.target_spine_version or None,
     )
 
     # 调用核心处理函数
@@ -90,7 +96,7 @@ def handle_update(args, logger):
         output_dir=output_dir,
         asset_types_to_replace=asset_types,
         save_options=save_options,
-        spine_options=None, # cli版本先不启用 Spine 转换
+        spine_options=spine_options,
         log=logger.log
     )
 
@@ -104,48 +110,64 @@ def setup_update_parser(subparsers: argparse._SubParsersAction) -> None:
     """为 'update' 命令配置参数解析器。"""
     update_parser = subparsers.add_parser(
         'update', 
-        help='一键更新 Mod，将旧 Mod 的资源移植到新版游戏文件中。',
+        help='更新或移植 Mod，将旧 Mod 的资源移植到指定的Bundle中。',
         formatter_class=argparse.RawTextHelpFormatter,
         description='''
 示例:
   # 自动搜索新文件并更新
-  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --game-dir "C:\\path\\to\\game_data" --output-dir "C:\\path\\to\\output"
+  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --resource-dir "C:\\path\\to\\GameData\\Windows"
 
   # 手动指定新文件并更新
-  python maincli.py update --old-mod "C:\\path\\to\\old_mod.bundle" --new-bundle "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
+  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
 
-  # 指定替换多种资源
-  python maincli.py update --old-mod "..." --new-bundle "..." --output-dir "..." --asset-types Texture2D TextAsset
+  # 启用Spine骨骼转换
+  python maincli.py update --old "old.bundle" --target "new.bundle" --output-dir "output" \
+--enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.33"
 '''
     )
-    update_parser.add_argument('--old-mod', required=True, help='旧版 Mod bundle 文件的路径。')
-    update_parser.add_argument('--new-bundle', help='新版游戏资源 bundle 文件的路径 (如果提供，则优先于 --game-dir)。')
-    update_parser.add_argument('--game-dir', help='游戏资源目录的路径，用于自动查找匹配的新版 bundle 文件。')
+    # --- 基本参数 ---
+    update_parser.add_argument('--old', required=True, help='旧版 Mod bundle 文件的路径。')
     update_parser.add_argument('--output-dir', default='./output/', help='保存生成的新 Mod 文件的目录 (默认: ./output/)。')
-    update_parser.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
-    update_parser.add_argument(
+    
+    # --- 目标文件定位参数 ---
+    target_group = update_parser.add_argument_group('Target Bundle Options')
+    target_group.add_argument('--target', help='新版游戏资源 bundle 文件的路径 (如果提供，则优先于 --resource-dir)。')
+    target_group.add_argument('--resource-dir', help='游戏资源目录的路径，用于自动查找匹配的新版 bundle 文件。')
+
+    # --- 资源与保存参数 ---
+    saving_group = update_parser.add_argument_group('Asset and Saving Options')
+    saving_group.add_argument('--no-crc', action='store_true', help='禁用 CRC 修正功能。')
+    saving_group.add_argument('--padding', action='store_true', help='添加私货')
+    saving_group.add_argument(
         '--asset-types', 
         nargs='+', 
         default=['Texture2D', 'TextAsset', 'Mesh'], 
         choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'],
-        help='要替换的资源类型列表。可选: Texture2D, TextAsset, Mesh, ALL。'
+        help='要替换的资源类型列表。可选: Texture2D, TextAsset, Mesh, ALL。(默认: %(default)s)'
     )
-    update_parser.add_argument(
+    saving_group.add_argument(
         '--compression', 
         default='lzma', 
         choices=['lzma', 'lz4', 'original', 'none'],
         help='Bundle 文件的压缩方式 (默认: lzma)。可选: lzma, lz4, original(保持原始), none(不压缩)。'
     )
+
+    # --- Spine 转换参数 ---
+    spine_group = update_parser.add_argument_group('Spine Conversion Options')
+    spine_group.add_argument('--enable-spine-conversion', action='store_true', help='启用Spine骨骼转换功能。')
+    spine_group.add_argument('--spine-converter-path', help='SpineSkeletonDataConverter.exe 的完整路径。')
+    spine_group.add_argument('--target-spine-version', default='4.2.33', help='目标Spine版本 (例如 "4.2.33")。(默认: %(default)s)')
+
     update_parser.set_defaults(func=handle_update)
 
 # ====== Asset Packer ======
 
-def handle_asset_packing(args, logger):
+def handle_asset_packing(args: argparse.Namespace, logger) -> None:
     """处理 'pack' 命令的逻辑。"""
     logger.log("--- 开始资源打包 ---")
     
     bundle_path = Path(args.bundle)
-    asset_folder = Path(args.asset_folder)
+    asset_folder = Path(args.folder)
     output_dir = Path(args.output_dir)
 
     # 确保输出目录存在
@@ -206,7 +228,7 @@ def setup_asset_packer_parser(subparsers: argparse._SubParsersAction) -> None:
 
 # ====== CRC Tool ======
 
-def handle_crc(args, logger):
+def handle_crc(args: argparse.Namespace, logger) -> None:
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- 开始 CRC 工具 ---")
 
@@ -215,7 +237,7 @@ def handle_crc(args, logger):
         logger.log(f"❌ 错误: 修改后文件 '{modified_path}' 不存在。")
         return
 
-    # 确定原始文件路径：优先使用 --original，其次使用 --game-dir 自动查找
+    # 确定原始文件路径：优先使用 --original，其次使用 --resource-dir 自动查找
     original_path = None
     if args.original:
         original_path = Path(args.original)
@@ -223,9 +245,9 @@ def handle_crc(args, logger):
             logger.log(f"❌ 错误: 手动指定的原始文件 '{original_path}' 不存在。")
             return
         logger.log(f"已手动指定原始文件: {original_path.name}")
-    elif args.game_dir:
-        logger.log(f"未提供原始文件，将在 '{args.game_dir}' 中自动搜索...")
-        game_dir = Path(args.game_dir)
+    elif args.resource_dir:
+        logger.log(f"未提供原始文件，将在 '{args.resource_dir}' 中自动搜索...")
+        game_dir = Path(args.resource_dir)
         if not game_dir.is_dir():
             logger.log(f"❌ 错误: 游戏资源目录 '{game_dir}' 不存在或不是一个目录。")
             return
@@ -259,7 +281,7 @@ def handle_crc(args, logger):
 
     # --- 模式 2: 修正 CRC ---
     if not original_path:
-        logger.log("❌ 错误: 进行CRC修正时，必须提供 '--original' 原始文件或使用 '--game-dir' 进行自动查找。")
+        logger.log("❌ 错误: 进行CRC修正时，必须提供 '--original' 原始文件或使用 '--resource-dir' 进行自动查找。")
         return
 
     try:
@@ -296,9 +318,9 @@ def setup_crc_parser(subparsers: argparse._SubParsersAction) -> None:
   python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
 
   # 自动在游戏目录中查找原始文件并修正 CRC
-  python maincli.py crc --modified "my_mod.bundle" --game-dir "C:\\path\\to\\game_data"
+  python maincli.py crc --modified "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
 
-  # 仅检查 CRC 是否匹配，不修改文件 (可配合 --game-dir 自动查找)
+  # 仅检查 CRC 是否匹配，不修改文件 (可配合 --resource-dir 自动查找)
   python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
 
   # 计算单个文件的 CRC
@@ -306,8 +328,8 @@ def setup_crc_parser(subparsers: argparse._SubParsersAction) -> None:
 '''
     )
     crc_parser.add_argument('--modified', required=True, help='修改后的文件路径 (待修正或计算)。')
-    crc_parser.add_argument('--original', help='原始文件路径 (用于提供目标 CRC 值)。如果提供，则优先于 --game-dir。')
-    crc_parser.add_argument('--game-dir', help='游戏资源目录的路径，用于自动查找匹配的原始 bundle 文件。')
+    crc_parser.add_argument('--original', help='原始文件路径 (用于提供目标 CRC 值)。如果提供，则优先于 --resource-dir。')
+    crc_parser.add_argument('--resource-dir', help='游戏资源目录的路径，用于自动查找匹配的原始 bundle 文件。')
     crc_parser.add_argument('--check-only', action='store_true', help='仅计算并比较 CRC，不修改任何文件。')
     crc_parser.add_argument('--no-backup', action='store_true', help='在修正文件前不创建备份 (.bak)。')
     crc_parser.set_defaults(func=handle_crc)
