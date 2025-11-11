@@ -69,13 +69,18 @@ The program can save user configurations to the `config.ini` file, which will be
 - **ALL**: All types of assets, including those not listed above (experimental, not recommended)
 
 #### Spine Converter (Experimental Feature)
-Uses a third-party program to convert older Spine 3.8 format to the currently supported 4.2 format.
+Uses a third-party program to convert Spine 3.8 format `.skel` files from some old mods to the currently supported 4.2 format.
 - You need to download the third-party Spine converter program yourself. BAMT only calls the program to convert Spine files, not provides the program itself.
 - Download URL: [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - Configure the path to `SpineSkeletonDataConverter.exe` in the settings interface, and check the "启用 Spine 转换" (Enable Spine Conversion) option.
-- Configure the path to `SpineAtlasDowngrade.exe` in the settings interface, and check the "Spine降级" (Spine Downgrade) option. If enabled, the program will convert the Spine Atlas file to Spine 3.8 format in the Asset Extraction process.
+- Configure the path to `SpineAtlasDowngrade.exe` in the settings interface, and check the "Spine降级" (Spine Downgrade) option. If enabled, the program will convert the Spine Atlas file to Spine 3.8 format in the **Asset Extraction** process.
 
-**Note**: This is an experimental feature, not all mods can be successfully upgraded, suitable only for advanced users.
+##### Notes
+- This is an experimental feature that cannot guarantee all mods can be successfully upgraded, suitable only for advanced users.
+- Even without configuring `SpineSkeletonDataConverter.exe`, you can still use this program normally to update mods that *use Spine files compatible with the current version (4.2.xx)*.
+    - If the mod you want to update was created in 2025 or later, it already uses Spine 4.2 format and can be updated normally without configuring this option.
+- The `SpineAtlasDowngrade.exe` program is used during **asset extraction** to convert `.atlas` files to Spine 3.8 format, making it easier for mod creators to edit.
+    - If you only need to update mods, you don't need to configure this option.
 
 ## How to Use
 
@@ -121,6 +126,18 @@ The "计算CRC值" (Calculate CRC Value) button can be used to manually view the
 
 This feature is for creating new Mods, such as quickly packaging modified assets into Bundle files.
 
+#### Example
+Assume you are creating a mod for character `CH0808`, and you have extracted the related illustration assets to a `texture` folder using the "Asset Extractor" feature. This directory should contain the following files:
+- CH0808_spr.png
+- CH0808_spr.atlas
+- CH0808_spr.skel
+
+After modifying these files, you can package them into a Bundle file using the "Asset Packer" feature.
+
+Drag the `texture` folder to the first input box of the interface, and drag the corresponding Bundle file (e.g., `*-spinecharacters-ch0808_spr-*.bundle`) to the second input box of the program, then click the "开始打包" (Start Packing) button to generate a new Bundle file.
+
+This will replace the assets with the same name in the target Bundle with the `*.png`, `*.skel`, and `*.atlas` files from the `texture` folder.
+
 ### 资源提取 (Asset Extractor)
 1. Drag and drop or browse to select the Bundle file to extract assets from
 2. Select an output directory, the program will automatically create a subdirectory named after the Bundle file
@@ -155,6 +172,9 @@ You can add `BA-Modding-Toolkit` code (mainly `processing.py` and `utils.py`) to
 
 ```
 BA-Modding-Toolkit/
+│ 
+│ # ============= Code =============
+│ 
 ├── main.pyw    # GUI program main entry point
 ├── ui/         # GUI package
 │ ├── app.py        # Main application App class
@@ -171,7 +191,9 @@ BA-Modding-Toolkit/
 ├── maincli.py       # Command-line interface entry point
 ├── processing.py    # Core processing logic
 ├── utils.py         # Utility classes and helper functions
-│
+│ 
+│ # ============= Misc. =============
+│ 
 ├── requirements.txt # Python dependency list
 ├── config.ini       # Local configuration file (automatically generated)
 ├── LICENSE          # Project license file
@@ -187,10 +209,10 @@ BA-Modding-Toolkit/
 - [kalina](https://github.com/kalinaowo): Creating the prototype of the `CRCUtils` class, the starting point of BAMT.
 - [afiseleo](https://github.com/fiseleo): Helping with the CLI version.
 - [wang606](https://github.com/wang606): Spine version conversion feature based on [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) project.
-    - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BAMT. 
+    - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit. 
 
 This project uses the following excellent 3rd-party libraries:
 
 - [UnityPy](https://github.com/K0lb3/UnityPy): Core library for parsing and manipulating Unity Bundle files
-- [Pillow](https://python-pillow.org/): Used for processing texture assets in the game
+- [Pillow](https://python-pillow.github.io/): Used for processing texture assets in the game
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): Adds drag-and-drop functionality support for Tkinter

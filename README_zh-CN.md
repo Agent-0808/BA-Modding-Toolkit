@@ -67,13 +67,18 @@ python maincli.py env
 - **ALL**：所有类型的资源，也包括上面三者之外的类型（实验性，不推荐启用）
 
 #### Spine 转换器（实验性功能）
-使用第三方程序，将较老的 Spine 3.8 格式转换为当前版本支持的 4.2 格式。
+使用第三方程序，将一些较老的 Mod 中使用的 Spine 3.8 格式`.skel`文件转换为当前游戏版本支持的 4.2 格式。
 - 请自行下载第三方 Spine 转换器程序，BAMT 仅提供调用程序转换功能，不包含该程序本体。
 - 下载地址：[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - 在设置界面配置`SpineSkeletonDataConverter.exe`程序的路径，并勾选"启用 Spine 转换"选项。
-- 配置 `SpineAtlasDowngrade.exe` 程序的路径，可以在资源提取时将 Atlas 文件转换为 Spine 3.8 格式。
+- 配置 `SpineAtlasDowngrade.exe` 程序的路径，可以在**资源提取**时将`.atlas`文件转换为 Spine 3.8 格式。
 
-**注意**：这是一个实验性功能，并非所有 mod 都能成功升级，仅适合高级用户尝试。
+##### 注意
+- 这是一个实验性功能，无法保证所有 mod 都能成功升级，仅适合高级用户尝试。
+- 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
+    - 如果您想要更新的Mod制作于2025年及之后，则其已经使用了Spine 4.2格式，无需配置该选项也可正常更新。
+- `SpineAtlasDowngrade.exe` 程序用于在**资源提取**时，将`.atlas`文件转换为 Spine 3.8 格式，方便Mod制作者编辑。
+    - 如果您只是需要更新Mod，无需配置该选项。
 
 ## 使用方法
 
@@ -118,6 +123,18 @@ python maincli.py env
 
 此功能适用于制作新的 Mod，例如快速将修改后的资源打包到 Bundle 文件中。
 
+#### 示例
+假设您正在为编号为`CH0808`的角色制作Mod，通过“资源提取”功能将相关立绘资源提取到了`texture`文件夹下。则该目录下应该含有以下文件：
+- CH0808_spr.png
+- CH0808_spr.atlas
+- CH0808_spr.skel
+
+在修改这些文件之后，您可以通过“资源打包”功能将它们打包到一个 Bundle 文件中。
+
+将`texture`文件夹拖放到界面的第一个输入框中，并把对应的 Bundle 文件（例如`*-spinecharacters-ch0808_spr-*.bundle`）拖放至程序的第二个输入框中，点击“开始打包”按钮即可生成新的 Bundle 文件。
+
+这会使`texture`文件夹下的`*.png`、`*.skel`、`*.atlas`文件替换目标Bundle中的同名资源。
+
 ### 资源提取
 1. 拖放或浏览选择需要提取资源的 Bundle 文件
 2. 选择输出目录，程序会自动创建以 Bundle 文件名命名的子目录
@@ -152,6 +169,9 @@ python maincli.py env
 
 ```
 BA-Modding-Toolkit/
+│ 
+│ # ============= 程序 =============
+│ 
 ├── main.pyw    # GUI程序主入口
 ├── ui/         # 图形界面包
 │ ├── app.py        # 主应用 App 类
@@ -168,7 +188,9 @@ BA-Modding-Toolkit/
 ├── maincli.py       # 命令行接口主入口
 ├── processing.py    # 核心处理逻辑
 ├── utils.py         # 工具类和辅助函数
-│
+│ 
+│ # ============= 杂项 =============
+│ 
 ├── requirements.txt # Python依赖列表
 ├── config.ini       # 本地配置文件（自动生成）
 ├── LICENSE          # 项目许可证文件
@@ -184,10 +206,10 @@ BA-Modding-Toolkit/
 - [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型，也是 BAMT 项目的起点。
 - [afiseleo](https://github.com/fiseleo): 协助开发命令行版本。
 - [wang606](https://github.com/wang606): Spine 版本转换功能基于 [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) 项目。
-    - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BAMT 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
+    - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
 
 本项目使用了以下优秀的第三方库：
 
 - [UnityPy](https://github.com/K0lb3/UnityPy): 用于解析和操作 Unity Bundle 文件的核心库
-- [Pillow](https://python-pillow.org/): 用于处理游戏中的纹理资源
+- [Pillow](https://python-pillow.github.io/): 用于处理游戏中的纹理资源
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): 为 Tkinter 添加拖放功能支持
