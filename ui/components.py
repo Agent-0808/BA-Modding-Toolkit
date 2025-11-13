@@ -261,7 +261,7 @@ class UIComponents:
         Returns:
             创建的框架组件
         """
-        frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=8)
+        frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=8, pady=8)
         frame.pack(fill=tk.X, pady=5)
 
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)

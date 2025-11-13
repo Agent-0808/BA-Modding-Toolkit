@@ -11,7 +11,7 @@ A toolkit for automating the creation and updating of Blue Archive Mod Bundle fi
 ## Getting Started
 
 ### Install Python
-Please ensure that Python 3.8 or higher is installed.
+Please ensure that Python 3.10 or higher is installed.
 
 You can download and install Python from the [official website](https://www.python.org/downloads/).
 
@@ -21,7 +21,7 @@ When you run `python --version` in the console, you should see something like `P
 ```bash
 pip install -r requirements.txt
 ```
-If you encounter a `Failed building wheel` error in this step, please try using a slightly older version of Python, such as Python 3.13 or 3.12.
+If you encounter a `Failed building wheel` error in this step, it may be because PyPI has not provided a compatible version of UnityPy. Please try using a slightly older version of Python, such as Python 3.13 or 3.12.
 
 ### Run the Program
 ```bash
@@ -69,7 +69,7 @@ The program can save user configurations to the `config.ini` file, which will be
 - **ALL**: All types of assets, including those not listed above (experimental, not recommended)
 
 #### Spine Converter (Experimental Feature)
-Uses a third-party program to convert Spine 3.8 format `.skel` files from some old mods to the currently supported 4.2 format.
+(Optional) Uses a third-party program to convert Spine 3.8 format `.skel` files from some old mods to the currently supported 4.2 format.
 - You need to download the third-party Spine converter program yourself. BAMT only calls the program to convert Spine files, not provides the program itself.
 - Download URL: [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - Configure the path to `SpineSkeletonDataConverter.exe` in the settings interface, and check the "启用 Spine 转换" (Enable Spine Conversion) option.
@@ -96,7 +96,7 @@ Uses a third-party program to convert Spine 3.8 format `.skel` files from some o
 1. Drag and drop or browse to select the old Mod Bundle file that needs to be updated
 2. The program will automatically find the corresponding target Bundle file in the resource directory
 3. Check the asset types that need to be replaced in the settings window
-4. Click the "开始一键更新" (Start One-Click Update) button, the program will automatically process and generate the updated Bundle file
+4. Click the "开始更新" (Start Updating) button, the program will automatically process and generate the updated Bundle file
 5. (Optional) After success, click "覆盖原文件" (Overwrite Original File) to apply the modifications. Please ensure the "创建备份" (Create Backup) option is enabled to prevent risks.
 
 This feature can also be used to port mods between different platforms, just select the Bundle file from the corresponding platform in step 2.
@@ -148,7 +148,7 @@ This will replace the assets with the same name in the target Bundle with the `*
 This feature is for extracting assets from existing Bundle files for modification or preview.
 
 ### JP/GB转换 (JP/GB Conversion)
-Conversion between JP server format (two files) and Global server format (one file).
+Conversion between JP server format (two separate Bundle files) and Global server format (one Bundle file) for a mod that modified the Spine assets.
 
 #### JP -> Global Conversion
 1. Select the Global server Bundle file (as the base file)
@@ -203,7 +203,7 @@ BA-Modding-Toolkit/
 └── README.md        # Project documentation (this file)
 ```
 
-## Thanks
+## Acknowledgement
 
 - [Deathemonic](https://github.com/Deathemonic): Patching CRC with [BA-CY](https://github.com/Deathemonic/BA-CY).
 - [kalina](https://github.com/kalinaowo): Creating the prototype of the `CRCUtils` class, the starting point of BAMT.

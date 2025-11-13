@@ -9,7 +9,7 @@
 ## 启动程序
 
 ### 安装 Python
-请确保已安装 Python 3.8 或以上版本。
+请确保已安装 Python 3.10 或以上版本。
 
 可以从 [Python 官方网站](https://www.python.org/downloads/) 下载并安装。
 
@@ -19,7 +19,7 @@
 ```bash
 pip install -r requirements.txt
 ```
-如果在这一步遇到了`Failed building wheel`的提示，请尝试不要使用最新的 Python 3.14，换用稍旧的版本，如 Python 3.13或是3.12。
+如果在这一步遇到了`Failed building wheel`的提示，可能是因为PyPI还未提供兼容版本的UnityPy。请尝试不要使用最新的 Python 3.14，换用稍旧的版本，如 Python 3.13或是3.12。
 
 ### 运行程序
 ```bash
@@ -67,7 +67,7 @@ python maincli.py env
 - **ALL**：所有类型的资源，也包括上面三者之外的类型（实验性，不推荐启用）
 
 #### Spine 转换器（实验性功能）
-使用第三方程序，将一些较老的 Mod 中使用的 Spine 3.8 格式`.skel`文件转换为当前游戏版本支持的 4.2 格式。
+（可选）使用第三方程序，将一些较老的 Mod 中使用的 Spine 3.8 格式`.skel`文件转换为当前游戏版本支持的 4.2 格式。
 - 请自行下载第三方 Spine 转换器程序，BAMT 仅提供调用程序转换功能，不包含该程序本体。
 - 下载地址：[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - 在设置界面配置`SpineSkeletonDataConverter.exe`程序的路径，并勾选"启用 Spine 转换"选项。
