@@ -13,7 +13,7 @@ from ui.utils import is_multiple_drop
 class JpGbConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
     def create_widgets(self, output_dir_var, enable_padding_var, enable_crc_correction_var, 
-                      create_backup_var, compression_method_var, game_resource_dir_var, auto_detect_subdirs_var):
+                      create_backup_var, compression_method_var, game_resource_dir_var, auto_detect_subdirs_var, auto_search_var):
         # --- 共享变量 ---
         self.output_dir_var: tk.StringVar = output_dir_var
         self.enable_padding: tk.BooleanVar = enable_padding_var
@@ -22,6 +22,9 @@ class JpGbConversionTab(TabFrame):
         self.compression_method: tk.StringVar = compression_method_var
         self.game_resource_dir_var: tk.StringVar = game_resource_dir_var
         self.auto_detect_subdirs: tk.BooleanVar = auto_detect_subdirs_var
+        
+        # 自动搜索开关变量
+        self.auto_search_var: tk.BooleanVar = auto_search_var
         
         # 文件路径变量
         self.global_bundle_path: Path | None = None
@@ -57,6 +60,18 @@ class JpGbConversionTab(TabFrame):
         
         # 创建文件输入区域
         self._create_file_input_areas()
+        
+        # --- 选项设置区域 ---
+        options_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
+        options_frame.pack(fill=tk.X, pady=5)
+        
+        # 自动搜索开关按钮
+        self.auto_search_checkbox = UIComponents.create_checkbutton(
+            options_frame, 
+            text="自动搜索关联文件", 
+            variable=self.auto_search_var
+        )
+        self.auto_search_checkbox.pack(side=tk.LEFT, padx=5)
         
         # --- 操作按钮 ---
         action_button_frame = tk.Frame(self)
@@ -103,7 +118,7 @@ class JpGbConversionTab(TabFrame):
         """根据选择的模式更新UI"""
         if self.mode_var.get() == "jp_to_global":
             # 日服 -> 国际服模式
-            self.global_frame.config(text="Global Bundle（基础）")
+            self.global_frame.config(text="Global Bundle（模板）")
             self.jp_textasset_frame.config(text="JP TextAsset Bundle（源）")
             self.jp_texture2d_frame.config(text="JP Texture2D Bundle（源）")
         else:
@@ -118,41 +133,48 @@ class JpGbConversionTab(TabFrame):
             messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
             return
         path = Path(event.data.strip('{}'))
-        self.set_file_path('global_bundle_path', self.global_label, path, "国际服 Bundle 文件",
-                           callback=lambda: self._auto_find_counterparts('global'))
+        # 只有在自动搜索开关开启时才执行自动搜索
+        callback = lambda: self._auto_find_counterparts('global') if self.auto_search_var.get() else None
+        self.set_file_path('global_bundle_path', self.global_label, path, "国际服 Bundle 文件", callback=callback)
     
     def browse_global_bundle(self):
         p = filedialog.askopenfilename(title="选择国际服 Bundle 文件")
         if p:
-            self.set_file_path('global_bundle_path', self.global_label, Path(p), "国际服 Bundle 文件",
-                               callback=lambda: self._auto_find_counterparts('global'))
+            # 只有在自动搜索开关开启时才执行自动搜索
+            callback = lambda: self._auto_find_counterparts('global') if self.auto_search_var.get() else None
+            self.set_file_path('global_bundle_path', self.global_label, Path(p), "国际服 Bundle 文件", callback=callback)
     
     def drop_jp_textasset_bundle(self, event):
         if is_multiple_drop(event.data):
             messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
             return
         path = Path(event.data.strip('{}'))
-        self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, path, "日服 TextAsset Bundle 文件",
-                           callback=lambda: self._auto_find_counterparts('jp_textasset'))
+        # 只有在自动搜索开关开启时才执行自动搜索
+        callback = lambda: self._auto_find_counterparts('jp_textasset') if self.auto_search_var.get() else None
+        self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, path, "日服 TextAsset Bundle 文件", callback=callback)
     
     def browse_jp_textasset_bundle(self):
         p = filedialog.askopenfilename(title="选择日服 TextAsset Bundle 文件")
         if p:
-            self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, Path(p), "日服 TextAsset Bundle 文件",
-                               callback=lambda: self._auto_find_counterparts('jp_textasset'))
+            # 只有在自动搜索开关开启时才执行自动搜索
+            callback = lambda: self._auto_find_counterparts('jp_textasset') if self.auto_search_var.get() else None
+            self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, Path(p), "日服 TextAsset Bundle 文件", callback=callback)
     
     def drop_jp_texture2d_bundle(self, event):
         if is_multiple_drop(event.data):
             messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
             return
         path = Path(event.data.strip('{}'))
-        self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, path, "日服 Texture2D Bundle 文件", callback=lambda: self._auto_find_counterparts('jp_texture2d'))
+        # 只有在自动搜索开关开启时才执行自动搜索
+        callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.auto_search_var.get() else None
+        self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, path, "日服 Texture2D Bundle 文件", callback=callback)
     
     def browse_jp_texture2d_bundle(self):
         p = filedialog.askopenfilename(title="选择日服 Texture2D Bundle 文件")
         if p:
-            self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, Path(p), "日服 Texture2D Bundle 文件",
-                               callback=lambda: self._auto_find_counterparts('jp_texture2d'))
+            # 只有在自动搜索开关开启时才执行自动搜索
+            callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.auto_search_var.get() else None
+            self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, Path(p), "日服 Texture2D Bundle 文件", callback=callback)
     
     # --- 自动查找逻辑 ---
     def _set_file_ui(self, label: ttk.Label, path_var_name: str, path: Path | None, file_type: str):

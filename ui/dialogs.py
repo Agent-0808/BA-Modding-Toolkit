@@ -20,6 +20,10 @@ class SettingsDialog(tk.Toplevel):
         container = tk.Frame(self, bg=Theme.WINDOW_BG, padx=15, pady=15)
         container.pack(fill=tk.BOTH, expand=True)
 
+        # TODO: 3种Preset
+
+        # TODO: 去掉auto_detect_checkbox，全部启用
+
         # --- 手动创建游戏资源目录UI，以实现动态标题 ---
         self.game_dir_frame = tk.LabelFrame(container, text="", font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=8)
         self.game_dir_frame.pack(fill=tk.X, pady=5)

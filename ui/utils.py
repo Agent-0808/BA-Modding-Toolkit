@@ -87,7 +87,8 @@ class ConfigManager:
                 'enable_padding': str(app_instance.enable_padding_var.get()),
                 'enable_crc_correction': str(app_instance.enable_crc_correction_var.get()),
                 'create_backup': str(app_instance.create_backup_var.get()),
-                'compression_method': app_instance.compression_method_var.get()
+                'compression_method': app_instance.compression_method_var.get(),
+                'auto_search': str(app_instance.auto_search_var.get())
             }
             
             # 添加资源类型选项
@@ -148,6 +149,8 @@ class ConfigManager:
                     app_instance.create_backup_var.set(self.config['GlobalOptions']['create_backup'].lower() == 'true')
                 if 'compression_method' in self.config['GlobalOptions']:
                     app_instance.compression_method_var.set(self.config['GlobalOptions']['compression_method'])
+                if 'auto_search' in self.config['GlobalOptions']:
+                    app_instance.auto_search_var.set(self.config['GlobalOptions']['auto_search'].lower() == 'true')
             
             # 加载资源类型选项
             if 'ResourceTypes' in self.config:

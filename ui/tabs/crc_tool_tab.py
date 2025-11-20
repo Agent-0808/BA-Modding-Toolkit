@@ -11,7 +11,7 @@ from ui.utils import is_multiple_drop, replace_file
 from utils import CRCUtils
 
 class CrcToolTab(TabFrame):
-    def create_widgets(self, game_resource_dir_var, enable_padding_var, create_backup_var, auto_detect_subdirs_var):
+    def create_widgets(self, game_resource_dir_var, enable_padding_var, create_backup_var, auto_detect_subdirs_var, output_dir_var=None):
         self.original_path = None
         self.modified_path = None
         self.enable_padding = enable_padding_var
@@ -19,6 +19,8 @@ class CrcToolTab(TabFrame):
         # 接收共享的游戏资源目录变量
         self.game_resource_dir_var = game_resource_dir_var
         self.auto_detect_subdirs = auto_detect_subdirs_var
+        # 接收输出目录变量
+        self.output_dir_var = output_dir_var
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
@@ -135,6 +137,17 @@ class CrcToolTab(TabFrame):
         self.logger.log("开始CRC修正过程...")
         self.logger.status("正在进行CRC修正...")
         try:
+            # 确保有输出目录变量
+            if not self.output_dir_var or not self.output_dir_var.get():
+                self.logger.log("❌ 错误: 未设置输出目录")
+                messagebox.showerror("错误", "未设置输出目录，请先在设置中配置输出目录。")
+                self.logger.status("CRC修正失败")
+                return False
+            
+            # 创建输出目录（如果不存在）
+            output_dir = Path(self.output_dir_var.get())
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
             # 先检测CRC是否一致
             self.logger.log("正在检测CRC值是否匹配...")
             try:
@@ -154,23 +167,20 @@ class CrcToolTab(TabFrame):
             
             self.logger.log("❌ CRC值不匹配，开始进行CRC修正...")
             
-            backup_message = ""
-            if self.create_backup.get():
-                # 创建备份文件
-                backup_path = self.modified_path.with_suffix(self.modified_path.suffix + '.bak')
-                shutil.copy2(self.modified_path, backup_path)
-                self.logger.log(f"已创建备份文件: {backup_path.name}")
-                backup_message = f"\n\n原始版本已备份至:\n{backup_path.name}"
-            else:
-                self.logger.log("已根据设置跳过创建备份文件。")
-                backup_message = "\n\n(已跳过创建备份)"
+            # 计算输出文件路径
+            output_filename = self.modified_path.name
+            output_path = output_dir / output_filename
             
-            # 修正文件CRC
-            success = CRCUtils.manipulate_crc(self.original_path, self.modified_path, self.enable_padding.get())
+            # 先复制修改后的文件到输出目录
+            shutil.copy2(self.modified_path, output_path)
+            self.logger.log(f"已将修改后的文件复制到输出目录: {output_path}")
+            
+            # 修正输出目录中的文件CRC
+            success = CRCUtils.manipulate_crc(self.original_path, output_path, self.enable_padding.get())
             
             if success:
                 self.logger.log("✅ CRC修正成功！")
-                messagebox.showinfo("成功", f"CRC 修正成功！\n修改后的文件已更新。{backup_message}")
+                messagebox.showinfo("成功", f"CRC 修正成功！\n修正后的文件已保存至输出目录:\n{output_path}")
             else:
                 self.logger.log("❌ CRC修正失败")
                 messagebox.showerror("失败", "CRC 修正失败。")
