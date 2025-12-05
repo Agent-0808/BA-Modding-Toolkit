@@ -160,7 +160,113 @@ Conversion between JP server format (two separate Bundle files) and Global serve
 #### Global -> JP Conversion
 1. Select the Global server Bundle file (source file)
 2. Select the JP TextAsset Bundle and Texture2D Bundle files (as template)
-4. Click the "开始转换" (Start Conversion) button, the program will split the Global server format Bundle into the two JP server Bundle files
+3. Click the "开始转换" (Start Conversion) button, the program will split the Global server format Bundle into the two JP server Bundle files
+
+## Command Line Interface (CLI)
+
+In addition to the graphical interface, this project provides a Command Line Interface (CLI) version `maincli.py`.
+
+The current GUI does not support internationalization (the interface is in Chinese only), but the CLI version's help information and parameter descriptions are in English. If you prefer an English interface or need to use it in a non-GUI environment, the CLI version is an excellent choice.
+
+### CLI Usage
+
+All operations can be executed via the `python maincli.py` command. You can use `--help` to view all available commands and parameters.
+
+```bash
+# View all available commands
+python maincli.py -h
+
+# View detailed help and examples for a specific command
+python maincli.py update -h
+python maincli.py pack -h
+python maincli.py crc -h
+
+# View environment information
+python maincli.py env
+```
+
+<details>
+<summary>Click to expand detailed CLI instructions</summary>
+
+#### Update Mod (update)
+
+Used to update or port Mods, migrating assets from an old Mod to new game files. This is the core function.
+
+**Main Arguments:**
+- `--old`: (Required) Path to the old Mod file.
+- `--resource-dir`: Game resource directory. The program will automatically search for matching new version files in this directory.
+- `--target`: Manually specify the path to the new game file. If `--resource-dir` is also provided, this option takes precedence.
+- `--output-dir`: (Optional) Output directory for generated files (default: `./output/`).
+- `--enable-spine-conversion`: (Optional) Enable Spine skeleton conversion for upgrading old Mods.
+- `--spine-converter-path`: (Optional) Full path to `SpineSkeletonDataConverter.exe`.
+
+**Examples:**
+```bash
+# Example 1: Automatic search and update
+python maincli.py update --old "path/to/old_mod.bundle" --resource-dir "path/to/GameData/Windows"
+
+# Example 2: Manually specify target file for update
+python maincli.py update --old "old_mod.bundle" --target "new_game_file.bundle" --output-dir "./updated_mods"
+```
+
+#### Asset Packer (pack)
+
+Pack assets (e.g., `.png`, `.skel`, `.atlas`) from a folder into a specified Bundle file, replacing assets with the same name.
+
+**Main Arguments:**
+- `--bundle`: (Required) Path to the target Bundle file to be modified.
+- `--folder`: (Required) Path to the folder containing new assets.
+- `--output-dir`: Output directory for generated files (default: `./output/`).
+
+**Examples:**
+```bash
+# Pack all assets from asset_folder into target_game_file.bundle
+python maincli.py pack --bundle "target_game_file.bundle" --folder "./asset_folder" --output-dir "./packed_mods"
+```
+
+#### CRC Fix (crc)
+
+Correct the CRC checksum for modified Bundle files to match the original files.
+
+**Main Arguments:**
+- `--modified`: (Required) Path to the modified Mod file.
+- `--resource-dir`: Game resource directory, used to automatically find the corresponding original file.
+- `--original`: Manually specify the original file path to extract the correct CRC value.
+- `--check-only`: (Optional) Only check and compare CRC values without performing any modifications.
+
+**Examples:**
+```bash
+# Example 1: Automatically find original file and fix CRC
+python maincli.py crc --modified "my_mod.bundle" --resource-dir "path/to/GameData/Windows"
+
+# Example 2: Manually specify original file for fix
+python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
+
+# Example 3: Only check CRC values, do not modify file
+# Compare CRC of two files
+python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
+# Check CRC of a single file
+python maincli.py crc --modified "my_mod.bundle" --check-only
+```
+
+</details>
+
+### Tested Environments
+
+The table below lists tested environment configurations for reference.
+
+| Operating System | Python Version | UnityPy Version | Pillow Version | Status | Note   |
+|:------------------- |:-------------- |:--------------- |:-------------- |:------ | :--- |
+| Windows 10          | 3.12.4         | 1.23.0          | 10.4.0         | ✅     | Dev Env |
+| Windows 10          | 3.13.7         | 1.23.0          | 11.3.0         | ✅     |  |
+| Ubuntu 22.04 (WSL2) | 3.10.12        | 1.23.0          | 10.4.0         | ✅     |  |
+| Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0          | 12.0.0         | ✅     |  |
+
+## Linux Support
+
+- **GUI Compatibility**: The GUI program is built on the `tkinter` library and uses `tkinterdnd2` for drag-and-drop functionality. Since support for tkinter varies across Linux distributions, the graphical interface may not display or run correctly on Linux.
+- **Recommendation**: Linux users are advised to use the **Command Line Interface (CLI)** version `maincli.py`. The CLI version implements most functions and does not depend on any GUI libraries, and has been tested to work correctly.
+- **Use Virtual Environment**: To avoid conflicts with system environments and dependencies, **it is strongly recommended to use a Python virtual environment (venv) to run this program**.
 
 ## Developing
 
