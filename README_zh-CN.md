@@ -1,5 +1,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+![Title](assets/title.png)
+
 # BA Modding Toolkit
 
 简体中文 | [English](README.md)
@@ -35,8 +37,8 @@ python maincli.py env
 ## 程序界面说明
 程序包含多个功能标签页：
 - **Mod 更新**：用于更新或移植不同平台的 Mod
-    - 单个更新：用于更新单个 Mod 文件
-    - 批量更新：用于批量处理多个 Mod 文件
+  - 单个更新：用于更新单个 Mod 文件
+  - 批量更新：用于批量处理多个 Mod 文件
 - **CRC 修正工具**：CRC 校验值修正功能
 - **资源打包**：将一个文件夹内的资源打包进对应的 Bundle ，替换 Bundle 中的同名资源
 - **资源提取**：从 Bundle 文件中提取指定类型的资源
@@ -47,6 +49,9 @@ python maincli.py env
 
 ### 设置界面
 
+<details>
+<summary>点击展开查看设置界面详细说明</summary>
+
 ![Settings](assets/help/gui-help-settings-zhcn.png)
 
 #### 目录设置
@@ -55,7 +60,7 @@ python maincli.py env
 
 #### 全局选项
 - **CRC 修正**：自动修正 Bundle 文件的 CRC 校验值，防止文件被修改后无法运行
-    - 当前仅 Steam 版本 Mod 需要此步骤，其他版本 Mod 可忽略
+  - 当前仅 Steam 版本 Mod 需要此步骤，其他版本 Mod 可忽略
 - 添加私货: 在CRC修正之前添加`0x08080808`。~~确实是私货，不选也没有影响~~
 - **创建备份**：在覆盖原文件之前创建原文件的备份
 - **压缩方式**：选择 Bundle 文件的压缩方式（LZMA、LZ4、保持原始、不压缩）
@@ -76,9 +81,11 @@ python maincli.py env
 ##### 注意
 - 这是一个实验性功能，无法保证所有 mod 都能成功升级，仅适合高级用户尝试。
 - 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
-    - 如果您想要更新的Mod制作于2025年及之后，则其已经使用了Spine 4.2格式，无需配置该选项也可正常更新。
+  - 如果您想要更新的Mod制作于2025年及之后，则其已经使用了Spine 4.2格式，无需配置该选项也可正常更新。
 - `SpineAtlasDowngrade.exe` 程序用于在**资源提取**时，将`.atlas`文件转换为 Spine 3.8 格式，方便Mod制作者编辑。
-    - 如果您只是需要更新Mod，无需配置该选项。
+  - 如果您只是需要更新Mod，无需配置该选项。
+
+</details>
 
 ## 使用方法
 
@@ -115,8 +122,8 @@ python maincli.py env
 
 ### 资源打包
 1. 拖放或浏览选择包含待打包资源的文件夹
-    - 支持的文件类型：`.png`（贴图）、`.skel`、`.atlas`（Spine动画文件）
-    - 确保资源文件名与目标 Bundle 文件中的资源名匹配
+   - 支持的文件类型：`.png`（贴图）、`.skel`、`.atlas`（Spine动画文件）
+   - 确保资源文件名与目标 Bundle 文件中的资源名匹配
 2. 拖放或浏览选择需要修改的目标 Bundle 文件
 3. 点击"开始打包"按钮：执行资源打包操作
 4. （可选）成功后点击"覆盖原文件"应用修改。请确保开启了"创建备份"选项以防止风险。
@@ -156,6 +163,121 @@ python maincli.py env
 1. 选择国际服 Bundle 文件（源文件）
 2. 选择日服 TextAsset Bundle 文件与 Texture2D Bundle 文件（作为模板）
 3. 点击"开始转换"按钮，程序会将国际服格式的 Bundle 拆分到日服的两个 Bundle 文件中
+
+## Linux 用户特别说明
+
+- **GUI 兼容性**：GUI 程序基于 `tkinter` 库构建，并使用了 `tkinterdnd2` 实现拖拽功能。由于 Linux 各发行版对 tkinter 的支持情况不一，图形界面可能无法在 Linux 上正常显示或运行。
+- **推荐方案**：建议 Linux 用户直接使用 **命令行接口 (CLI)** 版本 `maincli.py`。CLI 版本实现了大部分功能，且不依赖任何 GUI 库，更适合在 Linux 终端下运行。
+
+### 常见问题与解决
+
+在某些 Linux 环境下，可能会遇到由底层依赖库（如 UnityPy）引发的 C 级别断言错误，导致程序崩溃。
+
+您遇到的报错信息可能类似于：
+`python3: ../Objects/typeobject.c:4745: _PyType_Lookup: Assertion !PyErr_Occurred()' failed. Aborted (core dumped)`
+
+#### 解决方案
+尝试使用 **Python 3.10.x** 版本以获得最佳兼容性。此版本已经过测试并且可以稳定运行。
+
+## 命令行接口 (CLI)
+
+除了图形界面，本项目还提供了一个功能强大的命令行接口（CLI）版本 `maincli.py`。
+
+**注意**：目前的 GUI 界面暂未支持国际化（界面仅为中文），但CLI版本的帮助信息、参数说明为英文。如果您习惯使用英文界面或需要在非中文环境下使用，CLI 版本是一个很好的选择。
+
+### CLI 使用方法
+
+所有操作都可以通过 `python maincli.py` 命令执行。您可以通过 `--help` 查看所有可用命令和参数。
+
+```bash
+# 查看所有可用命令
+python maincli.py -h
+
+# 查看特定命令的详细帮助和示例
+python maincli.py update -h
+python maincli.py pack -h
+python maincli.py crc -h
+
+# 查看环境信息
+python maincli.py env
+```
+
+<details>
+<summary>点击展开查看CLI详细说明</summary>
+
+#### 更新 Mod (update)
+
+用于更新或移植Mod，将旧Mod中的资源迁移到新版的游戏文件中。这是最核心的功能。
+
+**主要参数:**
+- `--old`: (必需) 指定旧的 Mod 文件路径。
+- `--resource-dir`: 指定游戏资源目录，程序将在此目录中自动查找匹配的新版文件进行更新。
+- `--target`: 手动指定新版游戏文件的路径。如果同时提供了 `--resource-dir`，此选项优先。
+- `--output-dir`: (可选) 指定生成文件的输出目录 (默认为 `./output/`)。
+- `--enable-spine-conversion`: (可选) 启用Spine骨骼转换功能，用于升级旧版Mod。
+- `--spine-converter-path`: (可选) 指定 `SpineSkeletonDataConverter.exe` 的完整路径。
+
+**命令示例:**
+```bash
+# 示例 1: 自动搜索更新
+python maincli.py update --old "path/to/old_mod.bundle" --resource-dir "path/to/GameData/Windows"
+
+# 示例 2: 手动指定目标文件进行更新
+python maincli.py update --old "old_mod.bundle" --target "new_game_file.bundle" --output-dir "./updated_mods"
+```
+
+#### 资源打包 (pack)
+
+将一个文件夹内的资源（如 `.png`, `.skel`, `.atlas`）打包进一个指定的 Bundle 文件中，替换其中的同名资源。
+
+**主要参数:**
+- `--bundle`: (必需) 指定要修改的目标 Bundle 文件路径。
+- `--folder`: (必需) 指定包含新资源的文件夹路径。
+- `--output-dir`: 指定生成文件的输出目录 (默认为 `./output/`)。
+
+**命令示例:**
+```bash
+# 将 asset_folder 文件夹内的所有资源打包进 target_game_file.bundle
+python maincli.py pack --bundle "target_game_file.bundle" --folder "./asset_folder" --output-dir "./packed_mods"
+```
+
+#### CRC 修正 (crc)
+
+为修改过的 Bundle 文件修正 CRC 校验值，使其与原版文件一致。
+
+**主要参数:**
+- `--modified`: (必需) 指定被修改过的 Mod 文件路径。
+- `--resource-dir`: 指定游戏资源目录，用于自动查找对应的原版文件。
+- `--original`: 手动指定原版文件路径，用于提取正确的 CRC 值。
+- `--check-only`: (可选) 仅检查和对比 CRC 值，不执行任何修改操作。
+
+**命令示例:**
+```bash
+# 示例 1: 自动查找原版文件并修正 CRC
+python maincli.py crc --modified "my_mod.bundle" --resource-dir "path/to/GameData/Windows"
+
+# 示例 2: 手动指定原版文件进行修正
+python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
+
+# 示例 3: 仅检查 CRC 值，不修改文件
+# 比较两个文件的CRC
+python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
+# 查看单个文件的CRC
+python maincli.py crc --modified "my_mod.bundle" --check-only
+```
+
+</details>
+
+### 经过测试的环境
+
+下表列出了开发和测试过程中使用的环境配置，供参考。
+
+| 操作系统 (OS)           | Python 版本 | UnityPy 版本 | Pillow 版本 | 状态  | 备注   |
+|:------------------- |:--------- |:---------- |:--------- |:--- | ---- |
+| Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   | 开发环境 |
+| Ubuntu 22.04 (WSL2) | 3.10.12   | 1.23.0     | 10.4.0    | ✅   |      |
+| Ubuntu 22.04 (WSL2) | 3.12.8+   | 1.23.0     | 10.4.0    | ❌   |      |
+| Ubuntu 22.04 (WSL2) | 3.12.8+   | 1.23.0     | 12.0.0    | ❌   |      |
 
 ## 开发
 
@@ -206,7 +328,7 @@ BA-Modding-Toolkit/
 - [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型，也是 BAMT 项目的起点。
 - [afiseleo](https://github.com/fiseleo): 协助开发命令行版本。
 - [wang606](https://github.com/wang606): Spine 版本转换功能基于 [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) 项目。
-    - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
+  - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
 
 本项目使用了以下优秀的第三方库：
 

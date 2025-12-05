@@ -1,5 +1,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
+![Title](assets/title.png)
+
 # BA Modding Toolkit
 
 > Sorry for my program being written in Chinese without i18n support, but I believe it's easy to use with this README.
