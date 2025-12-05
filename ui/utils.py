@@ -15,6 +15,73 @@ def is_multiple_drop(data: str) -> bool:
     """
     return '} {' in data
 
+def open_directory(path: str | Path, log = no_log) -> None:
+    """
+    打开文件资源管理器。
+    
+    Args:
+        path: 要打开的目录路径
+        log: 日志函数，用于记录操作
+    """
+    import sys
+    import subprocess
+    import os
+    from pathlib import Path
+    from tkinter import messagebox
+    
+    try:
+        path_obj = Path(path).resolve()
+        if not path_obj.is_dir():
+            messagebox.showwarning("警告", f"路径不存在或不是一个文件夹:\n{path_obj}")
+            return
+        
+        # 检测是否为 WSL 环境
+        is_wsl = False
+        if sys.platform == 'linux':
+            try:
+                with open('/proc/version', 'r') as f:
+                    if 'microsoft' in f.read().lower():
+                        is_wsl = True
+            except Exception:
+                pass
+
+        # --- 打开目录 ---
+        if sys.platform == 'win32':
+            os.startfile(str(path_obj))
+            log(f"已打开目录: {path_obj}")
+            
+        elif is_wsl:
+            # WSL 环境：先转换路径，再调用 Explorer
+            try:
+                # 使用 wslpath -w 将 Linux 路径转换为 Windows 路径
+                result = subprocess.run(
+                    ['wslpath', '-w', str(path_obj)], 
+                    capture_output=True, text=True, check=True
+                )
+                windows_path = result.stdout.strip()
+
+                subprocess.run(['explorer.exe', windows_path])
+                log(f"已在 Windows 中打开目录: {windows_path}")
+                
+            except subprocess.CalledProcessError as e:
+                log(f"WSL 路径转换或打开失败: {e}")
+                messagebox.showerror("错误", f"无法在 Windows 中打开路径:\n{e}")
+            
+        else:
+            # Linux/macOS
+            try:
+                if sys.platform == 'darwin':  # macOS
+                    subprocess.run(['open', str(path_obj)], check=True)
+                else:  # Linux
+                    subprocess.run(['xdg-open', str(path_obj)], check=True)
+                log(f"已打开目录: {path_obj}")
+                
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                messagebox.showinfo("提示", f"请手动打开目录:\n{path_obj}")
+                
+    except Exception as e:
+        messagebox.showerror("错误", f"打开目录时发生错误:\n{e}")
+
 def replace_file(source_path: Path, 
                     dest_path: Path, 
                     create_backup: bool = True, 

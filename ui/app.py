@@ -7,7 +7,7 @@ import os
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
-from ui.utils import ConfigManager
+from ui.utils import ConfigManager, open_directory
 from ui.dialogs import SettingsDialog
 from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
 
@@ -162,8 +162,9 @@ class App(tk.Frame):
                 else:
                     messagebox.showwarning("警告", f"路径不存在或不是一个文件夹:\n{path}")
                     return
-            os.startfile(str(path))
-            self.logger.log(f"已在资源管理器中打开目录: {path}")
+            
+            # 使用工具函数打开资源管理器
+            open_directory(path, self.logger.log)
         except Exception as e:
             messagebox.showerror("错误", f"打开资源管理器时发生错误:\n{e}")
 
