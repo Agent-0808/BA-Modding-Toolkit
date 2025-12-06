@@ -12,20 +12,7 @@ from ui.utils import is_multiple_drop
 
 class JpGbConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
-    def create_widgets(self, output_dir_var, enable_padding_var, enable_crc_correction_var, 
-                      create_backup_var, compression_method_var, game_resource_dir_var, auto_detect_subdirs_var, auto_search_var):
-        # --- 共享变量 ---
-        self.output_dir_var: tk.StringVar = output_dir_var
-        self.enable_padding: tk.BooleanVar = enable_padding_var
-        self.enable_crc_correction: tk.BooleanVar = enable_crc_correction_var
-        self.create_backup: tk.BooleanVar = create_backup_var
-        self.compression_method: tk.StringVar = compression_method_var
-        self.game_resource_dir_var: tk.StringVar = game_resource_dir_var
-        self.auto_detect_subdirs: tk.BooleanVar = auto_detect_subdirs_var
-        
-        # 自动搜索开关变量
-        self.auto_search_var: tk.BooleanVar = auto_search_var
-        
+    def create_widgets(self):
         # 文件路径变量
         self.global_bundle_path: Path | None = None
         self.jp_textasset_bundle_path: Path | None = None
@@ -38,8 +25,8 @@ class JpGbConversionTab(TabFrame):
         self.mode_var = tk.StringVar(value="jp_to_global")
         
         style = ttk.Style()
-        style.configure("Toolbutton", 
-                        background=Theme.MUTED_BG, 
+        style.configure("Toolbutton",
+                        background=Theme.MUTED_BG,
                         foreground=Theme.TEXT_NORMAL,
                         font=Theme.BUTTON_FONT,
                         padding=(10, 5),
@@ -49,9 +36,9 @@ class JpGbConversionTab(TabFrame):
                   background=[('selected', Theme.FRAME_BG), ('active', '#e0e0e0')],
                   relief=[('selected', tk.GROOVE)])
 
-        ttk.Radiobutton(mode_frame, text="JP -> Global", variable=self.mode_var, 
+        ttk.Radiobutton(mode_frame, text="JP -> Global", variable=self.mode_var,
                        value="jp_to_global", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Radiobutton(mode_frame, text="Global -> JP", variable=self.mode_var, 
+        ttk.Radiobutton(mode_frame, text="Global -> JP", variable=self.mode_var,
                        value="global_to_jp", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # --- 文件输入区域 ---
@@ -67,9 +54,9 @@ class JpGbConversionTab(TabFrame):
         
         # 自动搜索开关按钮
         self.auto_search_checkbox = UIComponents.create_checkbutton(
-            options_frame, 
-            text="自动搜索关联文件", 
-            variable=self.auto_search_var
+            options_frame,
+            text="自动搜索关联文件",
+            variable=self.app.auto_search_var
         )
         self.auto_search_checkbox.pack(side=tk.LEFT, padx=5)
         
@@ -78,9 +65,9 @@ class JpGbConversionTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=2)
         
         self.run_button = UIComponents.create_button(
-            action_button_frame, "开始转换", 
-            self.run_conversion_thread, 
-            bg_color=Theme.BUTTON_SUCCESS_BG, 
+            action_button_frame, "开始转换",
+            self.run_conversion_thread,
+            bg_color=Theme.BUTTON_SUCCESS_BG,
             padx=15, pady=8
         )
         self.run_button.pack(fill=tk.X)
@@ -134,14 +121,14 @@ class JpGbConversionTab(TabFrame):
             return
         path = Path(event.data.strip('{}'))
         # 只有在自动搜索开关开启时才执行自动搜索
-        callback = lambda: self._auto_find_counterparts('global') if self.auto_search_var.get() else None
+        callback = lambda: self._auto_find_counterparts('global') if self.app.auto_search_var.get() else None
         self.set_file_path('global_bundle_path', self.global_label, path, "国际服 Bundle 文件", callback=callback)
     
     def browse_global_bundle(self):
         p = filedialog.askopenfilename(title="选择国际服 Bundle 文件")
         if p:
             # 只有在自动搜索开关开启时才执行自动搜索
-            callback = lambda: self._auto_find_counterparts('global') if self.auto_search_var.get() else None
+            callback = lambda: self._auto_find_counterparts('global') if self.app.auto_search_var.get() else None
             self.set_file_path('global_bundle_path', self.global_label, Path(p), "国际服 Bundle 文件", callback=callback)
     
     def drop_jp_textasset_bundle(self, event):
@@ -150,14 +137,14 @@ class JpGbConversionTab(TabFrame):
             return
         path = Path(event.data.strip('{}'))
         # 只有在自动搜索开关开启时才执行自动搜索
-        callback = lambda: self._auto_find_counterparts('jp_textasset') if self.auto_search_var.get() else None
+        callback = lambda: self._auto_find_counterparts('jp_textasset') if self.app.auto_search_var.get() else None
         self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, path, "日服 TextAsset Bundle 文件", callback=callback)
     
     def browse_jp_textasset_bundle(self):
         p = filedialog.askopenfilename(title="选择日服 TextAsset Bundle 文件")
         if p:
             # 只有在自动搜索开关开启时才执行自动搜索
-            callback = lambda: self._auto_find_counterparts('jp_textasset') if self.auto_search_var.get() else None
+            callback = lambda: self._auto_find_counterparts('jp_textasset') if self.app.auto_search_var.get() else None
             self.set_file_path('jp_textasset_bundle_path', self.jp_textasset_label, Path(p), "日服 TextAsset Bundle 文件", callback=callback)
     
     def drop_jp_texture2d_bundle(self, event):
@@ -166,14 +153,14 @@ class JpGbConversionTab(TabFrame):
             return
         path = Path(event.data.strip('{}'))
         # 只有在自动搜索开关开启时才执行自动搜索
-        callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.auto_search_var.get() else None
+        callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.app.auto_search_var.get() else None
         self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, path, "日服 Texture2D Bundle 文件", callback=callback)
     
     def browse_jp_texture2d_bundle(self):
         p = filedialog.askopenfilename(title="选择日服 Texture2D Bundle 文件")
         if p:
             # 只有在自动搜索开关开启时才执行自动搜索
-            callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.auto_search_var.get() else None
+            callback = lambda: self._auto_find_counterparts('jp_texture2d') if self.app.auto_search_var.get() else None
             self.set_file_path('jp_texture2d_bundle_path', self.jp_texture2d_label, Path(p), "日服 Texture2D Bundle 文件", callback=callback)
     
     # --- 自动查找逻辑 ---
@@ -190,7 +177,7 @@ class JpGbConversionTab(TabFrame):
 
     def _auto_find_counterparts(self, source_type: str):
         """根据用户选择的文件，自动查找其他相关文件"""
-        if not self.game_resource_dir_var.get():
+        if not self.app.game_resource_dir_var.get():
             self.logger.log("⚠️ 自动查找失败：未设置游戏资源目录。")
             return
         self.run_in_thread(self._find_worker, source_type)
@@ -198,8 +185,8 @@ class JpGbConversionTab(TabFrame):
     def _find_worker(self, source_type: str):
         """在工作线程中执行文件查找，统一处理逻辑"""
         self.logger.status("正在自动查找对应文件...")
-        base_game_dir = Path(self.game_resource_dir_var.get())
-        game_search_dirs = self.get_game_search_dirs(base_game_dir, self.auto_detect_subdirs.get())
+        base_game_dir = Path(self.app.game_resource_dir_var.get())
+        game_search_dirs = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         if source_type == 'global' and self.global_bundle_path:
             source_path = self.global_bundle_path
@@ -258,18 +245,18 @@ class JpGbConversionTab(TabFrame):
     def run_conversion(self):
         """执行转换过程"""
         # 验证输出目录
-        output_dir = Path(self.output_dir_var.get())
+        output_dir = Path(self.app.output_dir_var.get())
         try:
-            output_dir.mkdir(parents=True, exist_ok=True) 
+            output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             messagebox.showerror("错误", f"无法创建输出目录:\n{output_dir}\n\n错误详情: {e}")
             return
         
         # 创建保存选项
         save_options = processing.SaveOptions(
-            perform_crc=self.enable_crc_correction.get(),
-            enable_padding=self.enable_padding.get(),
-            compression=self.compression_method.get()
+            perform_crc=self.app.enable_crc_correction_var.get(),
+            enable_padding=self.app.enable_padding_var.get(),
+            compression=self.app.compression_method_var.get()
         )
         
         # 根据选择的模式执行不同的转换

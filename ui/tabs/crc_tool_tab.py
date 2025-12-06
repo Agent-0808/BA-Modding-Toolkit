@@ -11,16 +11,9 @@ from ui.utils import is_multiple_drop, replace_file
 from utils import CRCUtils
 
 class CrcToolTab(TabFrame):
-    def create_widgets(self, game_resource_dir_var, enable_padding_var, create_backup_var, auto_detect_subdirs_var, output_dir_var=None):
+    def create_widgets(self):
         self.original_path = None
         self.modified_path = None
-        self.enable_padding = enable_padding_var
-        self.create_backup = create_backup_var
-        # 接收共享的游戏资源目录变量
-        self.game_resource_dir_var = game_resource_dir_var
-        self.auto_detect_subdirs = auto_detect_subdirs_var
-        # 接收输出目录变量
-        self.output_dir_var = output_dir_var
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
@@ -29,8 +22,8 @@ class CrcToolTab(TabFrame):
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
         original_frame, self.original_label = UIComponents.create_file_drop_zone(
-            self, "原始文件", self.drop_original, self.browse_original, 
-            search_path_var=self.game_resource_dir_var
+            self, "原始文件", self.drop_original, self.browse_original,
+            search_path_var=self.app.game_resource_dir_var
         )
         
         # 自定义拖放区的提示文本，使其更具指导性
@@ -41,31 +34,31 @@ class CrcToolTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1, 2), weight=1)
         
-        UIComponents.create_button(action_button_frame, "运行CRC修正", self.run_correction_thread, 
+        UIComponents.create_button(action_button_frame, "运行CRC修正", self.run_correction_thread,
                                    bg_color=Theme.BUTTON_SUCCESS_BG, padx=10, pady=5).grid(row=0, column=0, sticky="ew", padx=5)
-        UIComponents.create_button(action_button_frame, "计算CRC值", self.calculate_values_thread, 
+        UIComponents.create_button(action_button_frame, "计算CRC值", self.calculate_values_thread,
                                    bg_color=Theme.BUTTON_PRIMARY_BG, padx=10, pady=5).grid(row=0, column=1, sticky="ew", padx=5)
-        UIComponents.create_button(action_button_frame, "替换原始文件", self.replace_original_thread, 
+        UIComponents.create_button(action_button_frame, "替换原始文件", self.replace_original_thread,
                                    bg_color=Theme.BUTTON_DANGER_BG, padx=10, pady=5).grid(row=0, column=2, sticky="ew", padx=5)
 
-    def drop_original(self, event): 
+    def drop_original(self, event):
         if is_multiple_drop(event.data):
             messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
             return
         self.set_original_file(Path(event.data.strip('{}')))
     def browse_original(self):
         p = filedialog.askopenfilename(title="请选择原始文件")
-        if p: 
+        if p:
             self.set_original_file(Path(p))
     
-    def drop_modified(self, event): 
+    def drop_modified(self, event):
         if is_multiple_drop(event.data):
             messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
             return
         self.set_modified_file(Path(event.data.strip('{}')))
     def browse_modified(self):
         p = filedialog.askopenfilename(title="请选择修改后文件")
-        if p: 
+        if p:
             self.set_modified_file(Path(p))
 
     def set_original_file(self, path: Path):
@@ -79,7 +72,7 @@ class CrcToolTab(TabFrame):
         self.modified_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
         self.logger.log(f"已加载CRC修改后文件: {path.name}")
         
-        game_dir_str = self.game_resource_dir_var.get()
+        game_dir_str = self.app.game_resource_dir_var.get()
         if not game_dir_str:
             self.logger.log("⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。")
             return
@@ -90,7 +83,7 @@ class CrcToolTab(TabFrame):
             return
         
         # 使用通用函数构造搜索目录列表
-        search_dirs = self.get_game_search_dirs(base_game_dir, self.auto_detect_subdirs.get())
+        search_dirs = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         found = False
         for directory in search_dirs:
@@ -138,14 +131,14 @@ class CrcToolTab(TabFrame):
         self.logger.status("正在进行CRC修正...")
         try:
             # 确保有输出目录变量
-            if not self.output_dir_var or not self.output_dir_var.get():
+            if not self.app.output_dir_var or not self.app.output_dir_var.get():
                 self.logger.log("❌ 错误: 未设置输出目录")
                 messagebox.showerror("错误", "未设置输出目录，请先在设置中配置输出目录。")
                 self.logger.status("CRC修正失败")
                 return False
             
             # 创建输出目录（如果不存在）
-            output_dir = Path(self.output_dir_var.get())
+            output_dir = Path(self.app.output_dir_var.get())
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # 先检测CRC是否一致
@@ -176,7 +169,7 @@ class CrcToolTab(TabFrame):
             self.logger.log(f"已将修改后的文件复制到输出目录: {output_path}")
             
             # 修正输出目录中的文件CRC
-            success = CRCUtils.manipulate_crc(self.original_path, output_path, self.enable_padding.get())
+            success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.enable_padding_var.get())
             
             if success:
                 self.logger.log("✅ CRC修正成功！")
@@ -237,7 +230,7 @@ class CrcToolTab(TabFrame):
         success = replace_file(
             source_path=self.modified_path,
             dest_path=self.original_path,
-            create_backup=self.create_backup.get(),
+            create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
             confirm_message="确定要用修改后的文件替换原始文件吗？\n\n此操作不可逆，建议先备份原始文件！",
             log=self.logger.log,

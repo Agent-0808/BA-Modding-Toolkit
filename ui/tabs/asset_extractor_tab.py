@@ -11,19 +11,8 @@ from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop
 
 class AssetExtractorTab(TabFrame):
-    def create_widgets(self, output_dir_var, replace_texture2d_var, replace_textasset_var, replace_mesh_var, replace_all_var, enable_atlas_downgrade_var, atlas_downgrade_path_var, spine_converter_path_var, spine_downgrade_version_var):
+    def create_widgets(self):
         self.bundle_path: Path | None = None
-        
-        # 接收共享的变量
-        self.output_dir_var: tk.StringVar = output_dir_var
-        self.replace_texture2d_var: tk.BooleanVar = replace_texture2d_var
-        self.replace_textasset_var: tk.BooleanVar = replace_textasset_var
-        self.replace_mesh_var: tk.BooleanVar = replace_mesh_var
-        self.replace_all_var: tk.BooleanVar = replace_all_var
-        self.enable_atlas_downgrade_var: tk.BooleanVar = enable_atlas_downgrade_var
-        self.atlas_downgrade_path_var: tk.StringVar = atlas_downgrade_path_var
-        self.spine_converter_path_var: tk.StringVar = spine_converter_path_var
-        self.spine_downgrade_version_var: tk.StringVar = spine_downgrade_version_var
         
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
@@ -49,7 +38,7 @@ class AssetExtractorTab(TabFrame):
         spine_downgrade_frame.pack(fill=tk.X, pady=5)
         
         atlas_downgrade_check = UIComponents.create_checkbutton(
-            spine_downgrade_frame, "启用 Spine 降级", self.enable_atlas_downgrade_var
+            spine_downgrade_frame, "启用 Spine 降级", self.app.enable_atlas_downgrade_var
         )
         atlas_downgrade_check.pack(side=tk.LEFT, padx=(0, 10))
         
@@ -58,8 +47,8 @@ class AssetExtractorTab(TabFrame):
         spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
         
         self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
-            spine_downgrade_frame, 
-            textvariable=self.spine_downgrade_version_var,
+            spine_downgrade_frame,
+            textvariable=self.app.spine_downgrade_version_var,
             width=10
         )
         self.spine_downgrade_version_entry.pack(side=tk.LEFT)
@@ -70,7 +59,7 @@ class AssetExtractorTab(TabFrame):
         action_frame.pack(fill=tk.X, pady=10)
         action_frame.grid_columnconfigure(0, weight=1)
 
-        run_button = UIComponents.create_button(action_frame, "开始提取", self.run_extraction_thread, 
+        run_button = UIComponents.create_button(action_frame, "开始提取", self.run_extraction_thread,
                                                  bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
@@ -87,7 +76,7 @@ class AssetExtractorTab(TabFrame):
     def select_output_dir(self):
         """选择输出子目录"""
         # 默认路径为输出目录
-        default_dir = Path(self.output_dir_var.get())
+        default_dir = Path(self.app.output_dir_var.get())
         if not default_dir.exists():
             default_dir = Path.home()
             
@@ -98,7 +87,7 @@ class AssetExtractorTab(TabFrame):
         
         if selected_dir:
             # 计算相对于输出目录的路径
-            output_dir = Path(self.output_dir_var.get())
+            output_dir = Path(self.app.output_dir_var.get())
             selected_path = Path(selected_dir)
             
             try:
@@ -119,18 +108,18 @@ class AssetExtractorTab(TabFrame):
         if subdir_name:
             # 如果是相对路径，则与输出目录组合
             if not Path(subdir_name).is_absolute():
-                output_path = Path(self.output_dir_var.get()) / subdir_name
+                output_path = Path(self.app.output_dir_var.get()) / subdir_name
             else:
                 output_path = Path(subdir_name)
         else:
-            output_path = Path(self.output_dir_var.get())
+            output_path = Path(self.app.output_dir_var.get())
             
         if output_path.exists():
             os.startfile(output_path)
         else:
             # 如果目录不存在，询问用户是否要创建
             result = messagebox.askyesno(
-                "目录不存在", 
+                "目录不存在",
                 f"输出目录 '{output_path}' 不存在。\n是否要创建此目录？"
             )
             if result:
@@ -148,9 +137,9 @@ class AssetExtractorTab(TabFrame):
             return
             
         # 检查 Spine 降级选项
-        if self.enable_atlas_downgrade_var.get():
-            atlas_downgrade_path = self.atlas_downgrade_path_var.get()
-            spine_converter_path = self.spine_converter_path_var.get()
+        if self.app.enable_atlas_downgrade_var.get():
+            atlas_downgrade_path = self.app.atlas_downgrade_path_var.get()
+            spine_converter_path = self.app.spine_converter_path_var.get()
             
             if not atlas_downgrade_path or not Path(atlas_downgrade_path).exists():
                 messagebox.showerror("错误", "已启用 Spine 降级，但未指定有效的 SpineAtlasDowngrade.exe 路径。")
@@ -160,7 +149,7 @@ class AssetExtractorTab(TabFrame):
                 messagebox.showerror("错误", "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。")
                 return
             
-        output_path = Path(self.output_dir_var.get())
+        output_path = Path(self.app.output_dir_var.get())
         
         # 获取子目录名
         subdir_name = self.subdir_var.get().strip()
@@ -176,21 +165,21 @@ class AssetExtractorTab(TabFrame):
             final_output_path = output_path
             
         asset_types = set()
-        if self.replace_all_var.get():
+        if self.app.replace_all_var.get():
             asset_types.add("ALL")
         else:
-            if self.replace_texture2d_var.get(): asset_types.add("Texture2D")
-            if self.replace_textasset_var.get(): asset_types.add("TextAsset")
-            if self.replace_mesh_var.get(): asset_types.add("Mesh")
+            if self.app.replace_texture2d_var.get(): asset_types.add("Texture2D")
+            if self.app.replace_textasset_var.get(): asset_types.add("TextAsset")
+            if self.app.replace_mesh_var.get(): asset_types.add("Mesh")
         
         if not asset_types:
             messagebox.showwarning("提示", "请至少选择一种要提取的资源类型。\n您可以在设置对话框中配置这些选项。")
             return
             
         # 传递 Spine 降级选项
-        enable_atlas_downgrade = self.enable_atlas_downgrade_var.get()
-        atlas_downgrade_path = self.atlas_downgrade_path_var.get() if enable_atlas_downgrade else None
-        spine_converter_path = self.spine_converter_path_var.get() if enable_atlas_downgrade else None
+        enable_atlas_downgrade = self.app.enable_atlas_downgrade_var.get()
+        atlas_downgrade_path = self.app.atlas_downgrade_path_var.get() if enable_atlas_downgrade else None
+        spine_converter_path = self.app.spine_converter_path_var.get() if enable_atlas_downgrade else None
             
         self.run_in_thread(self.run_extraction, self.bundle_path, final_output_path, asset_types, enable_atlas_downgrade, atlas_downgrade_path, spine_converter_path)
 
@@ -201,7 +190,7 @@ class AssetExtractorTab(TabFrame):
         downgrade_options = None
         if enable_atlas_downgrade and atlas_downgrade_path and spine_converter_path:
             # 获取用户输入的版本，如果为空则使用默认值
-            target_version = self.spine_downgrade_version_var.get().strip()
+            target_version = self.app.spine_downgrade_version_var.get().strip()
             if not target_version:
                 target_version = "3.8.75"
             

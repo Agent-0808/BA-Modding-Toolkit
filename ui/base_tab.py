@@ -4,18 +4,22 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 import threading
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 
 from .components import Theme
 
+if TYPE_CHECKING:
+    from ui.app import App
+
 class TabFrame(ttk.Frame):
     """所有Tab页面的基类，提供通用功能和结构。"""
-    def __init__(self, parent, logger, **kwargs):
+    def __init__(self, parent: ttk.Notebook, app: 'App'):
         super().__init__(parent, padding=10)
-        self.logger = logger
-        self.create_widgets(**kwargs)
+        self.app = app
+        self.logger = app.logger
+        self.create_widgets()
 
-    def create_widgets(self, **kwargs):
+    def create_widgets(self):
         raise NotImplementedError("子类必须实现 create_widgets 方法")
 
     def run_in_thread(self, target: Callable, *args):
@@ -42,9 +46,9 @@ class TabFrame(ttk.Frame):
             suffixes = ["",
                 "BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows",
                 "BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows",
-                "GameData/Windows",
+"GameData/Windows",
                 "Preload/Windows",
-                "GameData/Android",
+"GameData/Android",
                 "Preload/Android",
                 ]
             return [base_game_dir / suffix for suffix in suffixes]

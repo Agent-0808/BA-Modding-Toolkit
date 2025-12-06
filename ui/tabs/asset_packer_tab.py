@@ -10,23 +10,11 @@ from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop, replace_file
 
 class AssetPackerTab(TabFrame):
-    def create_widgets(self, output_dir_var, enable_padding_var, enable_crc_correction_var, create_backup_var, compression_method_var, enable_spine_conversion_var, spine_converter_path_var, target_spine_version_var):
+    def create_widgets(self):
         self.bundle_path: Path = None
         self.folder_path: Path = None
         self.final_output_path: Path = None
         
-        # 接收共享变量
-        self.output_dir_var = output_dir_var
-        self.enable_padding = enable_padding_var
-        self.enable_crc_correction = enable_crc_correction_var
-        self.create_backup = create_backup_var
-        self.compression_method = compression_method_var
-        
-        # 接收Spine相关的配置变量
-        self.enable_spine_conversion_var = enable_spine_conversion_var
-        self.spine_converter_path_var = spine_converter_path_var
-        self.target_spine_version_var = target_spine_version_var
-
         # 资源文件夹
         _, self.folder_label = UIComponents.create_folder_drop_zone(
             self, "待打包资源文件夹", self.drop_folder, self.browse_folder
@@ -42,11 +30,11 @@ class AssetPackerTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        run_button = UIComponents.create_button(action_button_frame, "开始打包", self.run_replacement_thread, 
+        run_button = UIComponents.create_button(action_button_frame, "开始打包", self.run_replacement_thread,
                                                  bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=10)
         
-        self.replace_button = UIComponents.create_button(action_button_frame, "覆盖原文件", self.replace_original_thread, 
+        self.replace_button = UIComponents.create_button(action_button_frame, "覆盖原文件", self.replace_original_thread,
                                                         bg_color=Theme.BUTTON_DANGER_BG, padx=15, pady=8, state="disabled")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=10)
 
@@ -78,7 +66,7 @@ class AssetPackerTab(TabFrame):
         if p: self.set_folder_path('folder_path', self.folder_label, Path(p), "待打包资源文件夹")
 
     def run_replacement_thread(self):
-        if not all([self.bundle_path, self.folder_path, self.output_dir_var.get()]):
+        if not all([self.bundle_path, self.folder_path, self.app.output_dir_var.get()]):
             messagebox.showerror("错误", "请确保已选择目标 Bundle、待打包资源文件夹，并在全局设置中指定了输出目录。")
             return
         self.run_in_thread(self.run_replacement)
@@ -88,7 +76,7 @@ class AssetPackerTab(TabFrame):
         self.final_output_path = None
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
 
-        output_dir = Path(self.output_dir_var.get())
+        output_dir = Path(self.app.output_dir_var.get())
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
@@ -101,15 +89,15 @@ class AssetPackerTab(TabFrame):
         
         # 创建 SaveOptions 和 SpineOptions 对象
         save_options = processing.SaveOptions(
-            perform_crc=self.enable_crc_correction.get(),
-            enable_padding=self.enable_padding.get(),
-            compression=self.compression_method.get()
+            perform_crc=self.app.enable_crc_correction_var.get(),
+            enable_padding=self.app.enable_padding_var.get(),
+            compression=self.app.compression_method_var.get()
         )
         
         spine_options = processing.SpineOptions(
-            enabled=self.enable_spine_conversion_var.get(),
-            converter_path=Path(self.spine_converter_path_var.get()),
-            target_version=self.target_spine_version_var.get()
+            enabled=self.app.enable_spine_conversion_var.get(),
+            converter_path=Path(self.app.spine_converter_path_var.get()),
+            target_version=self.app.target_spine_version_var.get()
         )
         
         success, message = processing.process_asset_packing(
@@ -158,7 +146,7 @@ class AssetPackerTab(TabFrame):
         success = replace_file(
             source_path=source_file,
             dest_path=target_file,
-            create_backup=self.create_backup.get(),
+            create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
             confirm_message=f"此操作将覆盖原始文件:\n\n{self.bundle_path.name}\n\n"
                             "如果要继续，请确保已备份原始文件，或是在全局设置中开启备份功能。\n\n确定要继续吗？",

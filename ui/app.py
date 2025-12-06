@@ -256,66 +256,8 @@ class App(tk.Frame):
 
     def populate_notebook(self):
         """创建并添加所有的Tab页面到Notebook。"""
-        # Tab: Mod 更新
-        combined_update_tab = ModUpdateTab(self.notebook, self.logger, 
-                                         game_resource_dir_var=self.game_resource_dir_var,
-                                         output_dir_var=self.output_dir_var,
-                                         enable_padding_var=self.enable_padding_var,
-                                         enable_crc_correction_var=self.enable_crc_correction_var,
-                                         create_backup_var=self.create_backup_var,
-                                         replace_texture2d_var=self.replace_texture2d_var,
-                                         replace_textasset_var=self.replace_textasset_var,
-                                         replace_mesh_var=self.replace_mesh_var,
-                                         replace_all_var=self.replace_all_var,
-                                         compression_method_var=self.compression_method_var,
-                                         auto_detect_subdirs_var=self.auto_detect_subdirs_var,
-                                         enable_spine_conversion_var=self.enable_spine_conversion_var,
-                                         spine_converter_path_var=self.spine_converter_path_var,
-                                         target_spine_version_var=self.target_spine_version_var)
-        self.notebook.add(combined_update_tab, text="Mod 更新")
-
-        # Tab: CRC 工具
-        crc_tab = CrcToolTab(self.notebook, self.logger, 
-                             game_resource_dir_var=self.game_resource_dir_var,
-                             enable_padding_var=self.enable_padding_var,
-                             create_backup_var=self.create_backup_var,
-                             auto_detect_subdirs_var=self.auto_detect_subdirs_var,
-                             output_dir_var=self.output_dir_var)
-        self.notebook.add(crc_tab, text="CRC 修正工具")
-
-        # Tab: 资源打包
-        asset_tab = AssetPackerTab(self.notebook, self.logger, 
-                                    output_dir_var=self.output_dir_var,
-                                    enable_padding_var=self.enable_padding_var,
-                                    enable_crc_correction_var=self.enable_crc_correction_var,
-                                    create_backup_var=self.create_backup_var,
-                                    compression_method_var=self.compression_method_var,
-                                    enable_spine_conversion_var=self.enable_spine_conversion_var,
-                                    spine_converter_path_var=self.spine_converter_path_var,
-                                    target_spine_version_var=self.target_spine_version_var)
-        self.notebook.add(asset_tab, text="资源打包")
-
-        # Tab: 资源提取
-        asset_extractor_tab = AssetExtractorTab(self.notebook, self.logger, 
-                                                output_dir_var=self.output_dir_var,
-                                                replace_texture2d_var=self.replace_texture2d_var,
-                                                replace_textasset_var=self.replace_textasset_var,
-                                                replace_mesh_var=self.replace_mesh_var,
-                                                replace_all_var=self.replace_all_var,
-                                                enable_atlas_downgrade_var=self.enable_atlas_downgrade_var,
-                                                atlas_downgrade_path_var=self.atlas_downgrade_path_var,
-                                                spine_converter_path_var=self.spine_converter_path_var,
-                                                spine_downgrade_version_var=self.spine_downgrade_version_var)
-        self.notebook.add(asset_extractor_tab, text="资源提取")
-        
-        # Tab: 日服/国际服转换 - 单独传递参数
-        jp_gb_conversion_tab = JpGbConversionTab(self.notebook, self.logger, 
-                                                output_dir_var=self.output_dir_var,
-                                                enable_padding_var=self.enable_padding_var,
-                                                enable_crc_correction_var=self.enable_crc_correction_var,
-                                                create_backup_var=self.create_backup_var,
-                                                compression_method_var=self.compression_method_var,
-                                                game_resource_dir_var=self.game_resource_dir_var,
-                                                auto_detect_subdirs_var=self.auto_detect_subdirs_var,
-                                                auto_search_var=self.auto_search_var)
-        self.notebook.add(jp_gb_conversion_tab, text="JP/GB转换")
+        self.notebook.add(ModUpdateTab(self.notebook, self), text="Mod 更新")
+        self.notebook.add(CrcToolTab(self.notebook, self), text="CRC 修正工具")
+        self.notebook.add(AssetPackerTab(self.notebook, self), text="资源打包")
+        self.notebook.add(AssetExtractorTab(self.notebook, self), text="资源提取")
+        self.notebook.add(JpGbConversionTab(self.notebook, self), text="JP/GB转换")

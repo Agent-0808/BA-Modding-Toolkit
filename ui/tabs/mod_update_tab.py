@@ -12,31 +12,15 @@ from ui.utils import is_multiple_drop, replace_file
 
 class ModUpdateTab(TabFrame):
     """一个整合了单个更新和批量更新功能的标签页"""
-    def create_widgets(self, game_resource_dir_var, output_dir_var, enable_padding_var, enable_crc_correction_var, create_backup_var, replace_texture2d_var, replace_textasset_var, replace_mesh_var, replace_all_var, compression_method_var, auto_detect_subdirs_var, enable_spine_conversion_var, spine_converter_path_var, target_spine_version_var):
+    def create_widgets(self):
         # --- 共享变量 ---
         # 单个更新
         self.old_mod_path: Path | None = None
-        self.new_mod_path: Path | None = None 
+        self.new_mod_path: Path | None = None
         self.final_output_path: Path | None = None
         # 批量更新
         self.mod_file_list: list[Path] = []
         
-        # 接收共享的变量
-        self.game_resource_dir_var: tk.StringVar = game_resource_dir_var
-        self.output_dir_var: tk.StringVar = output_dir_var
-        self.auto_detect_subdirs: tk.BooleanVar = auto_detect_subdirs_var
-        self.enable_padding: tk.BooleanVar = enable_padding_var
-        self.enable_crc_correction: tk.BooleanVar = enable_crc_correction_var
-        self.create_backup: tk.BooleanVar = create_backup_var
-        self.compression_method: tk.StringVar = compression_method_var
-        self.replace_texture2d: tk.BooleanVar = replace_texture2d_var
-        self.replace_textasset: tk.BooleanVar = replace_textasset_var
-        self.replace_mesh: tk.BooleanVar = replace_mesh_var
-        self.replace_all: tk.BooleanVar = replace_all_var
-        self.enable_spine_conversion_var: tk.BooleanVar = enable_spine_conversion_var
-        self.spine_converter_path_var: tk.StringVar = spine_converter_path_var
-        self.target_spine_version_var: tk.StringVar = target_spine_version_var
-
         # --- 模式切换 ---
         mode_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
         mode_frame.pack(fill=tk.X, pady=(0, 10))
@@ -44,8 +28,8 @@ class ModUpdateTab(TabFrame):
         self.mode_var = tk.StringVar(value="single")
         
         style = ttk.Style()
-        style.configure("Toolbutton", 
-                        background=Theme.MUTED_BG, 
+        style.configure("Toolbutton",
+                        background=Theme.MUTED_BG,
                         foreground=Theme.TEXT_NORMAL,
                         font=Theme.BUTTON_FONT,
                         padding=(10, 5),
@@ -88,7 +72,7 @@ class ModUpdateTab(TabFrame):
         # 2. 新版游戏资源文件
         new_mod_frame, self.new_mod_label = UIComponents.create_file_drop_zone(
             parent, "目标 Bundle 文件", self.drop_new_mod, self.browse_new_mod,
-            search_path_var=self.game_resource_dir_var
+            search_path_var=self.app.game_resource_dir_var
         )
         self.new_mod_label.config(text="拖入旧版Mod后将自动查找目标资源\n或手动拖放/浏览文件")
 
@@ -134,7 +118,7 @@ class ModUpdateTab(TabFrame):
         self.logger.status("已加载目标资源")
 
     def auto_find_new_bundle(self):
-        if not all([self.old_mod_path, self.game_resource_dir_var.get()]):
+        if not all([self.old_mod_path, self.app.game_resource_dir_var.get()]):
             self.new_mod_label.config(text="⚠️ 请先选择旧版Mod并设置游戏资源目录", fg=Theme.COLOR_WARNING)
             messagebox.showwarning("提示", "请先选择旧版Mod文件，并设置游戏资源目录，才能进行自动查找。")
             return
@@ -144,8 +128,8 @@ class ModUpdateTab(TabFrame):
         self.new_mod_label.config(text="正在搜索新版资源...", fg=Theme.COLOR_WARNING)
         self.logger.status("正在搜索新版资源...")
         
-        base_game_dir = Path(self.game_resource_dir_var.get())
-        search_paths = self.get_game_search_dirs(base_game_dir, self.auto_detect_subdirs.get())
+        base_game_dir = Path(self.app.game_resource_dir_var.get())
+        search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         found_path, message = processing.find_new_bundle_path(
             self.old_mod_path,
@@ -162,11 +146,11 @@ class ModUpdateTab(TabFrame):
             self.logger.status("未找到匹配的目标资源")
 
     def run_update_thread(self):
-        if not all([self.old_mod_path, self.new_mod_path, self.game_resource_dir_var.get(), self.output_dir_var.get()]):
+        if not all([self.old_mod_path, self.new_mod_path, self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
             messagebox.showerror("错误", "请确保已分别指定旧版Mod、目标资源 Bundle，并设置了游戏资源目录和输出目录。")
             return
         
-        if not any([self.replace_texture2d.get(), self.replace_textasset.get(), self.replace_mesh.get(), self.replace_all.get()]):
+        if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
             messagebox.showerror("错误", "请至少选择一种要替换的资源类型（如 Texture2D）。")
             return
 
@@ -176,9 +160,9 @@ class ModUpdateTab(TabFrame):
         self.final_output_path = None
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
 
-        output_dir = Path(self.output_dir_var.get())
+        output_dir = Path(self.app.output_dir_var.get())
         try:
-            output_dir.mkdir(parents=True, exist_ok=True) 
+            output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             messagebox.showerror("错误", f"无法创建输出目录:\n{output_dir}\n\n错误详情: {e}")
             return
@@ -188,23 +172,23 @@ class ModUpdateTab(TabFrame):
         self.logger.status("正在处理中，请稍候...")
         
         asset_types_to_replace = set()
-        if self.replace_all.get():
+        if self.app.replace_all_var.get():
             asset_types_to_replace = {"ALL"}
         else:
-            if self.replace_texture2d.get(): asset_types_to_replace.add("Texture2D")
-            if self.replace_textasset.get(): asset_types_to_replace.add("TextAsset")
-            if self.replace_mesh.get(): asset_types_to_replace.add("Mesh")
+            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
+            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
+            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
         
         save_options = processing.SaveOptions(
-            perform_crc=self.enable_crc_correction.get(),
-            enable_padding=self.enable_padding.get(),
-            compression=self.compression_method.get()
+            perform_crc=self.app.enable_crc_correction_var.get(),
+            enable_padding=self.app.enable_padding_var.get(),
+            compression=self.app.compression_method_var.get()
         )
         
         spine_options = processing.SpineOptions(
-            enabled=self.enable_spine_conversion_var.get(),
-            converter_path=Path(self.spine_converter_path_var.get()),
-            target_version=self.target_spine_version_var.get()
+            enabled=self.app.enable_spine_conversion_var.get(),
+            converter_path=Path(self.app.spine_converter_path_var.get()),
+            target_version=self.app.target_spine_version_var.get()
         )
         
         success, message = processing.process_mod_update(
@@ -253,7 +237,7 @@ class ModUpdateTab(TabFrame):
         replace_file(
             source_path=source_file,
             dest_path=target_file,
-            create_backup=self.create_backup.get(),
+            create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
             confirm_message=f"此操作将覆盖资源目录中的原始文件:\n\n{self.new_mod_path}\n\n"
                             "如果要继续，请确保已备份原始文件，或是在全局设置中开启备份功能。\n\n确定要继续吗？",
@@ -377,10 +361,10 @@ class ModUpdateTab(TabFrame):
         if not self.mod_file_list:
             messagebox.showerror("错误", "处理列表为空，请先添加 Mod 文件。")
             return
-        if not all([self.game_resource_dir_var.get(), self.output_dir_var.get()]):
+        if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
             messagebox.showerror("错误", "请确保在全局设置中已指定游戏资源目录和输出目录。")
             return
-        if not any([self.replace_texture2d.get(), self.replace_textasset.get(), self.replace_mesh.get(), self.replace_all.get()]):
+        if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
             messagebox.showerror("错误", "请至少选择一种要替换的资源类型（如 Texture2D）。")
             return
         
@@ -392,9 +376,9 @@ class ModUpdateTab(TabFrame):
         self.logger.status("正在批量处理中...")
 
         # 1. 准备参数
-        output_dir = Path(self.output_dir_var.get())
-        base_game_dir = Path(self.game_resource_dir_var.get())
-        search_paths = self.get_game_search_dirs(base_game_dir, self.auto_detect_subdirs.get())
+        output_dir = Path(self.app.output_dir_var.get())
+        base_game_dir = Path(self.app.game_resource_dir_var.get())
+        search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
         
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -404,23 +388,23 @@ class ModUpdateTab(TabFrame):
             return
 
         asset_types_to_replace = set()
-        if self.replace_all.get():
+        if self.app.replace_all_var.get():
             asset_types_to_replace = {"ALL"}
         else:
-            if self.replace_texture2d.get(): asset_types_to_replace.add("Texture2D")
-            if self.replace_textasset.get(): asset_types_to_replace.add("TextAsset")
-            if self.replace_mesh.get(): asset_types_to_replace.add("Mesh")
+            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
+            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
+            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
 
         save_options = processing.SaveOptions(
-            perform_crc=self.enable_crc_correction.get(),
-            enable_padding=self.enable_padding.get(),
-            compression=self.compression_method.get()
+            perform_crc=self.app.enable_crc_correction_var.get(),
+            enable_padding=self.app.enable_padding_var.get(),
+            compression=self.app.compression_method_var.get()
         )
         
         spine_options = processing.SpineOptions(
-            enabled=self.enable_spine_conversion_var.get(),
-            converter_path=Path(self.spine_converter_path_var.get()),
-            target_version=self.target_spine_version_var.get()
+            enabled=self.app.enable_spine_conversion_var.get(),
+            converter_path=Path(self.app.spine_converter_path_var.get()),
+            target_version=self.app.target_spine_version_var.get()
         )
 
         # 更新UI状态的回调函数
