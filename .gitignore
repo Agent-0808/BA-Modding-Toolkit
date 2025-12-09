@@ -5,7 +5,12 @@ dist
 tools
 testbundle
 old
+.vscode
+.trae
 __pycache__
+*.pyc
+*.pyo
+*.pyd
 SpineConverter
 *.pdn
 *.exe
