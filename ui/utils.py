@@ -1,12 +1,16 @@
 # ui/utils.py
 
+import sys
+import subprocess
+import os
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
 import configparser
 
 from utils import no_log
+from i18n import t
 
 def is_multiple_drop(data: str) -> bool:
     """
@@ -15,25 +19,27 @@ def is_multiple_drop(data: str) -> bool:
     """
     return '} {' in data
 
-def open_directory(path: str | Path, log = no_log) -> None:
+def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = False) -> None:
     """
     打开文件资源管理器。
     
     Args:
         path: 要打开的目录路径
         log: 日志函数，用于记录操作
+        create_if_not_exist: 如果目录不存在，是否提示创建
     """
-    import sys
-    import subprocess
-    import os
-    from pathlib import Path
-    from tkinter import messagebox
     
     try:
         path_obj = Path(path).resolve()
         if not path_obj.is_dir():
-            messagebox.showwarning("警告", f"路径不存在或不是一个文件夹:\n{path_obj}")
-            return
+            if create_if_not_exist:
+                if messagebox.askyesno(t("ui.common.tip"), t("ui.message.directory_not_found_ask_create", path=path_obj)):
+                    path_obj.mkdir(parents=True, exist_ok=True)
+                else: 
+                    return
+            else:
+                messagebox.showwarning(t("ui.common.warning"), t("ui.message.path_not_exist_or_not_folder", path=path_obj))
+                return
         
         # 检测是否为 WSL 环境
         is_wsl = False
@@ -48,7 +54,6 @@ def open_directory(path: str | Path, log = no_log) -> None:
         # --- 打开目录 ---
         if sys.platform == 'win32':
             os.startfile(str(path_obj))
-            log(f"已打开目录: {path_obj}")
             
         elif is_wsl:
             # WSL 环境：先转换路径，再调用 Explorer
@@ -61,11 +66,12 @@ def open_directory(path: str | Path, log = no_log) -> None:
                 windows_path = result.stdout.strip()
 
                 subprocess.run(['explorer.exe', windows_path])
-                log(f"已在 Windows 中打开目录: {windows_path}")
+                path_obj = Path(windows_path)  # 更新路径为Windows路径
                 
             except subprocess.CalledProcessError as e:
-                log(f"WSL 路径转换或打开失败: {e}")
-                messagebox.showerror("错误", f"无法在 Windows 中打开路径:\n{e}")
+                log(t("log.file_ops.wsl_path_conversion_failed", error=e))
+                messagebox.showerror(t("ui.common.error"), t("ui.message.cannot_open_in_windows", error=e))
+                return
             
         else:
             # Linux/macOS
@@ -74,13 +80,16 @@ def open_directory(path: str | Path, log = no_log) -> None:
                     subprocess.run(['open', str(path_obj)], check=True)
                 else:  # Linux
                     subprocess.run(['xdg-open', str(path_obj)], check=True)
-                log(f"已打开目录: {path_obj}")
                 
             except (subprocess.CalledProcessError, FileNotFoundError):
-                messagebox.showinfo("提示", f"请手动打开目录:\n{path_obj}")
+                messagebox.showinfo(t("ui.common.tip"), t("ui.message.open_manually", path=path_obj))
+                return
+        
+        # 统一记录成功打开目录的日志
+        log(t("log.file_ops.directory_opened", path=path_obj))
                 
     except Exception as e:
-        messagebox.showerror("错误", f"打开目录时发生错误:\n{e}")
+        messagebox.showerror(t("ui.common.error"), t("ui.message.open_directory_error", error=e))
 
 def replace_file(source_path: Path, 
                     dest_path: Path, 
@@ -94,38 +103,60 @@ def replace_file(source_path: Path,
     返回操作是否成功。 
     """ 
     if not source_path or not source_path.exists(): 
-        messagebox.showerror("错误", f"源文件不存在:\n{source_path}") 
+        messagebox.showerror(t("ui.common.error"), t("ui.message.source_file_not_found", path=source_path)) 
         return False 
     if not dest_path or not dest_path.exists(): 
-        messagebox.showerror("错误", f"目标文件不存在:\n{dest_path}") 
+        messagebox.showerror(t("ui.common.error"), t("ui.message.target_file_not_found", path=dest_path)) 
         return False 
     if source_path == dest_path: 
-        messagebox.showerror("错误", "源文件和目标文件不能相同！") 
+        messagebox.showerror(t("ui.common.error"), t("ui.message.source_target_same")) 
         return False
 
-    if ask_confirm and not messagebox.askyesno("警告", confirm_message): 
+    if ask_confirm and not messagebox.askyesno(t("ui.common.warning"), confirm_message): 
         return False 
 
     try: 
         backup_message = "" 
         if create_backup: 
             backup_path = dest_path.with_suffix(dest_path.suffix + '.backup') 
-            log(f"  > 正在备份原始文件到: {backup_path.name}") 
+            log(t("log.file_ops.backing_up", file=backup_path.name)) 
             shutil.copy2(dest_path, backup_path) 
-            backup_message = f"\n\n原始文件备份至:\n{backup_path.name}" 
+            backup_message = t("ui.message.backup_created_at", path=backup_path.name)
         
-        log(f"  > 正在用 '{source_path.name}' 覆盖 '{dest_path.name}'...") 
+        log(t("log.file_ops.overwriting", source=source_path.name, target=dest_path.name)) 
         shutil.copy2(source_path, dest_path) 
         
-        log("✅ 文件已成功覆盖！") 
-        messagebox.showinfo("成功", f"文件已成功覆盖！{backup_message}") 
+        log(t("log.file_ops.overwrite_success")) 
+        messagebox.showinfo(t("ui.common.success"), t("ui.message.overwrite_success_with_backup", backup_info=backup_message)) 
         return True 
 
     except Exception as e: 
-        log(f"❌ 文件覆盖失败: {e}") 
+        log(t("log.file_ops.overwrite_failed", error=e)) 
 
-        messagebox.showerror("错误", f"文件覆盖过程中发生错误:\n{e}") 
+        messagebox.showerror(t("ui.common.error"), t("ui.message.overwrite_process_error", error=e)) 
         return False 
+
+def select_directory(var, title, logger=no_log):
+    """
+    选择目录并更新变量
+    
+    Args:
+        var: tkinter变量，用于存储选择的目录路径
+        title: 目录选择对话框的标题
+        logger: 日志函数，用于记录操作
+    """
+    try:
+        current_path = Path(var.get())
+        if not current_path.is_dir(): 
+            current_path = Path.home()
+        selected_dir = filedialog.askdirectory(title=title, initialdir=str(current_path))
+        if selected_dir:
+            var.set(str(Path(selected_dir)))
+            logger(t("log.file_ops.directory_updated", path=selected_dir))
+    except Exception as e:
+        messagebox.showerror(t("ui.common.error"), t("ui.message.select_directory_error", error=e))
+
+
 
 # --- 配置管理类 ---
 
@@ -186,7 +217,7 @@ class ConfigManager:
                 
             return True
         except Exception as e:
-            print(f"保存配置时出错: {e}")
+            print(t("log.config.save_failed", error=e))
             return False
     
     def load_config(self, app_instance):
@@ -248,7 +279,15 @@ class ConfigManager:
                 if 'spine_downgrade_version' in self.config['SpineDowngrade']:
                     app_instance.spine_downgrade_version_var.set(self.config['SpineDowngrade']['spine_downgrade_version'])
             
+            # 加载语言设置
+            if 'Language' in self.config and 'language' in self.config['Language']:
+                # 如果language_var不存在，创建它
+                if not hasattr(app_instance, 'language_var'):
+                    import tkinter as tk
+                    app_instance.language_var = tk.StringVar()
+                app_instance.language_var.set(self.config['Language']['language'])
+            
             return True
         except Exception as e:
-            print(f"加载配置时出错: {e}")
+            print(t("log.config.load_failed_details", error=e))
             return False

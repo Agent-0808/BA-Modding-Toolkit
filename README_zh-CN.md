@@ -301,9 +301,11 @@ BA-Modding-Toolkit/
 ├── maincli.py       # 命令行接口主入口
 ├── processing.py    # 核心处理逻辑
 ├── utils.py         # 工具类和辅助函数
+├── i18n.py          # 国际化功能相关
 │ 
 │ # ============= 杂项 =============
 │ 
+├── locales/         # 语言文件
 ├── requirements.txt # Python依赖列表
 ├── config.ini       # 本地配置文件（自动生成）
 ├── LICENSE          # 项目许可证文件

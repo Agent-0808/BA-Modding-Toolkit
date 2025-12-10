@@ -1,0 +1,191 @@
+{
+  "ui": {
+    "common": {
+      "save": "保存",
+      "load": "读取",
+      "default": "默认",
+      "backup": "创建备份",
+      "success": "成功",
+      "error": "错误",
+      "warning": "警告",
+      "tip": "提示"
+    },
+    "settings": {
+      "title": "高级设置",
+      "placeholder": {
+        "game_resource_dir": "选择游戏资源目录",
+        "output_dir": "选择输出目录",
+        "target_version": "目标版本"
+      },
+      "button": {
+        "select_short": "选",
+        "open_short": "开"
+      },
+      "auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
+      "label": {
+        "output_dir": "输出目录",
+        "compression_method": "压缩方式",
+        "target_version": "目标版本:",
+        "spine_converter_path": "SpineSkeletonDataConverter.exe 路径",
+        "atlas_downgrade_path": "SpineAtlasDowngrade.exe 路径",
+        "game_root_dir": "游戏根目录",
+        "custom_resource_dir": "自定义资源目录"
+      },
+      "group": {
+        "global_options": "全局选项",
+        "asset_replace_types": "替换资源类型",
+        "spine_converter": "Spine 转换器设置"
+      },
+      "options": {
+        "enable_padding": "添加私货",
+        "enable_crc_correction": "CRC修正",
+        "enable_spine_conversion": "启用 Spine 转换"
+      }
+    },
+    "dialog": {
+      "title": {
+        "confirm": "确认",
+        "select_spine_converter": "选择 Spine 转换器程序",
+        "invalid_operation": "操作无效",
+        "select_old_mod": "选择旧版 Mod Bundle",
+        "select_target_bundle": "选择目标资源 Bundle",
+        "tip": "提示",
+        "failed": "失败",
+        "success_path_unknown": "成功 (路径未知)",
+        "select_mod_bundles": "选择一个或多个 Mod Bundle 文件",
+        "select_mod_folder": "选择包含 Mod Bundle 文件的文件夹",
+        "batch_complete": "批量处理完成"
+      },
+      "message": {
+        "config_loaded": "配置已从 config.ini 加载",
+        "config_load_failed": "配置加载失败，请检查配置文件是否存在",
+        "confirm_reset_settings": "确定要重置为默认设置吗？",
+        "select_spine_converter_error": "选择 Spine 转换器路径时发生错误:\n{error}",
+        "drop_single_file_only": "请一次只拖放一个文件。",
+        "need_old_mod_and_game_dir": "请先选择旧版Mod文件，并设置游戏资源目录，才能进行自动查找。",
+        "missing_all_paths": "请确保已分别指定旧版Mod、目标资源 Bundle，并设置了游戏资源目录和输出目录。",
+        "select_asset_type": "请至少选择一种要替换的资源类型（如 Texture2D）。",
+        "create_output_dir_failed": "无法创建输出目录:\n{path}\n\n错误详情: {error}",
+        "update_success_path_unknown": "{message}\n\n⚠️ 警告：无法自动找到生成的 Mod 文件，请在输出目录中手动查找。",
+        "generated_mod_not_found": "找不到已生成的 Mod 文件。\n请先成功执行一次'更新'。",
+        "original_bundle_not_found": "找不到原始游戏资源文件路径。\n请确保在更新前已正确指定目标资源 Bundle。",
+        "confirm_replace_original": "此操作将覆盖资源目录中的原始文件:\n\n{path}\n\n如果要继续，请确保已备份原始文件，或是在全局设置中开启备份功能。\n\n确定要继续吗？",
+        "no_bundles_in_folder": "在该文件夹中没有找到任何 .bundle 文件。",
+        "no_files_selected": "没有选中任何文件。",
+        "list_is_empty": "处理列表为空，请先添加 Mod 文件。",
+        "missing_game_and_output_dir": "请确保在全局设置中已指定游戏资源目录和输出目录。",
+        "batch_summary": "批量处理完成！\n\n总计: {total} 个文件\n成功: {success} 个\n失败: {fail} 个"
+      },
+      "file_types": {
+        "executable": "可执行文件",
+        "all_files": "所有文件"
+      }
+    },
+    "tabs": {
+      "mod_update": {
+        "mode": {
+          "single": "单个更新",
+          "batch": "批量更新"
+        },
+        "single": {
+          "label": {
+            "old_mod": "旧版 Mod Bundle",
+            "target_bundle": "目标 Bundle 文件"
+          },
+          "placeholder": {
+            "new_mod_initial": "拖入旧版Mod后将自动查找目标资源\n或手动拖放/浏览文件"
+          },
+          "button": {
+            "start_update": "开始更新",
+            "replace_original": "覆盖原文件"
+          },
+          "log_prefix": {
+            "old_mod": "旧版 Mod"
+          },
+          "warning": {
+            "select_old_mod_and_game_dir": "⚠️ 请先选择旧版Mod并设置游戏资源目录"
+          },
+          "status": {
+            "searching_new_bundle": "正在搜索新版资源...",
+            "bundle_not_found": "❌ 未找到资源: {message}"
+          }
+        },
+        "batch": {
+          "group": {
+            "input_mods": "输入 Mod 文件/文件夹"
+          },
+          "placeholder": {
+            "drag_and_drop_here": "将文件或文件夹拖放到此处"
+          },
+          "button": {
+            "add_files": "添加文件",
+            "add_folder": "添加文件夹",
+            "remove_selected": "移除选中",
+            "clear_list": "清空列表",
+            "start_batch_update": "开始批量更新"
+          }
+        }
+      }
+    },
+    "message": {
+      "directory_not_found_ask_create": "目录不存在:\n{path}\n\n是否要创建它？",
+      "path_not_exist_or_not_folder": "路径不存在或不是一个文件夹:\n{path}",
+      "cannot_open_in_windows": "无法在 Windows 中打开路径:\n{error}",
+      "open_manually": "请手动打开目录:\n{path}",
+      "open_directory_error": "打开目录时发生错误:\n{error}",
+      "source_file_not_found": "源文件不存在:\n{path}",
+      "target_file_not_found": "目标文件不存在:\n{path}",
+      "source_target_same": "源文件和目标文件不能相同！",
+      "backup_created_at": "\n\n原始文件备份至:\n{path}",
+      "overwrite_success_with_backup": "文件已成功覆盖！{backup_info}",
+      "overwrite_process_error": "文件覆盖过程中发生错误:\n{error}",
+      "select_directory_error": "选择目录时发生错误:\n{error}"
+    }
+  },
+  "log": {
+    "config": {
+      "load_success": "配置加载成功",
+      "load_failed": "配置加载失败",
+      "reset_to_default": "已重置为默认设置",
+      "save_failed": "保存配置时出错: {error}",
+      "load_failed_details": "加载配置时出错: {error}"
+    },
+    "path": {
+      "spine_converter_set": "已设置 Spine 转换器路径: {path}"
+    },
+    "mod_update": {
+      "target_loaded": "已加载目标资源: {path}",
+      "start_update": "开始更新 Mod...",
+      "update_success": "✅ 更新成功。最终文件路径: {path}",
+      "replace_prompt": "现在可以点击 '覆盖游戏原文件' 按钮来应用 Mod。",
+      "update_success_file_not_found": "⚠️ 警告: 更新成功，但无法找到生成的 Mod 文件。请在 '{dir}' 目录中查找。",
+      "files_added_to_list": "已向处理列表添加 {count} 个文件。",
+      "files_removed_from_list": "已从处理列表移除 {count} 个文件。",
+      "list_cleared": "已清空处理列表。",
+      "batch_start": "🚀 开始批量更新 Mod...",
+      "failed_tasks_header": "\n\n失败的更新任务:"
+    },
+    "status": {
+      "target_loaded": "已加载目标资源",
+      "searching_new_bundle": "正在搜索新版资源...",
+      "target_not_found": "未找到匹配的目标资源",
+      "processing": "正在处理中，请稍候...",
+      "done": "处理完成",
+      "files_in_list": "当前列表有 {count} 个文件待处理。",
+      "ready": "准备就绪",
+      "batch_processing": "正在批量处理中...",
+      "failed": "处理失败",
+      "processing_progress": "正在处理 ({current}/{total}): {filename}",
+      "batch_done": "批量处理完成"
+    },
+    "file_ops": {
+      "wsl_path_conversion_failed": "WSL 路径转换或打开失败: {error}",
+      "directory_opened": "已打开目录: {path}",
+      "backing_up": "  > 正在备份原始文件到: {file}",
+      "overwriting": "  > 正在用 '{source}' 覆盖 '{target}'...",
+      "overwrite_success": "✅ 文件已成功覆盖！",
+      "overwrite_failed": "❌ 文件覆盖失败: {error}",
+      "directory_updated": "已更新目录: {path}"
+    }
+  }
+}

@@ -7,9 +7,10 @@ import os
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
-from ui.utils import ConfigManager, open_directory
+from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
 from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
+from i18n import i18n_manager
 
 class App(tk.Frame):
     def __init__(self, master):
@@ -18,8 +19,9 @@ class App(tk.Frame):
         self.setup_main_window()
         self.config_manager = ConfigManager()
         self.init_shared_variables()
-        self.create_widgets()
+        # 在创建UI组件前加载配置，确保语言设置正确
         self.load_config_on_startup()  # 启动时加载配置
+        self.create_widgets()
         self.logger.status("准备就绪")
 
     def setup_main_window(self):
@@ -88,6 +90,9 @@ class App(tk.Frame):
         self.atlas_downgrade_path_var = tk.StringVar()
         self.spine_downgrade_version_var = tk.StringVar()  # 添加Spine降级版本变量
         
+        # 语言设置
+        self.language_var = tk.StringVar(value="zh-CN")
+        
         # 设置默认值
         self._set_default_values()
 
@@ -131,6 +136,10 @@ class App(tk.Frame):
         
         self.logger = Logger(self.master, self.log_text, self.status_label)
         
+        # 在logger创建后记录配置加载信息
+        language = self.language_var.get()
+        self.logger.log(f"应用启动完成，当前语言设置为: {language}")
+        
         # 将 logger 和共享变量传递给 Tabs
         self.populate_notebook()
 
@@ -138,35 +147,6 @@ class App(tk.Frame):
         """打开高级设置对话框"""
         dialog = SettingsDialog(self.master, self)
         self.master.wait_window(dialog) # 等待对话框关闭
-
-    # --- 共享目录选择和打开的方法 ---
-    def _select_directory(self, var, title):
-        try:
-            current_path = Path(var.get())
-            if not current_path.is_dir(): current_path = Path.home()
-            selected_dir = filedialog.askdirectory(title=title, initialdir=str(current_path))
-            if selected_dir:
-                var.set(str(Path(selected_dir)))
-                self.logger.log(f"已更新目录: {selected_dir}")
-        except Exception as e:
-            messagebox.showerror("错误", f"选择目录时发生错误:\n{e}")
-            
-    def _open_directory_in_explorer(self, path_str, create_if_not_exist=False):
-        try:
-            path = Path(path_str)
-            if not path.is_dir():
-                if create_if_not_exist:
-                    if messagebox.askyesno("提示", f"目录不存在:\n{path}\n\n是否要创建它？"):
-                        path.mkdir(parents=True, exist_ok=True)
-                    else: return
-                else:
-                    messagebox.showwarning("警告", f"路径不存在或不是一个文件夹:\n{path}")
-                    return
-            
-            # 使用工具函数打开资源管理器
-            open_directory(path, self.logger.log)
-        except Exception as e:
-            messagebox.showerror("错误", f"打开资源管理器时发生错误:\n{e}")
 
     def show_environment_info(self):
         """显示环境信息"""
@@ -178,16 +158,16 @@ class App(tk.Frame):
             title = "选择游戏根目录"
         else:
             title = "选择自定义资源目录"
-        self._select_directory(self.game_resource_dir_var, title)
+        select_directory(self.game_resource_dir_var, title, self.logger.log)
         
     def open_game_resource_in_explorer(self):
-        self._open_directory_in_explorer(self.game_resource_dir_var.get())
+        open_directory(self.game_resource_dir_var.get(), self.logger.log)
 
     def select_output_directory(self):
-        self._select_directory(self.output_dir_var, "选择输出目录")
+        select_directory(self.output_dir_var, "选择输出目录", self.logger.log)
 
     def open_output_dir_in_explorer(self):
-        self._open_directory_in_explorer(self.output_dir_var.get(), create_if_not_exist=True)
+        open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
     
     def select_atlas_downgrade_path(self):
         """选择SpineAtlasDowngrade.exe路径"""
@@ -209,10 +189,17 @@ class App(tk.Frame):
     
     def load_config_on_startup(self):
         """应用启动时自动加载配置"""
-        if self.config_manager.load_config(self):
-            self.logger.log("配置加载成功")
+        config_loaded = self.config_manager.load_config(self)
+        
+        # 设置语言
+        language = self.language_var.get()
+        i18n_manager.set_language(language)
+        
+        # 此时logger可能还未创建，使用print作为临时日志
+        if config_loaded:
+            print(f"配置加载成功，语言设置为: {language}")
         else:
-            self.logger.log("未找到配置文件，使用默认设置")
+            print(f"未找到配置文件，使用默认语言: {language}")
     
     def save_current_config(self):
         """保存当前配置到文件"""
