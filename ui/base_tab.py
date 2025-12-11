@@ -6,6 +6,7 @@ from pathlib import Path
 import threading
 from typing import Callable, TYPE_CHECKING
 
+from i18n import t
 from .components import Theme
 
 if TYPE_CHECKING:
@@ -30,16 +31,16 @@ class TabFrame(ttk.Frame):
     def set_file_path(self, path_var_name: str, label_widget: tk.Widget, path: Path, file_type_name: str, callback: Callable[[], None] | None = None):
         setattr(self, path_var_name, path)
         label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(f"已加载 {file_type_name}: {path.name}")
-        self.logger.status(f"已加载 {file_type_name}")
+        self.logger.log(t("log.loaded_with_type", type=file_type_name, name=path.name))
+        self.logger.status(t("log.status.loaded_type", type=file_type_name))
         if callback:
             callback()
 
     def set_folder_path(self, path_var_name: str, label_widget: tk.Widget, path: Path, folder_type_name: str):
         setattr(self, path_var_name, path)
         label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(f"已加载 {folder_type_name}: {path.name}")
-        self.logger.status(f"已加载 {folder_type_name}")
+        self.logger.log(t("log.loaded_with_type", type=folder_type_name, name=path.name))
+        self.logger.status(t("log.status.loaded_type", type=folder_type_name))
 
     def get_game_search_dirs(self, base_game_dir: Path, auto_detect_subdirs: bool) -> list[Path]:
         if auto_detect_subdirs:

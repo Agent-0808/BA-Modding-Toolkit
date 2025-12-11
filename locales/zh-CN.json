@@ -15,7 +15,8 @@
 		"ready": "就绪",
 		"processing": "处理中...",
 		"done": "完成",
-		"all": "全部"
+		"all": "全部",
+		"status_label": "状态："
 	},
 	"action": {
 		"browse": "浏览",
@@ -40,7 +41,9 @@
 		"create_backup": "创建备份",
 		"enable": "启用",
 		"disable": "禁用",
-		"environment": "运行环境"
+		"environment": "运行环境",
+		"browse_file": "浏览文件...",
+		"browse_folder": "浏览文件夹..."
 	},
 	"label": {
 		"game_root_dir": "游戏根目录",
@@ -57,7 +60,9 @@
 		"target_version": "目标版本",
 		"spine_version": "Spine 版本",
 		"skel_converter_path": "Skel 转换器路径",
-		"atlas_downgrade_path": "Atlas 降级工具路径"
+		"atlas_downgrade_path": "Atlas 降级工具路径",
+		"search_path": "查找路径:",
+		"game_resource_dir": "游戏资源目录"
 	},
 	"option": {
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
@@ -100,14 +105,17 @@
 		"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
 		"no_bundles_in_folder": "在该文件夹中没有找到任何 .bundle 文件。",
 		"cannot_open_explorer": "无法打开目录: {error}",
-		"open_manually": "请手动打开目录：{path}"
+		"open_manually": "请手动打开目录：{path}",
+		"updating": "正在更新...",
+		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件"
 	},
 	"log": {
 		"status": {
 			"ready": "准备就绪",
 			"processing": "正在处理: {filename}",
 			"processing_batch": "正在处理 ({current}/{total}): {filename}",
-			"done": "处理完成"
+			"done": "处理完成",
+			"loaded_type": "已加载 {type}"
 		},
 		"file": {
 			"loaded": "已加载: {path}",
@@ -120,7 +128,7 @@
 			"added": "已添加 {count} 个文件",
 			"removed": "已移除 {count} 个文件",
 			"cleared": "列表已清空",
-			"failed_item": "处理失败: {filename}"
+			"failed_items_cnt": "共 {count} 个文件处理失败："
 		},
 		"config": {
 			"reset": "已重置为默认设置",
@@ -132,7 +140,8 @@
 		"spine": {
 			"skel_converter_set": "已设置 Skel 转换器: {path}",
 			"atlas_downgrade_set": "已设置 Atlas 降级工具： {path}"
-		}
+		},
+		"loaded_with_type": "已加载 {type}: {name}"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",
@@ -153,10 +162,10 @@
 			"mode_single": "单个更新",
 			"mode_batch": "批量更新",
 			"placeholder_old": "拖放旧版 Mod 文件到此处",
-			"placeholder_new": "拖放新版 Bundle 或自动搜索",
+			"placeholder_new": "拖入修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_searching": "正在搜索对应资源...",
-			"status_not_found": "未找到匹配资源",
+			"status_not_found": "未找到匹配资源：{message}",
 			"warn_need_guide": "请先选择旧版 Mod 并设置游戏目录以启用自动搜索。"
 		},
 		"crc_tool": {
@@ -172,6 +181,10 @@
 		},
 		"dialog": {
 			"select": "选择 {filename}"
+		},
+		"drop_zone": {
+			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",
+			"folder_hint": "将文件夹拖放到此处\n或点击下方按钮选择"
 		}
 	}
 }

@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinterdnd2 import DND_FILES
+from i18n import t
 
 # --- 日志管理类 ---
 class Logger:
@@ -23,7 +24,7 @@ class Logger:
     def status(self, message: str) -> None:
         """线程安全地更新状态栏消息"""
         def _update_status() -> None:
-            self.status_widget.config(text=f"状态：{message}")
+            self.status_widget.config(text=f"{t('common.status_label')}{message}")
         
         self.master.after(0, _update_status)
 
@@ -207,11 +208,11 @@ class UIComponents:
         if search_path_var is not None:
             search_frame = tk.Frame(frame, bg=Theme.FRAME_BG)
             search_frame.pack(fill=tk.X, pady=(0, 8))
-            tk.Label(search_frame, text="查找路径:", bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL).pack(side=tk.LEFT, padx=(0,5))
+            tk.Label(search_frame, text=t("label.search_path"), bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL).pack(side=tk.LEFT, padx=(0,5))
             UIComponents.create_textbox_entry(
                 search_frame, 
                 textvariable=search_path_var,
-                placeholder_text="游戏资源目录",
+                placeholder_text=t("label.game_resource_dir"),
                 readonly=True
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
@@ -230,8 +231,8 @@ class UIComponents:
         """创建文件拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd, 
-            "将文件拖放到此处\n或点击下方按钮选择", 
-            "浏览文件...",
+            t("ui.drop_zone.file_hint"), 
+            t("action.browse_file"),
             search_path_var
         )
 
@@ -240,8 +241,8 @@ class UIComponents:
         """创建文件夹拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd,
-            "将文件夹拖放到此处\n或点击下方按钮选择",
-            "浏览文件夹..."
+            t("ui.drop_zone.folder_hint"),
+            t("action.browse_folder")
         )
 
     @staticmethod
@@ -267,11 +268,11 @@ class UIComponents:
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
-        select_btn = UIComponents.create_button(frame, "选", select_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
+        select_btn = UIComponents.create_button(frame, t("action.select_short"), select_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
         select_btn.pack(side=tk.LEFT, padx=(0, 5))
         
         if open_button and open_cmd is not None:
-            open_btn = UIComponents.create_button(frame, "开", open_cmd, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
+            open_btn = UIComponents.create_button(frame, t("action.open_short"), open_cmd, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
             open_btn.pack(side=tk.LEFT)
             
         return frame

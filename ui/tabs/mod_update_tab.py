@@ -169,8 +169,8 @@ class ModUpdateTab(TabFrame):
             return
 
         self.logger.log("\n" + "="*50)
-        self.logger.log(t("action.update"))
-        self.logger.status(t("log.status.processing"), filename=self.old_mod_path.name)
+        self.logger.log(t("message.updating"))
+        self.logger.status(t("log.status.processing", filename=self.old_mod_path.name))
         
         asset_types_to_replace = set()
         if self.app.replace_all_var.get():
@@ -211,7 +211,7 @@ class ModUpdateTab(TabFrame):
         
         if self.final_output_path.exists():
             self.logger.log(t("log.file.saved", path=self.final_output_path))
-            self.logger.log(t("action.replace_original"))
+            self.logger.log(t("message.replace_original"), button=t("action.replace_original"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
         else:
@@ -428,7 +428,7 @@ class ModUpdateTab(TabFrame):
         self.logger.log("\n" + "#"*50)
         self.logger.log(summary_message)
         if failed_tasks:
-            self.logger.log(t("log.batch.failed_item"))
+            self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
             for task in failed_tasks:
                 self.logger.log(f"- {task}")
         self.logger.log("\n" + "#"*50)

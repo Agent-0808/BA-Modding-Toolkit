@@ -6,6 +6,7 @@ tools/
 testbundle/
 old/
 locales/tmp/
+locales/backup/
 .vscode/
 .trae/
 __pycache__/
