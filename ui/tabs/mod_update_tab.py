@@ -40,8 +40,8 @@ class ModUpdateTab(TabFrame):
                   background=[('selected', Theme.FRAME_BG), ('active', '#e0e0e0')],
                   relief=[('selected', tk.GROOVE)])
 
-        ttk.Radiobutton(mode_frame, text=t("ui.tabs.mod_update.mode.single"), variable=self.mode_var, value="single", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Radiobutton(mode_frame, text=t("ui.tabs.mod_update.mode.batch"), variable=self.mode_var, value="batch", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Radiobutton(mode_frame, text=t("ui.mod_update.mode_single"), variable=self.mode_var, value="single", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Radiobutton(mode_frame, text=t("ui.mod_update.mode_batch"), variable=self.mode_var, value="batch", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # --- 容器框架 ---
         self.single_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
@@ -67,67 +67,67 @@ class ModUpdateTab(TabFrame):
     def _create_single_mode_widgets(self, parent):
         # 1. 旧版 Mod 文件
         _, self.old_mod_label = UIComponents.create_file_drop_zone(
-            parent, t("ui.tabs.mod_update.single.label.old_mod"), self.drop_old_mod, self.browse_old_mod
+            parent, t("label.mod_file"), self.drop_old_mod, self.browse_old_mod
         )
         
         # 2. 新版游戏资源文件
         new_mod_frame, self.new_mod_label = UIComponents.create_file_drop_zone(
-            parent, t("ui.tabs.mod_update.single.label.target_bundle"), self.drop_new_mod, self.browse_new_mod,
+            parent, t("label.target_resource_bundle"), self.drop_new_mod, self.browse_new_mod,
             search_path_var=self.app.game_resource_dir_var
         )
-        self.new_mod_label.config(text=t("ui.tabs.mod_update.single.placeholder.new_mod_initial"))
+        self.new_mod_label.config(text=t("ui.mod_update.placeholder_new"))
 
         # 操作按钮区域
         action_button_frame = tk.Frame(parent)
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        self.run_button = UIComponents.create_button(action_button_frame, t("ui.tabs.mod_update.single.button.start_update"), self.run_update_thread, bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
+        self.run_button = UIComponents.create_button(action_button_frame, t("action.update"), self.run_update_thread, bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
         self.run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=2)
         
-        self.replace_button = UIComponents.create_button(action_button_frame, t("ui.tabs.mod_update.single.button.replace_original"), self.replace_original_thread, bg_color=Theme.BUTTON_DANGER_BG, padx=15, pady=8, state="disabled")
+        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bg_color=Theme.BUTTON_DANGER_BG, padx=15, pady=8, state="disabled")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=2)
 
     def drop_old_mod(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning(t("ui.dialog.title.invalid_operation"), t("ui.dialog.message.drop_single_file_only"))
+            messagebox.showwarning(t("common.warning"), t("message.drop_single_file"))
             return
         path = Path(event.data.strip('{}'))
-        self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.tabs.mod_update.single.log_prefix.old_mod"), callback=self.auto_find_new_bundle)
+        self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle)
 
     def browse_old_mod(self):
-        p = filedialog.askopenfilename(title=t("ui.dialog.title.select_old_mod"))
+        p = filedialog.askopenfilename(title=t("label.mod_file"))
         if p:
-            self.set_file_path('old_mod_path', self.old_mod_label, Path(p), t("ui.tabs.mod_update.single.log_prefix.old_mod"), callback=self.auto_find_new_bundle)
+            self.set_file_path('old_mod_path', self.old_mod_label, Path(p), t("label.mod_file"), callback=self.auto_find_new_bundle)
 
     def drop_new_mod(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning(t("ui.dialog.title.invalid_operation"), t("ui.dialog.message.drop_single_file_only"))
+            messagebox.showwarning(t("common.warning"), t("message.drop_single_file"))
             return
         path = Path(event.data.strip('{}'))
         self.set_new_mod_file(path)
 
     def browse_new_mod(self):
-        p = filedialog.askopenfilename(title=t("ui.dialog.title.select_target_bundle"))
+        p = filedialog.askopenfilename(title=t("label.target_resource_bundle"))
         if p:
             self.set_new_mod_file(Path(p))
             
     def set_new_mod_file(self, path: Path):
         self.new_mod_path = path
         self.new_mod_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(t("log.mod_update.target_loaded", path=path))
-        self.logger.status(t("log.status.target_loaded"))
+        self.logger.log(t("log.file.loaded", path=path))
+        self.logger.status(t("log.status.ready"))
 
     def auto_find_new_bundle(self):
         if not all([self.old_mod_path, self.app.game_resource_dir_var.get()]):
-            self.new_mod_label.config(text=t("ui.tabs.mod_update.single.warning.select_old_mod_and_game_dir"), fg=Theme.COLOR_WARNING)
-            messagebox.showwarning(t("ui.dialog.title.tip"), t("ui.dialog.message.need_old_mod_and_game_dir"))
+            self.new_mod_label.config(text=t("ui.mod_update.warn_need_guide"), fg=Theme.COLOR_WARNING)
+            messagebox.showwarning(t("common.tip"), t("message.missing_paths"))
             return
         self.run_in_thread(self._find_new_bundle_worker)
         
     def _find_new_bundle_worker(self):
-        self.new_mod_label.config(text=t("ui.tabs.mod_update.single.status.searching_new_bundle"), fg=Theme.COLOR_WARNING)
-        self.logger.status(t("log.status.searching_new_bundle"))
+        self.new_mod_label.config(text=t("ui.mod_update.status_searching"), fg=Theme.COLOR_WARNING)
+        self.logger.status(t("log.status.processing"))
         
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
@@ -142,17 +142,17 @@ class ModUpdateTab(TabFrame):
             self.master.after(0, self.set_new_mod_file, found_path)
         else:
             short_message = message.split('。')[0]
-            ui_message = t("ui.tabs.mod_update.single.status.bundle_not_found", message=short_message)
+            ui_message = t("ui.mod_update.status_not_found", message=short_message)
             self.new_mod_label.config(text=ui_message, fg=Theme.COLOR_ERROR)
-            self.logger.status(t("log.status.target_not_found"))
+            self.logger.status(t("log.status.ready"))
 
     def run_update_thread(self):
         if not all([self.old_mod_path, self.new_mod_path, self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.missing_all_paths"))
+            messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
         
         if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.select_asset_type"))
+            messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
 
         self.run_in_thread(self.run_update)
@@ -165,12 +165,12 @@ class ModUpdateTab(TabFrame):
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.create_output_dir_failed", path=output_dir, error=e))
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
             return
 
         self.logger.log("\n" + "="*50)
-        self.logger.log(t("log.mod_update.start_update"))
-        self.logger.status(t("log.status.processing"))
+        self.logger.log(t("action.update"))
+        self.logger.status(t("log.status.processing"), filename=self.old_mod_path.name)
         
         asset_types_to_replace = set()
         if self.app.replace_all_var.get():
@@ -203,30 +203,30 @@ class ModUpdateTab(TabFrame):
         )
         
         if not success:
-            messagebox.showerror(t("ui.dialog.title.failed"), message)
+            messagebox.showerror(t("common.error"), message)
             return
 
         generated_bundle_filename = self.new_mod_path.name
         self.final_output_path = output_dir / generated_bundle_filename
         
         if self.final_output_path.exists():
-            self.logger.log(t("log.mod_update.update_success", path=self.final_output_path))
-            self.logger.log(t("log.mod_update.replace_prompt"))
+            self.logger.log(t("log.file.saved", path=self.final_output_path))
+            self.logger.log(t("action.replace_original"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-            messagebox.showinfo(t("ui.common.success"), message)
+            messagebox.showinfo(t("common.success"), message)
         else:
-            self.logger.log(t("log.mod_update.update_success_file_not_found", dir=output_dir))
+            self.logger.log(t("message.generated_file_not_found"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
-            messagebox.showinfo(t("ui.dialog.title.success_path_unknown"), t("ui.dialog.message.update_success_path_unknown", message=message))
+            messagebox.showinfo(t("common.success"), t("message.process_success"))
         
         self.logger.status(t("log.status.done"))
 
     def replace_original_thread(self):
         if not self.final_output_path or not self.final_output_path.exists():
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.generated_mod_not_found"))
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=self.final_output_path))
             return
         if not self.new_mod_path or not self.new_mod_path.exists():
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.original_bundle_not_found"))
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=self.new_mod_path))
             return
         
         self.run_in_thread(self.replace_original)
@@ -240,13 +240,13 @@ class ModUpdateTab(TabFrame):
             dest_path=target_file,
             create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
-            confirm_message=t("ui.dialog.message.confirm_replace_original", path=self.new_mod_path),
+            confirm_message=t("message.confirm_replace_file", path=self.new_mod_path),
             log=self.logger.log,
         )
 
     # --- 批量更新UI和逻辑 ---
     def _create_batch_mode_widgets(self, parent):
-        input_frame = tk.LabelFrame(parent, text=t("ui.tabs.mod_update.batch.group.input_mods"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
+        input_frame = tk.LabelFrame(parent, text=t("label.mod_file"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         input_frame.columnconfigure(0, weight=1)
 
@@ -272,25 +272,25 @@ class ModUpdateTab(TabFrame):
         self.file_listbox.dnd_bind('<<Drop>>', self.drop_mods)
         
         # 添加提示文本
-        self.file_listbox.insert(tk.END, t("ui.tabs.mod_update.batch.placeholder.drag_and_drop_here"))
+        self.file_listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
         
         button_frame = tk.Frame(input_frame, bg=Theme.FRAME_BG)
         button_frame.grid(row=1, column=0, sticky="ew")
         button_frame.columnconfigure((0, 1, 2, 3), weight=1)
 
-        tk.Button(button_frame, text=t("ui.tabs.mod_update.batch.button.add_files"), command=self.browse_add_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        tk.Button(button_frame, text=t("ui.tabs.mod_update.batch.button.add_folder"), command=self.browse_add_folder, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=1, sticky="ew", padx=5)
-        tk.Button(button_frame, text=t("ui.tabs.mod_update.batch.button.remove_selected"), command=self.remove_selected_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_WARNING_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=2, sticky="ew", padx=5)
-        tk.Button(button_frame, text=t("ui.tabs.mod_update.batch.button.clear_list"), command=self.clear_list, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_DANGER_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=3, sticky="ew", padx=(5, 0))
+        tk.Button(button_frame, text=t("action.add_files"), command=self.browse_add_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        tk.Button(button_frame, text=t("action.add_folder"), command=self.browse_add_folder, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=1, sticky="ew", padx=5)
+        tk.Button(button_frame, text=t("action.remove_selected"), command=self.remove_selected_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_WARNING_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=2, sticky="ew", padx=5)
+        tk.Button(button_frame, text=t("action.clear_list"), command=self.clear_list, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_DANGER_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=3, sticky="ew", padx=(5, 0))
 
-        run_button = tk.Button(parent, text=t("ui.tabs.mod_update.batch.button.start_batch_update"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
+        run_button = tk.Button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
         run_button.pack(fill=tk.X, pady=5)
 
     def _add_files_to_list(self, file_paths: list[Path]):
         # 第一次添加文件时，清除提示文本
         if len(self.mod_file_list) == 0 and self.file_listbox.size() > 0:
             # 检查列表中是否包含提示文本
-            if self.file_listbox.get(0) == t("ui.tabs.mod_update.batch.placeholder.drag_and_drop_here"):
+            if self.file_listbox.get(0) == t("ui.mod_update.placeholder_batch"):
                 self.file_listbox.delete(0, tk.END)
         
         added_count = 0
@@ -300,8 +300,8 @@ class ModUpdateTab(TabFrame):
                 self.file_listbox.insert(tk.END, f"{path.parent.name} / {path.name}")
                 added_count += 1
         if added_count > 0:
-            self.logger.log(t("log.mod_update.files_added_to_list", count=added_count))
-            self.logger.status(t("log.status.files_in_list", count=len(self.mod_file_list)))
+            self.logger.log(t("log.batch.added", count=added_count))
+            self.logger.status(t("log.status.ready"))
 
     def drop_mods(self, event):
         raw_paths = event.data.strip('{}').split('} {')
@@ -318,24 +318,24 @@ class ModUpdateTab(TabFrame):
             self._add_files_to_list(paths_to_add)
 
     def browse_add_files(self):
-        filepaths = filedialog.askopenfilenames(title=t("ui.dialog.title.select_mod_bundles"))
+        filepaths = filedialog.askopenfilenames(title=t("label.bundle_file"))
         if filepaths:
             self._add_files_to_list([Path(p) for p in filepaths])
 
     def browse_add_folder(self):
-        folder_path = filedialog.askdirectory(title=t("ui.dialog.title.select_mod_folder"))
+        folder_path = filedialog.askdirectory(title=t("label.output_dir"))
         if folder_path:
             path = Path(folder_path)
             bundle_files = sorted(path.glob('*.bundle'))
             if bundle_files:
                 self._add_files_to_list(bundle_files)
             else:
-                messagebox.showinfo(t("ui.dialog.title.tip"), t("ui.dialog.message.no_bundles_in_folder"))
+                messagebox.showinfo(t("common.tip"), t("message.no_bundles_in_folder"))
 
     def remove_selected_files(self):
         selected_indices = self.file_listbox.curselection()
         if not selected_indices:
-            messagebox.showinfo(t("ui.dialog.title.tip"), t("ui.dialog.message.no_files_selected"))
+            messagebox.showinfo(t("common.tip"), t("message.file_not_selected"))
             return
 
         for index in sorted(selected_indices, reverse=True):
@@ -343,35 +343,35 @@ class ModUpdateTab(TabFrame):
             del self.mod_file_list[index]
         
         removed_count = len(selected_indices)
-        self.logger.log(t("log.mod_update.files_removed_from_list", count=removed_count))
-        self.logger.status(t("log.status.files_in_list", count=len(self.mod_file_list)))
+        self.logger.log(t("log.batch.removed", count=removed_count))
+        self.logger.status(t("log.status.ready"))
 
     def clear_list(self):
         self.mod_file_list.clear()
         self.file_listbox.delete(0, tk.END)
         # 恢复提示文本
-        self.file_listbox.insert(tk.END, t("ui.tabs.mod_update.batch.placeholder.drag_and_drop_here"))
+        self.file_listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
         
-        self.logger.log(t("log.mod_update.list_cleared"))
+        self.logger.log(t("log.batch.cleared"))
         self.logger.status(t("log.status.ready"))
 
     def run_batch_update_thread(self):
         if not self.mod_file_list:
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.list_is_empty"))
+            messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
         if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.missing_game_and_output_dir"))
+            messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
         if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.select_asset_type"))
+            messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
         
         self.run_in_thread(self._batch_update_worker)
 
     def _batch_update_worker(self):
         self.logger.log("\n" + "#"*50)
-        self.logger.log(t("log.mod_update.batch_start"))
-        self.logger.status(t("log.status.batch_processing"))
+        self.logger.log(t("log.batch.start"))
+        self.logger.status(t("log.status.processing"))
 
         # 1. 准备参数
         output_dir = Path(self.app.output_dir_var.get())
@@ -381,8 +381,8 @@ class ModUpdateTab(TabFrame):
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.create_output_dir_failed", path=output_dir, error=e))
-            self.logger.status(t("log.status.failed"))
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+            self.logger.status(t("log.status.ready"))
             return
 
         asset_types_to_replace = set()
@@ -407,7 +407,7 @@ class ModUpdateTab(TabFrame):
 
         # 更新UI状态的回调函数
         def progress_callback(current, total, filename):
-            self.logger.status(t("log.status.processing_progress", current=current, total=total, filename=filename))
+            self.logger.status(t("log.status.processing", current=current, total=total, filename=filename))
 
         # 2. 调用核心处理函数
         success_count, fail_count, failed_tasks = processing.process_batch_mod_update(
@@ -423,15 +423,15 @@ class ModUpdateTab(TabFrame):
         
         # 3. 处理结果并更新UI
         total_files = len(self.mod_file_list)
-        summary_message = t("ui.dialog.message.batch_summary", total=total_files, success=success_count, fail=fail_count)
+        summary_message = t("message.batch_summary", total=total_files, success=success_count, fail=fail_count)
         
         self.logger.log("\n" + "#"*50)
         self.logger.log(summary_message)
         if failed_tasks:
-            self.logger.log(t("log.mod_update.failed_tasks_header"))
+            self.logger.log(t("log.batch.failed_item"))
             for task in failed_tasks:
                 self.logger.log(f"- {task}")
         self.logger.log("\n" + "#"*50)
         
-        self.logger.status(t("log.status.batch_done"))
-        messagebox.showinfo(t("ui.dialog.title.batch_complete"), summary_message)
+        self.logger.status(t("log.status.done"))
+        messagebox.showinfo(t("common.success"), summary_message)

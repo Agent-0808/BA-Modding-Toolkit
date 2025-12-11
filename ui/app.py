@@ -10,7 +10,7 @@ from ui.components import Theme, Logger, UIComponents
 from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
 from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
-from i18n import i18n_manager
+from i18n import i18n_manager, t
 
 class App(tk.Frame):
     def __init__(self, master):
@@ -22,10 +22,10 @@ class App(tk.Frame):
         # 在创建UI组件前加载配置，确保语言设置正确
         self.load_config_on_startup()  # 启动时加载配置
         self.create_widgets()
-        self.logger.status("准备就绪")
+        self.logger.status(t("log.status.ready"))
 
     def setup_main_window(self):
-        self.master.title("BA Modding Toolkit")
+        self.master.title(t("ui.app_title"))
         self.master.geometry("600x789")
         self.master.configure(bg=Theme.WINDOW_BG)
 
@@ -114,10 +114,10 @@ class App(tk.Frame):
         top_controls_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 使用grid布局让按钮横向拉伸填满
-        settings_button = UIComponents.create_button(top_controls_frame, "Settings", self.open_settings_dialog, bg_color=Theme.BUTTON_WARNING_BG)
+        settings_button = UIComponents.create_button(top_controls_frame, t("ui.settings.title"), self.open_settings_dialog, bg_color=Theme.BUTTON_WARNING_BG)
         settings_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
-        environment_button = UIComponents.create_button(top_controls_frame, "Env", self.show_environment_info, bg_color=Theme.BUTTON_SECONDARY_BG)
+        environment_button = UIComponents.create_button(top_controls_frame, t("action.environment"), self.show_environment_info, bg_color=Theme.BUTTON_SECONDARY_BG)
         environment_button.grid(row=0, column=1, sticky="ew")
         
         # 设置列权重，让按钮均匀拉伸
@@ -138,7 +138,7 @@ class App(tk.Frame):
         
         # 在logger创建后记录配置加载信息
         language = self.language_var.get()
-        self.logger.log(f"应用启动完成，当前语言设置为: {language}")
+        self.logger.log(t("log.config.loaded", language=language))
         
         # 将 logger 和共享变量传递给 Tabs
         self.populate_notebook()
@@ -155,37 +155,20 @@ class App(tk.Frame):
     def select_game_resource_directory(self):
         # 根据复选框状态决定对话框标题
         if self.auto_detect_subdirs_var.get():
-            title = "选择游戏根目录"
+            title = t("label.game_root_dir")
         else:
-            title = "选择自定义资源目录"
+            title = t("label.custom_resource_dir")
         select_directory(self.game_resource_dir_var, title, self.logger.log)
         
     def open_game_resource_in_explorer(self):
         open_directory(self.game_resource_dir_var.get(), self.logger.log)
 
     def select_output_directory(self):
-        select_directory(self.output_dir_var, "选择输出目录", self.logger.log)
+        select_directory(self.output_dir_var, t("label.output_dir"), self.logger.log)
 
     def open_output_dir_in_explorer(self):
         open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
-    
-    def select_atlas_downgrade_path(self):
-        """选择SpineAtlasDowngrade.exe路径"""
-        try:
-            current_path = Path(self.atlas_downgrade_path_var.get())
-            if not current_path.exists():
-                current_path = Path.home()
-            
-            selected_file = filedialog.askopenfilename(
-                title="选择 SpineAtlasDowngrade.exe",
-                initialdir=str(current_path.parent) if current_path.parent.exists() else str(current_path),
-                filetypes=[("可执行文件", "*.exe"), ("所有文件", "*.*")]
-            )
-            
-            if selected_file:
-                self.atlas_downgrade_path_var.set(str(Path(selected_file)))
-        except Exception as e:
-            messagebox.showerror("错误", f"选择SpineAtlasDowngrade.exe时发生错误:\n{e}")
+
     
     def load_config_on_startup(self):
         """应用启动时自动加载配置"""
@@ -204,11 +187,11 @@ class App(tk.Frame):
     def save_current_config(self):
         """保存当前配置到文件"""
         if self.config_manager.save_config(self):
-            self.logger.log("配置保存成功")
-            messagebox.showinfo("成功", "配置已保存到 config.ini")
+            self.logger.log(t("log.config.saved"))
+            messagebox.showinfo(t("common.success"), t("message.config_saved"))
         else:
-            self.logger.log("配置保存失败")
-            messagebox.showerror("错误", "配置保存失败")
+            self.logger.log(t("log.config.save_failed"))
+            messagebox.showerror(t("common.error"), t("message.config_load_failed"))
     # --- 方法结束 ---
     
     def create_notebook(self, parent):
@@ -229,7 +212,7 @@ class App(tk.Frame):
         return notebook
 
     def create_log_area(self, parent):
-        log_frame = tk.LabelFrame(parent, text="Log", font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
+        log_frame = tk.LabelFrame(parent, text=t("common.ready"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0) # 日志区不需要顶部pady
 
         log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=10) #添加 height 参数
@@ -243,8 +226,8 @@ class App(tk.Frame):
 
     def populate_notebook(self):
         """创建并添加所有的Tab页面到Notebook。"""
-        self.notebook.add(ModUpdateTab(self.notebook, self), text="Mod 更新")
-        self.notebook.add(CrcToolTab(self.notebook, self), text="CRC 修正工具")
-        self.notebook.add(AssetPackerTab(self.notebook, self), text="资源打包")
-        self.notebook.add(AssetExtractorTab(self.notebook, self), text="资源提取")
-        self.notebook.add(JpGbConversionTab(self.notebook, self), text="JP/GB转换")
+        self.notebook.add(ModUpdateTab(self.notebook, self), text=t("ui.tabs.mod_update"))
+        self.notebook.add(CrcToolTab(self.notebook, self), text=t("ui.tabs.crc_tool"))
+        self.notebook.add(AssetPackerTab(self.notebook, self), text=t("ui.tabs.asset_packer"))
+        self.notebook.add(AssetExtractorTab(self.notebook, self), text=t("ui.tabs.asset_extractor"))
+        self.notebook.add(JpGbConversionTab(self.notebook, self), text=t("ui.tabs.jp_gb_convert"))

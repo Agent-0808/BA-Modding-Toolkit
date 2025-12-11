@@ -36,18 +36,18 @@ class SettingsDialog(tk.Toplevel):
         entry = UIComponents.create_textbox_entry(
             entry_button_container, 
             textvariable=self.app.game_resource_dir_var,
-            placeholder_text=t("ui.settings.placeholder.game_resource_dir")
+            placeholder_text=t("label.resource_dir")
         )
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
-        select_btn = UIComponents.create_button(entry_button_container, t("ui.settings.button.select_short"), self.app.select_game_resource_directory, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
+        select_btn = UIComponents.create_button(entry_button_container, t("action.select_short"), self.app.select_game_resource_directory, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
         select_btn.pack(side=tk.LEFT, padx=(0, 5))
-        open_btn = UIComponents.create_button(entry_button_container, t("ui.settings.button.open_short"), self.app.open_game_resource_in_explorer, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
+        open_btn = UIComponents.create_button(entry_button_container, t("action.open_short"), self.app.open_game_resource_in_explorer, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
         open_btn.pack(side=tk.LEFT)
 
         self.auto_detect_checkbox = tk.Checkbutton(
             self.game_dir_frame, 
-            text=t("ui.settings.auto_detect_subdirs"),
+            text=t("option.auto_detect_subdirs"),
             variable=self.app.auto_detect_subdirs_var,
             command=self._on_auto_detect_toggle,
             font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG
@@ -56,22 +56,22 @@ class SettingsDialog(tk.Toplevel):
         # --- 游戏资源目录UI结束 ---
 
         UIComponents.create_directory_path_entry(
-            container, t("ui.settings.label.output_dir"), self.app.output_dir_var,
+            container, t("label.output_dir"), self.app.output_dir_var,
             self.app.select_output_directory, self.app.open_output_dir_in_explorer,
-            placeholder_text=t("ui.settings.placeholder.output_dir")
+            placeholder_text=t("label.output_dir")
         )
         
         # 选项设置
-        global_options_frame = tk.LabelFrame(container, text=t("ui.settings.group.global_options"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=5, pady=5)
+        global_options_frame = tk.LabelFrame(container, text=t("ui.settings.group_global"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=5, pady=5)
         global_options_frame.pack(fill=tk.X, pady=(5, 0))
         
-        self.padding_checkbox = tk.Checkbutton(global_options_frame, text=t("ui.settings.options.enable_padding"), variable=self.app.enable_padding_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
-        crc_checkbox = tk.Checkbutton(global_options_frame, text=t("ui.settings.options.enable_crc_correction"), variable=self.app.enable_crc_correction_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG, command=self.toggle_padding_checkbox_state)
-        backup_checkbox = tk.Checkbutton(global_options_frame, text=t("ui.common.backup"), variable=self.app.create_backup_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
+        self.padding_checkbox = tk.Checkbutton(global_options_frame, text=t("option.padding"), variable=self.app.enable_padding_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
+        crc_checkbox = tk.Checkbutton(global_options_frame, text=t("option.crc_correction"), variable=self.app.enable_crc_correction_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG, command=self.toggle_padding_checkbox_state)
+        backup_checkbox = tk.Checkbutton(global_options_frame, text=t("option.backup"), variable=self.app.create_backup_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
 
         # 压缩方式下拉框
         compression_frame = tk.Frame(global_options_frame, bg=Theme.FRAME_BG)
-        compression_label = tk.Label(compression_frame, text=t("ui.settings.label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        compression_label = tk.Label(compression_frame, text=t("label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         compression_combo = ttk.Combobox(compression_frame, textvariable=self.app.compression_method_var, values=["lzma", "lz4", "original", "none"], state="readonly", font=Theme.INPUT_FONT, width=10)
 
         # 布局 - 使用统一的grid布局确保高度对齐
@@ -87,50 +87,50 @@ class SettingsDialog(tk.Toplevel):
         global_options_frame.rowconfigure(0, weight=1)
         
         # 资源替换类型选项
-        asset_replace_frame = tk.LabelFrame(container, text=t("ui.settings.group.asset_replace_types"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
+        asset_replace_frame = tk.LabelFrame(container, text=t("ui.settings.group_assets"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
         asset_replace_frame.pack(fill=tk.X, pady=8)
         
         asset_checkbox_container = tk.Frame(asset_replace_frame, bg=Theme.FRAME_BG)
         asset_checkbox_container.pack(fill=tk.X)
         
-        tk.Checkbutton(asset_checkbox_container, text="ALL", variable=self.app.replace_all_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT)
-        tk.Checkbutton(asset_checkbox_container, text="Texture2D", variable=self.app.replace_texture2d_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
-        tk.Checkbutton(asset_checkbox_container, text="TextAsset", variable=self.app.replace_textasset_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
-        tk.Checkbutton(asset_checkbox_container, text="Mesh", variable=self.app.replace_mesh_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
+        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_all"), variable=self.app.replace_all_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT)
+        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_texture"), variable=self.app.replace_texture2d_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
+        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_textasset"), variable=self.app.replace_textasset_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
+        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_mesh"), variable=self.app.replace_mesh_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
         
         # Spine 转换器设置
-        spine_frame = tk.LabelFrame(container, text=t("ui.settings.group.spine_converter"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
+        spine_frame = tk.LabelFrame(container, text=t("ui.settings.group_spine"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
         spine_frame.pack(fill=tk.X, pady=(15, 0))
         
         # Spine 转换选项
         spine_options_frame = tk.Frame(spine_frame, bg=Theme.FRAME_BG)
         spine_options_frame.pack(fill=tk.X)
         
-        spine_conversion_checkbox = tk.Checkbutton(spine_options_frame, text=t("ui.settings.options.enable_spine_conversion"), variable=self.app.enable_spine_conversion_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
+        spine_conversion_checkbox = tk.Checkbutton(spine_options_frame, text=t("option.spine_conversion"), variable=self.app.enable_spine_conversion_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
         spine_conversion_checkbox.pack(side=tk.LEFT, padx=(0, 10))
         
         # 目标版本输入框
-        spine_version_label = tk.Label(spine_options_frame, text=t("ui.settings.label.target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        spine_version_label = tk.Label(spine_options_frame, text=t("label.target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
         
         spine_version_entry = UIComponents.create_textbox_entry(
             spine_options_frame, 
             textvariable=self.app.target_spine_version_var,
-            placeholder_text=t("ui.settings.placeholder.target_version"),
+            placeholder_text=t("label.spine_version"),
             width=10
         )
         spine_version_entry.pack(side=tk.LEFT)
 
         # Spine 转换器路径设置
         UIComponents.create_file_path_entry(
-            spine_frame, t("ui.settings.label.spine_converter_path"), self.app.spine_converter_path_var,
+            spine_frame, t("label.skel_converter_path"), self.app.spine_converter_path_var,
             self.select_spine_converter_path
         )
         
         # Spine 降级工具路径设置
         UIComponents.create_file_path_entry(
-            spine_frame, t("ui.settings.label.atlas_downgrade_path"), self.app.atlas_downgrade_path_var,
-            self.app.select_atlas_downgrade_path
+            spine_frame, t("label.atlas_downgrade_path"), self.app.atlas_downgrade_path_var,
+            self.select_atlas_downgrade_path
         )
 
         # 初始化所有动态UI的状态
@@ -146,21 +146,21 @@ class SettingsDialog(tk.Toplevel):
         config_buttons_frame.columnconfigure(1, weight=1)
         config_buttons_frame.columnconfigure(2, weight=1)
         
-        save_button = UIComponents.create_button(config_buttons_frame, t("ui.common.save"), self.app.save_current_config, bg_color=Theme.BUTTON_SUCCESS_BG)
+        save_button = UIComponents.create_button(config_buttons_frame, t("common.save"), self.app.save_current_config, bg_color=Theme.BUTTON_SUCCESS_BG)
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
-        load_button = UIComponents.create_button(config_buttons_frame, t("ui.common.load"), self.load_config, bg_color=Theme.BUTTON_WARNING_BG)
+        load_button = UIComponents.create_button(config_buttons_frame, t("common.load"), self.load_config, bg_color=Theme.BUTTON_WARNING_BG)
         load_button.grid(row=0, column=1, sticky="ew", padx=5)
         
-        reset_button = UIComponents.create_button(config_buttons_frame, t("ui.common.default"), self.reset_to_default, bg_color=Theme.BUTTON_DANGER_BG)
+        reset_button = UIComponents.create_button(config_buttons_frame, t("common.reset"), self.reset_to_default, bg_color=Theme.BUTTON_DANGER_BG)
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
     def _on_auto_detect_toggle(self):
         """当自动检测复选框状态改变时，更新UI"""
         if self.app.auto_detect_subdirs_var.get():
-            self.game_dir_frame.config(text=t("ui.settings.label.game_root_dir"))
+            self.game_dir_frame.config(text=t("label.game_root_dir"))
         else:
-            self.game_dir_frame.config(text=t("ui.settings.label.custom_resource_dir"))
+            self.game_dir_frame.config(text=t("label.custom_resource_dir"))
 
     def toggle_padding_checkbox_state(self):
         """根据CRC修正复选框的状态，启用或禁用添加私货复选框"""
@@ -173,18 +173,18 @@ class SettingsDialog(tk.Toplevel):
     def load_config(self):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
-            self.app.logger.log(t("log.config.load_success"))
-            messagebox.showinfo(t("ui.common.success"), t("ui.dialog.message.config_loaded"))
+            self.app.logger.log(t("log.status.ready"))
+            messagebox.showinfo(t("common.success"), t("message.config_loaded"))
             # 更新UI状态
             self.toggle_padding_checkbox_state()
             self._on_auto_detect_toggle()
         else:
             self.app.logger.log(t("log.config.load_failed"))
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.config_load_failed"))
+            messagebox.showerror(t("common.error"), t("message.config_load_failed"))
     
     def reset_to_default(self):
         """重置为默认设置"""
-        if messagebox.askyesno(t("ui.dialog.title.confirm"), t("ui.dialog.message.confirm_reset_settings")):
+        if messagebox.askyesno(t("common.tip"), t("message.confirm_reset_settings")):
             # 使用统一的默认值设置方法
             self.app._set_default_values()
             
@@ -192,7 +192,7 @@ class SettingsDialog(tk.Toplevel):
             self.toggle_padding_checkbox_state()
             self._on_auto_detect_toggle()
             
-            self.app.logger.log(t("log.config.reset_to_default"))
+            self.app.logger.log(t("log.config.reset"))
     
     def select_spine_converter_path(self):
         """选择Spine转换器路径"""
@@ -202,13 +202,32 @@ class SettingsDialog(tk.Toplevel):
                 current_path = Path.home()
             
             selected_file = filedialog.askopenfilename(
-                title=t("ui.dialog.title.select_spine_converter"),
+                title=t("ui.dialog.select", filename="SpineSkeletonConverter.exe"),
                 initialdir=str(current_path.parent) if current_path.parent.exists() else str(current_path),
-                filetypes=[(t("ui.dialog.file_types.executable"), "*.exe"), (t("ui.dialog.file_types.all_files"), "*.*")]
+                filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")]
             )
             
             if selected_file:
                 self.app.spine_converter_path_var.set(str(Path(selected_file)))
-                self.app.logger.log(t("log.path.spine_converter_set", path=selected_file))
+                self.app.logger.log(t("log.spine.skel_converter_set", path=selected_file))
         except Exception as e:
-            messagebox.showerror(t("ui.common.error"), t("ui.dialog.message.select_spine_converter_error", error=e))
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+
+    def select_atlas_downgrade_path(self):
+        """选择SpineAtlasDowngrade.exe路径"""
+        try:
+            current_path = Path(self.app.atlas_downgrade_path_var.get())
+            if not current_path.exists():
+                current_path = Path.home()
+            
+            selected_file = filedialog.askopenfilename(
+                title=t("ui.dialog.select", filename="SpineAtlasDowngrade.exe"),
+                initialdir=str(current_path.parent) if current_path.parent.exists() else str(current_path),
+                filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")]
+            )
+            
+            if selected_file:
+                self.app.atlas_downgrade_path_var.set(str(Path(selected_file)))
+                self.app.logger.log(t("log.spine.atlas_downgrade_set", path=selected_file))
+        except Exception as e:
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))

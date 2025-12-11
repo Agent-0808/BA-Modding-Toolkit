@@ -33,12 +33,12 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
         path_obj = Path(path).resolve()
         if not path_obj.is_dir():
             if create_if_not_exist:
-                if messagebox.askyesno(t("ui.common.tip"), t("ui.message.directory_not_found_ask_create", path=path_obj)):
+                if messagebox.askyesno(t("common.tip"), t("message.dir_not_found_create", path=path_obj)):
                     path_obj.mkdir(parents=True, exist_ok=True)
                 else: 
                     return
             else:
-                messagebox.showwarning(t("ui.common.warning"), t("ui.message.path_not_exist_or_not_folder", path=path_obj))
+                messagebox.showwarning(t("common.warning"), t("message.path_invalid", path=path_obj))
                 return
         
         # 检测是否为 WSL 环境
@@ -69,8 +69,8 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                 path_obj = Path(windows_path)  # 更新路径为Windows路径
                 
             except subprocess.CalledProcessError as e:
-                log(t("log.file_ops.wsl_path_conversion_failed", error=e))
-                messagebox.showerror(t("ui.common.error"), t("ui.message.cannot_open_in_windows", error=e))
+                log(t("message.process_failed", error=e))
+                messagebox.showerror(t("common.error"), t("message.cannot_open_explorer", error=e))
                 return
             
         else:
@@ -82,14 +82,14 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                     subprocess.run(['xdg-open', str(path_obj)], check=True)
                 
             except (subprocess.CalledProcessError, FileNotFoundError):
-                messagebox.showinfo(t("ui.common.tip"), t("ui.message.open_manually", path=path_obj))
+                messagebox.showinfo(t("common.tip"), t("message.open_manually", path=path_obj))
                 return
         
         # 统一记录成功打开目录的日志
-        log(t("log.file_ops.directory_opened", path=path_obj))
+        log(t("log.file.loaded", path=path_obj))
                 
     except Exception as e:
-        messagebox.showerror(t("ui.common.error"), t("ui.message.open_directory_error", error=e))
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
 
 def replace_file(source_path: Path, 
                     dest_path: Path, 
@@ -103,37 +103,37 @@ def replace_file(source_path: Path,
     返回操作是否成功。 
     """ 
     if not source_path or not source_path.exists(): 
-        messagebox.showerror(t("ui.common.error"), t("ui.message.source_file_not_found", path=source_path)) 
+        messagebox.showerror(t("common.error"), t("message.file_not_found", path=source_path)) 
         return False 
     if not dest_path or not dest_path.exists(): 
-        messagebox.showerror(t("ui.common.error"), t("ui.message.target_file_not_found", path=dest_path)) 
+        messagebox.showerror(t("common.error"), t("message.file_not_found", path=dest_path)) 
         return False 
     if source_path == dest_path: 
-        messagebox.showerror(t("ui.common.error"), t("ui.message.source_target_same")) 
+        messagebox.showerror(t("common.error"), t("message.confirm_operation")) 
         return False
 
-    if ask_confirm and not messagebox.askyesno(t("ui.common.warning"), confirm_message): 
+    if ask_confirm and not messagebox.askyesno(t("common.warning"), confirm_message): 
         return False 
 
     try: 
         backup_message = "" 
         if create_backup: 
             backup_path = dest_path.with_suffix(dest_path.suffix + '.backup') 
-            log(t("log.file_ops.backing_up", file=backup_path.name)) 
+            log(t("log.file.backed_up", path=backup_path)) 
             shutil.copy2(dest_path, backup_path) 
-            backup_message = t("ui.message.backup_created_at", path=backup_path.name)
+            backup_message = t("message.file_not_found", path=backup_path)
         
-        log(t("log.file_ops.overwriting", source=source_path.name, target=dest_path.name)) 
+        log(t("log.file.overwritten", path=dest_path)) 
         shutil.copy2(source_path, dest_path) 
         
-        log(t("log.file_ops.overwrite_success")) 
-        messagebox.showinfo(t("ui.common.success"), t("ui.message.overwrite_success_with_backup", backup_info=backup_message)) 
+        log(t("log.status.done")) 
+        messagebox.showinfo(t("common.success"), t("message.process_success")) 
         return True 
 
     except Exception as e: 
-        log(t("log.file_ops.overwrite_failed", error=e)) 
+        log(t("message.process_failed", error=e)) 
 
-        messagebox.showerror(t("ui.common.error"), t("ui.message.overwrite_process_error", error=e)) 
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
         return False 
 
 def select_directory(var, title, logger=no_log):
@@ -152,9 +152,9 @@ def select_directory(var, title, logger=no_log):
         selected_dir = filedialog.askdirectory(title=title, initialdir=str(current_path))
         if selected_dir:
             var.set(str(Path(selected_dir)))
-            logger(t("log.file_ops.directory_updated", path=selected_dir))
+            logger(t("log.file.loaded", path=selected_dir))
     except Exception as e:
-        messagebox.showerror(t("ui.common.error"), t("ui.message.select_directory_error", error=e))
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
 
 
 
@@ -289,5 +289,5 @@ class ConfigManager:
             
             return True
         except Exception as e:
-            print(t("log.config.load_failed_details", error=e))
+            print(t("message.process_failed", error=e))
             return False
