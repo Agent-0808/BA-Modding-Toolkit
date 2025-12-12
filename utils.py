@@ -313,6 +313,23 @@ def get_skel_version(source: Path | bytes, log = no_log) -> str | None:
         log(f"处理源数据时发生错误: {e}")
         return None
 
+def get_search_resource_dirs(base_game_dir: Path, auto_detect_subdirs: bool = True) -> list[Path]:
+    """
+    获取游戏资源搜索目录列表。
+    """
+    if auto_detect_subdirs:
+        suffixes = ["",
+            "BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows",
+            "BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows",
+            "GameData/Windows",
+            "Preload/Windows",
+            "GameData/Android",
+            "Preload/Android",
+            ]
+        return [base_game_dir / suffix for suffix in suffixes]
+    else:
+        return [base_game_dir]
+
 def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
     """
     通过检查文件或字节数据头部来判断是否为Unity的.bundle文件

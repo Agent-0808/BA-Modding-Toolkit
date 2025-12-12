@@ -84,7 +84,8 @@
 	},
 	"file": {
 		"executable": "可执行文件",
-		"all_files": "所有文件"
+		"all_files": "所有文件",
+		"bundle": "AssetBundle 文件"
 	},
 	"message": {
 		"confirm_operation": "确定要执行此操作吗？",
@@ -134,7 +135,7 @@
 			"file_crc32": "文件 CRC32: {crc}",
 			"calculation_error": "计算CRC时发生错误:\n{error}",
 			"modified_file_crc32": "待修正文件 CRC32: {crc}",
-			"original_file_crc32": "原始文件 CRC32: {crc}",
+			"original_file_crc32": "原始文件　 CRC32: {crc}",
 			"match_yes": "✅ CRC值匹配: 是",
 			"match_no": "❌ CRC值匹配: 否"
 		}
@@ -152,12 +153,15 @@
 			"crc_check_done": "CRC检测完成",
 			"crc_correction_done": "CRC修正完成",
 			"error": "错误：{error}",
-			"loaded": "已加载 {type}"
+			"loaded": "已加载 {type}",
+			"crc_match": "CRC值匹配",
+			"crc_mismatch": "CRC值不匹配",
+			"calculation_done": "计算完成"
 		},
 		"file": {
 			"loaded": "已加载: {path}",
-			"saved": "已保存至: {path}",
-			"backed_up": "已备份至: {path}",
+			"saved": "已将输出文件保存至: {path}",
+			"backed_up": "已将文件备份至: {path}",
 			"overwritten": "已覆盖: {path}"
 		},
 		"batch": {
@@ -180,22 +184,18 @@
 			"atlas_downgrade_set": "已设置 Atlas 降级工具： {path}"
 		},
 		"loaded_with_type": "已加载 {type}: {name}",
-		"common": {
-			"error_detail": "❌ 错误：{error}"
-		},
 		"packer": {
 			"start_packing": "开始从资源文件夹打包...",
 			"pack_success_path": "✅ 打包成功。文件已输出至: {path}"
 		},
 		"crc": {
-			"loaded_original": "已加载CRC原始文件: {filename}",
-			"loaded_modified": "已加载CRC修改后文件: {filename}",
+			"loaded_original": "已加载原始文件: {file}",
+			"loaded_modified": "已加载修改后文件: {file}",
 			"start_correction": "开始CRC修正过程...",
 			"checking_match": "正在检测CRC值是否匹配...",
 			"check_failed": "⚠️ 警告: 检测CRC值时发生错误: {error}",
 			"match_no_correction_needed": "✅ CRC值已匹配，无需修正",
 			"mismatch_start_correction": "❌ CRC值不匹配，开始进行CRC修正...",
-			"copied_to_output": "已将修改后的文件复制到输出目录: {path}",
 			"correction_success": "✅ CRC修正成功！",
 			"correction_failed": "❌ CRC修正失败",
 			"calculation_error": "❌ 计算CRC时发生错误: {error}",
@@ -206,7 +206,8 @@
 		"game_dir_not_set": "⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。",
 		"file_not_found_in_dirs": "⚠️ 警告: 未能在指定的资源目录中找到对应的原始文件 '{filename}'。",
 		"file_found_in_subdir": "已在 '{subdir}' 中自动找到并加载原始文件: {filename}",
-		"output_dir_not_set": "❌ 错误: 未设置输出目录"
+		"output_dir_not_set": "❌ 错误: 未设置输出目录",
+		"error_detail": "发生错误：{error}"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",

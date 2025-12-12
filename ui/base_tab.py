@@ -32,7 +32,7 @@ class TabFrame(ttk.Frame):
         setattr(self, path_var_name, path)
         label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
         self.logger.log(t("log.loaded_with_type", type=file_type_name, name=path.name))
-        self.logger.status(t("log.status.loaded_type", type=file_type_name))
+        self.logger.status(t("log.status.loaded", type=file_type_name))
         if callback:
             callback()
 
@@ -40,18 +40,4 @@ class TabFrame(ttk.Frame):
         setattr(self, path_var_name, path)
         label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
         self.logger.log(t("log.loaded_with_type", type=folder_type_name, name=path.name))
-        self.logger.status(t("log.status.loaded_type", type=folder_type_name))
-
-    def get_game_search_dirs(self, base_game_dir: Path, auto_detect_subdirs: bool) -> list[Path]:
-        if auto_detect_subdirs:
-            suffixes = ["",
-                "BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows",
-                "BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows",
-"GameData/Windows",
-                "Preload/Windows",
-"GameData/Android",
-                "Preload/Android",
-                ]
-            return [base_game_dir / suffix for suffix in suffixes]
-        else:
-            return [base_game_dir]
+        self.logger.status(t("log.status.loaded", type=folder_type_name))

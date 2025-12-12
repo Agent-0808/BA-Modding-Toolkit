@@ -9,6 +9,7 @@ import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop
+from utils import get_search_resource_dirs
 
 class JpGbConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
@@ -186,7 +187,7 @@ class JpGbConversionTab(TabFrame):
         """在工作线程中执行文件查找，统一处理逻辑"""
         self.logger.status("正在自动查找对应文件...")
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        game_search_dirs = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         if source_type == 'global' and self.global_bundle_path:
             source_path = self.global_bundle_path

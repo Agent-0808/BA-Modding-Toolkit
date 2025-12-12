@@ -42,8 +42,12 @@ class AssetPackerTab(TabFrame):
             messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
         self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("label.target_bundle_file"))
+    
     def browse_bundle(self):
-        p = filedialog.askopenfilename(title=t("ui.dialog.select_target_bundle"))
+        p = filedialog.askopenfilename(
+            title=t("ui.dialog.select_target_bundle"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")]
+            )
         if p: self.set_file_path('bundle_path', self.bundle_label, Path(p), t("label.target_bundle_file"))
     
     def drop_folder(self, event):

@@ -10,6 +10,7 @@ import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop, replace_file
+from utils import get_search_resource_dirs
 
 class ModUpdateTab(TabFrame):
     """一个整合了单个更新和批量更新功能的标签页"""
@@ -96,7 +97,9 @@ class ModUpdateTab(TabFrame):
         self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle)
 
     def browse_old_mod(self):
-        p = filedialog.askopenfilename(title=t("label.mod_file"))
+        p = filedialog.askopenfilename(
+            title=t("label.mod_file"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
         if p:
             self.set_file_path('old_mod_path', self.old_mod_label, Path(p), t("label.mod_file"), callback=self.auto_find_new_bundle)
 
@@ -108,7 +111,9 @@ class ModUpdateTab(TabFrame):
         self.set_new_mod_file(path)
 
     def browse_new_mod(self):
-        p = filedialog.askopenfilename(title=t("label.target_resource_bundle"))
+        p = filedialog.askopenfilename(
+            title=t("label.target_resource_bundle"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
         if p:
             self.set_new_mod_file(Path(p))
             
@@ -130,7 +135,7 @@ class ModUpdateTab(TabFrame):
         self.logger.status(t("log.status.processing_detailed"))
         
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         found_path, message = processing.find_new_bundle_path(
             self.old_mod_path,
@@ -211,7 +216,7 @@ class ModUpdateTab(TabFrame):
         
         if self.final_output_path.exists():
             self.logger.log(t("log.file.saved", path=self.final_output_path))
-            self.logger.log(t("message.replace_original"), button=t("action.replace_original"))
+            self.logger.log(t("message.replace_original", button=t("action.replace_original")))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
         else:
@@ -318,7 +323,9 @@ class ModUpdateTab(TabFrame):
             self._add_files_to_list(paths_to_add)
 
     def browse_add_files(self):
-        filepaths = filedialog.askopenfilenames(title=t("label.bundle_file"))
+        filepaths = filedialog.askopenfilenames(
+            title=t("label.bundle_file"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
         if filepaths:
             self._add_files_to_list([Path(p) for p in filepaths])
 
@@ -376,7 +383,7 @@ class ModUpdateTab(TabFrame):
         # 1. 准备参数
         output_dir = Path(self.app.output_dir_var.get())
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
         
         try:
             output_dir.mkdir(parents=True, exist_ok=True)

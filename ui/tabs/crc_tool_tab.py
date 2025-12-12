@@ -9,7 +9,7 @@ from i18n import t
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop, replace_file
-from utils import CRCUtils
+from utils import CRCUtils, get_search_resource_dirs
 
 class CrcToolTab(TabFrame):
     def create_widgets(self):
@@ -48,7 +48,9 @@ class CrcToolTab(TabFrame):
             return
         self.set_original_file(Path(event.data.strip('{}')))
     def browse_original(self):
-        p = filedialog.askopenfilename(title=t("ui.dialog.select_original_file"))
+        p = filedialog.askopenfilename(
+            title=t("ui.dialog.select_original_file"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
         if p:
             self.set_original_file(Path(p))
     
@@ -58,20 +60,22 @@ class CrcToolTab(TabFrame):
             return
         self.set_modified_file(Path(event.data.strip('{}')))
     def browse_modified(self):
-        p = filedialog.askopenfilename(title=t("ui.dialog.select_modified_file"))
+        p = filedialog.askopenfilename(
+            title=t("ui.dialog.select_modified_file"),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
         if p:
             self.set_modified_file(Path(p))
 
     def set_original_file(self, path: Path):
         self.original_path = path
         self.original_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(t("log.crc.loaded_original", filename=path.name))
+        self.logger.log(t("log.crc.loaded_original", file=path))
         self.logger.status(t("log.status.loaded", type="original"))
 
     def set_modified_file(self, path: Path):
         self.modified_path = path
         self.modified_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(t("log.crc.loaded_modified", filename=path.name))
+        self.logger.log(t("log.crc.loaded_modified", file=path))
         
         game_dir_str = self.app.game_resource_dir_var.get()
         if not game_dir_str:
@@ -83,8 +87,8 @@ class CrcToolTab(TabFrame):
             self.logger.log(t("log.game_dir_not_exist", path=game_dir_str))
             return
         
-        # 使用通用函数构造搜索目录列表
-        search_dirs = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        # 构造搜索目录列表
+        search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         found = False
         for directory in search_dirs:
@@ -166,7 +170,7 @@ class CrcToolTab(TabFrame):
             
             # 先复制修改后的文件到输出目录
             shutil.copy2(self.modified_path, output_path)
-            self.logger.log(t("log.crc.copied_to_output", path=output_path))
+            self.logger.log(t("log.file.saved", path=output_path))
             
             # 修正输出目录中的文件CRC
             success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.enable_padding_var.get())
@@ -181,9 +185,9 @@ class CrcToolTab(TabFrame):
             return success
                 
         except Exception as e:
-            self.logger.log(t("log.common.error_detail", error=e))
-            messagebox.showerror(t("common.error"), t("message.execution_error", error=e))
+            self.logger.log(t("log.error_detail", error=e))
             self.logger.status(t("log.status.crc_correction_failed"))
+            messagebox.showerror(t("common.error"), t("message.execution_error", error=e))
             return False
         
     def calculate_single_value(self):
@@ -191,14 +195,15 @@ class CrcToolTab(TabFrame):
         self.logger.status(t("common.processing"))
         try:
             with open(self.modified_path, "rb") as f: file_data = f.read()
-
             crc_hex = f"{CRCUtils.compute_crc32(file_data):08X}"
             
             self.logger.log(t("message.crc.file_crc32", crc=crc_hex))
+            self.logger.status(t("log.status.calculation_done"))
             messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), t("message.crc.file_crc32", crc=crc_hex))
             
         except Exception as e:
             self.logger.log(t("log.crc.calculation_error", error=e))
+            self.logger.status(t("log.status.error", error=e))
             messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
     def calculate_values(self):
@@ -218,12 +223,15 @@ class CrcToolTab(TabFrame):
 
             if original_crc_hex == modified_crc_hex:
                 self.logger.log(t("log.crc.match_yes"))
+                self.logger.status(t("log.status.crc_match"))
                 messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_yes')}")
             else:
                 self.logger.log(t("log.crc.match_no"))
+                self.logger.status(t("log.status.crc_mismatch"))
                 messagebox.showwarning(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_no')}")
         except Exception as e:
             self.logger.log(t("log.crc.calculation_error", error=e))
+            self.logger.status(t("log.status.error", error=e))
             messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
     def replace_original(self):
