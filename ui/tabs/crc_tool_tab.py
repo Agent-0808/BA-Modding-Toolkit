@@ -5,6 +5,7 @@ from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
 
+from i18n import t
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
 from ui.utils import is_multiple_drop, replace_file
@@ -17,69 +18,69 @@ class CrcToolTab(TabFrame):
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
-            self, "待修正文件", self.drop_modified, self.browse_modified
+            self, t("label.file_to_correct"), self.drop_modified, self.browse_modified
         )
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
         original_frame, self.original_label = UIComponents.create_file_drop_zone(
-            self, "原始文件", self.drop_original, self.browse_original,
+            self, t("label.original_file"), self.drop_original, self.browse_original,
             search_path_var=self.app.game_resource_dir_var
         )
         
         # 自定义拖放区的提示文本，使其更具指导性
-        self.original_label.config(text="拖入修改后文件后将自动查找原始文件\n或手动拖放/浏览文件")
+        self.original_label.config(text=t("ui.mod_update.placeholder_new"))
 
         # 3. 操作按钮
         action_button_frame = tk.Frame(self) # 使用与父框架相同的背景色
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1, 2), weight=1)
         
-        UIComponents.create_button(action_button_frame, "运行CRC修正", self.run_correction_thread,
+        UIComponents.create_button(action_button_frame, t("action.run_crc_correction"), self.run_correction_thread,
                                    bg_color=Theme.BUTTON_SUCCESS_BG, padx=10, pady=5).grid(row=0, column=0, sticky="ew", padx=5)
-        UIComponents.create_button(action_button_frame, "计算CRC值", self.calculate_values_thread,
+        UIComponents.create_button(action_button_frame, t("action.calculate_crc"), self.calculate_values_thread,
                                    bg_color=Theme.BUTTON_PRIMARY_BG, padx=10, pady=5).grid(row=0, column=1, sticky="ew", padx=5)
-        UIComponents.create_button(action_button_frame, "替换原始文件", self.replace_original_thread,
+        UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread,
                                    bg_color=Theme.BUTTON_DANGER_BG, padx=10, pady=5).grid(row=0, column=2, sticky="ew", padx=5)
 
     def drop_original(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
+            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
         self.set_original_file(Path(event.data.strip('{}')))
     def browse_original(self):
-        p = filedialog.askopenfilename(title="请选择原始文件")
+        p = filedialog.askopenfilename(title=t("ui.dialog.select_original_file"))
         if p:
             self.set_original_file(Path(p))
     
     def drop_modified(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
+            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
         self.set_modified_file(Path(event.data.strip('{}')))
     def browse_modified(self):
-        p = filedialog.askopenfilename(title="请选择修改后文件")
+        p = filedialog.askopenfilename(title=t("ui.dialog.select_modified_file"))
         if p:
             self.set_modified_file(Path(p))
 
     def set_original_file(self, path: Path):
         self.original_path = path
         self.original_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(f"已加载CRC原始文件: {path.name}")
-        self.logger.status("已加载CRC原始文件")
+        self.logger.log(t("log.crc.loaded_original", filename=path.name))
+        self.logger.status(t("log.status.loaded", type="original"))
 
     def set_modified_file(self, path: Path):
         self.modified_path = path
         self.modified_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(f"已加载CRC修改后文件: {path.name}")
+        self.logger.log(t("log.crc.loaded_modified", filename=path.name))
         
         game_dir_str = self.app.game_resource_dir_var.get()
         if not game_dir_str:
-            self.logger.log("⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。")
+            self.logger.log(t("log.game_dir_not_set"))
             return
 
         base_game_dir = Path(game_dir_str)
         if not base_game_dir.is_dir():
-            self.logger.log(f"⚠️ 警告: 游戏资源目录 '{game_dir_str}' 不存在。")
+            self.logger.log(t("log.game_dir_not_exist", path=game_dir_str))
             return
         
         # 使用通用函数构造搜索目录列表
@@ -93,16 +94,16 @@ class CrcToolTab(TabFrame):
             candidate = directory / path.name
             if candidate.exists():
                 self.set_original_file(candidate)
-                self.logger.log(f"已在 '{directory.name}' 中自动找到并加载原始文件: {candidate.name}")
+                self.logger.log(t("log.file_found_in_subdir", subdir=directory.name, filename=candidate.name))
                 found = True
                 break # 找到后即停止搜索
         
         if not found:
-            self.logger.log(f"⚠️ 警告: 未能在指定的资源目录中找到对应的原始文件 '{path.name}'。")
+            self.logger.log(t("log.file_not_found_in_dirs", filename=path.name))
 
     def _validate_paths(self):
         if not self.original_path or not self.modified_path:
-            messagebox.showerror("错误", "请同时提供原始文件和待修正文件。")
+            messagebox.showerror(t("common.error"), t("message.crc.provide_both_files"))
             return False
         return True
 
@@ -112,7 +113,7 @@ class CrcToolTab(TabFrame):
     def calculate_values_thread(self):
         # 检查路径情况
         if not self.modified_path:
-            messagebox.showerror("错误", "请至少提供一个文件路径。")
+            messagebox.showerror(t("common.error"), t("message.crc.provide_at_least_one_file"))
             return
         
         # 如果只有修改后文件，计算其CRC32值
@@ -127,14 +128,14 @@ class CrcToolTab(TabFrame):
 
     def run_correction(self):
         self.logger.log("\n" + "="*50)
-        self.logger.log("开始CRC修正过程...")
-        self.logger.status("正在进行CRC修正...")
+        self.logger.log(t("log.crc.start_correction"))
+        self.logger.status(t("common.processing"))
         try:
             # 确保有输出目录变量
             if not self.app.output_dir_var or not self.app.output_dir_var.get():
-                self.logger.log("❌ 错误: 未设置输出目录")
-                messagebox.showerror("错误", "未设置输出目录，请先在设置中配置输出目录。")
-                self.logger.status("CRC修正失败")
+                self.logger.log(t("log.output_dir_not_set"))
+                messagebox.showerror(t("common.error"), t("message.output_dir_not_set"))
+                self.logger.status(t("log.status.crc_correction_failed"))
                 return False
             
             # 创建输出目录（如果不存在）
@@ -142,23 +143,22 @@ class CrcToolTab(TabFrame):
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # 先检测CRC是否一致
-            self.logger.log("正在检测CRC值是否匹配...")
+            self.logger.log(t("log.crc.checking_match"))
             try:
                 is_crc_match = CRCUtils.check_crc_match(self.original_path, self.modified_path)
             except Exception as e:
-                self.logger.log(f"⚠️ 警告: 检测CRC值时发生错误: {e}")
-                messagebox.showerror("错误", "检测CRC值时发生错误。请检查原始文件和修改后文件是否正确。")
-                self.logger.status("CRC检测失败")
+                self.logger.log(t("log.crc.check_failed", error=e))
+                messagebox.showerror(t("common.error"), t("message.crc.check_failed"))
+                self.logger.status(t("log.status.crc_check_failed"))
                 return False
             
-            
             if is_crc_match:
-                self.logger.log("✅ CRC值已匹配，无需修正")
-                messagebox.showinfo("CRC检测结果", "CRC值已匹配，无需进行修正操作。")
-                self.logger.status("CRC检测完成")
+                self.logger.log(t("log.crc.match_no_correction_needed"))
+                messagebox.showinfo(t("ui.dialog.title.crc_check_result"), t("message.crc.match_no_correction_needed"))
+                self.logger.status(t("log.status.crc_check_done"))
                 return True
             
-            self.logger.log("❌ CRC值不匹配，开始进行CRC修正...")
+            self.logger.log(t("log.crc.mismatch_start_correction"))
             
             # 计算输出文件路径
             output_filename = self.modified_path.name
@@ -166,44 +166,44 @@ class CrcToolTab(TabFrame):
             
             # 先复制修改后的文件到输出目录
             shutil.copy2(self.modified_path, output_path)
-            self.logger.log(f"已将修改后的文件复制到输出目录: {output_path}")
+            self.logger.log(t("log.crc.copied_to_output", path=output_path))
             
             # 修正输出目录中的文件CRC
             success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.enable_padding_var.get())
             
             if success:
-                self.logger.log("✅ CRC修正成功！")
-                messagebox.showinfo("成功", f"CRC 修正成功！\n修正后的文件已保存至输出目录:\n{output_path}")
+                self.logger.log(t("log.crc.correction_success"))
+                messagebox.showinfo(t("common.success"), t("message.crc.correction_success", path=output_path))
             else:
-                self.logger.log("❌ CRC修正失败")
-                messagebox.showerror("失败", "CRC 修正失败。")
-            self.logger.status("CRC修正完成")
+                self.logger.log(t("log.crc.correction_failed"))
+                messagebox.showerror(t("common.fail"), t("message.crc.correction_failed"))
+            self.logger.status(t("log.status.crc_correction_done"))
             return success
                 
         except Exception as e:
-            self.logger.log(f"❌ 错误：{e}")
-            messagebox.showerror("错误", f"执行过程中发生错误:\n{e}")
-            self.logger.status("CRC修正失败")
+            self.logger.log(t("log.common.error_detail", error=e))
+            messagebox.showerror(t("common.error"), t("message.execution_error", error=e))
+            self.logger.status(t("log.status.crc_correction_failed"))
             return False
         
     def calculate_single_value(self):
         """计算单个文件的CRC32值"""
-        self.logger.status("正在计算CRC...")
+        self.logger.status(t("common.processing"))
         try:
             with open(self.modified_path, "rb") as f: file_data = f.read()
 
             crc_hex = f"{CRCUtils.compute_crc32(file_data):08X}"
             
-            self.logger.log(f"文件 CRC32: {crc_hex}")
-            messagebox.showinfo("CRC计算结果", f"文件 CRC32: {crc_hex}")
+            self.logger.log(t("message.crc.file_crc32", crc=crc_hex))
+            messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), t("message.crc.file_crc32", crc=crc_hex))
             
         except Exception as e:
-            self.logger.log(f"❌ 计算CRC时发生错误: {e}")
-            messagebox.showerror("错误", f"计算CRC时发生错误:\n{e}")
+            self.logger.log(t("log.crc.calculation_error", error=e))
+            messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
     def calculate_values(self):
         """计算两个文件的CRC32值，并判断是否匹配"""
-        self.logger.status("正在计算CRC...")
+        self.logger.status(t("common.processing"))
         try:
             with open(self.original_path, "rb") as f: original_data = f.read()
             with open(self.modified_path, "rb") as f: modified_data = f.read()
@@ -211,20 +211,20 @@ class CrcToolTab(TabFrame):
             original_crc_hex = f"{CRCUtils.compute_crc32(original_data):08X}"
             modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
             
-            self.logger.log(f"待修正文件 CRC32: {modified_crc_hex}")
-            self.logger.log(f"原始文件 CRC32: {original_crc_hex}")
+            self.logger.log(t("message.crc.modified_file_crc32", crc=modified_crc_hex))
+            self.logger.log(t("message.crc.original_file_crc32", crc=original_crc_hex))
 
-            msg = f"待修正文件 CRC32: {modified_crc_hex}\n原始文件 CRC32: {original_crc_hex}\n"
+            msg = f"{t('message.crc.modified_file_crc32', crc=modified_crc_hex)}\n{t('message.crc.original_file_crc32', crc=original_crc_hex)}\n"
 
             if original_crc_hex == modified_crc_hex:
-                self.logger.log("    CRC值匹配: ✅是")
-                messagebox.showinfo("CRC计算结果", f"{msg}\n✅ CRC值匹配: 是")
+                self.logger.log(t("log.crc.match_yes"))
+                messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_yes')}")
             else:
-                self.logger.log("    CRC值匹配: ❌否")
-                messagebox.showwarning("CRC计算结果", f"{msg}\n❌ CRC值匹配: 否")
+                self.logger.log(t("log.crc.match_no"))
+                messagebox.showwarning(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_no')}")
         except Exception as e:
-            self.logger.log(f"❌ 计算CRC时发生错误: {e}")
-            messagebox.showerror("错误", f"计算CRC时发生错误:\n{e}")
+            self.logger.log(t("log.crc.calculation_error", error=e))
+            messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
     def replace_original(self):
         success = replace_file(
@@ -232,6 +232,6 @@ class CrcToolTab(TabFrame):
             dest_path=self.original_path,
             create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
-            confirm_message="确定要用修改后的文件替换原始文件吗？\n\n此操作不可逆，建议先备份原始文件！",
+            confirm_message=t("message.confirm_replace_file", filename=self.original_path.name),
             log=self.logger.log,
         )

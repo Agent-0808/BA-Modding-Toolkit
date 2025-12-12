@@ -138,7 +138,8 @@ class App(tk.Frame):
         
         # 在logger创建后记录配置加载信息
         language = self.language_var.get()
-        self.logger.log(t("log.config.loaded", language=language))
+        self.logger.log(t("log.config.loaded"))
+        self.logger.log(t("log.config.language", language=language))
         
         # 将 logger 和共享变量传递给 Tabs
         self.populate_notebook()
@@ -212,7 +213,7 @@ class App(tk.Frame):
         return notebook
 
     def create_log_area(self, parent):
-        log_frame = tk.LabelFrame(parent, text=t("common.ready"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
+        log_frame = tk.LabelFrame(parent, text=t("ui.log_area"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0) # 日志区不需要顶部pady
 
         log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=10) #添加 height 参数

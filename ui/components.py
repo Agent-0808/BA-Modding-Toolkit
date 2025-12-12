@@ -24,7 +24,7 @@ class Logger:
     def status(self, message: str) -> None:
         """线程安全地更新状态栏消息"""
         def _update_status() -> None:
-            self.status_widget.config(text=f"{t('common.status_label')}{message}")
+            self.status_widget.config(text=f"{t('ui.status_label')}{message}")
         
         self.master.after(0, _update_status)
 

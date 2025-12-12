@@ -127,7 +127,7 @@ class ModUpdateTab(TabFrame):
         
     def _find_new_bundle_worker(self):
         self.new_mod_label.config(text=t("ui.mod_update.status_searching"), fg=Theme.COLOR_WARNING)
-        self.logger.status(t("log.status.processing"))
+        self.logger.status(t("log.status.processing_detailed"))
         
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = self.get_game_search_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
@@ -170,7 +170,7 @@ class ModUpdateTab(TabFrame):
 
         self.logger.log("\n" + "="*50)
         self.logger.log(t("message.updating"))
-        self.logger.status(t("log.status.processing", filename=self.old_mod_path.name))
+        self.logger.status(t("log.status.processing_detailed", filename=self.old_mod_path.name))
         
         asset_types_to_replace = set()
         if self.app.replace_all_var.get():
@@ -371,7 +371,7 @@ class ModUpdateTab(TabFrame):
     def _batch_update_worker(self):
         self.logger.log("\n" + "#"*50)
         self.logger.log(t("log.batch.start"))
-        self.logger.status(t("log.status.processing"))
+        self.logger.status(t("log.status.batch_starting"))
 
         # 1. 准备参数
         output_dir = Path(self.app.output_dir_var.get())
@@ -382,7 +382,7 @@ class ModUpdateTab(TabFrame):
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
             messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
-            self.logger.status(t("log.status.ready"))
+            self.logger.status(t("log.status.error", error=e))
             return
 
         asset_types_to_replace = set()
@@ -407,7 +407,7 @@ class ModUpdateTab(TabFrame):
 
         # 更新UI状态的回调函数
         def progress_callback(current, total, filename):
-            self.logger.status(t("log.status.processing", current=current, total=total, filename=filename))
+            self.logger.status(t("log.status.processing_batch", current=current, total=total, filename=filename))
 
         # 2. 调用核心处理函数
         success_count, fail_count, failed_tasks = processing.process_batch_mod_update(
