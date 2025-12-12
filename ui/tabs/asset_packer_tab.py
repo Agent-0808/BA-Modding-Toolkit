@@ -1,14 +1,14 @@
 # ui/tabs/asset_packer_tab.py
 
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import messagebox
 from pathlib import Path
 from i18n import t
 
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, replace_file
+from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
@@ -44,11 +44,12 @@ class AssetPackerTab(TabFrame):
         self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("label.target_bundle_file"))
     
     def browse_bundle(self):
-        p = filedialog.askopenfilename(
-            title=t("ui.dialog.select_target_bundle"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")]
-            )
-        if p: self.set_file_path('bundle_path', self.bundle_label, Path(p), t("label.target_bundle_file"))
+        select_file(
+            title=t("ui.dialog.select", type=t("label.target_bundle_file")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("label.target_bundle_file")),
+            logger=self.logger.log
+        )
     
     def drop_folder(self, event):
         if is_multiple_drop(event.data):
@@ -64,9 +65,15 @@ class AssetPackerTab(TabFrame):
             return
             
         self.set_folder_path('folder_path', self.folder_label, dropped_path, t("label.assets_folder_to_pack"))
+
     def browse_folder(self):
-        p = filedialog.askdirectory(title=t("ui.dialog.select_assets_folder"))
-        if p: self.set_folder_path('folder_path', self.folder_label, Path(p), t("label.assets_folder_to_pack"))
+        folder_path = select_directory(
+            var=None,
+            title=t("ui.dialog.select", type=t("label.assets_folder_to_pack")),
+            logger=self.logger.log
+        )
+        if folder_path:
+            self.set_folder_path('folder_path', self.folder_label, Path(folder_path), t("label.assets_folder_to_pack"))
 
     def run_replacement_thread(self):
         if not all([self.bundle_path, self.folder_path, self.app.output_dir_var.get()]):

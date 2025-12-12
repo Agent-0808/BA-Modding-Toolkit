@@ -6,6 +6,7 @@ from pathlib import Path
 
 from i18n import t
 from .components import Theme, UIComponents
+from .utils import select_file
 
 class SettingsDialog(tk.Toplevel):
     def __init__(self, master, app_instance):
@@ -196,38 +197,24 @@ class SettingsDialog(tk.Toplevel):
     
     def select_spine_converter_path(self):
         """选择Spine转换器路径"""
-        try:
-            current_path = Path(self.app.spine_converter_path_var.get())
-            if not current_path.exists():
-                current_path = Path.home()
-            
-            selected_file = filedialog.askopenfilename(
-                title=t("ui.dialog.select", filename="SpineSkeletonConverter.exe"),
-                initialdir=str(current_path.parent) if current_path.parent.exists() else str(current_path),
-                filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")]
-            )
-            
-            if selected_file:
-                self.app.spine_converter_path_var.set(str(Path(selected_file)))
-                self.app.logger.log(t("log.spine.skel_converter_set", path=selected_file))
-        except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+        select_file(
+            title=t("ui.dialog.select", type=t("file.skel_converter")),
+            filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")],
+            callback=lambda path: (
+                self.app.spine_converter_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.skel_converter_set", path=path))
+            ),
+            logger=self.app.logger.log
+        )
 
     def select_atlas_downgrade_path(self):
         """选择SpineAtlasDowngrade.exe路径"""
-        try:
-            current_path = Path(self.app.atlas_downgrade_path_var.get())
-            if not current_path.exists():
-                current_path = Path.home()
-            
-            selected_file = filedialog.askopenfilename(
-                title=t("ui.dialog.select", filename="SpineAtlasDowngrade.exe"),
-                initialdir=str(current_path.parent) if current_path.parent.exists() else str(current_path),
-                filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")]
-            )
-            
-            if selected_file:
-                self.app.atlas_downgrade_path_var.set(str(Path(selected_file)))
-                self.app.logger.log(t("log.spine.atlas_downgrade_set", path=selected_file))
-        except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+        select_file(
+            title=t("ui.dialog.select", type=t("file.atlas_downgrade")),
+            filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")],
+            callback=lambda path: (
+                self.app.atlas_downgrade_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))
+            ),
+            logger=self.app.logger.log
+        )

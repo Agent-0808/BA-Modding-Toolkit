@@ -9,7 +9,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, replace_file
+from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
 from utils import get_search_resource_dirs
 
 class ModUpdateTab(TabFrame):
@@ -97,11 +97,12 @@ class ModUpdateTab(TabFrame):
         self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle)
 
     def browse_old_mod(self):
-        p = filedialog.askopenfilename(
-            title=t("label.mod_file"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
-        if p:
-            self.set_file_path('old_mod_path', self.old_mod_label, Path(p), t("label.mod_file"), callback=self.auto_find_new_bundle)
+        select_file(
+            title=t("ui.dialog.select", type=t("label.mod_file")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            callback=lambda path: self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle),
+            logger=self.logger.log
+        )
 
     def drop_new_mod(self, event):
         if is_multiple_drop(event.data):
@@ -111,11 +112,12 @@ class ModUpdateTab(TabFrame):
         self.set_new_mod_file(path)
 
     def browse_new_mod(self):
-        p = filedialog.askopenfilename(
-            title=t("label.target_resource_bundle"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
-        if p:
-            self.set_new_mod_file(Path(p))
+        select_file(
+            title=t("ui.dialog.select", type=t("label.target_resource_bundle")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            callback=self.set_new_mod_file,
+            logger=self.logger.log
+        )
             
     def set_new_mod_file(self, path: Path):
         self.new_mod_path = path
@@ -323,14 +325,19 @@ class ModUpdateTab(TabFrame):
             self._add_files_to_list(paths_to_add)
 
     def browse_add_files(self):
-        filepaths = filedialog.askopenfilenames(
-            title=t("label.bundle_file"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
-        if filepaths:
-            self._add_files_to_list([Path(p) for p in filepaths])
+        select_file(
+            title=t("ui.dialog.add", type=t("file.bundle")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            multiple=True,
+            callback=self._add_files_to_list,
+            logger=self.logger.log
+        )
 
     def browse_add_folder(self):
-        folder_path = filedialog.askdirectory(title=t("label.output_dir"))
+        folder_path = select_directory(
+            title=t("ui.dialog.add", type=t("file.folder")),
+            logger=self.logger.log
+        )
         if folder_path:
             path = Path(folder_path)
             bundle_files = sorted(path.glob('*.bundle'))

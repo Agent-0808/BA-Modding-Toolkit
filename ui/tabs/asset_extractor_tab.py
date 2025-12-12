@@ -8,7 +8,7 @@ import os
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop
+from ui.utils import is_multiple_drop, select_file, select_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
@@ -70,8 +70,11 @@ class AssetExtractorTab(TabFrame):
         self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), "目标 Bundle")
 
     def browse_bundle(self):
-        p = filedialog.askopenfilename(title="选择目标 Bundle 文件")
-        if p: self.set_file_path('bundle_path', self.bundle_label, Path(p), "目标 Bundle")
+        select_file(
+            title="选择目标 Bundle 文件",
+            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, "目标 Bundle"),
+            logger=self.logger.log
+        )
     
     def select_output_dir(self):
         """选择输出子目录"""
@@ -80,9 +83,10 @@ class AssetExtractorTab(TabFrame):
         if not default_dir.exists():
             default_dir = Path.home()
             
-        selected_dir = filedialog.askdirectory(
+        selected_dir = select_directory(
+            var=None,
             title="选择输出子目录",
-            initialdir=str(default_dir)
+            logger=self.logger.log
         )
         
         if selected_dir:

@@ -66,8 +66,8 @@
 		"game_resource_dir": "游戏资源目录",
 		"assets_folder_to_pack": "待打包资源文件夹",
 		"target_bundle_file": "目标 Bundle 文件",
-		"file_to_correct": "待修正文件",
-		"original_file": "原始文件"
+		"original_file": "原始文件",
+		"modified_file": "待修正文件"
 	},
 	"option": {
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
@@ -85,7 +85,10 @@
 	"file": {
 		"executable": "可执行文件",
 		"all_files": "所有文件",
-		"bundle": "AssetBundle 文件"
+		"bundle": "AssetBundle 文件",
+		"folder": "文件夹",
+		"skel_converter": "SpineSkeletonConverter.exe",
+		"atlas_downgrade": "SpineAtlasDowngrade.exe"
 	},
 	"message": {
 		"confirm_operation": "确定要执行此操作吗？",
@@ -246,11 +249,8 @@
 			"placeholder_bundle": "拖放要提取的 Bundle 文件"
 		},
 		"dialog": {
-			"select": "选择 {filename}",
-			"select_target_bundle": "选择目标 Bundle 文件",
-			"select_assets_folder": "选择待打包资源文件夹",
-			"select_original_file": "请选择原始文件",
-			"select_modified_file": "请选择修改后文件",
+			"select": "选择 {type}",
+			"add": "添加 {type}",
 			"title": {
 				"crc_check_result": "CRC检测结果",
 				"crc_calculation_result": "CRC计算结果"

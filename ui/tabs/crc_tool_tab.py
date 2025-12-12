@@ -8,7 +8,7 @@ import shutil
 from i18n import t
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, replace_file
+from ui.utils import is_multiple_drop, replace_file, select_file
 from utils import CRCUtils, get_search_resource_dirs
 
 class CrcToolTab(TabFrame):
@@ -18,7 +18,7 @@ class CrcToolTab(TabFrame):
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
-            self, t("label.file_to_correct"), self.drop_modified, self.browse_modified
+            self, t("label.modified_file"), self.drop_modified, self.browse_modified
         )
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
@@ -47,12 +47,14 @@ class CrcToolTab(TabFrame):
             messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
         self.set_original_file(Path(event.data.strip('{}')))
+
     def browse_original(self):
-        p = filedialog.askopenfilename(
-            title=t("ui.dialog.select_original_file"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
-        if p:
-            self.set_original_file(Path(p))
+        select_file(
+            title=t("ui.dialog.select", type=t("label.original_file")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            callback=self.set_original_file,
+            logger=self.logger.log
+        )
     
     def drop_modified(self, event):
         if is_multiple_drop(event.data):
@@ -60,11 +62,12 @@ class CrcToolTab(TabFrame):
             return
         self.set_modified_file(Path(event.data.strip('{}')))
     def browse_modified(self):
-        p = filedialog.askopenfilename(
-            title=t("ui.dialog.select_modified_file"),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")])
-        if p:
-            self.set_modified_file(Path(p))
+        select_file(
+            title=t("ui.dialog.select", type=t("label.modified_file")),
+            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            callback=self.set_modified_file,
+            logger=self.logger.log
+        )
 
     def set_original_file(self, path: Path):
         self.original_path = path
