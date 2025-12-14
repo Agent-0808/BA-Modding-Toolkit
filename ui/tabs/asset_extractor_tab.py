@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox, filedialog
 from pathlib import Path
 import os
 
+from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
@@ -17,20 +18,20 @@ class AssetExtractorTab(TabFrame):
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
         
-        # 1. 目标 Bundle 文件
+        # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
-            self, "目标 Bundle 文件", self.drop_bundle, self.browse_bundle
+            self, t("label.target_bundle_file"), self.drop_bundle, self.browse_bundle
         )
         
-        # 2. 输出目录
+        # 输出目录
         self.output_frame = UIComponents.create_directory_path_entry(
-            self, "输出目录", self.subdir_var,
+            self, t("label.output_dir"), self.subdir_var,
             self.select_output_dir, self.open_output_dir,
-            placeholder_text="选择输出子目录"
+            placeholder_text=t("ui.dialog.select", type=t("label.output_dir"))
         )
 
-        # 3. 资源类型选项
-        options_frame = tk.LabelFrame(self, text="提取选项", font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=10, pady=10)
+        # 资源类型选项
+        options_frame = tk.LabelFrame(self, text=t("ui.extractor.options_title"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=10, pady=10)
         options_frame.pack(fill=tk.X, pady=5)
         
         # Spine 降级选项
@@ -38,12 +39,12 @@ class AssetExtractorTab(TabFrame):
         spine_downgrade_frame.pack(fill=tk.X, pady=5)
         
         atlas_downgrade_check = UIComponents.create_checkbutton(
-            spine_downgrade_frame, "启用 Spine 降级", self.app.enable_atlas_downgrade_var
+            spine_downgrade_frame, t("option.spine_downgrade"), self.app.enable_atlas_downgrade_var
         )
         atlas_downgrade_check.pack(side=tk.LEFT, padx=(0, 10))
         
         # Spine 降级版本输入框
-        spine_version_label = tk.Label(spine_downgrade_frame, text="目标降级版本:", font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        spine_version_label = tk.Label(spine_downgrade_frame, text=t("label.downgrade_target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
         
         self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
@@ -54,25 +55,25 @@ class AssetExtractorTab(TabFrame):
         self.spine_downgrade_version_entry.pack(side=tk.LEFT)
         self.spine_downgrade_version_entry.pack(side=tk.LEFT)
         
-        # 4. 操作按钮
+        # 操作按钮
         action_frame = tk.Frame(self)
         action_frame.pack(fill=tk.X, pady=10)
         action_frame.grid_columnconfigure(0, weight=1)
 
-        run_button = UIComponents.create_button(action_frame, "开始提取", self.run_extraction_thread,
+        run_button = UIComponents.create_button(action_frame, t("action.extract"), self.run_extraction_thread,
                                                  bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
     def drop_bundle(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning("操作无效", "请一次只拖放一个文件。")
+            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
-        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), "目标 Bundle")
+        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("label.target_bundle_file"))
 
     def browse_bundle(self):
         select_file(
-            title="选择目标 Bundle 文件",
-            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, "目标 Bundle"),
+            title=t("ui.dialog.select", type=t("label.target_bundle_file")),
+            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("label.target_bundle_file")),
             logger=self.logger.log
         )
     
@@ -85,7 +86,7 @@ class AssetExtractorTab(TabFrame):
             
         selected_dir = select_directory(
             var=None,
-            title="选择输出子目录",
+            title=t("ui.dialog.select", type=t("label.output_dir")),
             logger=self.logger.log
         )
         
@@ -123,21 +124,21 @@ class AssetExtractorTab(TabFrame):
         else:
             # 如果目录不存在，询问用户是否要创建
             result = messagebox.askyesno(
-                "目录不存在",
-                f"输出目录 '{output_path}' 不存在。\n是否要创建此目录？"
+                t("common.tip"),
+                t("message.dir_not_found_create", path=output_path)
             )
             if result:
                 try:
                     output_path.mkdir(parents=True, exist_ok=True)
                     os.startfile(output_path)
                 except Exception as e:
-                    messagebox.showerror("错误", f"创建目录失败: {e}")
+                    messagebox.showerror(t("common.error"), t("message.create_dir_failed_detail", path=output_path, error=e))
             else:
-                messagebox.showinfo("提示", "未创建目录。")
+                messagebox.showinfo(t("common.tip"), t("message.dir_not_created"))
 
     def run_extraction_thread(self):
         if not self.bundle_path:
-            messagebox.showerror("错误", "请选择一个目标 Bundle 文件。")
+            messagebox.showerror(t("common.error"), t("message.select_file_first"))
             return
             
         # 检查 Spine 降级选项
@@ -146,11 +147,11 @@ class AssetExtractorTab(TabFrame):
             spine_converter_path = self.app.spine_converter_path_var.get()
             
             if not atlas_downgrade_path or not Path(atlas_downgrade_path).exists():
-                messagebox.showerror("错误", "已启用 Spine 降级，但未指定有效的 SpineAtlasDowngrade.exe 路径。")
+                messagebox.showerror(t("common.error"), t("message.spine.missing_downgrade_tool"))
                 return
                 
             if not spine_converter_path or not Path(spine_converter_path).exists():
-                messagebox.showerror("错误", "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。")
+                messagebox.showerror(t("common.error"), t("message.spine.missing_converter_tool"))
                 return
             
         output_path = Path(self.app.output_dir_var.get())
@@ -177,7 +178,7 @@ class AssetExtractorTab(TabFrame):
             if self.app.replace_mesh_var.get(): asset_types.add("Mesh")
         
         if not asset_types:
-            messagebox.showwarning("提示", "请至少选择一种要提取的资源类型。\n您可以在设置对话框中配置这些选项。")
+            messagebox.showwarning(t("common.tip"), t("message.missing_asset_type"))
             return
             
         # 传递 Spine 降级选项
@@ -188,7 +189,7 @@ class AssetExtractorTab(TabFrame):
         self.run_in_thread(self.run_extraction, self.bundle_path, final_output_path, asset_types, enable_atlas_downgrade, atlas_downgrade_path, spine_converter_path)
 
     def run_extraction(self, bundle_path, output_dir, asset_types, enable_atlas_downgrade=False, atlas_downgrade_path=None, spine_converter_path=None):
-        self.logger.status("正在提取资源...")
+        self.logger.status(t("log.status.extracting"))
         
         # 创建 SpineDowngradeOptions 对象（如果启用）
         downgrade_options = None
@@ -214,8 +215,8 @@ class AssetExtractorTab(TabFrame):
         )
         
         if success:
-            messagebox.showinfo("成功", message)
+            messagebox.showinfo(t("common.success"), message)
         else:
-            messagebox.showerror("失败", message)
+            messagebox.showerror(t("common.fail"), message)
             
-        self.logger.status("提取完成")
+        self.logger.status(t("log.status.done"))

@@ -150,22 +150,19 @@ class CrcToolTab(TabFrame):
             output_dir.mkdir(parents=True, exist_ok=True)
             
             # 先检测CRC是否一致
-            self.logger.log(t("log.crc.checking_match"))
             try:
                 is_crc_match = CRCUtils.check_crc_match(self.original_path, self.modified_path)
             except Exception as e:
                 self.logger.log(t("log.crc.check_failed", error=e))
                 messagebox.showerror(t("common.error"), t("message.crc.check_failed"))
-                self.logger.status(t("log.status.crc_check_failed"))
+                self.logger.status(t("log.status.error", error=e))
                 return False
             
             if is_crc_match:
                 self.logger.log(t("log.crc.match_no_correction_needed"))
-                messagebox.showinfo(t("ui.dialog.title.crc_check_result"), t("message.crc.match_no_correction_needed"))
-                self.logger.status(t("log.status.crc_check_done"))
+                messagebox.showinfo(t("common.result"), t("message.crc.match_no_correction_needed"))
+                self.logger.status(t("log.status.calculation_done"))
                 return True
-            
-            self.logger.log(t("log.crc.mismatch_start_correction"))
             
             # 计算输出文件路径
             output_filename = self.modified_path.name
@@ -202,7 +199,7 @@ class CrcToolTab(TabFrame):
             
             self.logger.log(t("message.crc.file_crc32", crc=crc_hex))
             self.logger.status(t("log.status.calculation_done"))
-            messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), t("message.crc.file_crc32", crc=crc_hex))
+            messagebox.showinfo(t("common.result"), t("message.crc.file_crc32", crc=crc_hex))
             
         except Exception as e:
             self.logger.log(t("log.crc.calculation_error", error=e))
@@ -224,14 +221,13 @@ class CrcToolTab(TabFrame):
 
             msg = f"{t('message.crc.modified_file_crc32', crc=modified_crc_hex)}\n{t('message.crc.original_file_crc32', crc=original_crc_hex)}\n"
 
+            self.logger.status(t("log.status.calculation_done"))
             if original_crc_hex == modified_crc_hex:
                 self.logger.log(t("log.crc.match_yes"))
-                self.logger.status(t("log.status.crc_match"))
-                messagebox.showinfo(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_yes')}")
+                messagebox.showinfo(t("common.result"), f"{msg}{t('message.crc.match_yes')}")
             else:
                 self.logger.log(t("log.crc.match_no"))
-                self.logger.status(t("log.status.crc_mismatch"))
-                messagebox.showwarning(t("ui.dialog.title.crc_calculation_result"), f"{msg}{t('message.crc.match_no')}")
+                messagebox.showwarning(t("common.result"), f"{msg}{t('message.crc.match_no')}")
         except Exception as e:
             self.logger.log(t("log.crc.calculation_error", error=e))
             self.logger.status(t("log.status.error", error=e))

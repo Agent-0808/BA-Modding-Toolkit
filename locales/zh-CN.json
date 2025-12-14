@@ -16,14 +16,19 @@
 		"processing": "处理中...",
 		"done": "完成",
 		"all": "全部",
-		"fail": "失败"
+		"fail": "失败",
+		"result": "结果"
 	},
 	"action": {
 		"browse": "浏览",
+		"browse_file": "浏览文件...",
+		"browse_folder": "浏览文件夹...",
 		"select": "选择",
 		"select_short": "选",
 		"open": "打开",
 		"open_short": "开",
+		"enable": "启用",
+		"disable": "禁用",
 		"add": "添加",
 		"add_files": "添加文件",
 		"add_folder": "添加文件夹",
@@ -31,19 +36,15 @@
 		"remove_selected": "移除选中",
 		"clear": "清空",
 		"clear_list": "清空列表",
+		"replace_original": "覆盖原文件",
+		"create_backup": "创建备份",
+		"environment": "运行环境",
 		"start": "开始",
 		"update": "更新",
 		"pack": "打包",
 		"extract": "提取",
 		"convert": "转换",
 		"calculate_crc": "计算 CRC",
-		"replace_original": "覆盖原文件",
-		"create_backup": "创建备份",
-		"enable": "启用",
-		"disable": "禁用",
-		"environment": "运行环境",
-		"browse_file": "浏览文件...",
-		"browse_folder": "浏览文件夹...",
 		"run_crc_correction": "运行CRC修正"
 	},
 	"label": {
@@ -67,7 +68,8 @@
 		"assets_folder_to_pack": "待打包资源文件夹",
 		"target_bundle_file": "目标 Bundle 文件",
 		"original_file": "原始文件",
-		"modified_file": "待修正文件"
+		"modified_file": "待修正文件",
+		"downgrade_target_version": "目标版本"
 	},
 	"option": {
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
@@ -79,7 +81,7 @@
 		"replace_mesh": "Mesh",
 		"replace_all": "ALL",
 		"spine_conversion": "启用 Spine 版本转换",
-		"atlas_downgrade": "启用 Atlas 降级",
+		"spine_downgrade": "启用 Spine 降级",
 		"auto_search": "自动搜索对应文件"
 	},
 	"file": {
@@ -105,7 +107,7 @@
 		"drop_single_file": "请一次只拖放一个文件。",
 		"drop_single_folder": "请一次只拖放一个文件夹。",
 		"missing_paths": "请确保已设置所有必要的路径",
-		"missing_asset_type": "请至少选择一种要处理的资源类型。",
+		"missing_asset_type": "请至少选择一种资源类型。",
 		"process_success": "处理成功！",
 		"process_failed": "处理失败: {error}",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
@@ -141,6 +143,11 @@
 			"original_file_crc32": "原始文件　 CRC32: {crc}",
 			"match_yes": "✅ CRC值匹配: 是",
 			"match_no": "❌ CRC值匹配: 否"
+		},
+		"dir_not_created": "未创建目录",
+		"spine": {
+			"missing_downgrade_tool": "已启用 Spine 降级，但未指定有效的 SpineAtlasDowngrade.exe 路径。",
+			"missing_converter_tool": "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。"
 		}
 	},
 	"log": {
@@ -151,18 +158,15 @@
 			"processing_batch": "正在处理 ({current}/{total}): {filename}",
 			"batch_starting": "正在开始批量更新",
 			"done": "处理完成",
-			"crc_correction_failed": "CRC修正失败",
-			"crc_check_failed": "CRC检测失败",
-			"crc_check_done": "CRC检测完成",
-			"crc_correction_done": "CRC修正完成",
 			"error": "错误：{error}",
 			"loaded": "已加载 {type}",
-			"crc_match": "CRC值匹配",
-			"crc_mismatch": "CRC值不匹配",
-			"calculation_done": "计算完成"
+			"crc_correction_failed": "CRC修正失败",
+			"calculation_done": "计算完成",
+			"extracting": "正在提取资源..."
 		},
 		"file": {
 			"loaded": "已加载: {path}",
+			"loaded_type": "已加载 {type}: {name}",
 			"saved": "已将输出文件保存至: {path}",
 			"backed_up": "已将文件备份至: {path}",
 			"overwritten": "已覆盖: {path}"
@@ -186,7 +190,6 @@
 			"skel_converter_set": "已设置 Skel 转换器: {path}",
 			"atlas_downgrade_set": "已设置 Atlas 降级工具： {path}"
 		},
-		"loaded_with_type": "已加载 {type}: {name}",
 		"packer": {
 			"start_packing": "开始从资源文件夹打包...",
 			"pack_success_path": "✅ 打包成功。文件已输出至: {path}"
@@ -195,10 +198,8 @@
 			"loaded_original": "已加载原始文件: {file}",
 			"loaded_modified": "已加载修改后文件: {file}",
 			"start_correction": "开始CRC修正过程...",
-			"checking_match": "正在检测CRC值是否匹配...",
 			"check_failed": "⚠️ 警告: 检测CRC值时发生错误: {error}",
-			"match_no_correction_needed": "✅ CRC值已匹配，无需修正",
-			"mismatch_start_correction": "❌ CRC值不匹配，开始进行CRC修正...",
+			"match_no_correction_needed": "⚠️ CRC值已匹配，无需修正",
 			"correction_success": "✅ CRC修正成功！",
 			"correction_failed": "❌ CRC修正失败",
 			"calculation_error": "❌ 计算CRC时发生错误: {error}",
@@ -246,15 +247,12 @@
 			"placeholder_bundle": "拖放目标 Bundle 文件"
 		},
 		"extractor": {
-			"placeholder_bundle": "拖放要提取的 Bundle 文件"
+			"placeholder_bundle": "拖放要提取的 Bundle 文件",
+			"options_title": "提取选项"
 		},
 		"dialog": {
-			"select": "选择 {type}",
-			"add": "添加 {type}",
-			"title": {
-				"crc_check_result": "CRC检测结果",
-				"crc_calculation_result": "CRC计算结果"
-			}
+			"select": "选择{type}",
+			"add": "添加{type}"
 		},
 		"drop_zone": {
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",

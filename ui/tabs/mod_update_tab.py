@@ -448,4 +448,4 @@ class ModUpdateTab(TabFrame):
         self.logger.log("\n" + "#"*50)
         
         self.logger.status(t("log.status.done"))
-        messagebox.showinfo(t("common.success"), summary_message)
+        messagebox.showinfo(t("common.result"), summary_message)
