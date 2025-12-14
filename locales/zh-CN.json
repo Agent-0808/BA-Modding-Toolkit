@@ -144,7 +144,6 @@
 			"match_yes": "✅ CRC值匹配: 是",
 			"match_no": "❌ CRC值匹配: 否"
 		},
-		"dir_not_created": "未创建目录",
 		"spine": {
 			"missing_downgrade_tool": "已启用 Spine 降级，但未指定有效的 SpineAtlasDowngrade.exe 路径。",
 			"missing_converter_tool": "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。"

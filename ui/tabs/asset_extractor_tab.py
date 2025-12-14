@@ -9,7 +9,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, select_file, select_directory
+from ui.utils import is_multiple_drop, select_file, select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
@@ -119,22 +119,7 @@ class AssetExtractorTab(TabFrame):
         else:
             output_path = Path(self.app.output_dir_var.get())
             
-        if output_path.exists():
-            os.startfile(output_path)
-        else:
-            # 如果目录不存在，询问用户是否要创建
-            result = messagebox.askyesno(
-                t("common.tip"),
-                t("message.dir_not_found_create", path=output_path)
-            )
-            if result:
-                try:
-                    output_path.mkdir(parents=True, exist_ok=True)
-                    os.startfile(output_path)
-                except Exception as e:
-                    messagebox.showerror(t("common.error"), t("message.create_dir_failed_detail", path=output_path, error=e))
-            else:
-                messagebox.showinfo(t("common.tip"), t("message.dir_not_created"))
+        open_directory(output_path, create_if_not_exist=True)
 
     def run_extraction_thread(self):
         if not self.bundle_path:

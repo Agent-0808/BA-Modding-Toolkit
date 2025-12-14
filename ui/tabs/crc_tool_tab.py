@@ -181,7 +181,7 @@ class CrcToolTab(TabFrame):
             else:
                 self.logger.log(t("log.crc.correction_failed"))
                 messagebox.showerror(t("common.fail"), t("message.crc.correction_failed"))
-            self.logger.status(t("log.status.crc_correction_done"))
+            self.logger.status(t("log.status.done"))
             return success
                 
         except Exception as e:
