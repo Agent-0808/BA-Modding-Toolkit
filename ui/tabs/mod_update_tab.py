@@ -68,12 +68,12 @@ class ModUpdateTab(TabFrame):
     def _create_single_mode_widgets(self, parent):
         # 1. 旧版 Mod 文件
         _, self.old_mod_label = UIComponents.create_file_drop_zone(
-            parent, t("label.mod_file"), self.drop_old_mod, self.browse_old_mod
+            parent, t("ui.label.mod_file"), self.drop_old_mod, self.browse_old_mod
         )
         
         # 2. 新版游戏资源文件
         new_mod_frame, self.new_mod_label = UIComponents.create_file_drop_zone(
-            parent, t("label.target_resource_bundle"), self.drop_new_mod, self.browse_new_mod,
+            parent, t("ui.label.target_resource_bundle"), self.drop_new_mod, self.browse_new_mod,
             search_path_var=self.app.game_resource_dir_var
         )
         self.new_mod_label.config(text=t("ui.mod_update.placeholder_new"))
@@ -94,13 +94,13 @@ class ModUpdateTab(TabFrame):
             messagebox.showwarning(t("common.warning"), t("message.drop_single_file"))
             return
         path = Path(event.data.strip('{}'))
-        self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle)
+        self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.label.mod_file"), callback=self.auto_find_new_bundle)
 
     def browse_old_mod(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.mod_file")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
-            callback=lambda path: self.set_file_path('old_mod_path', self.old_mod_label, path, t("label.mod_file"), callback=self.auto_find_new_bundle),
+            title=t("ui.dialog.select", type=t("ui.label.mod_file")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            callback=lambda path: self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.label.mod_file"), callback=self.auto_find_new_bundle),
             logger=self.logger.log
         )
 
@@ -113,8 +113,8 @@ class ModUpdateTab(TabFrame):
 
     def browse_new_mod(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.target_resource_bundle")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.select", type=t("ui.label.target_resource_bundle")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_new_mod_file,
             logger=self.logger.log
         )
@@ -176,7 +176,7 @@ class ModUpdateTab(TabFrame):
             return
 
         self.logger.log("\n" + "="*50)
-        self.logger.log(t("message.updating"))
+        self.logger.log(t("log.mod_update.updating"))
         self.logger.status(t("log.status.processing_detailed", filename=self.old_mod_path.name))
         
         asset_types_to_replace = set()
@@ -218,11 +218,11 @@ class ModUpdateTab(TabFrame):
         
         if self.final_output_path.exists():
             self.logger.log(t("log.file.saved", path=self.final_output_path))
-            self.logger.log(t("message.replace_original", button=t("action.replace_original")))
+            self.logger.log(t("log.replace_original", button=t("action.replace_original")))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
         else:
-            self.logger.log(t("message.generated_file_not_found"))
+            self.logger.log(t("log.generated_file_not_found"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
             messagebox.showinfo(t("common.success"), t("message.process_success"))
         
@@ -253,7 +253,7 @@ class ModUpdateTab(TabFrame):
 
     # --- 批量更新UI和逻辑 ---
     def _create_batch_mode_widgets(self, parent):
-        input_frame = tk.LabelFrame(parent, text=t("label.mod_file"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
+        input_frame = tk.LabelFrame(parent, text=t("ui.label.mod_file"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
         input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         input_frame.columnconfigure(0, weight=1)
 
@@ -326,8 +326,8 @@ class ModUpdateTab(TabFrame):
 
     def browse_add_files(self):
         select_file(
-            title=t("ui.dialog.add", type=t("file.bundle")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.add", type=t("file_type.bundle")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             multiple=True,
             callback=self._add_files_to_list,
             logger=self.logger.log
@@ -335,7 +335,7 @@ class ModUpdateTab(TabFrame):
 
     def browse_add_folder(self):
         folder_path = select_directory(
-            title=t("ui.dialog.add", type=t("file.folder")),
+            title=t("ui.dialog.add", type=t("file_type.folder")),
             logger=self.logger.log
         )
         if folder_path:

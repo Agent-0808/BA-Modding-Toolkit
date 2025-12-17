@@ -37,7 +37,7 @@ class SettingsDialog(tk.Toplevel):
         entry = UIComponents.create_textbox_entry(
             entry_button_container, 
             textvariable=self.app.game_resource_dir_var,
-            placeholder_text=t("label.resource_dir")
+            placeholder_text=t("ui.label.resource_dir")
         )
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
@@ -57,9 +57,9 @@ class SettingsDialog(tk.Toplevel):
         # --- 游戏资源目录UI结束 ---
 
         UIComponents.create_directory_path_entry(
-            container, t("label.output_dir"), self.app.output_dir_var,
+            container, t("ui.label.output_dir"), self.app.output_dir_var,
             self.app.select_output_directory, self.app.open_output_dir_in_explorer,
-            placeholder_text=t("label.output_dir")
+            placeholder_text=t("ui.label.output_dir")
         )
         
         # 选项设置
@@ -72,7 +72,7 @@ class SettingsDialog(tk.Toplevel):
 
         # 压缩方式下拉框
         compression_frame = tk.Frame(global_options_frame, bg=Theme.FRAME_BG)
-        compression_label = tk.Label(compression_frame, text=t("label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        compression_label = tk.Label(compression_frame, text=t("ui.label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         compression_combo = ttk.Combobox(compression_frame, textvariable=self.app.compression_method_var, values=["lzma", "lz4", "original", "none"], state="readonly", font=Theme.INPUT_FONT, width=10)
 
         # 布局 - 使用统一的grid布局确保高度对齐
@@ -111,26 +111,26 @@ class SettingsDialog(tk.Toplevel):
         spine_conversion_checkbox.pack(side=tk.LEFT, padx=(0, 10))
         
         # 目标版本输入框
-        spine_version_label = tk.Label(spine_options_frame, text=t("label.target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        spine_version_label = tk.Label(spine_options_frame, text=t("ui.label.target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
         
         spine_version_entry = UIComponents.create_textbox_entry(
             spine_options_frame, 
             textvariable=self.app.target_spine_version_var,
-            placeholder_text=t("label.spine_version"),
+            placeholder_text=t("ui.label.spine_version"),
             width=10
         )
         spine_version_entry.pack(side=tk.LEFT)
 
         # Spine 转换器路径设置
         UIComponents.create_file_path_entry(
-            spine_frame, t("label.skel_converter_path"), self.app.spine_converter_path_var,
+            spine_frame, t("ui.label.skel_converter_path"), self.app.spine_converter_path_var,
             self.select_spine_converter_path
         )
         
         # Spine 降级工具路径设置
         UIComponents.create_file_path_entry(
-            spine_frame, t("label.atlas_downgrade_path"), self.app.atlas_downgrade_path_var,
+            spine_frame, t("ui.label.atlas_downgrade_path"), self.app.atlas_downgrade_path_var,
             self.select_atlas_downgrade_path
         )
 
@@ -159,9 +159,9 @@ class SettingsDialog(tk.Toplevel):
     def _on_auto_detect_toggle(self):
         """当自动检测复选框状态改变时，更新UI"""
         if self.app.auto_detect_subdirs_var.get():
-            self.game_dir_frame.config(text=t("label.game_root_dir"))
+            self.game_dir_frame.config(text=t("ui.label.game_root_dir"))
         else:
-            self.game_dir_frame.config(text=t("label.custom_resource_dir"))
+            self.game_dir_frame.config(text=t("ui.label.custom_resource_dir"))
 
     def toggle_padding_checkbox_state(self):
         """根据CRC修正复选框的状态，启用或禁用添加私货复选框"""
@@ -198,8 +198,8 @@ class SettingsDialog(tk.Toplevel):
     def select_spine_converter_path(self):
         """选择Spine转换器路径"""
         select_file(
-            title=t("ui.dialog.select", type=t("file.skel_converter")),
-            filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.select", type=t("file_type.skel_converter")),
+            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
             callback=lambda path: (
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
@@ -210,8 +210,8 @@ class SettingsDialog(tk.Toplevel):
     def select_atlas_downgrade_path(self):
         """选择SpineAtlasDowngrade.exe路径"""
         select_file(
-            title=t("ui.dialog.select", type=t("file.atlas_downgrade")),
-            filetypes=[(t("file.executable"), "*.exe"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.select", type=t("file_type.atlas_downgrade")),
+            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
             callback=lambda path: (
                 self.app.atlas_downgrade_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))

@@ -70,7 +70,7 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                 path_obj = Path(windows_path)  # 更新路径为Windows路径
                 
             except subprocess.CalledProcessError as e:
-                log(t("message.process_failed", error=e))
+                log(t("log.process_failed", error=e))
                 messagebox.showerror(t("common.error"), t("message.cannot_open_explorer", error=e))
                 return
             
@@ -87,7 +87,7 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                 return
         
         # 统一记录成功打开目录的日志
-        log(t("log.file.loaded", path=path_obj))
+        log(t("log.file.directory_opened", path=path_obj))
                 
     except Exception as e:
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
@@ -110,7 +110,7 @@ def replace_file(source_path: Path,
         messagebox.showerror(t("common.error"), t("message.file_not_found", path=dest_path)) 
         return False 
     if source_path == dest_path: 
-        messagebox.showerror(t("common.error"), t("message.confirm_operation")) 
+        messagebox.showerror(t("common.error"), t("message.same_file")) 
         return False
 
     if ask_confirm and not messagebox.askyesno(t("common.warning"), confirm_message): 
@@ -132,12 +132,12 @@ def replace_file(source_path: Path,
         return True 
 
     except Exception as e: 
-        log(t("message.process_failed", error=e)) 
+        log(t("log.process_failed", error=e)) 
 
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
         return False 
 
-def select_directory(var=None, title="", logger=no_log):
+def select_directory(var: tk.Variable = None, title="", logger=no_log):
     """
     选择目录并更新变量或返回路径
     
@@ -190,7 +190,7 @@ def select_file(title: str,
     """
     try:
         if filetypes is None:
-            filetypes = [(t("file.all_files"), "*.*")]
+            filetypes = [(t("file_type.all_files"), "*.*")]
             
         if multiple:
             filepaths = filedialog.askopenfilenames(title=title, filetypes=filetypes)

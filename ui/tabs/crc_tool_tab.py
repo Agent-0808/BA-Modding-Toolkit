@@ -18,12 +18,12 @@ class CrcToolTab(TabFrame):
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
-            self, t("label.modified_file"), self.drop_modified, self.browse_modified
+            self, t("ui.label.modified_file"), self.drop_modified, self.browse_modified
         )
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
         original_frame, self.original_label = UIComponents.create_file_drop_zone(
-            self, t("label.original_file"), self.drop_original, self.browse_original,
+            self, t("ui.label.original_file"), self.drop_original, self.browse_original,
             search_path_var=self.app.game_resource_dir_var
         )
         
@@ -50,8 +50,8 @@ class CrcToolTab(TabFrame):
 
     def browse_original(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.original_file")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.select", type=t("ui.label.original_file")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_original_file,
             logger=self.logger.log
         )
@@ -63,8 +63,8 @@ class CrcToolTab(TabFrame):
         self.set_modified_file(Path(event.data.strip('{}')))
     def browse_modified(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.modified_file")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
+            title=t("ui.dialog.select", type=t("ui.label.modified_file")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_modified_file,
             logger=self.logger.log
         )
@@ -142,7 +142,7 @@ class CrcToolTab(TabFrame):
             if not self.app.output_dir_var or not self.app.output_dir_var.get():
                 self.logger.log(t("log.output_dir_not_set"))
                 messagebox.showerror(t("common.error"), t("message.output_dir_not_set"))
-                self.logger.status(t("log.status.crc_correction_failed"))
+                self.logger.status(t("log.status.failed"))
                 return False
             
             # 创建输出目录（如果不存在）
@@ -186,7 +186,7 @@ class CrcToolTab(TabFrame):
                 
         except Exception as e:
             self.logger.log(t("log.error_detail", error=e))
-            self.logger.status(t("log.status.crc_correction_failed"))
+            self.logger.status(t("log.status.error", error=e))
             messagebox.showerror(t("common.error"), t("message.execution_error", error=e))
             return False
         
@@ -197,7 +197,7 @@ class CrcToolTab(TabFrame):
             with open(self.modified_path, "rb") as f: file_data = f.read()
             crc_hex = f"{CRCUtils.compute_crc32(file_data):08X}"
             
-            self.logger.log(t("message.crc.file_crc32", crc=crc_hex))
+            self.logger.log(t("log.crc.file_crc32", crc=crc_hex))
             self.logger.status(t("log.status.calculation_done"))
             messagebox.showinfo(t("common.result"), t("message.crc.file_crc32", crc=crc_hex))
             
@@ -216,8 +216,8 @@ class CrcToolTab(TabFrame):
             original_crc_hex = f"{CRCUtils.compute_crc32(original_data):08X}"
             modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
             
-            self.logger.log(t("message.crc.modified_file_crc32", crc=modified_crc_hex))
-            self.logger.log(t("message.crc.original_file_crc32", crc=original_crc_hex))
+            self.logger.log(t("log.crc.modified_file_crc32", crc=modified_crc_hex))
+            self.logger.log(t("log.crc.original_file_crc32", crc=original_crc_hex))
 
             msg = f"{t('message.crc.modified_file_crc32', crc=modified_crc_hex)}\n{t('message.crc.original_file_crc32', crc=original_crc_hex)}\n"
 
@@ -239,6 +239,6 @@ class CrcToolTab(TabFrame):
             dest_path=self.original_path,
             create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
-            confirm_message=t("message.confirm_replace_file", filename=self.original_path.name),
+            confirm_message=t("message.confirm_replace_file", path=self.original_path.name),
             log=self.logger.log,
         )

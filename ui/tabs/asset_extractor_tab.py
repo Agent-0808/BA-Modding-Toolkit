@@ -20,14 +20,14 @@ class AssetExtractorTab(TabFrame):
         
         # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
-            self, t("label.target_bundle_file"), self.drop_bundle, self.browse_bundle
+            self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle
         )
         
         # 输出目录
         self.output_frame = UIComponents.create_directory_path_entry(
-            self, t("label.output_dir"), self.subdir_var,
+            self, t("ui.label.output_dir"), self.subdir_var,
             self.select_output_dir, self.open_output_dir,
-            placeholder_text=t("ui.dialog.select", type=t("label.output_dir"))
+            placeholder_text=t("ui.dialog.select", type=t("ui.label.output_dir"))
         )
 
         # 资源类型选项
@@ -44,7 +44,7 @@ class AssetExtractorTab(TabFrame):
         atlas_downgrade_check.pack(side=tk.LEFT, padx=(0, 10))
         
         # Spine 降级版本输入框
-        spine_version_label = tk.Label(spine_downgrade_frame, text=t("label.downgrade_target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        spine_version_label = tk.Label(spine_downgrade_frame, text=t("ui.label.downgrade_target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
         
         self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
@@ -68,12 +68,12 @@ class AssetExtractorTab(TabFrame):
         if is_multiple_drop(event.data):
             messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
-        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("label.target_bundle_file"))
+        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("ui.label.target_bundle_file"))
 
     def browse_bundle(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.target_bundle_file")),
-            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("label.target_bundle_file")),
+            title=t("ui.dialog.select", type=t("ui.label.target_bundle_file")),
+            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")),
             logger=self.logger.log
         )
     
@@ -86,7 +86,7 @@ class AssetExtractorTab(TabFrame):
             
         selected_dir = select_directory(
             var=None,
-            title=t("ui.dialog.select", type=t("label.output_dir")),
+            title=t("ui.dialog.select", type=t("ui.label.output_dir")),
             logger=self.logger.log
         )
         

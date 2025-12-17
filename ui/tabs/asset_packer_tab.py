@@ -18,12 +18,12 @@ class AssetPackerTab(TabFrame):
         
         # 资源文件夹
         _, self.folder_label = UIComponents.create_folder_drop_zone(
-            self, t("label.assets_folder_to_pack"), self.drop_folder, self.browse_folder
+            self, t("ui.label.assets_folder_to_pack"), self.drop_folder, self.browse_folder
         )
 
         # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
-            self, t("label.target_bundle_file"), self.drop_bundle, self.browse_bundle
+            self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle
         )
         
         # 操作按钮区域
@@ -41,13 +41,13 @@ class AssetPackerTab(TabFrame):
         if is_multiple_drop(event.data):
             messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
-        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("label.target_bundle_file"))
+        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("ui.label.target_bundle_file"))
     
     def browse_bundle(self):
         select_file(
-            title=t("ui.dialog.select", type=t("label.target_bundle_file")),
-            filetypes=[(t("file.bundle"), "*.bundle"), (t("file.all_files"), "*.*")],
-            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("label.target_bundle_file")),
+            title=t("ui.dialog.select", type=t("ui.label.target_bundle_file")),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")),
             logger=self.logger.log
         )
     
@@ -64,16 +64,16 @@ class AssetPackerTab(TabFrame):
             messagebox.showwarning(t("message.invalid_operation"), t("message.packer.require_folder_with_assets"))
             return
             
-        self.set_folder_path('folder_path', self.folder_label, dropped_path, t("label.assets_folder_to_pack"))
+        self.set_folder_path('folder_path', self.folder_label, dropped_path, t("ui.label.assets_folder_to_pack"))
 
     def browse_folder(self):
         folder_path = select_directory(
             var=None,
-            title=t("ui.dialog.select", type=t("label.assets_folder_to_pack")),
+            title=t("ui.dialog.select", type=t("ui.label.assets_folder_to_pack")),
             logger=self.logger.log
         )
         if folder_path:
-            self.set_folder_path('folder_path', self.folder_label, Path(folder_path), t("label.assets_folder_to_pack"))
+            self.set_folder_path('folder_path', self.folder_label, Path(folder_path), t("ui.label.assets_folder_to_pack"))
 
     def run_replacement_thread(self):
         if not all([self.bundle_path, self.folder_path, self.app.output_dir_var.get()]):
@@ -124,7 +124,7 @@ class AssetPackerTab(TabFrame):
             self.final_output_path = output_dir / generated_bundle_filename
             
             self.logger.log(t("log.packer.pack_success_path", path=self.final_output_path))
-            self.logger.log(t("message.replace_original", button=t('action.replace_original')))
+            self.logger.log(t("log.replace_original", button=t('action.replace_original')))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
         else:

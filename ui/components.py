@@ -208,11 +208,11 @@ class UIComponents:
         if search_path_var is not None:
             search_frame = tk.Frame(frame, bg=Theme.FRAME_BG)
             search_frame.pack(fill=tk.X, pady=(0, 8))
-            tk.Label(search_frame, text=t("label.search_path"), bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL).pack(side=tk.LEFT, padx=(0,5))
+            tk.Label(search_frame, text=t("ui.label.search_path"), bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL).pack(side=tk.LEFT, padx=(0,5))
             UIComponents.create_textbox_entry(
                 search_frame, 
                 textvariable=search_path_var,
-                placeholder_text=t("label.game_resource_dir"),
+                placeholder_text=t("ui.label.game_resource_dir"),
                 readonly=True
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 

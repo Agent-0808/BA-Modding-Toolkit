@@ -12,6 +12,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, Any, Literal
 
+from i18n import t
 from utils import CRCUtils, no_log, get_skel_version
 
 # -------- 类型别名 ---------
@@ -103,7 +104,7 @@ def load_bundle(
         with open(bundle_path, "rb") as f:
             data = f.read()
     except Exception as e:
-        log(f"  ❌ 无法在内存中读取文件 '{bundle_path.name}': {e}")
+        log(f'  ❌ {t("log.file.read_in_memory_failed", name=bundle_path.name, error=e)}')
         return None
 
     # 定义加载策略：字节移除数量
@@ -119,7 +120,7 @@ def load_bundle(
             except Exception as e:
                 pass
 
-    log(f"❌ 无法以任何方式加载 '{bundle_path}'。文件可能已损坏。")
+    log(f'❌ {t("log.file.load_failed", path=bundle_path)}')
     return None
 
 def create_backup(
@@ -141,7 +142,7 @@ def create_backup(
         shutil.copy2(original_path, backup_path)
         return True
     except Exception as e:
-        log(f"❌ 创建备份文件失败: {e}")
+        log(f'❌ {t("log.file.backup_failed", error=e)}')
         return False
 
 def save_bundle(
@@ -159,7 +160,7 @@ def save_bundle(
             f.write(bundle_data)
         return True
     except Exception as e:
-        log(f"❌ 保存 bundle 文件到 '{output_path}' 时失败: {e}")
+        log(f'❌ {t("log.file.save_failed", path=output_path, error=e)}')
         log(traceback.format_exc())
         return False
 
@@ -178,13 +179,13 @@ def compress_bundle(
     """
     save_kwargs = {}
     if compression == "original":
-        log("   > 压缩方式: 保持原始设置")
+        log(f'   > {t("log.compression.original")}')
         # Not passing the 'packer' argument preserves the original compression.
     elif compression == "none":
-        log("    > 压缩方式: 不压缩")
+        log(f'    > {t("log.compression.none")}')
         save_kwargs['packer'] = ""  # An empty string typically means no compression.
     else:
-        log(f"    > 压缩方式: {compression.upper()}")
+        log(f'    > {t("log.compression.method", method=compression.upper())}')
         save_kwargs['packer'] = compression
     
     return env.file.save(**save_kwargs)
@@ -205,15 +206,15 @@ def _save_and_crc(
     """
     try:
         # 1. 从 env 生成修改后的压缩 bundle 数据
-        log(f"\n--- 导出修改后的 Bundle 文件 ---")
-        log("  > 压缩 Bundle 数据")
+        log(f'\n--- {t("log.section.export_modified_bundle")} ---')
+        log(f'  > {t("log.compressing_bundle_data")}')
         modified_data = compress_bundle(env, save_options.compression, log)
 
         final_data = modified_data
-        success_message = "文件保存成功。"
+        success_message = t("message.save_success")
 
         if save_options.perform_crc:
-            log(f"  > 准备修正CRC...")
+            log(f'  > {t("log.crc.preparing")}')
             
             with open(original_bundle_path, "rb") as f:
                 original_data = f.read()
@@ -225,23 +226,23 @@ def _save_and_crc(
             )
 
             if not corrected_data:
-                return False, f"CRC 修正失败。最终文件 '{output_path.name}' 未能生成。"
+                return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
             
             final_data = corrected_data
-            success_message = "文件保存和CRC修正成功。"
-            log("✅ CRC 修正成功！")
+            success_message = t("message.save_and_crc_success")
+            log(f'✅ {t("log.crc.correction_success")}')
 
         # 2. 将最终数据写入文件
-        log(f"  > 正在写入文件: {output_path}")
+        log(f'  > {t("log.file.writing", path=output_path)}')
         with open(output_path, "wb") as f:
             f.write(final_data)
         
         return True, success_message
 
     except Exception as e:
-        log(f"❌ 保存或修正 bundle 文件到 '{output_path}' 时失败: {e}")
+        log(f'❌ {t("log.file.save_or_crc_failed", path=output_path, error=e)}')
         log(traceback.format_exc())
-        return False, f"保存或修正文件时发生错误: {e}"
+        return False, t("message.save_or_crc_error", error=e)
 
 # ====== Spine 转换工具相关 ======
 
@@ -271,7 +272,7 @@ def convert_skel(
         try:
             original_bytes = input_data.read_bytes()
         except OSError as e:
-            log(f"  > ❌ 无法读取输入文件 '{input_data}': {e}")
+            log(f'  > ❌ {t("log.file.read_in_memory_failed", path=input_data, error=e)}')
             return False, b""
     else:
         original_bytes = input_data
@@ -286,7 +287,7 @@ def convert_skel(
 
             current_version = get_skel_version(temp_input_path, log)
             if not current_version:
-                log("  > ⚠️ 无法检测当前 .skel 文件版本")
+                log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
                 return False, original_bytes
 
             # 准备输出文件
@@ -300,9 +301,9 @@ def convert_skel(
                 target_version
             ]
             
-            log(f"    > 正在转换skel文件: {temp_input_path.name}")
-            log(f"      > 当前版本: {current_version} -> 目标版本: {target_version}")
-            log(f"      > 执行命令：{' '.join(command)}")
+            log(f'    > {t("log.spine.converting_skel", name=temp_input_path.name)}')
+            log(f'      > {t("log.spine.version_conversion", current=current_version, target=target_version)}')
+            log(f'      > {t("log.spine.executing_command", command=" ".join(command))}')
             
             result = subprocess.run(
                 command, 
@@ -313,16 +314,15 @@ def convert_skel(
             )
             
             if result.returncode == 0:
-                log("      ✓ skel转换成功")
                 return True, temp_output_path.read_bytes()
             else:
-                log("      ✗ skel转换失败:")
+                log(f'      ✗ {t("log.spine.skel_conversion_failed")}:')
                 log(f"        stdout: {result.stdout.strip()}")
                 log(f"        stderr: {result.stderr.strip()}")
                 return False, original_bytes
 
     except Exception as e:
-        log(f"    ❌ skel转换失败: {e}")
+        log(f'    ❌ {t("log.error_detail", error=e)}')
         return False, original_bytes
 
 def _handle_skel_upgrade(
@@ -335,11 +335,13 @@ def _handle_skel_upgrade(
     处理 .skel 文件的版本检查和升级。
     如果无需升级或升级失败，则返回原始字节。
     """
+
+    log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
+
     # 检查Spine升级功能是否可用
     if spine_options is None or not spine_options.is_enabled():
         return skel_bytes
     
-    log(f"    > 检测到 .skel 文件: {resource_name}")
     try:
         # 检测 skel 的 spine 版本
         current_version = get_skel_version(skel_bytes, log)
@@ -347,7 +349,7 @@ def _handle_skel_upgrade(
         
         # 仅在主版本或次版本不匹配时才尝试升级
         if current_version and not current_version.startswith(target_major_minor):
-            log(f"      > spine 版本不匹配 (当前: {current_version}, 目标: {spine_options.target_version})。尝试升级...")
+            log(f'      > {t("log.spine.version_mismatch_converting", current=current_version, target=spine_options.target_version)}')
 
             skel_success, upgraded_content = convert_skel(
                 input_data=skel_bytes,
@@ -356,15 +358,13 @@ def _handle_skel_upgrade(
                 log=log
             )
             if skel_success:
-                log(f"    > 成功升级 .skel 文件: {resource_name}")
+                log(f'    > {t("log.spine.skel_conversion_success", name=resource_name)}')
                 return upgraded_content
             else:
-                log(f"    ❌ 升级 .skel 文件 '{resource_name}' 失败，将使用原始文件")
-        else:
-            log(f"      > 版本匹配或无法检测 ({current_version})，无需升级。")
+                log(f'    ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
 
     except Exception as e:
-        log(f"      ❌ 错误: 检测或升级 .skel 文件 '{resource_name}' 时发生错误: {e}")
+        log(f'      ❌ {t("log.error_detail", error=e)}')
 
     # 默认返回原始字节
     return skel_bytes
@@ -380,19 +380,19 @@ def _run_spine_atlas_downgrader(
         # 转换器需要在源图集所在的目录中找到源PNG文件。
         # input_atlas 路径已指向包含所有必要文件的临时目录。
         cmd = [str(converter_path), str(input_atlas), str(output_dir)]
-        log(f"    > 正在转换图集: {input_atlas.name}")
-        log(f"      > 执行命令：{' '.join(cmd)}")
+        log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')
+        log(f'      > {t("log.spine.executing_command", command=" ".join(cmd))}')
         result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=False)
         
         if result.returncode == 0:
             return True
         else:
-            log(f"      ✗ 图集转换失败:")
+            log(f'      ✗ {t("log.spine.atlas_conversion_failed")}:')
             log(f"        stdout: {result.stdout.strip()}")
             log(f"        stderr: {result.stderr.strip()}")
             return False
     except Exception as e:
-        log(f"      ✗ 运行图集转换器时出错: {e}")
+        log(f'      ✗ {t("log.error_detail", error=e)}')
         return False
 
 def _process_spine_group_downgrade(
@@ -407,7 +407,7 @@ def _process_spine_group_downgrade(
     始终尝试进行降级操作。
     """
     version = get_skel_version(skel_path, log)
-    log(f"    > 检测到Spine版本: {version or '未知'}，尝试降级...")
+    log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
     with tempfile.TemporaryDirectory() as conv_out_dir_str:
         conv_output_dir = Path(conv_out_dir_str)
         
@@ -417,12 +417,12 @@ def _process_spine_group_downgrade(
         )
         
         if atlas_success:
-            log("      > Atlas 降级成功")
+            log(f'      > {t("log.spine.atlas_downgrade_success")}')
             for converted_file in conv_output_dir.iterdir():
                 shutil.copy2(converted_file, output_dir / converted_file.name)
                 log(f"        - {converted_file.name}")
         else:
-            log("      ✗ Atlas 降级失败。")
+            log(f'      ✗ {t("log.spine.atlas_downgrade_failed")}.')
 
         # 降级 Skel
         output_skel_path = output_dir / skel_path.name
@@ -434,7 +434,7 @@ def _process_spine_group_downgrade(
             log=log
         )
         if not skel_success:
-            log("    ✗ skel 转换失败，将复制原始 .skel 文件。")
+            log(f'    ✗ {t("log.spine.skel_conversion_failed_using_original")}')
 
 
 # ====== 寻找对应文件 ======
@@ -447,8 +447,8 @@ def get_filename_prefix(filename: str, log: LogFunc = no_log) -> tuple[str | Non
     # 1. 通过日期模式确定文件名位置
     date_match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
     if not date_match:
-        msg = f"无法在文件名 '{filename}' 中找到日期模式 (YYYY-MM-DD)，无法确定用于匹配的文件前缀。"
-        log(f"  > 失败: {msg}")
+        msg = t("message.search.date_pattern_not_found", filename=filename)
+        log(f'  > {t("common.fail")}: {msg}')
         return None, msg
 
     # 2. 向前查找可能的日服额外文件名部分
@@ -471,7 +471,7 @@ def get_filename_prefix(filename: str, log: LogFunc = no_log) -> tuple[str | Non
     else:
         search_prefix = filename[:prefix_end_index]
 
-    return search_prefix, "前缀提取成功"
+    return search_prefix, t("message.search.prefix_extracted")
 
 def find_new_bundle_path(
     old_mod_path: Path,
@@ -486,15 +486,15 @@ def find_new_bundle_path(
     # TODO: 只用Texture2D比较好像不太对，但是it works
 
     if not old_mod_path.exists():
-        return None, f"请检查 '{old_mod_path}' 是否存在。"
+        return None, t("message.search.check_file_exists", path=old_mod_path)
 
-    log(f"正在为 '{old_mod_path.name}' 搜索对应文件...")
+    log(t("log.search.searching_for_file", name=old_mod_path.name))
 
     # 1. 提取文件名前缀
     prefix, prefix_message = get_filename_prefix(str(old_mod_path.name), log)
     if not prefix:
         return None, prefix_message
-    log(f"  > 文件前缀: '{prefix}'")
+    log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
     extension = '.bundle'
 
     # 2. 处理单个目录或目录列表
@@ -511,41 +511,41 @@ def find_new_bundle_path(
             candidates.extend(dir_candidates)
     
     if not candidates:
-        msg = f"在指定目录中未找到任何匹配的文件。"
-        log(f"  > 失败: {msg}")
+        msg = t("message.search.no_matching_files_in_dir")
+        log(f'  > {t("common.fail")}: {msg}')
         return None, msg
-    log(f"  > 找到 {len(candidates)} 个候选文件，正在验证内容...")
+    log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
 
     # 4. 加载旧Mod获取贴图列表
     old_env = load_bundle(old_mod_path, log)
     if not old_env:
-        msg = "加载旧版Mod文件失败。"
-        log(f"  > 失败: {msg}")
+        msg = t("message.search.load_old_mod_failed")
+        log(f'  > {t("common.fail")}: {msg}')
         return None, msg
     
     old_textures_map = {obj.read().m_Name for obj in old_env.objects if obj.type.name == "Texture2D"}
     
     if not old_textures_map:
-        msg = "旧版Mod文件中不包含任何 Texture2D 资源。"
-        log(f"  > 失败: {msg}")
+        msg = t("message.search.no_texture2d_in_old_mod")
+        log(f'  > {t("common.fail")}: {msg}')
         return None, msg
-    log(f"  > 旧版Mod包含 {len(old_textures_map)} 个贴图资源。")
+    log(f"  > {t('log.search.old_mod_texture_count', count=len(old_textures_map))}")
 
     # 5. 遍历候选文件，找到第一个包含匹配贴图的
     for candidate_path in candidates:
-        log(f"  - 正在检查: {candidate_path.name}")
+        log(f"  - {t('log.search.checking_candidate', name=candidate_path.name)}")
         
         env = load_bundle(candidate_path, log)
         if not env: continue
         
         for obj in env.objects:
             if obj.type.name == "Texture2D" and obj.read().m_Name in old_textures_map:
-                msg = f"已确定新版文件: {candidate_path.name}"
+                msg = t("message.search.new_file_confirmed", name=candidate_path.name)
                 log(f"  ✅ {msg}")
                 return candidate_path, msg
     
-    msg = "在所有候选文件中都未找到与旧版Mod贴图名称匹配的资源。无法确定正确的新版文件。"
-    log(f"  > 失败: {msg}")
+    msg = t("message.search.no_matching_texture_found")
+    log(f'  > {t("common.fail")}: {msg}')
     return None, msg
 
 
@@ -584,7 +584,7 @@ def _apply_replacements(
 
         if asset_key in tasks:
             content = tasks.pop(asset_key)
-            resource_name = getattr(data, 'm_Name', f"<{obj.type.name} 资源>")
+            resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
             
             try:
                 if obj.type.name == "Texture2D":
@@ -604,7 +604,7 @@ def _apply_replacements(
                 replaced_assets_log.append(log_message)
 
             except Exception as e:
-                log(f"  ❌ 错误: 替换资源 '{resource_name}' ({obj.type.name} 类型) 时发生错误: {e}")
+                log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name, type=obj.type.name, error=e)}')
 
     return replacement_count, replaced_assets_log, set(tasks.keys())
 
@@ -637,7 +637,7 @@ def process_asset_packing(
     try:
         env = load_bundle(target_bundle_path, log)
         if not env:
-            return False, "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。"
+            return False, t("message.packer.load_target_bundle_failed")
         
         # 1. 从文件夹构建"替换清单"
         replacement_map: dict[AssetKey, AssetContent] = {}
@@ -645,8 +645,8 @@ def process_asset_packing(
         input_files = [f for f in asset_folder.iterdir() if f.is_file() and f.suffix.lower() in supported_extensions]
 
         if not input_files:
-            msg = f"在指定文件夹中没有找到任何支持的文件 ({', '.join(supported_extensions)})。"
-            log(f"⚠️ 警告: {msg}")
+            msg = t("message.packer.no_supported_files_found", extensions=', '.join(supported_extensions))
+            log(f"⚠️ {t('common.warning')}: {msg}")
             return False, msg
 
         for file_path in input_files:
@@ -670,7 +670,7 @@ def process_asset_packing(
             replacement_map[asset_key] = content
         
         original_tasks_count = len(replacement_map)
-        log(f"找到 {original_tasks_count} 个待处理文件，正在扫描 bundle 并进行替换...")
+        log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
         # 2. 定义用于在 bundle 中查找资源的 key 生成函数
         def key_func(obj: UnityPy.classes.Object, data: Any) -> AssetKey | None:
@@ -682,21 +682,21 @@ def process_asset_packing(
         replacement_count, _, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
 
         if replacement_count == 0:
-            log("⚠️ 警告: 没有执行任何成功的资源打包。")
-            log("请检查：\n1. 文件名是否与 bundle 内的资源名完全匹配。\n2. bundle 文件是否正确。")
-            return False, "没有找到任何名称匹配的资源进行打包。"
+            log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
+            log(t("log.packer.check_files_and_bundle"))
+            return False, t("message.packer.no_matching_assets_to_pack")
         
-        log(f"\n打包完成: 成功打包 {replacement_count} / {original_tasks_count} 个资源。")
+        log(f'\n{t("log.packer.packing_complete", success=replacement_count, total=original_tasks_count)}')
 
         # 报告未被打包的文件
         if unmatched_keys:
-            log("⚠️ 警告: 以下文件未在bundle中找到对应的资源:")
+            log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             # 为了找到原始文件名，我们需要反向查找
             original_filenames = {
                 f.stem if f.suffix.lower() == '.png' else f.name: f.name for f in input_files
             }
             for key in sorted(unmatched_keys):
-                log(f"  - {original_filenames.get(key, key)} (尝试匹配: '{key}')")
+                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key)})")
 
         # 4. 保存和修正
         output_path = output_dir / target_bundle_path.name
@@ -711,14 +711,14 @@ def process_asset_packing(
         if not save_ok:
             return False, save_message
 
-        log(f"最终文件已保存至: {output_path}")
-        log(f"\n🎉 处理完成！")
-        return True, f"处理完成！\n成功打包 {replacement_count} 个资源。\n\n文件已保存至工作目录，现在可以点击“覆盖原文件”按钮应用更改。"
+        log(t("log.file.saved", path=output_path))
+        log(f"\n🎉 {t('log.status.process_complete')}")
+        return True, t("message.packer.process_complete", count=replacement_count, button=t("action.replace_original"))
 
     except Exception as e:
-        log(f"\n❌ 严重错误: 处理 bundle 文件时发生错误: {e}")
+        log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, f"处理过程中发生严重错误:\n{e}"
+        return False, t("message.error_during_process", error=e)
 
 def process_asset_extraction(
     bundle_path: Path,
@@ -744,23 +744,23 @@ def process_asset_extraction(
     """
     try:
         log("\n" + "="*50)
-        log(f"开始从 '{bundle_path.name}' 提取资源...")
-        log(f"提取类型: {', '.join(asset_types_to_extract)}")
-        log(f"输出目录: {output_dir}")
+        log(t("log.extractor.starting_extraction", filename=bundle_path.name))
+        log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
+        log(f"{t('ui.label.output_dir')}: {output_dir}")
 
         env = load_bundle(bundle_path, log)
         if not env:
-            return False, "无法加载 Bundle 文件。请检查文件是否损坏。"
+            return False, t("message.load_failed")
 
         output_dir.mkdir(parents=True, exist_ok=True)
         downgrade_enabled = downgrade_options and downgrade_options.is_valid()
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_extraction_dir = Path(temp_dir)
-            log(f"  > 使用临时目录: {temp_extraction_dir}")
+            log(f"  > {t('log.extractor.using_temp_dir', path=temp_extraction_dir)}")
 
             # --- 阶段 1: 统一提取所有相关资源到临时目录 ---
-            log("\n--- 提取资源到临时目录 ---")
+            log(f'\n--- {t("log.section.extract_to_temp")} ---')
             extraction_count = 0
             for obj in env.objects:
                 if obj.type.name not in asset_types_to_extract:
@@ -769,7 +769,7 @@ def process_asset_extraction(
                     data = obj.read()
                     resource_name = getattr(data, 'm_Name', None)
                     if not resource_name:
-                        log(f"  > 跳过一个未命名的 {obj.type.name} 资源")
+                        log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
                         continue
 
                     if obj.type.name == "TextAsset":
@@ -783,34 +783,33 @@ def process_asset_extraction(
                     log(f"  - {dest_path.name}")
                     extraction_count += 1
                 except Exception as e:
-                    log(f"  ❌ 提取资源 {getattr(data, 'm_Name', 'N/A')} 时发生错误: {e}")
+                    log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
 
             if extraction_count == 0:
-                msg = "未找到任何指定类型的资源进行提取。"
+                msg = t("message.extractor.no_assets_found")
                 log(f"⚠️ {msg}")
                 return True, msg
 
             # --- 阶段 2: 处理并移动文件 ---
             if not downgrade_enabled:
-                log("\n--- 移动提取的文件到输出目录 ---")
-                log("  > Spine降级功能未启用或配置无效，执行标准复制。")
+                log(f'\n--- {t("log.section.move_to_output")} ---')
                 for item in temp_extraction_dir.iterdir():
                     shutil.copy2(item, output_dir / item.name)
             else:
-                log("\n--- 处理Spine资产并降级 ---")
+                log(f'\n--- {t("log.section.process_spine_downgrade")} ---')
                 processed_files = set()
                 skel_files = list(temp_extraction_dir.glob("*.skel"))
 
                 if not skel_files:
-                    log("  > 在bundle中未找到 .skel 文件，将复制所有已提取文件。")
+                    log(f'  > {t("log.spine.no_skel_found")}')
                 
                 for skel_path in skel_files:
                     base_name = skel_path.stem
                     atlas_path = skel_path.with_suffix(".atlas")
-                    log(f"\n  > 正在处理资产组: {base_name}")
+                    log(f"\n  > {t('log.extractor.processing_asset_group', name=base_name)}")
 
                     if not atlas_path.exists():
-                        log(f"    - 警告: 找到 {skel_path.name} 但缺少匹配的 {atlas_path.name}，将作为独立文件处理。")
+                        log(f"    - {t('common.warning')}: {t('log.spine.missing_matching_atlas', skel=skel_path.name, atlas=atlas_path.name)}")
                         continue
                     
                     # 标记此资产组中的所有文件为已处理
@@ -825,25 +824,23 @@ def process_asset_extraction(
                     )
                 
                 # --- 阶段 3: 复制剩余的独立文件 ---
-                remaining_files_found = False
-                for item in temp_extraction_dir.iterdir():
-                    if item not in processed_files:
-                        remaining_files_found = True
-                        log(f"  - 复制独立文件: {item.name}")
-                        shutil.copy2(item, output_dir / item.name)
+                remaining_files = [item for item in temp_extraction_dir.iterdir() if item not in processed_files]
                 
-                if not remaining_files_found:
-                    log("  > 没有需要复制的独立文件。")
+                if remaining_files:
+                    log(f'\n--- {t("log.section.copy_standalone_files")} ---')
+                    for item in remaining_files:
+                        log(f"  - {t('log.extractor.copying_file', name=item.name)}")
+                        shutil.copy2(item, output_dir / item.name)
 
         total_files_extracted = len(list(output_dir.iterdir()))
-        success_msg = f"提取完成，共输出 {total_files_extracted} 个文件。"
+        success_msg = t("message.extractor.extraction_complete", count=total_files_extracted)
         log(f"\n🎉 {success_msg}")
         return True, success_msg
 
     except Exception as e:
-        log(f"\n❌ 严重错误: 提取资源时发生错误: {e}")
+        log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, f"处理过程中发生严重错误:\n{e}"
+        return False, t("message.error_during_process", error=e)
 
 def _extract_assets_from_bundle(
     env: UnityPy.Environment,
@@ -864,7 +861,7 @@ def _extract_assets_from_bundle(
             data = obj.read()
             asset_key = key_func(obj, data)
             content = None
-            resource_name = getattr(data, 'm_Name', f"<{obj.type.name} 资源>")
+            resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
 
             if obj.type.name == "Texture2D":
                 content = data.image
@@ -903,12 +900,12 @@ def _b2b_replace(
     返回一个元组 (modified_env, replacement_count)，如果失败则 modified_env 为 None。
     """
     # 1. 加载 bundles
-    log(f"正在从旧版 bundle 中提取指定类型的资源: {', '.join(asset_types_to_replace)}")
+    log(t("log.b2b.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
     old_env = load_bundle(old_bundle_path, log)
     if not old_env:
         return None, 0
     
-    log("正在加载新版 bundle...")
+    log(t("log.b2b.loading_new_bundle"))
     new_env = load_bundle(new_bundle_path, log)
     if not new_env:
         return None, 0
@@ -920,37 +917,37 @@ def _b2b_replace(
     ]
 
     for name, key_func in strategies:
-        log(f"\n正在尝试使用 '{name}' 策略进行匹配")
+        log(f'\n{t("log.b2b.trying_strategy", name=name)}')
         
         # 2. 根据当前策略从旧版 bundle 构建“替换清单”
-        log("  > 从旧版 bundle 提取资源...")
+        log(f'  > {t("log.b2b.extracting_from_old_bundle_simple")}')
         old_assets_map = _extract_assets_from_bundle(
             old_env, asset_types_to_replace, key_func, spine_options, log
         )
         
         if not old_assets_map:
-            log(f"  > ⚠️ 警告: 使用 '{name}' 策略未在旧版 bundle 中找到任何指定类型的资源。")
+            log(f"  > ⚠️ {t('common.warning')}: {t('log.b2b.strategy_no_assets_found', name=name)}")
             continue
 
-        log(f"  > 提取完成: 使用 '{name}' 策略从旧版 bundle 提取了 {len(old_assets_map)} 个资源。")
+        log(f'  > {t("log.b2b.extraction_complete", name=name, count=len(old_assets_map))}')
 
         # 3. 根据当前策略应用替换
-        log("  > 向新版 bundle 写入资源...")
+        log(f'  > {t("log.b2b.writing_to_new_bundle")}')
         
         replacement_count, replaced_logs, _ \
         = _apply_replacements(new_env, old_assets_map, key_func, log)
         
         # 4. 如果当前策略成功替换了至少一个资源，就结束
         if replacement_count > 0:
-            log(f"\n✅ 策略 '{name}' 成功替换了 {replacement_count} 个资源:")
+            log(f"\n✅ {t('log.b2b.strategy_success', name=name, count=replacement_count)}:")
             for item in replaced_logs:
                 log(item)
             return new_env, replacement_count
 
-        log(f"  > 策略 '{name}' 未能匹配到任何资源。")
+        log(f'  > {t("log.b2b.strategy_no_match", name=name)}')
 
     # 5. 所有策略都失败了
-    log(f"\n⚠️ 警告: 所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({', '.join(asset_types_to_replace)})。")
+    log(f"\n⚠️ {t('common.warning')}: {t('log.b2b.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
     return None, 0
 
 def process_mod_update(
@@ -988,13 +985,11 @@ def process_mod_update(
     """
     try:
         log("="*50)
-        log(f"  > 使用旧版 Mod: {old_mod_path.name}")
-        log(f"  > 使用新版资源: {new_bundle_path.name}")
-        if spine_options and spine_options.is_enabled():
-            log(f"  > 已启用 Spine 升级工具: {spine_options.converter_path.name}")
+        log(f'  > {t("log.mod_update.using_old_mod", name=old_mod_path.name)}')
+        log(f'  > {t("log.mod_update.using_new_resource", name=new_bundle_path.name)}')
 
         # 进行Bundle to Bundle 替换
-        log("\n--- Bundle-to-Bundle 替换 ---")
+        log(f'\n--- {t("log.section.b2b_replace")} ---')
         modified_env, replacement_count = _b2b_replace(
             old_bundle_path=old_mod_path, 
             new_bundle_path=new_bundle_path, 
@@ -1004,11 +999,11 @@ def process_mod_update(
         )
 
         if not modified_env:
-            return False, "Bundle-to-Bundle 替换过程失败，请检查日志获取详细信息。"
+            return False, t("message.mod_update.b2b_failed")
         if replacement_count == 0:
-            return False, "没有找到任何名称匹配的资源进行替换，无法继续更新。"
+            return False, t("message.mod_update.no_matching_assets_to_replace")
         
-        log(f"  > B2B 替换完成，共处理 {replacement_count} 个资源。")
+        log(f'  > {t("log.mod_update.b2b_complete", count=replacement_count)}')
         
         # 保存和修正文件
         output_path = output_dir / new_bundle_path.name
@@ -1023,14 +1018,14 @@ def process_mod_update(
         if not save_ok:
             return False, save_message
 
-        log(f"最终文件已保存至: {output_path}")
-        log(f"\n🎉 全部流程处理完成！")
-        return True, "一键更新成功！"
+        log(t("log.file.saved", path=output_path))
+        log(f"\n🎉 {t('log.mod_update.all_processes_complete')}")
+        return True, t("message.mod_update.success")
 
     except Exception as e:
-        log(f"\n❌ 严重错误: 在一键更新流程中发生错误: {e}")
+        log(f"\n❌ {t('common.error')}: {t('log.error_processing', error=e)}")
         log(traceback.format_exc())
-        return False, f"处理过程中发生严重错误:\n{e}"
+        return False, t("message.error_during_process", error=e)
 
 def process_batch_mod_update(
     mod_file_list: list[Path],
@@ -1073,7 +1068,7 @@ def process_batch_mod_update(
             progress_callback(current_progress, total_files, filename)
 
         log("\n" + "=" * 50)
-        log(f"({current_progress}/{total_files}) 正在处理: {filename}")
+        log(t("log.status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
         # 查找对应的新资源文件
         new_bundle_path, find_message = find_new_bundle_path(
@@ -1081,9 +1076,9 @@ def process_batch_mod_update(
         )
 
         if not new_bundle_path:
-            log(f"❌ 查找失败: {find_message}")
+            log(f'❌ {t("log.search.find_failed", message=find_message)}')
             fail_count += 1
-            failed_tasks.append(f"{filename} - 查找失败: {find_message}")
+            failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
             continue
 
         # 执行Mod更新处理
@@ -1098,10 +1093,10 @@ def process_batch_mod_update(
         )
 
         if success:
-            log(f"✅ 处理成功: {filename}")
+            log(f'✅ {t("log.batch.process_success", filename=filename)}')
             success_count += 1
         else:
-            log(f"❌ 处理失败: {filename} - {process_message}")
+            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
@@ -1134,13 +1129,13 @@ def find_jp_bundle_by_type(
     # 使用 get_filename_prefix 获取通用的文件名前缀
     prefix, prefix_message = get_filename_prefix(source_jp_path.name, log)
     if not prefix:
-        log(f"  > ❌ 查找失败: {prefix_message}")
+        log(f'  > ❌ {t("log.search.find_failed")}: {prefix_message}')
         return None
-    log(f"  > 使用文件前缀: '{prefix}'")
+    log(f"  > {t('log.search.using_prefix', prefix=prefix)}")
     target_keyword = f'-{target_type}-'
 
     if target_keyword in source_jp_path.name:
-        log(f"  > 源文件已是 '{target_type}' 类型。")
+        log(f"  > {t('log.jp_convert.source_is_target_type', type=target_type)}")
         return source_jp_path
 
     # 在所有搜索目录中查找匹配的文件
@@ -1151,10 +1146,10 @@ def find_jp_bundle_by_type(
         for file_path in search_dir.iterdir():
             # 检查文件是否以通用前缀开头，并包含目标类型的关键词
             if file_path.is_file() and file_path.name.startswith(prefix) and target_keyword in file_path.name:
-                log(f"  ✅ 成功找到: {file_path}")
+                log(f"  ✅ {t('log.jp_convert.found_match', path=file_path)}")
                 return file_path
     
-    log("  > ❌ 未能找到匹配的文件。")
+    log(f'  > ❌ {t("log.jp_convert.no_match_found")}')
     return None
 
 def find_jp_counterparts(
@@ -1173,14 +1168,14 @@ def find_jp_counterparts(
     Returns:
         一个元组 (jp_text_path, jp_tex2d_path)，未找到则为 None。
     """
-    log(f"正在为 '{global_bundle_path.name}' 搜索对应的JP文件...")
+    log(t("log.jp_convert.searching_jp_counterparts", name=global_bundle_path.name))
 
     # 1. 从国际服文件名提取前缀
     prefix, prefix_message = get_filename_prefix(global_bundle_path.name, log)
     if not prefix:
-        log(f"  > ❌ 查找失败: {prefix_message}")
+        log(f'  > ❌ {t("log.search.find_failed")}: {prefix_message}')
         return None, None
-    log(f"  > 使用文件前缀: '{prefix}'")
+    log(f"  > {t('log.search.using_prefix', prefix=prefix)}")
 
     jp_text_path: Path | None = None
     jp_tex2d_path: Path | None = None
@@ -1194,10 +1189,10 @@ def find_jp_counterparts(
             if file_path.is_file() and file_path.name.startswith(prefix):
                 if '-textassets-' in file_path.name:
                     jp_text_path = file_path
-                    log(f"  > 找到JP TextAsset文件: {file_path.name}")
+                    log(f"  > {t('log.jp_convert.found_jp_asset', type='TextAsset', name=file_path.name)}")
                 elif '-textures-' in file_path.name:
                     jp_tex2d_path = file_path
-                    log(f"  > 找到JP Texture2D文件: {file_path.name}")
+                    log(f"  > {t('log.jp_convert.found_jp_asset', type='Texture2D', name=file_path.name)}")
             
             # 如果两个都找到了，可以提前结束搜索
             if jp_text_path and jp_tex2d_path:
@@ -1231,25 +1226,25 @@ def process_jp_to_global_conversion(
     """
     try:
         log("="*50)
-        log("开始JP -> Global转换...")
-        log(f"  > 国际服基础文件: {global_bundle_path.name}")
-        log(f"  > 日服TextAsset文件: {jp_textasset_bundle_path.name}")
-        log(f"  > 日服Texture2D文件: {jp_texture2d_bundle_path.name}")
+        log(t("log.jp_convert.starting_jp_to_global"))
+        log(f'  > {t("log.jp_convert.global_base_file", name=global_bundle_path.name)}')
+        log(f'  > {t("log.jp_convert.jp_asset_file", type="TextAsset", name=jp_textasset_bundle_path.name)}')
+        log(f'  > {t("log.jp_convert.jp_asset_file", type="Texture2D", name=jp_texture2d_bundle_path.name)}')
         
         # 加载所有 bundles
         global_env = load_bundle(global_bundle_path, log)
         if not global_env:
-            return False, "无法加载国际服基础文件"
+            return False, t("message.jp_convert.load_global_failed")
         
         jp_textasset_env = load_bundle(jp_textasset_bundle_path, log)
         if not jp_textasset_env:
-            return False, "无法加载日服TextAsset文件"
+            return False, t("message.jp_convert.load_jp_asset_failed", type="TextAsset")
         
         jp_texture2d_env = load_bundle(jp_texture2d_bundle_path, log)
         if not jp_texture2d_env:
-            return False, "无法加载日服Texture2D文件"
+            return False, t("message.jp_convert.load_jp_asset_failed", type="Texture2D")
         
-        log("\n--- 合并资源 ---")
+        log(f'\n--- {t("log.section.merging_assets")} ---')
 
         # 1. 从日服 bundles 构建源资源映射，以便快速查找
         #    键是资源名，值是 UnityPy 的 Object 对象
@@ -1281,10 +1276,10 @@ def process_jp_to_global_conversion(
                 
                 # 确保类型匹配
                 if obj.type.name != source_obj.type.name:
-                    log(f"  > ⚠️ 类型不匹配，跳过替换: {resource_name} (目标: {obj.type.name}, 源: {source_obj.type.name})")
+                    log(f"  > ⚠️ {t('log.jp_convert.type_mismatch', name=resource_name, target=obj.type.name, source=source_obj.type.name)}")
                     continue
 
-                log(f"  > 替换 {obj.type.name}: {resource_name}")
+                log(f"  > {t('log.jp_convert.replacing_asset', type=obj.type.name, name=resource_name)}")
                 source_data = source_obj.read()
                 
                 if obj.type.name == "TextAsset":
@@ -1301,7 +1296,7 @@ def process_jp_to_global_conversion(
         # 遍历源资源映射，将未被用于替换的资源添加到目标环境
         for resource_name, source_obj in source_assets.items():
             if resource_name not in replaced_or_added:
-                log(f"  > 添加 {source_obj.type.name}: {resource_name}")
+                log(f"  > {t('log.jp_convert.adding_asset', type=source_obj.type.name, name=resource_name)}")
                 
                 # 关键步骤: 将源对象的 assets_file 指向目标环境的 file 对象
                 # 这使得该对象成为目标环境的一部分
@@ -1313,7 +1308,7 @@ def process_jp_to_global_conversion(
                 elif source_obj.type.name == "Texture2D":
                     texture2d_count += 1
 
-        log(f"\n  > 合并完成，共处理了 {textasset_count} 个 TextAsset 和 {texture2d_count} 个 Texture2D")
+        log(f"\n  > {t('log.jp_convert.merge_complete', text_count=textasset_count, tex_count=texture2d_count)}")
         
         # 3. 保存最终文件
         output_path = output_dir / global_bundle_path.name
@@ -1328,14 +1323,14 @@ def process_jp_to_global_conversion(
         if not save_ok:
             return False, save_message
         
-        log(f"最终文件已保存至: {output_path}")
-        log(f"\n🎉 JP -> Global转换完成！")
-        return True, "JP -> Global转换成功！"
+        log(t("log.file.saved", path=output_path))
+        log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
+        return True, t("message.jp_convert.jp_to_global_success")
         
     except Exception as e:
-        log(f"\n❌ 严重错误: 在JP -> Global转换过程中发生错误: {e}")
+        log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
         log(traceback.format_exc())
-        return False, f"转换过程中发生严重错误:\n{e}"
+        return False, t("message.jp_convert.conversion_error", error=e)
 
 def process_global_to_jp_conversion(
     global_bundle_path: Path,
@@ -1364,39 +1359,39 @@ def process_global_to_jp_conversion(
     """
     try:
         log("="*50)
-        log("开始Global -> JP转换...")
-        log(f"  > 国际服源文件: {global_bundle_path.name}")
-        log(f"  > TextAsset 模板: {jp_textasset_bundle_path.name}")
-        log(f"  > Texture2D 模板: {jp_texture2d_bundle_path.name}")
+        log(t("log.jp_convert.starting_global_to_jp"))
+        log(f'  > {t("log.jp_convert.global_source_file", name=global_bundle_path.name)}')
+        log(f'  > {t("log.jp_convert.asset_template", type="TextAsset", name=jp_textasset_bundle_path.name)}')
+        log(f'  > {t("log.jp_convert.asset_template", type="Texture2D", name=jp_texture2d_bundle_path.name)}')
         
         # 1. 加载所有相关文件
         global_env = load_bundle(global_bundle_path, log)
         if not global_env:
-            return False, "无法加载国际服源文件"
+            return False, t("message.jp_convert.load_global_source_failed")
 
         textasset_env = load_bundle(jp_textasset_bundle_path, log)
         if not textasset_env:
-            return False, "无法加载日服 TextAsset 模板文件"
+            return False, t("message.jp_convert.load_jp_template_failed", type="TextAsset")
         
         texture2d_env = load_bundle(jp_texture2d_bundle_path, log)
         if not texture2d_env:
-            return False, "无法加载日服 Texture2D 模板文件"
+            return False, t("message.jp_convert.load_jp_template_failed", type="Texture2D")
         
         # 2. 从国际服 bundle 构建源资源映射
-        log("\n--- 正在从国际服文件提取资源 ---")
+        log(f'\n--- {t("log.section.extracting_from_global")} ---')
         source_assets = {}
         for obj in global_env.objects:
             if obj.type.name in ["TextAsset", "Texture2D"]:
                 source_assets[obj.read().m_Name] = obj
         
         if not source_assets:
-            msg = "源文件中未找到任何 TextAsset 或 Texture2D 资源，无法进行转换。"
+            msg = t("message.jp_convert.no_assets_in_source")
             log(f"  > ⚠️ {msg}")
             return False, msg
-        log(f"  > 提取了 {len(source_assets)} 个资源。")
+        log(f"  > {t('log.jp_convert.extracted_count', count=len(source_assets))}")
 
         # 3. 处理 TextAsset bundle
-        log("\n--- 正在处理 TextAsset Bundle ---")
+        log(f'\n--- {t("log.section.processing_asset_bundle", type="TextAsset")} ---')
         replaced_or_added_text = set()
         textasset_count = 0
         # 替换现有
@@ -1406,7 +1401,7 @@ def process_global_to_jp_conversion(
                 if data.m_Name in source_assets:
                     source_obj = source_assets[data.m_Name]
                     if source_obj.type.name == "TextAsset":
-                        log(f"  > 替换 TextAsset: {data.m_Name}")
+                        log(f"  > {t('log.jp_convert.replacing_asset', type='TextAsset', name=data.m_Name)}")
                         data.m_Script = source_obj.read().m_Script
                         data.save()
                         replaced_or_added_text.add(data.m_Name)
@@ -1414,13 +1409,13 @@ def process_global_to_jp_conversion(
         # 添加新增
         for name, source_obj in source_assets.items():
             if source_obj.type.name == "TextAsset" and name not in replaced_or_added_text:
-                log(f"  > 添加 TextAsset: {name}")
+                log(f"  > {t('log.jp_convert.adding_asset', type='TextAsset', name=name)}")
                 source_obj.assets_file = textasset_env.file
                 textasset_env.objects.append(source_obj)
                 textasset_count += 1
 
         # 4. 处理 Texture2D bundle
-        log("\n--- 正在处理 Texture2D Bundle ---")
+        log(f'\n--- {t("log.section.processing_asset_bundle", type="Texture2D")} ---')
         replaced_or_added_tex = set()
         texture2d_count = 0
         # 替换现有
@@ -1430,7 +1425,7 @@ def process_global_to_jp_conversion(
                 if data.m_Name in source_assets:
                     source_obj = source_assets[data.m_Name]
                     if source_obj.type.name == "Texture2D":
-                        log(f"  > 替换 Texture2D: {data.m_Name}")
+                        log(f"  > {t('log.jp_convert.replacing_asset', type='Texture2D', name=data.m_Name)}")
                         data.image = source_obj.read().image
                         data.save()
                         replaced_or_added_tex.add(data.m_Name)
@@ -1438,12 +1433,12 @@ def process_global_to_jp_conversion(
         # 添加新增
         for name, source_obj in source_assets.items():
             if source_obj.type.name == "Texture2D" and name not in replaced_or_added_tex:
-                log(f"  > 添加 Texture2D: {name}")
+                log(f"  > {t('log.jp_convert.adding_asset', type='Texture2D', name=name)}")
                 source_obj.assets_file = texture2d_env.file
                 texture2d_env.objects.append(source_obj)
                 texture2d_count += 1
 
-        log(f"\n--- 迁移完成: {textasset_count} 个 TextAsset, {texture2d_count} 个 Texture2D ---")
+        log(f"\n--- {t('log.section.migration_complete', text_count=textasset_count, tex_count=texture2d_count)} ---")
 
         # 5. 定义输出路径和保存选项
         output_textasset_path = output_dir / jp_textasset_bundle_path.name
@@ -1451,7 +1446,7 @@ def process_global_to_jp_conversion(
         
         # 6. 保存拆分后的 bundle 文件
         if textasset_count > 0:
-            log("\n--- 保存 TextAsset Bundle ---")
+            log(f'\n--- {t("log.section.saving_asset_bundle", type="TextAsset")} ---')
             save_ok, save_message = _save_and_crc(
                 env=textasset_env,
                 output_path=output_textasset_path,
@@ -1460,13 +1455,13 @@ def process_global_to_jp_conversion(
                 log=log
             )
             if not save_ok:
-                return False, f"保存 TextAsset bundle 失败: {save_message}"
+                return False, t("message.jp_convert.save_asset_bundle_failed", type="TextAsset", message=save_message)
         else:
-            log("\n--- 源文件中无 TextAsset，跳过保存 TextAsset Bundle ---")
+            log(f'\n--- {t("log.section.no_asset_skipping_save", type="TextAsset")} ---')
 
 
         if texture2d_count > 0:
-            log("\n--- 保存 Texture2D Bundle ---")
+            log(f'\n--- {t("log.section.saving_asset_bundle", type="Texture2D")} ---')
             save_ok, save_message = _save_and_crc(
                 env=texture2d_env,
                 output_path=output_texture2d_path,
@@ -1475,20 +1470,20 @@ def process_global_to_jp_conversion(
                 log=log
             )
             if not save_ok:
-                return False, f"保存 Texture2D bundle 失败: {save_message}"
+                return False, t("message.jp_convert.save_asset_bundle_failed", type="Texture2D", message=save_message)
         else:
-            log("\n--- 源文件中无 Texture2D，跳过保存 Texture2D Bundle ---")
+            log(f'\n--- {t("log.section.no_asset_skipping_save", type="Texture2D")} ---')
 
-        log(f"\n--- 转换完成 ---")
+        log(f'\n--- {t("log.section.conversion_complete")} ---')
         if textasset_count > 0:
-            log(f"TextAsset Bundle 已保存至: {output_textasset_path}")
+            log(t("log.jp_convert.asset_bundle_saved_to", type="TextAsset", path=output_textasset_path))
         if texture2d_count > 0:
-            log(f"Texture2D Bundle 已保存至: {output_texture2d_path}")
-        log(f"\n🎉 Global -> JP转换完成！")
+            log(t("log.jp_convert.asset_bundle_saved_to", type="Texture2D", path=output_texture2d_path))
+        log(f"\n🎉 {t('log.jp_convert.global_to_jp_complete')}")
         
-        return True, "Global -> JP转换成功！"
+        return True, t("message.jp_convert.global_to_jp_success")
         
     except Exception as e:
-        log(f"\n❌ 严重错误: 在Global -> JP转换过程中发生错误: {e}")
+        log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_global_to_jp', error=e)}")
         log(traceback.format_exc())
-        return False, f"转换过程中发生严重错误:\n{e}"
+        return False, t("message.jp_convert.conversion_error", error=e)
