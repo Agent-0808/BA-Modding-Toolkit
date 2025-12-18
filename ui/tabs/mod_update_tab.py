@@ -8,7 +8,7 @@ from pathlib import Path
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents
+from ui.components import Theme, UIComponents, FileListbox
 from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
 from utils import get_search_resource_dirs
 
@@ -253,64 +253,46 @@ class ModUpdateTab(TabFrame):
 
     # --- 批量更新UI和逻辑 ---
     def _create_batch_mode_widgets(self, parent):
-        input_frame = tk.LabelFrame(parent, text=t("ui.label.mod_file"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
-        input_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-        input_frame.columnconfigure(0, weight=1)
-
-        # 直接创建Listbox作为拖放区域
-        list_frame = tk.Frame(input_frame, bg=Theme.FRAME_BG)
-        list_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
-        input_frame.rowconfigure(0, weight=1) # 让列表框区域可以伸缩
-        list_frame.columnconfigure(0, weight=1)
+        # 创建文件列表框
+        self.batch_file_listbox = FileListbox(
+            parent,
+            t("ui.label.mod_file"),
+            self.mod_file_list,
+            t("ui.mod_update.placeholder_batch"),
+            height=10,
+            logger=self.logger
+        )
+        self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
-        self.file_listbox = tk.Listbox(list_frame, font=Theme.INPUT_FONT, bg=Theme.INPUT_BG, fg=Theme.TEXT_NORMAL, selectmode=tk.EXTENDED, height=10)
+        # 设置自定义显示格式
+        self.batch_file_listbox.add_files = self._add_files_to_list
         
-        v_scrollbar = tk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_listbox.yview)
-        h_scrollbar = tk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.file_listbox.xview)
-        self.file_listbox.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
-        
-        self.file_listbox.grid(row=0, column=0, sticky="nsew")
-        v_scrollbar.grid(row=0, column=1, sticky="ns")
-        h_scrollbar.grid(row=1, column=0, sticky="ew")
-        list_frame.rowconfigure(0, weight=1)
-        
-        # 将Listbox注册为拖放目标
-        self.file_listbox.drop_target_register(DND_FILES)
-        self.file_listbox.dnd_bind('<<Drop>>', self.drop_mods)
-        
-        # 添加提示文本
-        self.file_listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
-        
-        button_frame = tk.Frame(input_frame, bg=Theme.FRAME_BG)
-        button_frame.grid(row=1, column=0, sticky="ew")
-        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
-
-        tk.Button(button_frame, text=t("action.add_files"), command=self.browse_add_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        tk.Button(button_frame, text=t("action.add_folder"), command=self.browse_add_folder, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_PRIMARY_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=1, sticky="ew", padx=5)
-        tk.Button(button_frame, text=t("action.remove_selected"), command=self.remove_selected_files, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_WARNING_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=2, sticky="ew", padx=5)
-        tk.Button(button_frame, text=t("action.clear_list"), command=self.clear_list, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_DANGER_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT).grid(row=0, column=3, sticky="ew", padx=(5, 0))
-
         run_button = tk.Button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
         run_button.pack(fill=tk.X, pady=5)
 
-    def _add_files_to_list(self, file_paths: list[Path]):
+    def _add_files_to_list(self, paths: list[Path]):
+        """重写添加文件方法，使用自定义显示格式"""
         # 第一次添加文件时，清除提示文本
-        if len(self.mod_file_list) == 0 and self.file_listbox.size() > 0:
+        if len(self.mod_file_list) == 0 and self.batch_file_listbox.listbox.size() > 0:
             # 检查列表中是否包含提示文本
-            if self.file_listbox.get(0) == t("ui.mod_update.placeholder_batch"):
-                self.file_listbox.delete(0, tk.END)
+            if self.batch_file_listbox.listbox.get(0) == t("ui.mod_update.placeholder_batch"):
+                self.batch_file_listbox.listbox.delete(0, tk.END)
         
         added_count = 0
-        for path in file_paths:
+        for path in paths:
             if path not in self.mod_file_list:
                 self.mod_file_list.append(path)
-                self.file_listbox.insert(tk.END, f"{path.parent.name} / {path.name}")
+                # 使用自定义格式显示：文件夹名 / 文件名
+                display_text = f"{path.parent.name} / {path.name}"
+                self.batch_file_listbox.listbox.insert(tk.END, display_text)
                 added_count += 1
+        
         if added_count > 0:
-            self.logger.log(t("log.batch.added", count=added_count))
+            self.logger.log(t("log.file.added_count", count=added_count))
             self.logger.status(t("log.status.ready"))
 
     def drop_mods(self, event):
+        """处理批量模式下的文件拖放"""
         raw_paths = event.data.strip('{}').split('} {')
         
         paths_to_add = []
@@ -347,26 +329,28 @@ class ModUpdateTab(TabFrame):
                 messagebox.showinfo(t("common.tip"), t("message.no_bundles_in_folder"))
 
     def remove_selected_files(self):
-        selected_indices = self.file_listbox.curselection()
+        """移除选中的文件"""
+        selected_indices = self.batch_file_listbox.listbox.curselection()
         if not selected_indices:
             messagebox.showinfo(t("common.tip"), t("message.file_not_selected"))
             return
 
         for index in sorted(selected_indices, reverse=True):
-            self.file_listbox.delete(index)
+            self.batch_file_listbox.listbox.delete(index)
             del self.mod_file_list[index]
         
         removed_count = len(selected_indices)
-        self.logger.log(t("log.batch.removed", count=removed_count))
+        self.logger.log(t("log.file.removed_count", count=removed_count))
         self.logger.status(t("log.status.ready"))
 
     def clear_list(self):
+        """清空列表"""
         self.mod_file_list.clear()
-        self.file_listbox.delete(0, tk.END)
+        self.batch_file_listbox.listbox.delete(0, tk.END)
         # 恢复提示文本
-        self.file_listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
+        self.batch_file_listbox.listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
         
-        self.logger.log(t("log.batch.cleared"))
+        self.logger.log(t("log.file.list_cleared"))
         self.logger.status(t("log.status.ready"))
 
     def run_batch_update_thread(self):
@@ -384,7 +368,7 @@ class ModUpdateTab(TabFrame):
 
     def _batch_update_worker(self):
         self.logger.log("\n" + "#"*50)
-        self.logger.log(t("log.batch.start"))
+        self.logger.log(t("log.mod_update.batch_start"))
         self.logger.status(t("log.status.batch_starting"))
 
         # 1. 准备参数
@@ -437,15 +421,22 @@ class ModUpdateTab(TabFrame):
         
         # 3. 处理结果并更新UI
         total_files = len(self.mod_file_list)
-        summary_message = t("message.batch_summary", total=total_files, success=success_count, fail=fail_count)
         
-        self.logger.log("\n" + "#"*50)
-        self.logger.log(summary_message)
+        self.logger.log(t("log.mod_update.batch_summary", total=total_files, success=success_count, fail=fail_count))
+
         if failed_tasks:
-            self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
-            for task in failed_tasks:
-                self.logger.log(f"- {task}")
-        self.logger.log("\n" + "#"*50)
-        
+            self.logger.log(t("log.mod_update.failed_items_cnt", count=fail_count))
+            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f['file'].name) for f in failed_tasks])
+            self.logger.log(failed_list)
+
         self.logger.status(t("log.status.done"))
-        messagebox.showinfo(t("common.result"), summary_message)
+
+    # 设置文件路径的通用方法
+    def set_file_path(self, attr_name: str, label: tk.Label, path: Path, label_text: str, callback=None):
+        """设置文件路径并更新标签显示"""
+        setattr(self, attr_name, path)
+        label.config(text=f"{label_text}: {path.name}", fg=Theme.COLOR_SUCCESS)
+        self.logger.log(t("log.file.loaded", path=path))
+        self.logger.status(t("log.status.ready"))
+        if callback:
+            callback()

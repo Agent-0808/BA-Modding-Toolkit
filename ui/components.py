@@ -2,6 +2,8 @@
 
 import tkinter as tk
 from tkinterdnd2 import DND_FILES
+from pathlib import Path
+
 from i18n import t
 
 # --- 日志管理类 ---
@@ -287,3 +289,235 @@ class UIComponents:
     def create_file_path_entry(parent, title, textvariable, select_cmd):
         """创建文件路径输入框组件（向后兼容）"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
+
+
+class FileListbox:
+    """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
+    
+    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None):
+        """
+        初始化文件列表框组件
+        
+        Args:
+            parent: 父组件
+            title: 框架标题
+            file_list: 存储文件路径的列表
+            placeholder_text: 占位符文本
+            height: 列表框高度
+            logger: 日志记录器
+        """
+        self.parent = parent
+        self.file_list: list[Path] = file_list
+        self.placeholder_text = placeholder_text
+        self.height = height
+        self.logger = logger
+        
+        self._create_widgets(title)
+        
+    def _create_widgets(self, title):
+        """创建组件UI"""
+        # 创建框架
+        self.frame = tk.LabelFrame(
+            self.parent, 
+            text=title, 
+            font=Theme.FRAME_FONT, 
+            fg=Theme.TEXT_TITLE, 
+            bg=Theme.FRAME_BG, 
+            padx=15, 
+            pady=12
+        )
+        self.frame.columnconfigure(0, weight=1)
+        
+        # 创建列表框区域
+        list_frame = tk.Frame(self.frame, bg=Theme.FRAME_BG)
+        list_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
+        self.frame.rowconfigure(0, weight=1)
+        list_frame.columnconfigure(0, weight=1)
+        
+        # 创建列表框
+        self.listbox = tk.Listbox(
+            list_frame, 
+            font=Theme.INPUT_FONT, 
+            bg=Theme.INPUT_BG, 
+            fg=Theme.TEXT_NORMAL, 
+            selectmode=tk.EXTENDED, 
+            height=self.height
+        )
+        
+        # 创建滚动条
+        v_scrollbar = tk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.listbox.yview)
+        h_scrollbar = tk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.listbox.xview)
+        self.listbox.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        
+        # 布局
+        self.listbox.grid(row=0, column=0, sticky="nsew")
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        list_frame.rowconfigure(0, weight=1)
+        
+        # 注册拖放
+        self.listbox.drop_target_register(DND_FILES)
+        self.listbox.dnd_bind('<<Drop>>', self._handle_drop)
+        
+        # 添加占位符
+        self._add_placeholder()
+        
+        # 创建按钮区域
+        button_frame = tk.Frame(self.frame, bg=Theme.FRAME_BG)
+        button_frame.grid(row=1, column=0, sticky="ew")
+        button_frame.columnconfigure((0, 1, 2, 3), weight=1)
+        
+        # 创建按钮
+        UIComponents.create_button(
+            button_frame, 
+            t("action.add_files"), 
+            self._browse_add_files, 
+            bg_color=Theme.BUTTON_PRIMARY_BG
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        
+        UIComponents.create_button(
+            button_frame, 
+            t("action.add_folder"), 
+            self._browse_add_folder, 
+            bg_color=Theme.BUTTON_PRIMARY_BG
+        ).grid(row=0, column=1, sticky="ew", padx=5)
+        
+        UIComponents.create_button(
+            button_frame, 
+            t("action.remove_selected"), 
+            self._remove_selected, 
+            bg_color=Theme.BUTTON_WARNING_BG
+        ).grid(row=0, column=2, sticky="ew", padx=5)
+        
+        UIComponents.create_button(
+            button_frame, 
+            t("action.clear_list"), 
+            self._clear_list, 
+            bg_color=Theme.BUTTON_DANGER_BG
+        ).grid(row=0, column=3, sticky="ew", padx=(5, 0))
+    
+    def _add_placeholder(self):
+        """添加占位符文本"""
+        if not self.file_list and self.listbox.size() == 0:
+            self.listbox.insert(tk.END, self.placeholder_text)
+    
+    def _remove_placeholder(self):
+        """移除占位符文本"""
+        if self.listbox.size() > 0:
+            first_item = self.listbox.get(0)
+            if first_item == self.placeholder_text:
+                self.listbox.delete(0)
+    
+    def add_files(self, paths: list[Path], display_formatter=None):
+        """
+        添加文件到列表
+        
+        Args:
+            paths: 文件路径列表
+            display_formatter: 可选的显示格式化函数
+        """
+        # 移除占位符
+        self._remove_placeholder()
+        
+        added_count = 0
+        for path in paths:
+            if path not in self.file_list:
+                self.file_list.append(path)
+                
+                # 格式化显示文本
+                if display_formatter:
+                    display_text = display_formatter(path)
+                else:
+                    display_text = path.name
+                
+                self.listbox.insert(tk.END, display_text)
+                added_count += 1
+        
+        if added_count > 0 and self.logger:
+            self.logger.log(t('log.file.added_count', count=added_count))
+    
+    def _handle_drop(self, event):
+        """处理拖放事件"""
+        from ui.utils import is_multiple_drop
+        
+        raw_paths = event.data.strip('{}').split('} {')
+        paths_to_add = []
+        
+        for p_str in raw_paths:
+            path = Path(p_str)
+            if path.is_dir():
+                # 如果是目录，添加目录下的所有.bundle文件
+                paths_to_add.extend(sorted(path.glob('*.bundle')))
+            elif path.is_file() and path.suffix == '.bundle':
+                # 如果是.bundle文件，直接添加
+                paths_to_add.append(path)
+        
+        if paths_to_add:
+            self.add_files(paths_to_add)
+    
+    def _browse_add_files(self):
+        """浏览添加文件"""
+        from ui.utils import select_file
+        
+        select_file(
+            title=t("action.add_files"),
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            multiple=True,
+            callback=lambda paths: self.add_files(paths),
+            logger=self.logger.log if self.logger else None
+        )
+    
+    def _browse_add_folder(self):
+        """浏览添加文件夹"""
+        from ui.utils import select_directory
+        
+        folder = select_directory(
+            title = t("action.add_folder"),
+            logger = self.logger.log if self.logger else None
+            )
+
+        if folder:
+            path = Path(folder)
+            files = sorted(path.glob("*.bundle"))
+            if files:
+                self.add_files(files)
+                if self.logger:
+                    self.logger.log(t('log.file.added_count', count=len(files)))
+            else:
+                if self.logger:
+                    self.logger.log(t('log.file.no_files_found_in_folder', type=".bundle"))
+    
+    def _remove_selected(self):
+        """移除选中的文件"""
+        selection = self.listbox.curselection()
+        if not selection:
+            return
+        
+        # 从后往前删除，避免索引问题
+        for index in sorted(selection, reverse=True):
+            self.listbox.delete(index)
+            del self.file_list[index]
+        
+        # 如果列表为空，添加占位符
+        if not self.file_list and self.listbox.size() == 0:
+            self._add_placeholder()
+        
+        if self.logger:
+            self.logger.log(t('log.file.removed_count', count=len(selection)))
+    
+    def _clear_list(self):
+        """清空列表"""
+        self.file_list.clear()
+        self.listbox.delete(0, tk.END)
+        self._add_placeholder()
+        
+        if self.logger:
+            self.logger.log(t('log.file.list_cleared'))
+    
+    def get_frame(self):
+        """获取组件框架，用于布局"""
+        return self.frame
+    
+    def get_listbox(self):
+        """获取列表框控件，用于直接操作"""
+        return self.listbox

@@ -1093,10 +1093,10 @@ def process_batch_mod_update(
         )
 
         if success:
-            log(f'✅ {t("log.batch.process_success", filename=filename)}')
+            log(f'✅ {t("log.mod_update.process_success", filename=filename)}')
             success_count += 1
         else:
-            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
+            log(f'❌ {t("log.mod_update.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 

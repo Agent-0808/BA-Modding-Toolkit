@@ -92,7 +92,6 @@
 		"config_saved": "配置已保存。",
 		"config_loaded": "配置已加载。",
 		"config_load_failed": "配置加载失败。",
-		"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
 		"no_bundles_in_folder": "在该文件夹中没有找到任何 .bundle 文件。",
 		"cannot_open_explorer": "无法打开目录: {error}",
 		"open_manually": "请手动打开目录：{path}",
@@ -192,16 +191,11 @@
 			"save_failed": "保存文件到 '{path}' 时失败: {error}",
 			"save_or_crc_failed": "保存或修正 bundle 文件到 '{path}' 时失败: {error}",
 			"directory_opened": "已打开目录：{path}",
-			"writing": "正在写入文件: {path}"
-		},
-		"batch": {
-			"start": "开始批量处理...",
-			"added": "已添加 {count} 个文件",
-			"removed": "已移除 {count} 个文件",
-			"cleared": "列表已清空",
-			"failed_items_cnt": "共 {count} 个文件处理失败：",
-			"process_success": "处理成功: {filename}",
-			"process_failed": "处理失败: {filename} - {message}"
+			"writing": "正在写入文件: {path}",
+			"added_count": "已添加 {count} 个文件",
+			"removed_count": "已移除 {count} 个文件",
+			"list_cleared": "列表已清空",
+			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件"
 		},
 		"config": {
 			"reset": "已重置为默认设置",
@@ -245,15 +239,15 @@
 		},
 		"crc": {
 			"loaded_original": "已加载原始文件: {file}",
-			"loaded_modified": "已加载修改后文件: {file}",
+			"loaded_modified": "已加载待修正文件: {file}",
 			"start_correction": "开始CRC修正过程...",
 			"check_failed": "⚠️ 警告: 检测CRC值时发生错误: {error}",
 			"match_no_correction_needed": "⚠️ CRC值已匹配，无需修正",
 			"correction_success": "CRC 修正成功！",
 			"correction_failed": "❌ CRC修正失败",
 			"calculation_error": "❌ 计算CRC时发生错误: {error}",
-			"match_yes": "    CRC值匹配: ✅是",
-			"match_no": "    CRC值匹配: ❌否",
+			"match_yes": "CRC值匹配: ✅是",
+			"match_no": "CRC值匹配: ❌否",
 			"preparing": "准备修正CRC...",
 			"file_crc32": "文件 CRC 32： {crc}",
 			"modified_file_crc32": "待修正文件 CRC32：{crc}",
@@ -314,7 +308,13 @@
 			"using_old_mod": "使用旧版 Mod: {name}",
 			"using_new_resource": "使用新版资源: {name}",
 			"b2b_complete": "B2B 替换完成，共处理 {count} 个资源。",
+			"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
 			"all_processes_complete": "全部流程处理完成！",
+			"batch_start": "开始批量处理...",
+			"failed_items_cnt": "共 {count} 个文件处理失败：",
+			"failed_item": "- {filename}",
+			"process_success": "处理成功: {filename}",
+			"process_failed": "处理失败: {filename} - {message}",
 			"updating": "正在更新……"
 		},
 		"jp_convert": {
