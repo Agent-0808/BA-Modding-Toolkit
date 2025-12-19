@@ -253,105 +253,20 @@ class ModUpdateTab(TabFrame):
 
     # --- 批量更新UI和逻辑 ---
     def _create_batch_mode_widgets(self, parent):
-        # 创建文件列表框
-        self.batch_file_listbox = FileListbox(
-            parent,
-            t("ui.label.mod_file"),
-            self.mod_file_list,
-            t("ui.mod_update.placeholder_batch"),
-            height=10,
-            logger=self.logger
-        )
-        self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-        
-        # 设置自定义显示格式
-        self.batch_file_listbox.add_files = self._add_files_to_list
-        
-        run_button = tk.Button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
-        run_button.pack(fill=tk.X, pady=5)
-
-    def _add_files_to_list(self, paths: list[Path]):
-        """重写添加文件方法，使用自定义显示格式"""
-        # 第一次添加文件时，清除提示文本
-        if len(self.mod_file_list) == 0 and self.batch_file_listbox.listbox.size() > 0:
-            # 检查列表中是否包含提示文本
-            if self.batch_file_listbox.listbox.get(0) == t("ui.mod_update.placeholder_batch"):
-                self.batch_file_listbox.listbox.delete(0, tk.END)
-        
-        added_count = 0
-        for path in paths:
-            if path not in self.mod_file_list:
-                self.mod_file_list.append(path)
-                # 使用自定义格式显示：文件夹名 / 文件名
-                display_text = f"{path.parent.name} / {path.name}"
-                self.batch_file_listbox.listbox.insert(tk.END, display_text)
-                added_count += 1
-        
-        if added_count > 0:
-            self.logger.log(t("log.file.added_count", count=added_count))
-            self.logger.status(t("log.status.ready"))
-
-    def drop_mods(self, event):
-        """处理批量模式下的文件拖放"""
-        raw_paths = event.data.strip('{}').split('} {')
-        
-        paths_to_add = []
-        for p_str in raw_paths:
-            path = Path(p_str)
-            if path.is_dir():
-                paths_to_add.extend(sorted(path.glob('*.bundle')))
-            elif path.is_file():
-                paths_to_add.append(path)
-        
-        if paths_to_add:
-            self._add_files_to_list(paths_to_add)
-
-    def browse_add_files(self):
-        select_file(
-            title=t("ui.dialog.add", type=t("file_type.bundle")),
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
-            multiple=True,
-            callback=self._add_files_to_list,
-            logger=self.logger.log
-        )
-
-    def browse_add_folder(self):
-        folder_path = select_directory(
-            title=t("ui.dialog.add", type=t("file_type.folder")),
-            logger=self.logger.log
-        )
-        if folder_path:
-            path = Path(folder_path)
-            bundle_files = sorted(path.glob('*.bundle'))
-            if bundle_files:
-                self._add_files_to_list(bundle_files)
-            else:
-                messagebox.showinfo(t("common.tip"), t("message.no_bundles_in_folder"))
-
-    def remove_selected_files(self):
-        """移除选中的文件"""
-        selected_indices = self.batch_file_listbox.listbox.curselection()
-        if not selected_indices:
-            messagebox.showinfo(t("common.tip"), t("message.file_not_selected"))
-            return
-
-        for index in sorted(selected_indices, reverse=True):
-            self.batch_file_listbox.listbox.delete(index)
-            del self.mod_file_list[index]
-        
-        removed_count = len(selected_indices)
-        self.logger.log(t("log.file.removed_count", count=removed_count))
-        self.logger.status(t("log.status.ready"))
-
-    def clear_list(self):
-        """清空列表"""
-        self.mod_file_list.clear()
-        self.batch_file_listbox.listbox.delete(0, tk.END)
-        # 恢复提示文本
-        self.batch_file_listbox.listbox.insert(tk.END, t("ui.mod_update.placeholder_batch"))
-        
-        self.logger.log(t("log.file.list_cleared"))
-        self.logger.status(t("log.status.ready"))
+            # 创建文件列表框，传入自定义显示格式：文件夹名 / 文件名
+            self.batch_file_listbox = FileListbox(
+                parent,
+                t("ui.label.mod_file"),
+                self.mod_file_list,
+                t("ui.mod_update.placeholder_batch"),
+                height=10,
+                logger=self.logger,
+                display_formatter=lambda p: f"{p.parent.name} / {p.name}"
+            )
+            self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+            
+            run_button = tk.Button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
+            run_button.pack(fill=tk.X, pady=5)
 
     def run_batch_update_thread(self):
         if not self.mod_file_list:
@@ -426,7 +341,7 @@ class ModUpdateTab(TabFrame):
 
         if failed_tasks:
             self.logger.log(t("log.mod_update.failed_items_cnt", count=fail_count))
-            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f['file'].name) for f in failed_tasks])
+            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f) for f in failed_tasks])
             self.logger.log(failed_list)
 
         self.logger.status(t("log.status.done"))

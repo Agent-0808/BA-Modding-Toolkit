@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinterdnd2 import DND_FILES
 from pathlib import Path
+from typing import Callable
 
 from i18n import t
 
@@ -159,6 +160,8 @@ class UIComponents:
             button_kwargs["padx"] = 2
             button_kwargs["pady"] = 2
             button_kwargs["font"] = Theme.INPUT_FONT  # 使用较小的字体
+        elif style == "short":
+            button_kwargs["pady"] = 2
         
         # 添加可选参数
         if width is not None:
@@ -294,7 +297,7 @@ class UIComponents:
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
     
-    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None):
+    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None, display_formatter: Callable[[Path], str] | None = None):
         """
         初始化文件列表框组件
         
@@ -305,12 +308,14 @@ class FileListbox:
             placeholder_text: 占位符文本
             height: 列表框高度
             logger: 日志记录器
+            display_formatter: 可选的文件名显示格式化函数 (Path -> str)。如果不提供，默认显示文件名。
         """
         self.parent = parent
         self.file_list: list[Path] = file_list
         self.placeholder_text = placeholder_text
         self.height = height
         self.logger = logger
+        self.display_formatter = display_formatter
         
         self._create_widgets(title)
         
@@ -372,28 +377,32 @@ class FileListbox:
             button_frame, 
             t("action.add_files"), 
             self._browse_add_files, 
-            bg_color=Theme.BUTTON_PRIMARY_BG
+            bg_color=Theme.BUTTON_PRIMARY_BG,
+            style="short"
         ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
         UIComponents.create_button(
             button_frame, 
             t("action.add_folder"), 
             self._browse_add_folder, 
-            bg_color=Theme.BUTTON_PRIMARY_BG
+            bg_color=Theme.BUTTON_PRIMARY_BG,
+            style="short"
         ).grid(row=0, column=1, sticky="ew", padx=5)
         
         UIComponents.create_button(
             button_frame, 
             t("action.remove_selected"), 
             self._remove_selected, 
-            bg_color=Theme.BUTTON_WARNING_BG
+            bg_color=Theme.BUTTON_WARNING_BG,
+            style="short"
         ).grid(row=0, column=2, sticky="ew", padx=5)
         
         UIComponents.create_button(
             button_frame, 
             t("action.clear_list"), 
             self._clear_list, 
-            bg_color=Theme.BUTTON_DANGER_BG
+            bg_color=Theme.BUTTON_DANGER_BG,
+            style="short"
         ).grid(row=0, column=3, sticky="ew", padx=(5, 0))
     
     def _add_placeholder(self):
@@ -408,13 +417,12 @@ class FileListbox:
             if first_item == self.placeholder_text:
                 self.listbox.delete(0)
     
-    def add_files(self, paths: list[Path], display_formatter=None):
+    def add_files(self, paths: list[Path]):
         """
         添加文件到列表
         
         Args:
             paths: 文件路径列表
-            display_formatter: 可选的显示格式化函数
         """
         # 移除占位符
         self._remove_placeholder()
@@ -425,8 +433,8 @@ class FileListbox:
                 self.file_list.append(path)
                 
                 # 格式化显示文本
-                if display_formatter:
-                    display_text = display_formatter(path)
+                if self.display_formatter:
+                    display_text = self.display_formatter(path)
                 else:
                     display_text = path.name
                 
