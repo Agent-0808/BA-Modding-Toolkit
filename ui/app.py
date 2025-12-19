@@ -97,9 +97,21 @@ class App(tk.Frame):
         self._set_default_values()
 
     def create_widgets(self):
-        # 使用可拖动的 PanedWindow 替换固定的 grid 布局
-        paned_window = ttk.PanedWindow(self.master, orient=tk.VERTICAL)
-        paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # 使用grid布局确保status_widget固定在底部
+        self.master.grid_rowconfigure(0, weight=1)  # 主内容区域可扩展
+        self.master.grid_columnconfigure(0, weight=1)  # 主内容区域可扩展
+        
+        # 创建主内容框架
+        main_frame = tk.Frame(self.master, bg=Theme.WINDOW_BG)
+        main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        
+        # 主内容框架也使用grid布局
+        main_frame.grid_rowconfigure(1, weight=1)  # notebook区域可扩展
+        main_frame.grid_columnconfigure(0, weight=1)
+        
+        # 使用可拖动的 PanedWindow 作为主内容区域
+        paned_window = ttk.PanedWindow(main_frame, orient=tk.VERTICAL)
+        paned_window.grid(row=1, column=0, sticky="nsew")
 
         # 上方控制面板
         top_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
@@ -123,16 +135,18 @@ class App(tk.Frame):
         # 设置列权重，让按钮均匀拉伸
         top_controls_frame.columnconfigure(0, weight=1)
         top_controls_frame.columnconfigure(1, weight=1)
+        top_controls_frame.rowconfigure(0, weight=1)  # 确保按钮垂直居中
 
         self.notebook = self.create_notebook(top_frame)
         
         # 创建日志区域
         self.log_text = self.create_log_area(bottom_frame)
 
-        # 底部状态栏
+        # 底部状态栏 - 固定在窗口底部
         self.status_label = tk.Label(self.master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                     font=Theme.INPUT_FONT, bg=Theme.STATUS_BAR_BG, fg=Theme.STATUS_BAR_FG, padx=10)
-        self.status_label.pack(side=tk.BOTTOM, fill=tk.X)
+                                     font=Theme.INPUT_FONT, bg=Theme.STATUS_BAR_BG, fg=Theme.STATUS_BAR_FG, padx=10,
+                                     height=1)  # 固定高度，确保不会被子组件挤压
+        self.status_label.grid(row=1, column=0, sticky="ew", padx=0, pady=0)  # 使用grid固定在底部，无边距
         
         self.logger = Logger(self.master, self.log_text, self.status_label)
         
@@ -143,6 +157,16 @@ class App(tk.Frame):
         
         # 将 logger 和共享变量传递给 Tabs
         self.populate_notebook()
+        
+        # 绑定窗口大小变化事件，确保布局正确
+        self.master.bind('<Configure>', self._on_window_configure)
+    
+    def _on_window_configure(self, event):
+        """处理窗口大小变化事件"""
+        # 确保状态栏始终可见
+        if event.widget == self.master:
+            # 可以在这里添加额外的布局调整逻辑
+            pass
 
     def open_settings_dialog(self):
         """打开高级设置对话框"""

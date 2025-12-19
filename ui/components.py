@@ -27,7 +27,11 @@ class Logger:
     def status(self, message: str) -> None:
         """线程安全地更新状态栏消息"""
         def _update_status() -> None:
-            self.status_widget.config(text=f"{t('ui.status_label')}{message}")
+            # 使用固定格式更新状态，避免布局变化
+            status_text = f"{t('ui.status_label')}{message}"
+            self.status_widget.config(text=status_text)
+            # 确保状态栏保持固定高度
+            self.status_widget.update_idletasks()
         
         self.master.after(0, _update_status)
 
@@ -417,6 +421,23 @@ class FileListbox:
             if first_item == self.placeholder_text:
                 self.listbox.delete(0)
     
+    def _get_file_index_by_listbox_index(self, listbox_index: int) -> int | None:
+        """
+        根据listbox中的索引获取在file_list中的对应索引
+        """
+        # 检查这个索引是否对应占位符
+        if self.listbox.get(listbox_index) == self.placeholder_text:
+            return None
+        
+        # 计算在file_list中的真实索引
+        # 需要统计在listbox中前面有多少个真实文件（跳过占位符）
+        real_file_count = 0
+        for i in range(listbox_index):
+            if self.listbox.get(i) != self.placeholder_text:
+                real_file_count += 1
+        
+        return real_file_count if real_file_count < len(self.file_list) else None
+    
     def add_files(self, paths: list[Path]):
         """
         添加文件到列表
@@ -501,17 +522,32 @@ class FileListbox:
         if not selection:
             return
         
-        # 从后往前删除，避免索引问题
-        for index in sorted(selection, reverse=True):
-            self.listbox.delete(index)
-            del self.file_list[index]
+        # 检查是否选中了占位符
+        items_to_remove = []
+        for index in selection:
+            item_text = self.listbox.get(index)
+            if item_text == self.placeholder_text:
+                # 如果是占位符，只从listbox删除，不从file_list删除
+                self.listbox.delete(index)
+            else:
+                # 如果是真实文件，需要同时从listbox和file_list删除
+                # 计算在file_list中的对应索引（需要跳過占位符）
+                file_index = self._get_file_index_by_listbox_index(index)
+                if file_index is not None and file_index < len(self.file_list):
+                    items_to_remove.append((index, file_index))
+        
+        # 从后往前删除真实文件，避免索引问题
+        for listbox_index, file_index in sorted(items_to_remove, reverse=True):
+            self.listbox.delete(listbox_index)
+            if file_index < len(self.file_list):
+                del self.file_list[file_index]
         
         # 如果列表为空，添加占位符
         if not self.file_list and self.listbox.size() == 0:
             self._add_placeholder()
         
         if self.logger:
-            self.logger.log(t('log.file.removed_count', count=len(selection)))
+            self.logger.log(t('log.file.removed_count', count=len(items_to_remove)))
     
     def _clear_list(self):
         """清空列表"""
