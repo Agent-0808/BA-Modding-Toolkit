@@ -208,8 +208,20 @@ class UIComponents:
         widget._debounce_timer = widget.after(500, lambda: widget.config(wraplength=widget.winfo_width() - 10))
 
     @staticmethod
-    def create_drop_zone(parent, title, drop_cmd, browse_cmd, label_text, button_text, search_path_var=None):
-        """创建通用的拖放区域组件"""
+    def create_drop_zone(parent, title, drop_cmd, browse_cmd, label_text, button_text, search_path_var=None, clear_cmd: Callable[[], None] | None = None):
+        """
+        创建通用的拖放区域组件
+        
+        Args:
+            parent: 父组件
+            title: 标题
+            drop_cmd: 拖放回调
+            browse_cmd: 浏览按钮回调
+            label_text: 初始提示文本
+            button_text: 浏览按钮文本
+            search_path_var: (可选) 搜索路径变量
+            clear_cmd: (可选) 清除按钮回调。点击清除按钮时，UI会自动恢复初始状态，并调用此函数清理外部变量。
+        """
         frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
         frame.pack(fill=tk.X, pady=(0, 5))
 
@@ -225,33 +237,53 @@ class UIComponents:
                 readonly=True
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
+        # 创建显示区域 Label
         label = tk.Label(frame, text=label_text, relief=tk.GROOVE, height=4, bg=Theme.MUTED_BG, fg=Theme.TEXT_NORMAL, font=Theme.INPUT_FONT, justify=tk.LEFT)
         label.pack(fill=tk.X, pady=(0, 8))
         label.drop_target_register(DND_FILES)
         label.dnd_bind('<<Drop>>', drop_cmd)
         label.bind('<Configure>', UIComponents._debounce_wraplength)
 
-        button = UIComponents.create_button(frame, button_text, browse_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, style="compact")
-        button.pack()
+        # 按钮容器 (用于并排显示浏览和清除按钮)
+        btn_frame = tk.Frame(frame, bg=Theme.FRAME_BG)
+        btn_frame.pack(anchor=tk.CENTER)
+
+        # 浏览按钮
+        UIComponents.create_button(btn_frame, button_text, browse_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, style="compact").pack(side=tk.LEFT, padx=(0, 5))
+
+        # 清除逻辑
+        def _handle_clear():
+            # 1. 恢复 UI 至初始状态 (文本、背景、字体颜色)
+            label.config(text=label_text, bg=Theme.MUTED_BG, fg=Theme.TEXT_NORMAL)
+            # 2. 调用外部清理逻辑 (如果存在)
+            if clear_cmd:
+                clear_cmd()
+
+        # 清除按钮
+        UIComponents.create_button(btn_frame, t("action.clear"), _handle_clear, bg_color=Theme.BUTTON_WARNING_BG, style="compact", width=3).pack(side=tk.LEFT)
+
         return frame, label
 
     @staticmethod
-    def create_file_drop_zone(parent, title, drop_cmd, browse_cmd, search_path_var=None):
+    def create_file_drop_zone(parent, title, drop_cmd, browse_cmd, search_path_var=None, clear_cmd: Callable[[], None] | None = None):
         """创建文件拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd, 
             t("ui.drop_zone.file_hint"), 
             t("action.browse_file"),
-            search_path_var
+            search_path_var,
+            clear_cmd=clear_cmd
         )
 
     @staticmethod
-    def create_folder_drop_zone(parent, title, drop_cmd, browse_cmd):
+    def create_folder_drop_zone(parent, title, drop_cmd, browse_cmd, clear_cmd: Callable[[], None] | None = None):
         """创建文件夹拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd,
             t("ui.drop_zone.folder_hint"),
-            t("action.browse_folder")
+            t("action.browse_folder"),
+            search_path_var=None,
+            clear_cmd=clear_cmd
         )
 
     @staticmethod
@@ -301,7 +333,10 @@ class UIComponents:
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
     
-    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None, display_formatter: Callable[[Path], str] | None = None):
+    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None, 
+                    display_formatter: Callable[[Path], str] | None = None, 
+                    on_files_added: Callable[[list[Path]], None] | None = None
+                    ):
         """
         初始化文件列表框组件
         
@@ -313,6 +348,7 @@ class FileListbox:
             height: 列表框高度
             logger: 日志记录器
             display_formatter: 可选的文件名显示格式化函数 (Path -> str)。如果不提供，默认显示文件名。
+            on_files_added: 可选的文件添加回调函数，当文件被添加时调用
         """
         self.parent = parent
         self.file_list: list[Path] = file_list
@@ -320,6 +356,7 @@ class FileListbox:
         self.height = height
         self.logger = logger
         self.display_formatter = display_formatter
+        self.on_files_added = on_files_added
         
         self._create_widgets(title)
         
@@ -449,9 +486,11 @@ class FileListbox:
         self._remove_placeholder()
         
         added_count = 0
+        added_paths = []  # 记录实际添加的文件路径
         for path in paths:
             if path not in self.file_list:
                 self.file_list.append(path)
+                added_paths.append(path)  # 记录新添加的文件
                 
                 # 格式化显示文本
                 if self.display_formatter:
@@ -462,8 +501,13 @@ class FileListbox:
                 self.listbox.insert(tk.END, display_text)
                 added_count += 1
         
-        if added_count > 0 and self.logger:
-            self.logger.log(t('log.file.added_count', count=added_count))
+        if added_count > 0:
+            if self.logger:
+                self.logger.log(t('log.file.added_count', count=added_count))
+            
+            # 调用回调函数
+            if self.on_files_added:
+                self.on_files_added(added_paths)
     
     def _handle_drop(self, event):
         """处理拖放事件"""

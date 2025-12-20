@@ -18,12 +18,14 @@ class AssetPackerTab(TabFrame):
         
         # 资源文件夹
         _, self.folder_label = UIComponents.create_folder_drop_zone(
-            self, t("ui.label.assets_folder_to_pack"), self.drop_folder, self.browse_folder
+            self, t("ui.label.assets_folder_to_pack"), self.drop_folder, self.browse_folder,
+            clear_cmd=self.clear_callback('folder_path')
         )
 
         # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
-            self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle
+            self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle,
+            clear_cmd=self.clear_callback('bundle_path')
         )
         
         # 操作按钮区域

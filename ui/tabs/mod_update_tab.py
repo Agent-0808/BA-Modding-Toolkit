@@ -68,13 +68,15 @@ class ModUpdateTab(TabFrame):
     def _create_single_mode_widgets(self, parent):
         # 1. 旧版 Mod 文件
         _, self.old_mod_label = UIComponents.create_file_drop_zone(
-            parent, t("ui.label.mod_file"), self.drop_old_mod, self.browse_old_mod
+            parent, t("ui.label.mod_file"), self.drop_old_mod, self.browse_old_mod,
+            clear_cmd=self.clear_callback('old_mod_path')
         )
         
         # 2. 新版游戏资源文件
         new_mod_frame, self.new_mod_label = UIComponents.create_file_drop_zone(
             parent, t("ui.label.target_resource_bundle"), self.drop_new_mod, self.browse_new_mod,
-            search_path_var=self.app.game_resource_dir_var
+            search_path_var=self.app.game_resource_dir_var,
+            clear_cmd=self.clear_callback('new_mod_path')
         )
         self.new_mod_label.config(text=t("ui.mod_update.placeholder_new"))
 

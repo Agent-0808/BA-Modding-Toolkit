@@ -47,7 +47,8 @@ class JpGbConversionTab(TabFrame):
         # 1. 国际服 Bundle 文件 (单文件拖放区)
         self.global_frame, self.global_label = UIComponents.create_file_drop_zone(
             self.file_frame, "Global Bundle 文件", 
-            self.drop_global_bundle, self.browse_global_bundle
+            self.drop_global_bundle, self.browse_global_bundle,
+            clear_cmd=self.clear_callback('global_bundle_path')
         )
 
         # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件)

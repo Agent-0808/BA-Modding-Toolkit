@@ -18,13 +18,15 @@ class CrcToolTab(TabFrame):
 
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
-            self, t("ui.label.modified_file"), self.drop_modified, self.browse_modified
+            self, t("ui.label.modified_file"), self.drop_modified, self.browse_modified,
+            clear_cmd=self.clear_callback('modified_path')
         )
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
         original_frame, self.original_label = UIComponents.create_file_drop_zone(
             self, t("ui.label.original_file"), self.drop_original, self.browse_original,
-            search_path_var=self.app.game_resource_dir_var
+            search_path_var=self.app.game_resource_dir_var,
+            clear_cmd=self.clear_callback('original_path')
         )
         
         # 自定义拖放区的提示文本，使其更具指导性
@@ -118,15 +120,15 @@ class CrcToolTab(TabFrame):
         if self._validate_paths(): self.run_in_thread(self.run_correction)
 
     def calculate_values_thread(self):
-        # 检查路径情况
-        if not self.modified_path:
+        # 检查路径情况 - 至少需要设置一个文件路径
+        if not self.original_path and not self.modified_path:
             messagebox.showerror(t("common.error"), t("message.crc.provide_at_least_one_file"))
             return
         
-        # 如果只有修改后文件，计算其CRC32值
-        if not self.original_path:
+        # 如果只有一个文件路径被设置，计算单个文件的CRC32值
+        if bool(self.original_path) != bool(self.modified_path):
             self.run_in_thread(self.calculate_single_value)
-        # 如果两个文件都有，保持原有行为
+        # 如果两个文件都有，计算两个文件的CRC32值并进行比较
         else:
             self.run_in_thread(self.calculate_values)
 
@@ -194,12 +196,15 @@ class CrcToolTab(TabFrame):
         """计算单个文件的CRC32值"""
         self.logger.status(t("common.processing"))
         try:
-            with open(self.modified_path, "rb") as f: file_data = f.read()
+            # 确定要计算的文件路径
+            target_path = self.modified_path if self.modified_path else self.original_path
+            
+            with open(target_path, "rb") as f: file_data = f.read()
             crc_hex = f"{CRCUtils.compute_crc32(file_data):08X}"
             
-            self.logger.log(t("log.crc.file_crc32", crc=crc_hex))
+            self.logger.log(t(f"log.crc.file_crc32", crc=crc_hex))
             self.logger.status(t("log.status.calculation_done"))
-            messagebox.showinfo(t("common.result"), t("message.crc.file_crc32", crc=crc_hex))
+            messagebox.showinfo(t("common.result"), t(f"message.crc.file_crc32", crc=crc_hex))
             
         except Exception as e:
             self.logger.log(t("log.crc.calculation_error", error=e))

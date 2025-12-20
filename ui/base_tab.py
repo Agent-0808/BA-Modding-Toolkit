@@ -41,3 +41,14 @@ class TabFrame(ttk.Frame):
         label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
         self.logger.log(t("log.file.loaded_type", type=folder_type_name, name=path.name))
         self.logger.status(t("log.status.loaded", type=folder_type_name))
+
+    def clear_callback(self, attr_name: str, default_value = None, log_msg: str | None = None) -> Callable[[], None]:
+        def _clear_action():
+            # 重置属性值
+            setattr(self, attr_name, default_value)
+            
+            # 如果提供了日志消息，则记录
+            if log_msg:
+                self.logger.log(log_msg)
+                
+        return _clear_action
