@@ -238,7 +238,7 @@ class UIComponents:
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # 创建显示区域 Label
-        label = tk.Label(frame, text=label_text, relief=tk.GROOVE, height=4, bg=Theme.MUTED_BG, fg=Theme.TEXT_NORMAL, font=Theme.INPUT_FONT, justify=tk.LEFT)
+        label = tk.Label(frame, text=label_text, relief=tk.GROOVE, height=3, bg=Theme.MUTED_BG, fg=Theme.TEXT_NORMAL, font=Theme.INPUT_FONT, justify=tk.LEFT)
         label.pack(fill=tk.X, pady=(0, 8))
         label.drop_target_register(DND_FILES)
         label.dnd_bind('<<Drop>>', drop_cmd)
@@ -260,7 +260,7 @@ class UIComponents:
                 clear_cmd()
 
         # 清除按钮
-        UIComponents.create_button(btn_frame, t("action.clear"), _handle_clear, bg_color=Theme.BUTTON_WARNING_BG, style="compact", width=3).pack(side=tk.LEFT)
+        UIComponents.create_button(btn_frame, t("action.clear"), _handle_clear, bg_color=Theme.BUTTON_WARNING_BG, style="compact").pack(side=tk.LEFT)
 
         return frame, label
 
@@ -309,11 +309,11 @@ class UIComponents:
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
-        select_btn = UIComponents.create_button(frame, t("action.select_short"), select_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
+        select_btn = UIComponents.create_button(frame, t("action.select_short"), select_cmd, bg_color=Theme.BUTTON_PRIMARY_BG, style="compact")
         select_btn.pack(side=tk.LEFT, padx=(0, 5))
         
         if open_button and open_cmd is not None:
-            open_btn = UIComponents.create_button(frame, t("action.open_short"), open_cmd, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
+            open_btn = UIComponents.create_button(frame, t("action.open_short"), open_cmd, bg_color=Theme.BUTTON_SECONDARY_BG, style="compact")
             open_btn.pack(side=tk.LEFT)
             
         return frame
@@ -333,10 +333,10 @@ class UIComponents:
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
     
-    def __init__(self, parent, title, file_list, placeholder_text, height=10, logger=None, 
-                    display_formatter: Callable[[Path], str] | None = None, 
-                    on_files_added: Callable[[list[Path]], None] | None = None
-                    ):
+    def __init__(self, parent, title:str, file_list:list[Path], placeholder_text:str, height=10, logger=None,
+    display_formatter: Callable[[Path], str] | None = None, 
+    on_files_added: Callable[[list[Path]], None] | None = None
+    ):
         """
         初始化文件列表框组件
         
@@ -419,7 +419,7 @@ class FileListbox:
             t("action.add_files"), 
             self._browse_add_files, 
             bg_color=Theme.BUTTON_PRIMARY_BG,
-            style="short"
+            style="compact"
         ).grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
         UIComponents.create_button(
@@ -427,7 +427,7 @@ class FileListbox:
             t("action.add_folder"), 
             self._browse_add_folder, 
             bg_color=Theme.BUTTON_PRIMARY_BG,
-            style="short"
+            style="compact"
         ).grid(row=0, column=1, sticky="ew", padx=5)
         
         UIComponents.create_button(
@@ -435,7 +435,7 @@ class FileListbox:
             t("action.remove_selected"), 
             self._remove_selected, 
             bg_color=Theme.BUTTON_WARNING_BG,
-            style="short"
+            style="compact"
         ).grid(row=0, column=2, sticky="ew", padx=5)
         
         UIComponents.create_button(
@@ -443,7 +443,7 @@ class FileListbox:
             t("action.clear_list"), 
             self._clear_list, 
             bg_color=Theme.BUTTON_DANGER_BG,
-            style="short"
+            style="compact"
         ).grid(row=0, column=3, sticky="ew", padx=(5, 0))
     
     def _add_placeholder(self):
@@ -511,8 +511,7 @@ class FileListbox:
     
     def _handle_drop(self, event):
         """处理拖放事件"""
-        from ui.utils import is_multiple_drop
-        
+
         raw_paths = event.data.strip('{}').split('} {')
         paths_to_add = []
         

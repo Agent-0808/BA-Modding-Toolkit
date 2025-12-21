@@ -41,9 +41,9 @@ class SettingsDialog(tk.Toplevel):
         )
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
-        select_btn = UIComponents.create_button(entry_button_container, t("action.select_short"), self.app.select_game_resource_directory, bg_color=Theme.BUTTON_PRIMARY_BG, width=3, style="compact")
+        select_btn = UIComponents.create_button(entry_button_container, t("action.select_short"), self.app.select_game_resource_directory, bg_color=Theme.BUTTON_PRIMARY_BG, style="compact")
         select_btn.pack(side=tk.LEFT, padx=(0, 5))
-        open_btn = UIComponents.create_button(entry_button_container, t("action.open_short"), self.app.open_game_resource_in_explorer, bg_color=Theme.BUTTON_SECONDARY_BG, width=3, style="compact")
+        open_btn = UIComponents.create_button(entry_button_container, t("action.open_short"), self.app.open_game_resource_in_explorer, bg_color=Theme.BUTTON_SECONDARY_BG, style="compact")
         open_btn.pack(side=tk.LEFT)
 
         self.auto_detect_checkbox = tk.Checkbutton(
@@ -100,8 +100,8 @@ class SettingsDialog(tk.Toplevel):
         tk.Checkbutton(asset_checkbox_container, text=t("option.replace_mesh"), variable=self.app.replace_mesh_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
         
         # Spine 转换器设置
-        spine_frame = tk.LabelFrame(container, text=t("ui.settings.group_spine"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
-        spine_frame.pack(fill=tk.X, pady=(15, 0))
+        spine_frame = tk.LabelFrame(container, text=t("ui.settings.group_spine"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
+        spine_frame.pack(fill=tk.X, pady=(5, 0))
         
         # Spine 转换选项
         spine_options_frame = tk.Frame(spine_frame, bg=Theme.FRAME_BG)
@@ -117,8 +117,7 @@ class SettingsDialog(tk.Toplevel):
         spine_version_entry = UIComponents.create_textbox_entry(
             spine_options_frame, 
             textvariable=self.app.target_spine_version_var,
-            placeholder_text=t("ui.label.spine_version"),
-            width=10
+            placeholder_text=t("ui.label.spine_version")
         )
         spine_version_entry.pack(side=tk.LEFT)
 

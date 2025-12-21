@@ -149,11 +149,12 @@ class ModUpdateTab(TabFrame):
         
         if found_path:
             self.master.after(0, self.set_new_mod_file, found_path)
+            self.logger.status(t("log.status.ready"))
         else:
             short_message = message.split('。')[0]
             ui_message = t("ui.mod_update.status_not_found", message=short_message)
             self.new_mod_label.config(text=ui_message, fg=Theme.COLOR_ERROR)
-            self.logger.status(t("log.status.ready"))
+            self.logger.status(t("log.status.search_not_found"))
 
     def run_update_thread(self):
         if not all([self.old_mod_path, self.new_mod_path, self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):

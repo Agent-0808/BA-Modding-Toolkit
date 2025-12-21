@@ -79,8 +79,7 @@
 		"dir_not_found": "找不到目录: {path}",
 		"dir_not_found_create": "目录不存在:\n{path}\n\n是否要创建它？",
 		"path_invalid": "路径无效: {path}",
-		"select_file_first": "请先选择一个文件。",
-		"select_dir_first": "请先选择一个目录。",
+		"no_file_selected": "未选择文件。",
 		"list_empty": "列表为空，请先添加项目。",
 		"drop_single_file": "请一次只拖放一个文件。",
 		"drop_single_folder": "请一次只拖放一个文件夹。",
@@ -152,17 +151,18 @@
 			"success": "一键更新成功！"
 		},
 		"jp_convert": {
-			"load_global_failed": "无法加载国际服基础文件",
-			"load_jp_asset_failed": "无法加载日服{type}文件",
+			"load_global_failed": "无法加载国际服源文件",
+			"load_jp_asset_failed": "无法加载日服 {type} 文件",
 			"jp_to_global_success": "JP -> Global转换成功！",
+			"global_to_jp_success": "Global -> JP转换成功！",
 			"conversion_error": "转换过程中发生错误:\n{error}",
 			"load_global_source_failed": "无法加载国际服源文件",
 			"load_jp_template_failed": "无法加载日服 {type} 模板文件",
 			"no_assets_in_source": "源文件中未找到任何 TextAsset 或 Texture2D 资源，无法进行转换。",
-			"save_asset_bundle_failed": "保存 {type} bundle 失败: {message}",
-			"global_to_jp_success": "Global -> JP转换成功！"
+			"save_asset_bundle_failed": "保存 {type} bundle 失败: {message}"
 		},
-		"same_file": "两个路径一致！"
+		"same_file": "两个路径一致！",
+		"create_output_dir_error": "无法创建输出目录: {error}"
 	},
 	"log": {
 		"status": {
@@ -171,13 +171,14 @@
 			"processing_detailed": "正在处理: {filename}",
 			"processing_batch": "正在处理 ({current}/{total}): {filename}",
 			"batch_starting": "正在开始批量更新",
+			"searching": "正在查找文件...",
+			"search_not_found": "未找到匹配文件",
 			"done": "处理完成",
 			"failed": "处理失败",
 			"error": "错误：{error}",
 			"loaded": "已加载 {type}",
 			"calculation_done": "计算完成",
-			"extracting": "正在提取资源...",
-			"process_complete": "处理完成！"
+			"extracting": "正在提取资源..."
 		},
 		"file": {
 			"loaded": "已加载: {path}",
@@ -195,7 +196,8 @@
 			"added_count": "已添加 {count} 个文件",
 			"removed_count": "已移除 {count} 个文件",
 			"list_cleared": "列表已清空",
-			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件"
+			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件",
+			"no_changes_made": "该文件未进行任何修改，未保存。"
 		},
 		"config": {
 			"reset": "已重置为默认设置",
@@ -262,6 +264,7 @@
 			"b2b_replace": "Bundle-to-Bundle 替换",
 			"merging_assets": "合并资源",
 			"extracting_from_global": "正在从国际服文件提取资源",
+			"processing_filename": "正在处理文件: {name}",
 			"processing_asset_bundle": "正在处理 {type} Bundle",
 			"migration_complete": "迁移完成: {text_count} 个 TextAsset, {tex_count} 个 Texture2D",
 			"saving_asset_bundle": "保存 {type} Bundle",
@@ -280,7 +283,8 @@
 			"old_mod_texture_count": "旧版Mod包含 {count} 个贴图资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
-			"using_prefix": "使用文件前缀: '{prefix}'"
+			"using_prefix": "使用文件前缀: '{prefix}'",
+			"found_count": "成功查找到 {count} 个匹配文件。"
 		},
 		"extractor": {
 			"starting_extraction": "开始从 '{filename}' 提取资源...",
@@ -324,10 +328,10 @@
 			"found_match": "成功找到: {path}",
 			"no_match_found": "未能找到匹配的文件。",
 			"searching_jp_counterparts": "正在为 '{name}' 搜索对应的JP文件...",
-			"found_jp_asset": "找到JP {type}文件: {name}",
 			"starting_jp_to_global": "开始JP -> Global转换...",
-			"global_base_file": "国际服基础文件: {name}",
-			"jp_asset_file": "JP {type}文件: {name}",
+			"global_base_file": "国际服源文件: {name}",
+			"jp_asset_file": "日服 {type} 文件: {name}",
+			"jp_files_count": "选中的日服文件数量: {count}",
 			"type_mismatch": "类型不匹配，跳过替换: {name} (目标: {target}, 源: {source})",
 			"replacing_asset": "替换 {type}: {name}",
 			"adding_asset": "添加 {type}: {name}",
@@ -338,7 +342,10 @@
 			"asset_template": "{type} 模板: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
 			"asset_bundle_saved_to": "{type} Bundle 已保存至: {path}",
-			"global_to_jp_complete": "Global -> JP转换完成！"
+			"global_to_jp_complete": "Global -> JP转换完成！",
+			"auto_search_no_game_dir": "⚠️ 自动查找失败：未设置游戏资源目录。",
+			"no_jp_version_found": "  > ❌ 未能找到该 Global 文件的日服对应版本。",
+			"auto_match_count": "  > 已自动匹配到 {count} 个日服文件。"
 		},
 		"game_dir_not_exist": "⚠️ 警告: 游戏资源目录 '{path}' 不存在。",
 		"game_dir_not_set": "⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。",
@@ -390,6 +397,16 @@
 		"extractor": {
 			"placeholder_bundle": "拖放要提取的 Bundle 文件",
 			"options_title": "提取选项"
+		},
+		"jp_gb_convert": {
+			"mode_jp_to_gb": "JP → Global (合并)",
+			"mode_gb_to_jp": "Global → JP (拆分)",
+			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
+			"role_jp_source": "日服 Bundle (源文件)",
+			"role_global_source": "国际服 Bundle (源文件)",
+			"global_bundle": "国际服 Bundle",
+			"role_global_target": "国际服 Bundle (目标文件)",
+			"role_jp_target": "日服 Bundle (目标文件)"
 		},
 		"dialog": {
 			"select": "选择{type}",

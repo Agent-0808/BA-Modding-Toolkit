@@ -712,7 +712,6 @@ def process_asset_packing(
             return False, save_message
 
         log(t("log.file.saved", path=output_path))
-        log(f"\n🎉 {t('log.status.process_complete')}")
         return True, t("message.packer.process_complete", count=replacement_count, button=t("action.replace_original"))
 
     except Exception as e:
@@ -1195,7 +1194,7 @@ def process_jp_to_global_conversion(
 
         # 依次处理每个 JP Bundle
         for jp_path in jp_bundle_paths:
-            log(f'\n--- {t("log.section.processing_file", name=jp_path.name)} ---')
+            log(f'\n--- {t("log.section.processing_filename", name=jp_path.name)} ---')
             jp_env = load_bundle(jp_path, log)
             if not jp_env:
                 log(f"  > ⚠️ {t('message.load_failed')}: {jp_path.name}")
@@ -1259,8 +1258,8 @@ def process_jp_to_global_conversion(
                         
                         replaced_or_added.add(resource_name)
                 except Exception as e:
-                    log(f"  > ⚠️ Error reading object: {e}")
-
+                    log(t("message.jp_convert.conversion_error", error=e))
+                        
             # --- 阶段二: 添加新资源 ---
             for resource_name, source_obj in source_assets.items():
                 if resource_name not in replaced_or_added:
@@ -1363,7 +1362,7 @@ def process_global_to_jp_conversion(
         
         # 3. 遍历每个日服模板文件进行处理
         for jp_template_path in jp_template_paths:
-            log(f'\n--- {t("log.section.processing_file", name=jp_template_path.name)} ---')
+            log(f'\n--- {t("log.section.processing_filename", name=jp_template_path.name)} ---')
             
             template_env = load_bundle(jp_template_path, log)
             if not template_env:
@@ -1436,12 +1435,12 @@ def process_global_to_jp_conversion(
                     log=log
                 )
                 if save_ok:
-                    log(t("log.file.saved", path=output_path))
+                    log(f"  {t('log.file.saved', path=output_path)}")
                     success_count += 1
                 else:
-                    log(f"  ❌ Save failed: {save_msg}")
+                    log(f"  {t('log.file.save_failed', path=output_path, error=save_msg)}")
             else:
-                log(f"  > {t('log.compression.none')} changes made, skipping save.")
+                log(f"  {t('log.file.no_changes_made')}")
 
         log(f'\n--- {t("log.section.conversion_complete")} ---')
         log(f"\n🎉 {t('log.jp_convert.global_to_jp_complete')}")

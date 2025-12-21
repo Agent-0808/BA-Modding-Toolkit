@@ -269,6 +269,11 @@ class ConfigManager:
                 'spine_downgrade_version': app_instance.spine_downgrade_version_var.get()
             }
             
+            # 添加语言设置
+            self.config['Language'] = {
+                'language': app_instance.language_var.get()
+            }
+            
             # 写入文件
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 self.config.write(f)

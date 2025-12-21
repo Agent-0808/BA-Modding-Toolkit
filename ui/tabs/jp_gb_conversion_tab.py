@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
 
+from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents, FileListbox
@@ -35,18 +36,18 @@ class JpGbConversionTab(TabFrame):
                   background=[('selected', Theme.FRAME_BG), ('active', '#e0e0e0')],
                   relief=[('selected', tk.GROOVE)])
 
-        ttk.Radiobutton(mode_frame, text="JP -> Global (合并多文件)", variable=self.mode_var,
+        ttk.Radiobutton(mode_frame, text=t("ui.jp_gb_convert.mode_jp_to_gb"), variable=self.mode_var,
                        value="jp_to_global", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Radiobutton(mode_frame, text="Global -> JP (拆分到模板)", variable=self.mode_var,
+        ttk.Radiobutton(mode_frame, text=t("ui.jp_gb_convert.mode_gb_to_jp"), variable=self.mode_var,
                        value="global_to_jp", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # --- 文件输入区域 ---
         self.file_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
-        self.file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
         
         # 1. 国际服 Bundle 文件 (单文件拖放区)
         self.global_frame, self.global_label = UIComponents.create_file_drop_zone(
-            self.file_frame, "Global Bundle 文件", 
+            self.file_frame, t("ui.jp_gb_convert.role_global_source"), 
             self.drop_global_bundle, self.browse_global_bundle,
             clear_cmd=self.clear_callback('global_bundle_path')
         )
@@ -54,13 +55,13 @@ class JpGbConversionTab(TabFrame):
         # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件)
         self.jp_files_listbox = FileListbox(
             self.file_frame, 
-            title="JP Bundle 文件列表", 
+            title=t("ui.jp_gb_convert.role_jp_source"), 
             file_list=[], 
-            placeholder_text="拖放所有相关的日服文件 (textures, assets, materials, timelines...) 到此处",
+            placeholder_text=t("ui.jp_gb_convert.placeholder_jp_files"),
             height=3,
             logger=self.logger
         )
-        self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
         # --- 选项设置区域 ---
         options_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
@@ -69,7 +70,7 @@ class JpGbConversionTab(TabFrame):
         # 自动搜索开关
         UIComponents.create_checkbutton(
             options_frame,
-            text="添加 Global 文件时自动搜索所有 JP 关联文件",
+            text=t("option.auto_search"),
             variable=self.app.auto_search_var
         ).pack(side=tk.LEFT, padx=5)
         
@@ -78,10 +79,10 @@ class JpGbConversionTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=2)
         
         self.run_button = UIComponents.create_button(
-            action_button_frame, "开始转换",
+            action_button_frame, t("action.convert"),
             self.run_conversion_thread,
             bg_color=Theme.BUTTON_SUCCESS_BG,
-            padx=15, pady=3
+            style="short"
         )
         self.run_button.pack(fill=tk.X)
         
@@ -91,26 +92,26 @@ class JpGbConversionTab(TabFrame):
     def _switch_view(self):
         """根据选择的模式更新UI文案"""
         if self.mode_var.get() == "jp_to_global":
-            self.global_frame.config(text="Global Bundle (模板)")
-            self.jp_files_listbox.get_frame().config(text="JP Bundles (源文件)")
+            self.global_frame.config(text=t("ui.jp_gb_convert.role_global_target"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_gb_convert.role_jp_source"))
         else:
-            self.global_frame.config(text="Global Bundle (源文件)")
-            self.jp_files_listbox.get_frame().config(text="JP Bundles (模板)")
+            self.global_frame.config(text=t("ui.jp_gb_convert.role_global_source"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_gb_convert.role_jp_target"))
 
     # --- 国际服文件处理 ---
     def drop_global_bundle(self, event):
         if is_multiple_drop(event.data):
-            messagebox.showwarning("操作无效", "此处请一次只拖放一个 Global 文件。")
+            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
             return
         path = Path(event.data.strip('{}'))
         callback = lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None
-        self.set_file_path('global_bundle_path', self.global_label, path, "Global Bundle", callback=callback)
+        self.set_file_path('global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), callback=callback)
     
     def browse_global_bundle(self):
         select_file(
-            title="选择 Global Bundle 文件",
+            title=t("ui.dialog.select", type=t("ui.jp_gb_convert.global_bundle")),
             callback=lambda path: self.set_file_path(
-                'global_bundle_path', self.global_label, path, "Global Bundle", 
+                'global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), 
                 callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None
             ),
             logger=self.logger.log
@@ -120,7 +121,7 @@ class JpGbConversionTab(TabFrame):
     def _auto_find_jp_files(self):
         """当指定了 Global 文件后，自动在资源目录查找所有匹配的 JP 文件"""
         if not self.app.game_resource_dir_var.get():
-            self.logger.log("⚠️ 自动查找失败：未设置游戏资源目录。")
+            self.logger.log(t("log.jp_convert.auto_search_no_game_dir"))
             return
         if not self.global_bundle_path:
             return
@@ -128,7 +129,7 @@ class JpGbConversionTab(TabFrame):
         self.run_in_thread(self._find_worker)
 
     def _find_worker(self):
-        self.logger.status("正在自动查找所有日服关联文件...")
+        self.logger.status(t("log.status.searching"))
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
@@ -139,14 +140,14 @@ class JpGbConversionTab(TabFrame):
         if jp_files:
             # 线程安全更新列表
             self.master.after(0, lambda: self._update_jp_listbox(jp_files))
+            self.logger.status(t("log.status.ready"))
         else:
-            self.logger.log("  > ❌ 未能找到该 Global 文件的日服对应版本。")
-        self.logger.status("自动查找完成")
+            self.logger.status(t("log.status.search_not_found"))
 
     def _update_jp_listbox(self, files: list[Path]):
         self.jp_files_listbox._clear_list()
         self.jp_files_listbox.add_files(files)
-        self.logger.log(f"  > 已自动匹配到 {len(files)} 个日服文件。")
+        self.logger.log(t("log.search.found_count", count=len(files)))
 
     # --- 核心转换流程 ---
     def run_conversion_thread(self):
@@ -158,16 +159,16 @@ class JpGbConversionTab(TabFrame):
         jp_files = self.jp_files_listbox.file_list
         
         if not self.global_bundle_path:
-            messagebox.showerror("错误", "请选择 Global Bundle 文件。")
+            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
         if not jp_files:
-            messagebox.showerror("错误", "日服文件列表不能为空。")
+            messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
 
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            messagebox.showerror("错误", f"无法创建输出目录: {e}")
+            messagebox.showerror(t("common.error"), t("message.create_output_dir_error", error=e))
             return
         
         # 2. 准备选项
@@ -178,7 +179,7 @@ class JpGbConversionTab(TabFrame):
         )
         
         # 3. 调用处理函数
-        self.logger.status("正在转换中...")
+        self.logger.status(t("common.processing"))
         if self.mode_var.get() == "jp_to_global":
             success, message = processing.process_jp_to_global_conversion(
                 global_bundle_path=self.global_bundle_path,
@@ -198,8 +199,8 @@ class JpGbConversionTab(TabFrame):
         
         # 4. 结果反馈
         if success:
-            self.logger.status("转换成功")
-            messagebox.showinfo("成功", message)
+            self.logger.status(t("log.status.done"))
+            messagebox.showinfo(t("common.success"), message)
         else:
-            self.logger.status("转换失败")
-            messagebox.showerror("失败", message)
+            self.logger.status(t("log.status.failed"))
+            messagebox.showerror(t("common.fail"), message)

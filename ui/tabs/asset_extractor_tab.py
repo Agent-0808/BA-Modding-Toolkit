@@ -124,7 +124,7 @@ class AssetExtractorTab(TabFrame):
 
     def run_extraction_thread(self):
         if not self.bundle_path:
-            messagebox.showerror(t("common.error"), t("message.select_file_first"))
+            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
             
         # 检查 Spine 降级选项
