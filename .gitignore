@@ -17,5 +17,5 @@ SpineConverter/
 *.pdn
 *.exe
 *.lnk
-config.ini
+*.ini
 

@@ -153,12 +153,13 @@
 		"jp_convert": {
 			"load_global_failed": "无法加载国际服源文件",
 			"load_jp_asset_failed": "无法加载日服 {type} 文件",
-			"jp_to_global_success": "JP -> Global转换成功！",
-			"global_to_jp_success": "Global -> JP转换成功！",
+			"jp_to_global_success": "JP -> Global转换成功！\n已替换 {asset_count} 个 资源",
+			"global_to_jp_success": "Global -> JP转换成功！\n已替换 {bundle_count} 个Bundle，{asset_count} 个资源",
 			"conversion_error": "转换过程中发生错误:\n{error}",
 			"load_global_source_failed": "无法加载国际服源文件",
 			"load_jp_template_failed": "无法加载日服 {type} 模板文件",
-			"no_assets_in_source": "源文件中未找到任何 TextAsset 或 Texture2D 资源，无法进行转换。",
+			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
+			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
 			"save_asset_bundle_failed": "保存 {type} bundle 失败: {message}"
 		},
 		"same_file": "两个路径一致！",
@@ -197,7 +198,8 @@
 			"removed_count": "已移除 {count} 个文件",
 			"list_cleared": "列表已清空",
 			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件",
-			"no_changes_made": "该文件未进行任何修改，未保存。"
+			"no_changes_made": "该文件未进行任何修改，未保存。",
+			"no_files_updated": "未更新任何文件。"
 		},
 		"config": {
 			"reset": "已重置为默认设置",
@@ -264,6 +266,8 @@
 			"b2b_replace": "Bundle-to-Bundle 替换",
 			"merging_assets": "合并资源",
 			"extracting_from_global": "正在从国际服文件提取资源",
+			"extracting_from_jp": "正在从日服文件提取资源",
+			"applying_to_global": "正在应用到国际服文件",
 			"processing_filename": "正在处理文件: {name}",
 			"processing_asset_bundle": "正在处理 {type} Bundle",
 			"migration_complete": "迁移完成: {text_count} 个 TextAsset, {tex_count} 个 Texture2D",
@@ -332,6 +336,8 @@
 			"global_base_file": "国际服源文件: {name}",
 			"jp_asset_file": "日服 {type} 文件: {name}",
 			"jp_files_count": "选中的日服文件数量: {count}",
+			"extracted_count_from_jp": "从日服文件提取了 {count} 个资源",
+			"no_assets_replaced": "未替换任何资源",
 			"type_mismatch": "类型不匹配，跳过替换: {name} (目标: {target}, 源: {source})",
 			"replacing_asset": "替换 {type}: {name}",
 			"adding_asset": "添加 {type}: {name}",
@@ -345,7 +351,8 @@
 			"global_to_jp_complete": "Global -> JP转换完成！",
 			"auto_search_no_game_dir": "⚠️ 自动查找失败：未设置游戏资源目录。",
 			"no_jp_version_found": "  > ❌ 未能找到该 Global 文件的日服对应版本。",
-			"auto_match_count": "  > 已自动匹配到 {count} 个日服文件。"
+			"auto_match_count": "  > 已自动匹配到 {count} 个日服文件。",
+			"template_updated": "更新的文件数量：{count}"
 		},
 		"game_dir_not_exist": "⚠️ 警告: 游戏资源目录 '{path}' 不存在。",
 		"game_dir_not_set": "⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。",
@@ -354,6 +361,7 @@
 		"output_dir_not_set": "❌ 错误: 未设置输出目录",
 		"error_detail": "发生错误：{error}",
 		"error_processing": "处理过程中发生错误：{error}",
+		"processing_filename": "正在处理文件: {name}",
 		"process_failed": "处理失败: {error}",
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",

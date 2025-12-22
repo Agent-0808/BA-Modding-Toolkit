@@ -579,14 +579,14 @@ def _apply_replacements(
         if not tasks:  # 如果清单空了，就提前退出
             break
         
-        data = obj.read()
-        asset_key = key_func(obj, data)
+        try:
+            data = obj.read()
+            asset_key = key_func(obj, data)
 
-        if asset_key in tasks:
-            content = tasks.pop(asset_key)
-            resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
-            
-            try:
+            if asset_key in tasks:
+                content = tasks.pop(asset_key)
+                resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
+                
                 if obj.type.name == "Texture2D":
                     data.image = content
                     data.save()
@@ -594,17 +594,23 @@ def _apply_replacements(
                     # content 是 bytes，需要解码成 str
                     data.m_Script = content.decode("utf-8", "surrogateescape")
                     data.save()
-                elif obj.type.name == "Mesh":
+                elif obj.type.name in ["Mesh", "Material", "Shader", "AnimationClip"]:
                     obj.set_raw_data(content)
-                else: # 适用于 "ALL" 模式下的其他类型
+                elif "ALL" in replacement_map.get("__mode__", set()): 
+                # Check for a special key if we're in "ALL" mode
                     obj.set_raw_data(content)
 
                 replacement_count += 1
-                log_message = f"  - {resource_name} ({obj.type.name})"
+                log_message = f"  - [{obj.type.name}] {resource_name}"
                 replaced_assets_log.append(log_message)
 
-            except Exception as e:
-                log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name, type=obj.type.name, error=e)}')
+        except Exception as e:
+            resource_name_for_error = "N/A"
+            try:
+                resource_name_for_error = obj.read().m_Name
+            except Exception:
+                pass
+            log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
 
     return replacement_count, replaced_assets_log, set(tasks.keys())
 
@@ -854,35 +860,45 @@ def _extract_assets_from_bundle(
     """
     replacement_map: dict[AssetKey, AssetContent] = {}
     replace_all = "ALL" in asset_types_to_replace
+    
+    # 扩大支持的类型范围，以适应JP/GB转换
+    supported_types = asset_types_to_replace | {"Mesh", "Material", "Shader", "AnimationClip"}
 
     for obj in env.objects:
-        if replace_all or (obj.type.name in asset_types_to_replace):
-            data = obj.read()
-            asset_key = key_func(obj, data)
-            content = None
-            resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
+        if replace_all or (obj.type.name in supported_types):
+            try:
+                data = obj.read()
+                asset_key = key_func(obj, data)
+                if asset_key is None or not getattr(data, 'm_Name', None):
+                    continue
+                
+                content: AssetContent | None = None
+                resource_name = data.m_Name
 
-            if obj.type.name == "Texture2D":
-                content = data.image
-            elif obj.type.name == "TextAsset":
-                asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                if resource_name.lower().endswith('.skel'):
-                    content = _handle_skel_upgrade(
-                        skel_bytes=asset_bytes,
-                        resource_name=resource_name,
-                        spine_options=spine_options,
-                        log=log
-                    )
-                else:
-                    content = asset_bytes
-            elif obj.type.name == "Mesh":
-                content = obj.get_raw_data()
-            elif replace_all:
-                content = obj.get_raw_data()
+                if obj.type.name == "Texture2D":
+                    content = data.image
+                elif obj.type.name == "TextAsset":
+                    asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+                    if resource_name.lower().endswith('.skel'):
+                        content = _handle_skel_upgrade(
+                            skel_bytes=asset_bytes,
+                            resource_name=resource_name,
+                            spine_options=spine_options,
+                            log=log
+                        )
+                    else:
+                        content = asset_bytes
+                elif replace_all or obj.type.name in supported_types:
+                    content = obj.get_raw_data()
 
-            if content is not None:
-                replacement_map[asset_key] = content
-    
+                if content is not None:
+                    replacement_map[asset_key] = content
+            except Exception as e:
+                log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(obj.read(), 'm_Name', 'N/A'), error=e)}")
+
+    if replace_all:
+        replacement_map["__mode__"] = {"ALL"} # 特殊标记用于 _apply_replacements
+
     return replacement_map
 
 def _b2b_replace(
@@ -1162,7 +1178,8 @@ def process_jp_to_global_conversion(
     """
     处理日服转国际服的转换。
     
-    将日服的多个资源bundle合并到国际服的基础bundle文件中。
+    将日服多个资源bundle中的资源，替换到国际服的基础bundle文件中对应的部分。
+    此过程只替换同名同类型的现有资源，不添加新资源。
     
     Args:
         global_bundle_path: 国际服bundle文件路径（作为基础）
@@ -1180,107 +1197,51 @@ def process_jp_to_global_conversion(
         log(f'  > {t("log.jp_convert.global_base_file", name=global_bundle_path.name)}')
         log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_bundle_paths))}')
         
-        # 加载国际服 base
+        # 1. 从所有日服包中构建一个完整的“替换清单”
+        log(f'\n--- {t("log.section.extracting_from_jp")} ---')
+        replacement_map: dict[AssetKey, AssetContent] = {}
+        # 定义资源标识符为 (资源名, 资源类型)
+        key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
+        # 我们需要转换所有可能的类型
+        asset_types_to_extract = {"ALL"}
+
+        for jp_path in jp_bundle_paths:
+            log(f"  > {t('log.processing_filename', name=jp_path.name)}")
+            jp_env = load_bundle(jp_path, log)
+            if not jp_env:
+                log(f"    > ⚠️ {t('message.load_failed')}: {jp_path.name}")
+                continue
+            
+            # 提取资源并合并到主清单
+            jp_assets = _extract_assets_from_bundle(
+                jp_env, asset_types_to_extract, key_func, None, log
+            )
+            replacement_map.update(jp_assets)
+
+        if not replacement_map:
+            msg = t("message.jp_convert.no_assets_in_source")
+            log(f"  > ⚠️ {msg}")
+            return False, msg
+        
+        log(f"  > {t('log.jp_convert.extracted_count_from_jp', count=len(replacement_map))}")
+
+        # 2. 加载国际服 base 并应用替换
+        log(f'\n--- {t("log.section.applying_to_global")} ---')
         global_env = load_bundle(global_bundle_path, log)
         if not global_env:
             return False, t("message.jp_convert.load_global_failed")
         
-        # 用于跟踪已处理（替换或添加）的资源名，防止不同JP包中有同名资源导致的冲突
-        # 或者标记在Global包中已经被更新过的资源
-        replaced_or_added = set()
-        total_textasset_count = 0
-        total_texture2d_count = 0
-        total_other_count = 0
-
-        # 依次处理每个 JP Bundle
-        for jp_path in jp_bundle_paths:
-            log(f'\n--- {t("log.section.processing_filename", name=jp_path.name)} ---')
-            jp_env = load_bundle(jp_path, log)
-            if not jp_env:
-                log(f"  > ⚠️ {t('message.load_failed')}: {jp_path.name}")
-                continue
-
-            # 1. 构建当前 JP 包的资源映射
-            source_assets = {}
-            # 支持更多类型，不仅仅是 TextAsset 和 Texture2D
-            supported_types = {"TextAsset", "Texture2D", "Mesh", "Material", "Shader", "AnimationClip"} 
+        replacement_count, replaced_logs, _ = _apply_replacements(
+            global_env, replacement_map, key_func, log
+        )
+        
+        if replacement_count == 0:
+            log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
+            return False, t("message.jp_convert.no_assets_matched")
             
-            for obj in jp_env.objects:
-                if obj.type.name in supported_types:
-                    try:
-                        data = obj.read()
-                        if hasattr(data, 'm_Name'):
-                            source_assets[data.m_Name] = obj
-                    except Exception:
-                        pass
-            
-            # --- 阶段一: 替换现有资源 ---
-            # 遍历目标环境，用源资源的数据更新匹配的现有资源
-            for obj in global_env.objects:
-                if obj.type.name not in supported_types:
-                    continue
-                
-                try:
-                    data = obj.read()
-                    resource_name = getattr(data, 'm_Name', None)
-                    
-                    if resource_name and resource_name in source_assets:
-                        source_obj = source_assets[resource_name]
-                        
-                        # 确保类型匹配
-                        if obj.type.name != source_obj.type.name:
-                            continue
-
-                        # 如果已经处理过这个资源（在之前的 JP 包中），则跳过
-                        if resource_name in replaced_or_added:
-                            continue
-
-                        log(f"  > {t('log.jp_convert.replacing_asset', type=obj.type.name, name=resource_name)}")
-                        source_data = source_obj.read()
-                        
-                        # 根据类型复制数据
-                        if obj.type.name == "TextAsset":
-                            data.m_Script = source_data.m_Script
-                            total_textasset_count += 1
-                        elif obj.type.name == "Texture2D":
-                            data.image = source_data.image
-                            total_texture2d_count += 1
-                        else:
-                            # 对于其他类型，尝试使用 raw_data
-                            obj.set_raw_data(source_obj.get_raw_data())
-                            total_other_count += 1
-                            # 注意：set_raw_data 不需要 data.save()，但上面的属性修改需要
-                            if obj.type.name in ["TextAsset", "Texture2D"]:
-                                data.save()
-                        
-                        if obj.type.name in ["TextAsset", "Texture2D"]:
-                            data.save()
-                        
-                        replaced_or_added.add(resource_name)
-                except Exception as e:
-                    log(t("message.jp_convert.conversion_error", error=e))
-                        
-            # --- 阶段二: 添加新资源 ---
-            for resource_name, source_obj in source_assets.items():
-                if resource_name not in replaced_or_added:
-                    log(f"  > {t('log.jp_convert.adding_asset', type=source_obj.type.name, name=resource_name)}")
-                    
-                    # 关键步骤: 将源对象的 assets_file 指向目标环境的 file 对象
-                    source_obj.assets_file = global_env.file
-                    global_env.objects.append(source_obj)
-                    
-                    if source_obj.type.name == "TextAsset":
-                        total_textasset_count += 1
-                    elif source_obj.type.name == "Texture2D":
-                        total_texture2d_count += 1
-                    else:
-                        total_other_count += 1
-                    
-                    replaced_or_added.add(resource_name)
-
-        log(f"\n  > {t('log.jp_convert.merge_complete', text_count=total_textasset_count, tex_count=total_texture2d_count)}")
-        if total_other_count > 0:
-             log(f"  > Merged {total_other_count} other assets.")
+        log(f"\n✅ {t('log.b2b.strategy_success', name='(JP->GB)', count=replacement_count)}:")
+        for item in replaced_logs:
+            log(item)
         
         # 3. 保存最终文件
         output_path = output_dir / global_bundle_path.name
@@ -1297,13 +1258,13 @@ def process_jp_to_global_conversion(
         
         log(t("log.file.saved", path=output_path))
         log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
-        return True, t("message.jp_convert.jp_to_global_success")
+        return True, t("message.jp_convert.jp_to_global_success", asset_count=replacement_count)
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
         log(traceback.format_exc())
         return False, t("message.jp_convert.conversion_error", error=e)
-
+        
 def process_global_to_jp_conversion(
     global_bundle_path: Path,
     jp_template_paths: list[Path],
@@ -1315,13 +1276,14 @@ def process_global_to_jp_conversion(
     处理国际服转日服的转换。
     
     将一个国际服格式的bundle文件，使用多个日服bundle作为模板，
-    将资源分发到对应的日服文件中。
+    将国际服的资源分发替换到对应的日服文件中。
+    只替换模板中已存在的同名同类型资源。
     
     Args:
         global_bundle_path: 待转换的国际服bundle文件路径。
         jp_template_paths: 日服bundle文件路径列表（用作模板）。
         output_dir: 输出目录。
-        save_options: 保存选项（函数内部会自动禁用CRC修正）。
+        save_options: 保存选项。
         log: 日志记录函数。
     
     Returns:
@@ -1333,99 +1295,47 @@ def process_global_to_jp_conversion(
         log(f'  > {t("log.jp_convert.global_source_file", name=global_bundle_path.name)}')
         log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_template_paths))}')
         
-        # 1. 加载国际服源文件
+        # 1. 加载国际服源文件并构建源资源清单
         global_env = load_bundle(global_bundle_path, log)
         if not global_env:
             return False, t("message.jp_convert.load_global_source_failed")
         
-        # 2. 从国际服 bundle 构建源资源映射
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
-        source_assets = {}
-        supported_types = {"TextAsset", "Texture2D", "Mesh", "Material", "Shader", "AnimationClip"}
-
-        for obj in global_env.objects:
-            if obj.type.name in supported_types:
-                try:
-                    data = obj.read()
-                    if hasattr(data, 'm_Name'):
-                        source_assets[data.m_Name] = obj
-                except Exception:
-                    pass
+        key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
+        asset_types_to_extract = {"ALL"}
         
-        if not source_assets:
+        source_replacement_map = _extract_assets_from_bundle(
+            global_env, asset_types_to_extract, key_func, None, log
+        )
+        
+        if not source_replacement_map:
             msg = t("message.jp_convert.no_assets_in_source")
             log(f"  > ⚠️ {msg}")
             return False, msg
-        log(f"  > {t('log.jp_convert.extracted_count', count=len(source_assets))}")
+        log(f"  > {t('log.jp_convert.extracted_count', count=len(source_replacement_map))}")
 
         success_count = 0
+        total_changes = 0
         
-        # 3. 遍历每个日服模板文件进行处理
+        # 2. 遍历每个日服模板文件进行处理
         for jp_template_path in jp_template_paths:
             log(f'\n--- {t("log.section.processing_filename", name=jp_template_path.name)} ---')
             
             template_env = load_bundle(jp_template_path, log)
             if not template_env:
-                log(f"  > ❌ Failed to load template: {jp_template_path.name}")
+                log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
                 continue
 
-            replaced_or_added = set()
-            changes_count = 0
+            # 应用替换，函数会自动匹配并替换存在于模板中的资源
+            replacement_count, replaced_logs, _ = _apply_replacements(
+                template_env, source_replacement_map, key_func, log
+            )
             
-            # 3.1 替换模板中的现有资源
-            for obj in template_env.objects:
-                if obj.type.name in supported_types:
-                    try:
-                        data = obj.read()
-                        if not hasattr(data, 'm_Name'): continue
-                        
-                        if data.m_Name in source_assets:
-                            source_obj = source_assets[data.m_Name]
-                            
-                            if source_obj.type.name == obj.type.name:
-                                log(f"  > {t('log.jp_convert.replacing_asset', type=obj.type.name, name=data.m_Name)}")
-                                
-                                if obj.type.name == "TextAsset":
-                                    data.m_Script = source_obj.read().m_Script
-                                    data.save()
-                                elif obj.type.name == "Texture2D":
-                                    data.image = source_obj.read().image
-                                    data.save()
-                                else:
-                                    obj.set_raw_data(source_obj.get_raw_data())
-                                
-                                replaced_or_added.add(data.m_Name)
-                                changes_count += 1
-                    except Exception as e:
-                        log(f"    ⚠️ Error: {e}")
-
-            # 3.2 添加新增资源 (如果该模板包含同类资源，可以考虑添加进去，但这比较复杂)
-            # 策略：如果源资源名包含模板文件的特征（如 "textures"），且未被替换，则尝试添加
-            # 这里简化逻辑：只进行同名替换，以及添加那些明显属于该包类型的资源
-            
-            # (可选) 简单的启发式添加逻辑
-            # 判断模板类型
-            is_texture_bundle = "-textures-" in jp_template_path.name or "Texture2D" in [o.type.name for o in template_env.objects[:5]]
-            is_text_bundle = "-textassets-" in jp_template_path.name or "TextAsset" in [o.type.name for o in template_env.objects[:5]]
-            
-            for name, source_obj in source_assets.items():
-                if name in replaced_or_added: continue
+            if replacement_count > 0:
+                log(f"  > {t('log.jp_convert.template_updated', count=replacement_count)}:")
+                for item in replaced_logs:
+                    log(f"    - {item}")
                 
-                should_add = False
-                if is_texture_bundle and source_obj.type.name == "Texture2D":
-                    should_add = True
-                elif is_text_bundle and source_obj.type.name == "TextAsset":
-                    should_add = True
-                
-                if should_add:
-                    log(f"  > {t('log.jp_convert.adding_asset', type=source_obj.type.name, name=name)}")
-                    source_obj.assets_file = template_env.file
-                    template_env.objects.append(source_obj)
-                    replaced_or_added.add(name)
-                    changes_count += 1
-
-            # 3.3 保存修改后的模板
-            if changes_count > 0:
                 output_path = output_dir / jp_template_path.name
                 save_ok, save_msg = _save_and_crc(
                     env=template_env,
@@ -1435,17 +1345,17 @@ def process_global_to_jp_conversion(
                     log=log
                 )
                 if save_ok:
-                    log(f"  {t('log.file.saved', path=output_path)}")
+                    log(f"  ✅ {t('log.file.saved', path=output_path)}")
                     success_count += 1
+                    total_changes += replacement_count
                 else:
-                    log(f"  {t('log.file.save_failed', path=output_path, error=save_msg)}")
+                    log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
             else:
-                log(f"  {t('log.file.no_changes_made')}")
+                log(f"  > {t('log.file.no_changes_made')}")
 
         log(f'\n--- {t("log.section.conversion_complete")} ---')
-        log(f"\n🎉 {t('log.jp_convert.global_to_jp_complete')}")
-        
-        return True, t("message.jp_convert.global_to_jp_success")
+        log(f"{t('log.jp_convert.global_to_jp_complete')}")
+        return True, t("message.jp_convert.global_to_jp_success",bundle_count=success_count, asset_count=total_changes)
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_global_to_jp', error=e)}")
