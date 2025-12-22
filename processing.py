@@ -180,13 +180,11 @@ def compress_bundle(
     """
     save_kwargs = {}
     if compression == "original":
-        log(f'   > {t("log.compression.original")}')
         # Not passing the 'packer' argument preserves the original compression.
+        pass
     elif compression == "none":
-        log(f'    > {t("log.compression.none")}')
         save_kwargs['packer'] = ""  # An empty string typically means no compression.
     else:
-        log(f'    > {t("log.compression.method", method=compression.upper())}')
         save_kwargs['packer'] = compression
     
     return env.file.save(**save_kwargs)
@@ -206,17 +204,24 @@ def _save_and_crc(
         tuple(bool, str): (是否成功, 状态消息) 的元组。
     """
     try:
-        # 1. 从 env 生成修改后的压缩 bundle 数据
-        log(f'\n--- {t("log.section.export_modified_bundle")} ---')
-        log(f'  > {t("log.compressing_bundle_data")}')
+        # 准备保存信息并记录日志
+        compression_map = {
+            "lzma": "LZMA",
+            "lz4": "LZ4",
+            "none": t("log.compression.none_short"),
+            "original": t("log.compression.original_short")
+        }
+        compression_str = compression_map.get(save_options.compression, save_options.compression.upper())
+        crc_status_str = t("common.on") if save_options.perform_crc else t("common.off")
+        log(f"  > {t('log.file.saving_bundle', compression=compression_str, crc_status=crc_status_str)}")
+
+        # 从 env 生成修改后的压缩 bundle 数据
         modified_data = compress_bundle(env, save_options.compression, log)
 
         final_data = modified_data
         success_message = t("message.save_success")
 
         if save_options.perform_crc:
-            log(f'  > {t("log.crc.preparing")}')
-            
             with open(original_bundle_path, "rb") as f:
                 original_data = f.read()
 
@@ -231,10 +236,8 @@ def _save_and_crc(
             
             final_data = corrected_data
             success_message = t("message.save_and_crc_success")
-            log(f'✅ {t("log.crc.correction_success")}')
 
-        # 2. 将最终数据写入文件
-        log(f'  > {t("log.file.writing", path=output_path)}')
+        # 写入文件
         with open(output_path, "wb") as f:
             f.write(final_data)
         
@@ -336,14 +339,12 @@ def _handle_skel_upgrade(
     处理 .skel 文件的版本检查和升级。
     如果无需升级或升级失败，则返回原始字节。
     """
-
-    log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
-
     # 检查Spine升级功能是否可用
     if spine_options is None or not spine_options.is_enabled():
         return skel_bytes
     
     try:
+        log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
         # 检测 skel 的 spine 版本
         current_version = get_skel_version(skel_bytes, log)
         target_major_minor = ".".join(spine_options.target_version.split('.')[:2])
@@ -685,13 +686,18 @@ def process_asset_packing(
             return None
 
         # 3. 应用替换
-        replacement_count, _, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
+        replacement_count, replaced_assets_log, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
 
         if replacement_count == 0:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
             log(t("log.packer.check_files_and_bundle"))
             return False, t("message.packer.no_matching_assets_to_pack")
         
+        # 报告替换结果
+        log(f"\n✅ {t('log.b2b.strategy_success', name="mName", count=replacement_count)}:")
+        for item in replaced_assets_log:
+            log(f"  - {item}")
+
         log(f'\n{t("log.packer.packing_complete", success=replacement_count, total=original_tasks_count)}')
 
         # 报告未被打包的文件
@@ -957,7 +963,7 @@ def _b2b_replace(
         if replacement_count > 0:
             log(f"\n✅ {t('log.b2b.strategy_success', name=name, count=replacement_count)}:")
             for item in replaced_logs:
-                log(item)
+                log(f"  - {item}")
             return new_env, replacement_count
 
         log(f'  > {t("log.b2b.strategy_no_match", name=name)}')
@@ -1236,8 +1242,9 @@ def process_jp_to_global_conversion(
         # 根据日服文件名动态确定要提取的资源类型
         asset_types = _get_asset_types_from_jp_filenames(jp_bundle_paths)
 
-        for jp_path in jp_bundle_paths:
-            log(f"  > {t('log.processing_filename', name=jp_path.name)}")
+        total_files = len(jp_bundle_paths)
+        for i, jp_path in enumerate(jp_bundle_paths, 1):
+            log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_path.name))
             jp_env = load_bundle(jp_path, log)
             if not jp_env:
                 log(f"    > ⚠️ {t('message.load_failed')}: {jp_path.name}")
@@ -1287,7 +1294,7 @@ def process_jp_to_global_conversion(
         if not save_ok:
             return False, save_message
         
-        log(t("log.file.saved", path=output_path))
+        log(f"  ✅ {t('log.file.saved', path=output_path)}")
         log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
         return True, t("message.jp_convert.jp_to_global_success", asset_count=replacement_count)
         
@@ -1349,10 +1356,11 @@ def process_global_to_jp_conversion(
 
         success_count = 0
         total_changes = 0
+        total_files = len(jp_template_paths)
         
         # 2. 遍历每个日服模板文件进行处理
-        for jp_template_path in jp_template_paths:
-            log(f'\n--- {t("log.section.processing_filename", name=jp_template_path.name)} ---')
+        for i, jp_template_path in enumerate(jp_template_paths, 1):
+            log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_template_path.name))
             
             template_env = load_bundle(jp_template_path, log)
             if not template_env:
