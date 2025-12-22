@@ -1,6 +1,7 @@
 # processing.py
 
 import UnityPy
+from UnityPy.enums import ClassIDType as AssetType
 import os
 import traceback
 from pathlib import Path
@@ -523,7 +524,7 @@ def find_new_bundle_path(
         log(f'  > {t("common.fail")}: {msg}')
         return None, msg
     
-    old_textures_map = {obj.read().m_Name for obj in old_env.objects if obj.type.name == "Texture2D"}
+    old_textures_map = {obj.read().m_Name for obj in old_env.objects if obj.type == AssetType.Texture2D}
     
     if not old_textures_map:
         msg = t("message.search.no_texture2d_in_old_mod")
@@ -539,7 +540,7 @@ def find_new_bundle_path(
         if not env: continue
         
         for obj in env.objects:
-            if obj.type.name == "Texture2D" and obj.read().m_Name in old_textures_map:
+            if obj.type == AssetType.Texture2D and obj.read().m_Name in old_textures_map:
                 msg = t("message.search.new_file_confirmed", name=candidate_path.name)
                 log(f"  ✅ {msg}")
                 return candidate_path, msg
@@ -547,7 +548,6 @@ def find_new_bundle_path(
     msg = t("message.search.no_matching_texture_found")
     log(f'  > {t("common.fail")}: {msg}')
     return None, msg
-
 
 # ====== 资源处理相关 ======
 
@@ -587,21 +587,21 @@ def _apply_replacements(
                 content = tasks.pop(asset_key)
                 resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
                 
-                if obj.type.name == "Texture2D":
+                if obj.type == AssetType.Texture2D:
                     data.image = content
                     data.save()
-                elif obj.type.name == "TextAsset":
+                elif obj.type == AssetType.TextAsset:
                     # content 是 bytes，需要解码成 str
                     data.m_Script = content.decode("utf-8", "surrogateescape")
                     data.save()
-                elif obj.type.name in ["Mesh", "Material", "Shader", "AnimationClip"]:
+                elif obj.type in {AssetType.Mesh, AssetType.Material, AssetType.Shader, AssetType.AnimationClip}:
                     obj.set_raw_data(content)
                 elif "ALL" in replacement_map.get("__mode__", set()): 
                 # Check for a special key if we're in "ALL" mode
                     obj.set_raw_data(content)
 
                 replacement_count += 1
-                log_message = f"  - [{obj.type.name}] {resource_name}"
+                log_message = f"[{obj.type.name}] {resource_name}"
                 replaced_assets_log.append(log_message)
 
         except Exception as e:
@@ -680,7 +680,7 @@ def process_asset_packing(
 
         # 2. 定义用于在 bundle 中查找资源的 key 生成函数
         def key_func(obj: UnityPy.classes.Object, data: Any) -> AssetKey | None:
-            if obj.type.name in ["Texture2D", "TextAsset"]:
+            if obj.type in {AssetType.Texture2D, AssetType.TextAsset}:
                 return data.m_Name
             return None
 
@@ -777,11 +777,11 @@ def process_asset_extraction(
                         log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
                         continue
 
-                    if obj.type.name == "TextAsset":
+                    if obj.type == AssetType.TextAsset:
                         dest_path = temp_extraction_dir / resource_name
                         asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
                         dest_path.write_bytes(asset_bytes)
-                    elif obj.type.name == "Texture2D":
+                    elif obj.type == AssetType.Texture2D:
                         dest_path = temp_extraction_dir / f"{resource_name}.png"
                         data.image.convert("RGBA").save(dest_path)
                     
@@ -860,44 +860,45 @@ def _extract_assets_from_bundle(
     """
     replacement_map: dict[AssetKey, AssetContent] = {}
     replace_all = "ALL" in asset_types_to_replace
-    
-    # 扩大支持的类型范围，以适应JP/GB转换
-    supported_types = asset_types_to_replace | {"Mesh", "Material", "Shader", "AnimationClip"}
 
     for obj in env.objects:
-        if replace_all or (obj.type.name in supported_types):
-            try:
-                data = obj.read()
-                asset_key = key_func(obj, data)
-                if asset_key is None or not getattr(data, 'm_Name', None):
-                    continue
-                
-                content: AssetContent | None = None
-                resource_name = data.m_Name
+        # 如果不是“ALL”模式，则只处理在指定集合中的类型
+        if not replace_all and obj.type.name not in asset_types_to_replace:
+            continue
 
-                if obj.type.name == "Texture2D":
-                    content = data.image
-                elif obj.type.name == "TextAsset":
-                    asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                    if resource_name.lower().endswith('.skel'):
-                        content = _handle_skel_upgrade(
-                            skel_bytes=asset_bytes,
-                            resource_name=resource_name,
-                            spine_options=spine_options,
-                            log=log
-                        )
-                    else:
-                        content = asset_bytes
-                elif replace_all or obj.type.name in supported_types:
-                    content = obj.get_raw_data()
+        try:
+            data = obj.read()
+            asset_key = key_func(obj, data)
+            if asset_key is None or not getattr(data, 'm_Name', None):
+                continue
+            
+            content: AssetContent | None = None
+            resource_name = data.m_Name
 
-                if content is not None:
-                    replacement_map[asset_key] = content
-            except Exception as e:
-                log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(obj.read(), 'm_Name', 'N/A'), error=e)}")
+            if obj.type == AssetType.Texture2D:
+                content = data.image
+            elif obj.type == AssetType.TextAsset:
+                asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+                if resource_name.lower().endswith('.skel'):
+                    content = _handle_skel_upgrade(
+                        skel_bytes=asset_bytes,
+                        resource_name=resource_name,
+                        spine_options=spine_options,
+                        log=log
+                    )
+                else:
+                    content = asset_bytes
+            # 对于其他类型，如果处于“ALL”模式或该类型被明确请求，则复制原始数据
+            elif replace_all or obj.type.name in asset_types_to_replace:
+                content = obj.get_raw_data()
+
+            if content is not None:
+                replacement_map[asset_key] = content
+        except Exception as e:
+            log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(obj.read(), 'm_Name', 'N/A'), error=e)}")
 
     if replace_all:
-        replacement_map["__mode__"] = {"ALL"} # 特殊标记用于 _apply_replacements
+        replacement_map["__mode__"] = {"ALL"}
 
     return replacement_map
 
@@ -1119,6 +1120,35 @@ def process_batch_mod_update(
 
 # ====== 日服处理相关 ======
 
+# 将日服文件名中的类型标识符映射到UnityPy的AssetType名称
+JP_FILENAME_TYPE_MAP = {
+    "textures": "Texture2D",
+    "textassets": "TextAsset",
+    "materials": "Material",
+    "meshes": "Mesh",
+    "animationclip": "AnimationClip",
+    "audio": "AudioClip",
+    "prefabs": "Prefab",
+}
+
+def _get_asset_types_from_jp_filenames(jp_paths: list[Path]) -> set[str]:
+    """
+    分析日服bundle文件名列表，以确定它们包含的资源类型。
+    """
+    asset_types = set()
+    # 用于查找类型部分的正则表达式，例如 "-textures-"
+    type_pattern = re.compile(r'-(' + '|'.join(JP_FILENAME_TYPE_MAP.keys()) + r')-')
+
+    for path in jp_paths:
+        match = type_pattern.search(path.name)
+        if match:
+            type_key = match.group(1)
+            asset_type_name = JP_FILENAME_TYPE_MAP.get(type_key)
+            if asset_type_name:
+                asset_types.add(asset_type_name)
+
+    return asset_types
+
 def find_all_jp_counterparts(
     global_bundle_path: Path,
     search_dirs: list[Path],
@@ -1202,8 +1232,9 @@ def process_jp_to_global_conversion(
         replacement_map: dict[AssetKey, AssetContent] = {}
         # 定义资源标识符为 (资源名, 资源类型)
         key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
-        # 我们需要转换所有可能的类型
-        asset_types_to_extract = {"ALL"}
+        
+        # 根据日服文件名动态确定要提取的资源类型
+        asset_types = _get_asset_types_from_jp_filenames(jp_bundle_paths)
 
         for jp_path in jp_bundle_paths:
             log(f"  > {t('log.processing_filename', name=jp_path.name)}")
@@ -1214,7 +1245,7 @@ def process_jp_to_global_conversion(
             
             # 提取资源并合并到主清单
             jp_assets = _extract_assets_from_bundle(
-                jp_env, asset_types_to_extract, key_func, None, log
+                jp_env, asset_types, key_func, None, log
             )
             replacement_map.update(jp_assets)
 
@@ -1302,10 +1333,12 @@ def process_global_to_jp_conversion(
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
         key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
-        asset_types_to_extract = {"ALL"}
+
+        # 根据日服模板文件名确定要提取哪些类型的资源
+        asset_types = _get_asset_types_from_jp_filenames(jp_template_paths)
         
         source_replacement_map = _extract_assets_from_bundle(
-            global_env, asset_types_to_extract, key_func, None, log
+            global_env, asset_types, key_func, None, log
         )
         
         if not source_replacement_map:
