@@ -49,7 +49,6 @@ jobs:
             archspec
           include-data-dir: assets=assets
           windows-console-mode: disable
-          product-name: "BA Modding Toolkit"
           file-description: "Blue Archive Modding Toolkit"
           output-dir: build
           output-filename: "BA-Modding-Toolkit.exe"
