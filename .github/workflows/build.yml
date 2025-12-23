@@ -22,12 +22,10 @@ jobs:
         with:
           python-version: '3.10'
           architecture: 'x64'
+          cache: 'pip'
 
       - name: Install Dependencies
         run: pip install -r requirements.txt
-
-      - name: Install Nuitka
-        run: pip install nuitka
 
       - name: Build Executable with Nuitka
         uses: Nuitka/Nuitka-Action@main
