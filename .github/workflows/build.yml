@@ -49,9 +49,8 @@ jobs:
             archspec
           include-data-dir: assets=assets
           windows-console-mode: disable
-          file-description: "Blue Archive Modding Toolkit"
           output-dir: build
-          output-filename: "BA-Modding-Toolkit.exe"
+          output-file: "BA-Modding-Toolkit.exe"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
