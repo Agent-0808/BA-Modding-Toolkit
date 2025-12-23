@@ -82,12 +82,14 @@ class I18n:
         self._get_template.cache_clear()
 
     @lru_cache(maxsize=1024)
-    def _get_template(self, key: str) -> str:
+    def _get_template(self, key: str, **kwargs) -> str:
         """
         内部方法：仅负责查找原始字符串并缓存结果
         """
         # Debug 模式直接返回键名
         if self.lang == "debug":
+            if kwargs:
+                return f"{key}({', '.join(f'{k}={v}' for k, v in kwargs.items())})"
             return key
 
         keys = key.split(".")
@@ -104,7 +106,11 @@ class I18n:
         用法: t("log.success", msg="更新成功")
         对应的 JSON: { "log": { "success": "成功: {msg}" } }
         """
-        template = self._get_template(key)
+        # Debug 模式下传入参数信息
+        if self.lang == "debug" and kwargs:
+            template = self._get_template(key, **kwargs)
+        else:
+            template = self._get_template(key)
         
         # 如果没有传参数，直接返回
         if not kwargs:

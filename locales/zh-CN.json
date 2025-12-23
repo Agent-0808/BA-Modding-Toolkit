@@ -9,7 +9,7 @@
 		"yes": "是",
 		"no": "否",
 		"on": "开",
-        "off": "关",
+		"off": "关",
 		"success": "成功",
 		"error": "错误",
 		"warning": "警告",
@@ -90,19 +90,23 @@
 		"process_success": "处理成功！",
 		"process_failed": "处理失败: {error}",
 		"error_during_process": "处理过程中发生错误:\n{error}",
-		"config_saved": "配置已保存。",
-		"config_loaded": "配置已加载。",
-		"config_load_failed": "配置加载失败。",
 		"no_bundles_in_folder": "在该文件夹中没有找到任何 .bundle 文件。",
 		"cannot_open_explorer": "无法打开目录: {error}",
 		"open_manually": "请手动打开目录：{path}",
 		"invalid_operation": "操作无效",
 		"execution_error": "执行过程中发生错误:\n{error}",
-		"create_dir_failed_detail": "无法创建输出目录:\n{path}\n\n错误详情: {error}",
+		"create_dir_failed_detail": "无法创建目录:\n{path}\n\n错误详情: {error}",
 		"output_dir_not_set": "未设置输出目录，请先在设置中配置输出目录。",
 		"save_success": "文件保存成功。",
 		"save_and_crc_success": "文件保存和CRC修正成功。",
 		"save_or_crc_error": "保存或修正文件时发生错误: {error}",
+		"config": {
+			"saved": "配置已保存。",
+			"loaded": "配置已加载。",
+			"save_failed": "配置保存失败。",
+			"load_failed": "配置加载失败。",
+			"language_changed": "语言设置已更改。\n请保存配置并重启程序以使更改生效。"
+		},
 		"packer": {
 			"require_folder_with_assets": "请输入包含了要打包的资源文件的文件夹。",
 			"missing_paths": "请确保已选择目标 Bundle、待打包资源文件夹，并在全局设置中指定了输出目录。",
@@ -280,7 +284,7 @@
 		},
 		"compression": {
 			"original_short": "原始",
-            "none_short": "无"
+			"none_short": "无"
 		},
 		"search": {
 			"searching_for_file": "正在为 '{name}' 搜索对应文件...",
@@ -385,7 +389,8 @@
 			"title": "设置",
 			"group_global": "全局选项",
 			"group_assets": "资源处理选项",
-			"group_spine": "Spine 工具设置"
+			"group_spine": "Spine 工具设置",
+			"group_app": "应用设置"
 		},
 		"mod_update": {
 			"mode_single": "单个更新",
@@ -449,7 +454,8 @@
 			"target_bundle_file": "目标 Bundle 文件",
 			"original_file": "原始文件",
 			"modified_file": "待修正文件",
-			"downgrade_target_version": "目标版本"
+			"downgrade_target_version": "目标版本",
+			"language": "Language"
 		},
 		"log_area": "日志",
 		"status_label": "状态："

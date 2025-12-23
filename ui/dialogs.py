@@ -62,6 +62,21 @@ class SettingsDialog(tk.Toplevel):
             placeholder_text=t("ui.label.output_dir")
         )
         
+        # 应用设置
+        app_settings_frame = tk.LabelFrame(container, text=t("ui.settings.group_app"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
+        app_settings_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        # 语言选择
+        language_frame = tk.Frame(app_settings_frame, bg=Theme.FRAME_BG)
+        language_frame.pack(fill=tk.X)
+        
+        language_label = tk.Label(language_frame, text=t("ui.label.language"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
+        language_label.pack(side=tk.LEFT, padx=(0, 10))
+        
+        language_combo = UIComponents.create_combobox(language_frame, textvariable=self.app.language_var, values=["zh-CN", "debug"], width=10)
+        language_combo.pack(side=tk.LEFT)
+        language_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
+        
         # 选项设置
         global_options_frame = tk.LabelFrame(container, text=t("ui.settings.group_global"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=5, pady=5)
         global_options_frame.pack(fill=tk.X, pady=(5, 0))
@@ -73,7 +88,7 @@ class SettingsDialog(tk.Toplevel):
         # 压缩方式下拉框
         compression_frame = tk.Frame(global_options_frame, bg=Theme.FRAME_BG)
         compression_label = tk.Label(compression_frame, text=t("ui.label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
-        compression_combo = ttk.Combobox(compression_frame, textvariable=self.app.compression_method_var, values=["lzma", "lz4", "original", "none"], state="readonly", font=Theme.INPUT_FONT, width=10)
+        compression_combo = UIComponents.create_combobox(compression_frame, textvariable=self.app.compression_method_var, values=["lzma", "lz4", "original", "none"], width=10)
 
         # 布局 - 使用统一的grid布局确保高度对齐
         crc_checkbox.grid(row=0, column=0, sticky="w", padx=(0, 5))
@@ -174,13 +189,13 @@ class SettingsDialog(tk.Toplevel):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
             self.app.logger.log(t("log.status.ready"))
-            messagebox.showinfo(t("common.success"), t("message.config_loaded"))
+            messagebox.showinfo(t("common.success"), t("message.config.loaded"))
             # 更新UI状态
             self.toggle_padding_checkbox_state()
             self._on_auto_detect_toggle()
         else:
             self.app.logger.log(t("log.config.load_failed"))
-            messagebox.showerror(t("common.error"), t("message.config_load_failed"))
+            messagebox.showerror(t("common.error"), t("message.config.load_failed"))
     
     def reset_to_default(self):
         """重置为默认设置"""
@@ -216,4 +231,16 @@ class SettingsDialog(tk.Toplevel):
                 self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))
             ),
             logger=self.app.logger.log
+        )
+
+    def _on_language_changed(self, event=None):
+        """语言选择改变时的处理"""
+        selected_language = self.app.language_var.get()
+        self.app.logger.log(f"语言已切换为: {selected_language}")
+        
+        # 弹出提示对话框
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.config.language_changed"),
+            parent=self
         )

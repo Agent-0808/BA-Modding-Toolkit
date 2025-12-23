@@ -10,7 +10,7 @@ from ui.components import Theme, Logger, UIComponents
 from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
 from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
-from i18n import i18n_manager, t
+from i18n import i18n_manager, t, get_system_language
 
 class App(tk.Frame):
     def __init__(self, master):
@@ -199,6 +199,18 @@ class App(tk.Frame):
         """应用启动时自动加载配置"""
         config_loaded = self.config_manager.load_config(self)
         
+        # 如果没有配置文件，根据系统语言检测设置默认语言
+        if not config_loaded:
+            system_lang = get_system_language()
+            # 如果系统语言是中文，使用zh-CN，否则使用debug模式
+            if system_lang and (system_lang.startswith("zh-")):
+                default_language = "zh-CN"
+            else:
+                default_language = "debug"
+            
+            self.language_var.set(default_language)
+            print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
+        
         # 设置语言
         language = self.language_var.get()
         i18n_manager.set_language(language)
@@ -206,17 +218,15 @@ class App(tk.Frame):
         # 此时logger可能还未创建，使用print作为临时日志
         if config_loaded:
             print(f"配置加载成功，语言设置为: {language}")
-        else:
-            print(f"未找到配置文件，使用默认语言: {language}")
     
     def save_current_config(self):
         """保存当前配置到文件"""
         if self.config_manager.save_config(self):
             self.logger.log(t("log.config.saved"))
-            messagebox.showinfo(t("common.success"), t("message.config_saved"))
+            messagebox.showinfo(t("common.success"), t("message.config.saved"))
         else:
             self.logger.log(t("log.config.save_failed"))
-            messagebox.showerror(t("common.error"), t("message.config_load_failed"))
+            messagebox.showerror(t("common.error"), t("message.config.save_failed"))
     # --- 方法结束 ---
     
     def create_notebook(self, parent):

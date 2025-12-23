@@ -329,6 +329,44 @@ class UIComponents:
         """创建文件路径输入框组件（向后兼容）"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
 
+    @staticmethod
+    def create_combobox(parent, textvariable, values, state="readonly", width=None, font=None, **kwargs):
+        """
+        创建统一的下拉框组件
+        
+        Args:
+            parent: 父组件
+            textvariable: 文本变量
+            values: 选项值列表
+            state: 下拉框状态，默认为"readonly"
+            width: 宽度
+            font: 字体，默认为Theme.INPUT_FONT
+            **kwargs: 其他ttk.Combobox参数
+            
+        Returns:
+            创建的下拉框组件
+        """
+        import tkinter.ttk as ttk
+        
+        # 设置默认字体
+        if font is None:
+            font = Theme.INPUT_FONT
+            
+        combo_kwargs = {
+            "textvariable": textvariable,
+            "values": values,
+            "state": state,
+            "font": font
+        }
+        
+        if width is not None:
+            combo_kwargs["width"] = width
+            
+        # 合并其他参数
+        combo_kwargs.update(kwargs)
+        
+        return ttk.Combobox(parent, **combo_kwargs)
+
 
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
