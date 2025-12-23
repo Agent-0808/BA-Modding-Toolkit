@@ -40,11 +40,14 @@ jobs:
             UnityPy.classes
             PIL
             tkinterdnd2
+            fmod_toolkit
+            pyfmodex
           include-package-data: |
             UnityPy
             PIL
             tkinterdnd2
             archspec
+            fmod_toolkit
           include-data-dir: assets=assets
           windows-console-mode: disable
           output-dir: build
