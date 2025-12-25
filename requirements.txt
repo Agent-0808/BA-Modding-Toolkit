@@ -1,3 +1,3 @@
 tkinterdnd2
-UnityPy
+UnityPy==1.23.0
 Pillow
