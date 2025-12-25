@@ -18,11 +18,23 @@ def get_system_language() -> str | None:
         print("Error: Failed to detect system language.")
         return None
 
+def get_default_language() -> str:
+    """
+    根据系统语言获取默认语言设置
+    如果系统语言是中文，使用zh-CN，否则使用debug模式
+    """
+    system_lang = get_system_language()
+    # 如果系统语言是中文，使用zh-CN，否则使用debug模式
+    if system_lang and (system_lang.startswith("zh-")):
+        return "zh-CN"
+    else:
+        return "debug"
+
 class I18n:
     def __init__(self, lang: str | None = None, locales_dir: str = "locales"):
-        self.default_lang = "en-US"
-        # 如果未指定语言，尝试自动获取系统语言
-        self.lang = lang or get_system_language() or self.default_lang
+        self.fallback_lang = "en-US"  # 翻译文件缺失时的回退语言
+        # 如果未指定语言，使用系统语言检测逻辑
+        self.lang = lang or get_default_language()
         self.locales_dir = Path(locales_dir)
         self.translations: dict[str, Any] = {}
         
@@ -48,12 +60,12 @@ class I18n:
             print("I18n: Debug mode enabled.")
             return
 
-        # 构建查找候选列表：[当前语言, 自定义回退语言, 默认语言]
+        # 构建查找候选列表：[当前语言, 自定义回退语言, 回退语言]
         candidates = [self.lang]
         if fallback := self.fallback_map.get(self.lang):
             candidates.append(fallback)
-        if self.default_lang not in candidates:
-            candidates.append(self.default_lang)
+        if self.fallback_lang not in candidates:
+            candidates.append(self.fallback_lang)
 
         # 按顺序查找存在的语言文件
         selected_path = None
@@ -100,7 +112,7 @@ class I18n:
             # 找不到翻译时返回 key 本身
             return key
 
-    def t(self, key: str, **kwargs: Any) -> str:
+    def t(self, _key: str, **kwargs: Any) -> str:
         """
         获取翻译文本，支持参数替换
         用法: t("log.success", msg="更新成功")
@@ -108,9 +120,9 @@ class I18n:
         """
         # Debug 模式下传入参数信息
         if self.lang == "debug" and kwargs:
-            template = self._get_template(key, **kwargs)
+            template = self._get_template(_key, **kwargs)
         else:
-            template = self._get_template(key)
+            template = self._get_template(_key)
         
         # 如果没有传参数，直接返回
         if not kwargs:
@@ -121,10 +133,10 @@ class I18n:
             return template.format(**kwargs)
         except KeyError as e:
             # 如果 JSON 里写了 {name} 但代码没传 name 参数，避免崩溃，返回原始模板或报错信息
-            print(f"Warning: Missing format argument {e} for key '{key}'")
+            print(f"Warning: Missing format argument {e} for key '{_key}'")
             return template
         except Exception as e:
-            print(f"Warning: Formatting error for key '{key}': {e}")
+            print(f"Warning: Formatting error for key '{_key}': {e}")
             return template
 
     def set_language(self, lang: str) -> None:
