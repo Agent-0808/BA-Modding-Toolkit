@@ -20,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.12'
           architecture: 'x64'
           cache: 'pip'
 
@@ -33,41 +33,62 @@ jobs:
           nuitka-version: main
           script-name: main.pyw
           mode: onefile
+          low-memory: true
+          # 经测试使用mingw64可以避免堆内存问题
+          mingw64: true
           enable-plugins: tk-inter
+          # 包含代码依赖包
           include-package: |
             UnityPy
             UnityPy.resources
             UnityPy.classes
             PIL
             tkinterdnd2
-            fmod_toolkit
-            pyfmodex
+          # 包含依赖包的数据文件
           include-package-data: |
             UnityPy
             PIL
             tkinterdnd2
             archspec
-            fmod_toolkit
-          include-data-dir: assets=assets
           windows-console-mode: disable
           output-dir: build
           output-file: "BA-Modding-Toolkit.exe"
+          assume-yes-for-downloads: true
 
+      # 清理 Nuitka 生成的中间文件夹
+      - name: Cleanup Nuitka Intermediate Files
+        run: |
+          Remove-Item -Path "build/main.build" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "build/main.dist" -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -Path "build/main.onefile-build" -Recurse -Force -ErrorAction SilentlyContinue
+        shell: powershell
+
+      # 复制外部资源文件夹到 build 目录
+      - name: Copy External Resources
+        run: |
+          Copy-Item -Path "locales" -Destination "build/locales" -Recurse
+          Copy-Item -Path "assets" -Destination "build/assets" -Recurse
+        shell: powershell
+
+      # 上传 Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BA-Modding-Toolkit-Windows
-          path: build/BA-Modding-Toolkit.exe
+          name: BA-Modding-Toolkit-Windows-Build
+          path: build/
 
-      - name: Rename The File (When Trigger With Tag)
+      # 打包成 Zip
+      - name: Zip Release Asset (When Trigger With Tag)
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           $tag_name = "${{ github.ref_name }}"
-          Compress-Archive -Path build/BA-Modding-Toolkit.exe -DestinationPath build/BA-Modding-Toolkit-$tag_name.exe
+          cd build
+          Compress-Archive -Path * -DestinationPath "../BA-Modding-Toolkit-$tag_name.zip"
         shell: powershell
 
+      # 上传 Zip
       - name: Upload Release Asset (When Trigger With Tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: build/BA-Modding-Toolkit-${{ github.ref_name }}.exe
+          files: BA-Modding-Toolkit-${{ github.ref_name }}.zip
