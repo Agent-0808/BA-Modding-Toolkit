@@ -1,0 +1,73 @@
+name: build executable file
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger when push tag start with v (etc. v0.1.0)
+  workflow_dispatch: # Manual
+  
+permissions:
+  contents: write
+  
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          architecture: 'x64'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build Executable with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: main.pyw
+          mode: onefile
+          enable-plugins: tk-inter
+          include-package: |
+            UnityPy
+            UnityPy.resources
+            UnityPy.classes
+            PIL
+            tkinterdnd2
+            fmod_toolkit
+            pyfmodex
+          include-package-data: |
+            UnityPy
+            PIL
+            tkinterdnd2
+            archspec
+            fmod_toolkit
+          include-data-dir: assets=assets
+          windows-console-mode: disable
+          output-dir: build
+          output-file: "BA-Modding-Toolkit.exe"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BA-Modding-Toolkit-Windows
+          path: build/BA-Modding-Toolkit.exe
+
+      - name: Rename The File (When Trigger With Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag_name = "${{ github.ref_name }}"
+          Compress-Archive -Path build/BA-Modding-Toolkit.exe -DestinationPath build/BA-Modding-Toolkit-$tag_name.exe
+        shell: powershell
+
+      - name: Upload Release Asset (When Trigger With Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/BA-Modding-Toolkit-${{ github.ref_name }}.exe
