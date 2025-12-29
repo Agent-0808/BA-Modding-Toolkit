@@ -8,26 +8,29 @@
 
 一个基于 UnityPy 的工具集，可用于自动化制作与更新 Blue Archive（碧蓝档案/蔚蓝档案）游戏的 Mod 文件流程。
 
-支持Steam版（PC）与手游版（国际服/日服，Android/iOS）。
+支持Steam版（PC）与手机版（国际服/日服，Android/iOS）。
 
 ## 运行
 
 您可以从页面右方的 [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) 页面下载最新版本的可执行文件，直接双击运行即可启动程序。
 
-## 程序界面说明
+## 程序功能说明
+
 程序包含多个功能标签页：
 - **Mod 更新**：用于更新或移植不同平台的 Mod
   - 单个更新：用于更新单个 Mod 文件
   - 批量更新：用于批量处理多个 Mod 文件
 - **CRC 修正工具**：CRC 校验值修正功能
 - **资源打包**：将一个文件夹内的资源打包进对应的 Bundle ，替换 Bundle 中的同名资源
-- **资源提取**：从 Bundle 文件中提取指定类型的资源
+- **资源提取**：从 Bundle 文件中提取指定类型的资源到本地文件
 - **JP/GB转换**：日服与国际服格式互相转换
 
-点击主界面上方的 **Settings** 按钮打开高级设置窗口。
-程序可以将用户配置保存到 `config.ini` 文件，下次启动时会自动恢复之前的设置。
 
-### 设置界面
+## 使用方法
+
+### 设置
+- 点击主界面上方的**设置**按钮打开设置窗口，配置游戏根目录和输出目录。
+- 点击"Save"按钮保存配置，程序会将用户配置保存到 `config.ini` 文件，下次启动时会自动恢复之前的设置。
 
 <details>
 <summary>点击展开查看设置界面详细说明</summary>
@@ -35,7 +38,16 @@
 ![Settings](assets/help/gui-help-settings-zhcn.png)
 
 #### 目录设置
-- **游戏根目录**：设置游戏安装目录。程序能够自动检测资源子目录
+- **游戏根目录**：设置游戏安装目录。
+    - 程序能够自动检测以下路径的子目录：
+    ```
+    "BlueArchive_Data/StreamingAssetsPUB/Resource/GameData/Windows",
+    "BlueArchive_Data/StreamingAssetsPUB/Resource/Preload/Windows",
+    "GameData/Windows",
+    "Preload/Windows",
+    "GameData/Android",
+    "Preload/Android",
+    ```
 - **输出目录**：设置生成文件的保存位置
 
 #### 全局选项
@@ -67,14 +79,7 @@
 
 </details>
 
-## 使用方法
-
 ![How to update a mod with BAMT GUI](assets/help/gui-help-mod-update-zhcn.png)
-
-- 首先，请打开 Settings 窗口，配置好游戏根目录和输出目录。
-- 如果是为Steam版更新或制作Mod，请勾选"CRC 修正"选项。
-- 建议勾选"创建备份"选项，以防止意外覆盖原文件。
-- 点击"Save"按钮保存配置，下次启动时会自动恢复之前的设置。
 
 ### Mod 更新
 #### 单个更新
@@ -84,7 +89,11 @@
 4. 点击"开始更新"按钮，程序会自动处理并生成更新后的 Bundle 文件
 5. （可选）成功后点击"覆盖原文件"应用修改。请确保开启了"创建备份"选项以防止风险。
 
+如果是为Steam版更新或制作Mod，请勾选"CRC 修正"选项。
+
 此功能同样适用于在不同平台间移植 Mod，只需在第二步中选择来自对应平台的 Bundle 文件即可。
+例如，如果您要将一个Android版的Mod移植到Steam版，则应该在上方的窗口内选择待移植的Android版Bundle文件，并在下方的窗口内选择目标 Steam 版 Bundle 文件。
+通常情况下，程序会在游戏目录下自动找到。
 
 #### 批量更新
 1. 拖放或浏览选择包含多个 Mod 文件的文件夹，或直接拖放多个 Mod 文件
@@ -124,8 +133,9 @@
 
 ### 资源提取
 1. 拖放或浏览选择需要提取资源的 Bundle 文件
-2. 选择输出目录，程序会自动创建以 Bundle 文件名命名的子目录
+2. 选择输出子目录的文件夹名称
 3. 在设置窗口中勾选需要提取的资源类型
+    - 当前仅支持提取`Texture2D`（`.png`）、`TextAsset`（`.skel`、`.atlas`）类型文件
 4. （可选）在设置窗口配置 `SpineAtlasDowngrade.exe` 程序的路径，并开启"启用 Spine 降级"选项，调用第三方程序将提取出的 Spine 文件转换为 Spine 3.8 格式
 5. 点击"开始提取"按钮，程序会自动提取指定类型的资源
 
