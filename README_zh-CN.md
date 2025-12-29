@@ -1,4 +1,4 @@
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![GitHub License](https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit) ![GitHub Release](https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit) ![GitHub Repo stars](https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total)
 
 ![Title](assets/title.png)
 
@@ -6,33 +6,13 @@
 
 简体中文 | [English](README.md)
 
-一个用于自动化制作、更新 Blue Archive 游戏的 Mod Bundle 文件流程的工具集。
+一个基于 UnityPy 的工具集，可用于自动化制作与更新 Blue Archive（碧蓝档案/蔚蓝档案）游戏的 Mod 文件流程。
 
-## 启动程序
+支持Steam版（PC）与手游版（国际服/日服，Android/iOS）。
 
-### 安装 Python
-请确保已安装 Python 3.10 或以上版本。
+## 运行
 
-可以从 [Python 官方网站](https://www.python.org/downloads/) 下载并安装。
-
-当在控制台中输入`python --version`时，应该能看到类似`Python 3.12.4`的输出。
-
-### 安装依赖
-```bash
-pip install -r requirements.txt
-```
-如果在这一步遇到了`Failed building wheel`的提示，可能是因为PyPI还未提供兼容版本的UnityPy。请尝试不要使用最新的 Python 3.14，换用稍旧的版本，如 Python 3.13或是3.12。
-
-### 运行程序
-```bash
-python main.pyw
-```
-或者直接双击 `main.pyw` 文件启动。
-
-如果无法正常启动，请尝试在控制台中运行下面的命令，查看环境是否配置正确。
-```bash
-python maincli.py env
-```
+您可以从页面右方的 [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) 页面下载最新版本的可执行文件，直接双击运行即可启动程序。
 
 ## 程序界面说明
 程序包含多个功能标签页：
@@ -152,17 +132,16 @@ python maincli.py env
 此功能适用于从现有 Bundle 文件中提取资源进行修改或预览。
 
 ### JP/GB转换
-日服（两个文件）与国际服（一个文件）格式之间的互相转换。
+日服（多个文件）与国际服（一个文件）格式之间的互相转换。
 
-#### JP -> Global 转换
-1. 选择国际服 Bundle 文件（作为基础文件）
-2. 选择日服 TextAsset Bundle 与 Texture2D Bundle 文件
-3. 点击"开始转换"按钮，程序会从日服的两个 Bundle 提取资源并合并到国际服版本的文件中
-
-#### Global -> JP 转换
-1. 选择国际服 Bundle 文件（源文件）
-2. 选择日服 TextAsset Bundle 文件与 Texture2D Bundle 文件（作为模板）
-3. 点击"开始转换"按钮，程序会将国际服格式的 Bundle 拆分到日服的两个 Bundle 文件中
+1. 在页面上方选择转换方向（JP -> Global 或 Global -> JP）
+2. 选择国际服 Bundle 文件（根据转换方向作为基础文件或源文件）
+3. 选择日服 Bundle 文件列表（支持多个文件，可拖放或浏览选择）
+   - 可以手动选择多个日服 Bundle 文件
+   - 如果在设置中配置了游戏根目录并启用"自动搜索"，选择国际服文件后会自动查找匹配的日服文件
+4. 点击"开始转换"按钮
+   - JP -> Global：程序会从日服的 Bundle 文件列表中提取资源并合并到国际服版本的文件中
+   - Global -> JP：程序会将国际服格式的 Bundle 拆分到日服的 Bundle 文件列表中
 
 ## 命令行接口 (CLI)
 
@@ -261,7 +240,6 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 |:------------------- |:--------- |:---------- |:--------- |:--- | ---- |
 | Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   | 开发环境 |
 | Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
-| Ubuntu 22.04 (WSL2) | 3.10.12   | 1.23.0     | 10.4.0    | ✅   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
 ## Linux 支持
@@ -271,6 +249,15 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 - **使用虚拟环境**：为了避免系统环境与依赖库产生冲突，**强烈建议使用 Python 虚拟环境 (venv) 来运行本程序**。
 
 ## 开发
+
+### 从源代码运行
+
+请安装 Python 3.12+ 版本，安装依赖后运行：
+
+```bash
+pip install -r requirements.txt
+python main.pyw
+```
 
 作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
 
@@ -318,13 +305,14 @@ BA-Modding-Toolkit/
 ## 鸣谢
 
 - [Deathemonic](https://github.com/Deathemonic): 基于 [BA-CY](https://github.com/Deathemonic/BA-CY) 项目实现 CRC 修正功能。
-- [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型，也是 BAMT 项目的起点。
+- [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型。
 - [afiseleo](https://github.com/fiseleo): 协助开发命令行版本。
+- [com55](https://github.com/com55): 协助了 Github 工作流（编译 Python 至可执行文件）。
 - [wang606](https://github.com/wang606): Spine 版本转换功能基于 [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) 项目。
   - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
 
 本项目使用了以下优秀的第三方库：
 
 - [UnityPy](https://github.com/K0lb3/UnityPy): 用于解析和操作 Unity Bundle 文件的核心库
-- [Pillow](https://python-pillow.github.io/): 用于处理游戏中的纹理资源
+- [Pillow](https://python-pillow.github.io/): 游戏中的 Texture2D 类型资产的导出功能
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): 为 Tkinter 添加拖放功能支持
