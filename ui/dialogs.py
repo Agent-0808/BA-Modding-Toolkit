@@ -22,40 +22,14 @@ class SettingsDialog(tk.Toplevel):
         container = tk.Frame(self, bg=Theme.WINDOW_BG, padx=15, pady=15)
         container.pack(fill=tk.BOTH, expand=True)
 
-        # TODO: 3种Preset
-
-        # TODO: 去掉auto_detect_checkbox，全部启用
-
-        # --- 手动创建游戏资源目录UI，以实现动态标题 ---
-        self.game_dir_frame = tk.LabelFrame(container, text="", font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=8)
-        self.game_dir_frame.pack(fill=tk.X, pady=5)
-
-        # 内部容器，用于放置输入框和按钮
-        entry_button_container = tk.Frame(self.game_dir_frame, bg=Theme.FRAME_BG)
-        entry_button_container.pack(fill=tk.X)
-
-        entry = UIComponents.create_textbox_entry(
-            entry_button_container, 
-            textvariable=self.app.game_resource_dir_var,
+        # --- 游戏资源目录 ---
+        UIComponents.create_directory_path_entry(
+            container, t("ui.label.game_root_dir"), self.app.game_resource_dir_var,
+            self.app.select_game_resource_directory, self.app.open_game_resource_in_explorer,
             placeholder_text=t("ui.label.resource_dir")
         )
-        entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
 
-        select_btn = UIComponents.create_button(entry_button_container, t("action.select_short"), self.app.select_game_resource_directory, bg_color=Theme.BUTTON_PRIMARY_BG, style="compact")
-        select_btn.pack(side=tk.LEFT, padx=(0, 5))
-        open_btn = UIComponents.create_button(entry_button_container, t("action.open_short"), self.app.open_game_resource_in_explorer, bg_color=Theme.BUTTON_SECONDARY_BG, style="compact")
-        open_btn.pack(side=tk.LEFT)
-
-        self.auto_detect_checkbox = tk.Checkbutton(
-            self.game_dir_frame, 
-            text=t("option.auto_detect_subdirs"),
-            variable=self.app.auto_detect_subdirs_var,
-            command=self._on_auto_detect_toggle,
-            font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG
-        )
-        self.auto_detect_checkbox.pack(anchor='w', pady=(5, 0))
-        # --- 游戏资源目录UI结束 ---
-
+        # --- 输出目录 ---
         UIComponents.create_directory_path_entry(
             container, t("ui.label.output_dir"), self.app.output_dir_var,
             self.app.select_output_directory, self.app.open_output_dir_in_explorer,
@@ -150,7 +124,6 @@ class SettingsDialog(tk.Toplevel):
 
         # 初始化所有动态UI的状态
         self.toggle_padding_checkbox_state()
-        self._on_auto_detect_toggle()
         
         # 添加配置操作按钮
         config_buttons_frame = tk.Frame(container, bg=Theme.WINDOW_BG)
@@ -170,13 +143,6 @@ class SettingsDialog(tk.Toplevel):
         reset_button = UIComponents.create_button(config_buttons_frame, t("common.reset"), self.reset_to_default, bg_color=Theme.BUTTON_DANGER_BG)
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
-    def _on_auto_detect_toggle(self):
-        """当自动检测复选框状态改变时，更新UI"""
-        if self.app.auto_detect_subdirs_var.get():
-            self.game_dir_frame.config(text=t("ui.label.game_root_dir"))
-        else:
-            self.game_dir_frame.config(text=t("ui.label.custom_resource_dir"))
-
     def toggle_padding_checkbox_state(self):
         """根据CRC修正复选框的状态，启用或禁用添加私货复选框"""
         if self.app.enable_crc_correction_var.get():
@@ -192,7 +158,6 @@ class SettingsDialog(tk.Toplevel):
             messagebox.showinfo(t("common.success"), t("message.config.loaded"))
             # 更新UI状态
             self.toggle_padding_checkbox_state()
-            self._on_auto_detect_toggle()
         else:
             self.app.logger.log(t("log.config.load_failed"))
             messagebox.showerror(t("common.error"), t("message.config.load_failed"))
@@ -205,7 +170,6 @@ class SettingsDialog(tk.Toplevel):
             
             # 更新UI状态
             self.toggle_padding_checkbox_state()
-            self._on_auto_detect_toggle()
             
             self.app.logger.log(t("log.config.reset"))
     
