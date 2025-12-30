@@ -3,11 +3,20 @@
 import binascii
 import os
 import re
+import shutil
+import subprocess
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
+
+from i18n import t
 
 def no_log(message):
     """A dummy logger that does nothing."""
     pass
+
+LogFunc = Callable[[str], None]
 
 class CRCUtils:
     """
@@ -272,47 +281,6 @@ def get_environment_info():
 
     return "\n".join(lines)
 
-def get_skel_version(source: Path | bytes, log = no_log) -> str | None:
-    """
-    通过扫描文件或字节数据头部来查找Spine版本号。
-
-    Args:
-        source: .skel 文件的 Path 对象或其字节数据 (bytes)。
-
-    Returns:
-        一个字符串，表示Spine的版本号，例如 "4.2.33"。
-        如果未找到，则返回 None。
-    """
-    try:
-        data = b''
-        if isinstance(source, Path):
-            if not source.exists():
-                log(f"错误: 文件不存在 -> {source}")
-                return None
-            with open(str(source), 'rb') as f:
-                # 读取文件的前256个字节。版本号几乎总是在这个范围内。
-                data = f.read(256)
-        else:
-            data = source
-        
-        # 读取数据的前256个字节。
-        header_chunk = data[:256]
-        header_text = header_chunk.decode('utf-8', errors='ignore')
-
-        # 使用正则表达式查找 "数字.数字.数字" 格式的字符串。
-        match = re.search(r'(\d\.\d+\.\d+)', header_text)
-        
-        if match:
-            version_string = match.group(1)
-            return version_string
-        else:
-            log("未能在数据头部找到Spine版本号模式")
-            return None
-
-    except Exception as e:
-        log(f"处理源数据时发生错误: {e}")
-        return None
-
 def get_search_resource_dirs(base_game_dir: Path, auto_detect_subdirs: bool = True) -> list[Path]:
     """
     获取游戏资源搜索目录列表。
@@ -354,3 +322,237 @@ def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
     except Exception as e:
         log(f"处理源数据时发生错误: {e}")
         return False
+
+
+class SpineUtils:
+    """Spine 资源转换工具类，支持版本升级和降级。"""
+
+    @staticmethod
+    def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
+        """
+        通过扫描文件或字节数据头部来查找Spine版本号。
+
+        Args:
+            source: .skel 文件的 Path 对象或其字节数据 (bytes)。
+            log: 日志记录函数
+
+        Returns:
+            一个字符串，表示Spine的版本号，例如 "4.2.33"。
+            如果未找到，则返回 None。
+        """
+        try:
+            data = b''
+            if isinstance(source, Path):
+                if not source.exists():
+                    log(t("log.file.not_exist", path=source))
+                    return None
+                with open(str(source), 'rb') as f:
+                    data = f.read(256)
+            else:
+                data = source
+
+            header_chunk = data[:256]
+            header_text = header_chunk.decode('utf-8', errors='ignore')
+
+            match = re.search(r'(\d\.\d+\.\d+)', header_text)
+            
+            if not match:
+                return None
+            
+            version_string = match.group(1)
+            return version_string
+
+        except Exception as e:
+            log(t("log.error_processing", error=e))
+            return None
+
+    @staticmethod
+    def run_skel_converter(
+        input_data: bytes | Path,
+        converter_path: Path,
+        target_version: str,
+        output_path: Path | None = None,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, bytes]:
+        """
+        通用的 Spine .skel 文件转换器，支持升级和降级。
+
+        Args:
+            input_data: 输入数据，可以是 bytes 或 Path 对象
+            converter_path: 转换器可执行文件的路径
+            target_version: 目标版本号 (例如 "4.2.33" 或 "3.8.75")
+            output_path: 可选的输出文件路径，如果提供则将结果保存到该路径
+            log: 日志记录函数
+
+        Returns:
+            tuple[bool, bytes]: (是否成功, 转换后的数据)
+        """
+        original_bytes: bytes
+        if isinstance(input_data, Path):
+            try:
+                original_bytes = input_data.read_bytes()
+            except OSError as e:
+                log(f'  > ❌ {t("log.file.read_in_memory_failed", path=input_data, error=e)}')
+                return False, b""
+        else:
+            original_bytes = input_data
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_dir_path = Path(temp_dir)
+
+                temp_input_path = temp_dir_path / "input.skel"
+                temp_input_path.write_bytes(original_bytes)
+
+                current_version = SpineUtils.get_skel_version(temp_input_path, log)
+                if not current_version:
+                    log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
+                    return False, original_bytes
+
+                temp_output_path = output_path if output_path else temp_dir_path / "output.skel"
+
+                command = [
+                    str(converter_path),
+                    str(temp_input_path),
+                    str(temp_output_path),
+                    "-v",
+                    target_version
+                ]
+
+                log(f'    > {t("log.spine.converting_skel", name=temp_input_path.name)}')
+                log(f'      > {t("log.spine.version_conversion", current=current_version, target=target_version)}')
+                log(f'      > {t("log.spine.executing_command", command=" ".join(command))}')
+
+                result = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore',
+                )
+
+                if result.returncode == 0:
+                    return True, temp_output_path.read_bytes()
+                else:
+                    log(f'      ✗ {t("log.spine.skel_conversion_failed")}:')
+                    log(f"        stdout: {result.stdout.strip()}")
+                    log(f"        stderr: {result.stderr.strip()}")
+                    return False, original_bytes
+
+        except Exception as e:
+            log(f'    ❌ {t("log.error_detail", error=e)}')
+            return False, original_bytes
+
+    @staticmethod
+    def handle_skel_upgrade(
+        skel_bytes: bytes,
+        resource_name: str,
+        enabled: bool = False,
+        converter_path: Path | None = None,
+        target_version: str | None = None,
+        log: LogFunc = no_log,
+    ) -> bytes:
+        """
+        处理 .skel 文件的版本检查和升级。
+        如果无需升级或升级失败，则返回原始字节。
+        """
+        if not enabled or not converter_path or not target_version:
+            return skel_bytes
+
+        if not converter_path.exists():
+            return skel_bytes
+
+        if target_version.count(".") != 2:
+            return skel_bytes
+
+        try:
+            log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
+            current_version = SpineUtils.get_skel_version(skel_bytes, log)
+            target_major_minor = ".".join(target_version.split('.')[:2])
+
+            if current_version and not current_version.startswith(target_major_minor):
+                log(f'      > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+
+                skel_success, upgraded_content = SpineUtils.run_skel_converter(
+                    input_data=skel_bytes,
+                    converter_path=converter_path,
+                    target_version=target_version,
+                    log=log
+                )
+                if skel_success:
+                    log(f'    > {t("log.spine.skel_conversion_success", name=resource_name)}')
+                    return upgraded_content
+                else:
+                    log(f'    ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
+
+        except Exception as e:
+            log(f'      ❌ {t("log.error_detail", error=e)}')
+
+        return skel_bytes
+
+    @staticmethod
+    def run_atlas_downgrader(
+        input_atlas: Path,
+        output_dir: Path,
+        converter_path: Path,
+        log: LogFunc = no_log,
+    ) -> bool:
+        """使用 SpineAtlasDowngrade.exe 转换图集数据。"""
+        try:
+            cmd = [str(converter_path), str(input_atlas), str(output_dir)]
+            log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')
+            log(f'      > {t("log.spine.executing_command", command=" ".join(cmd))}')
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=False)
+
+            if result.returncode == 0:
+                return True
+            else:
+                log(f'      ✗ {t("log.spine.atlas_conversion_failed")}:')
+                log(f"        stdout: {result.stdout.strip()}")
+                log(f"        stderr: {result.stderr.strip()}")
+                return False
+        except Exception as e:
+            log(f'      ✗ {t("log.error_detail", error=e)}')
+            return False
+
+    @staticmethod
+    def handle_group_downgrade(
+        skel_path: Path,
+        atlas_path: Path,
+        output_dir: Path,
+        skel_converter_path: Path,
+        atlas_converter_path: Path,
+        target_version: str,
+        log: LogFunc = no_log,
+    ) -> None:
+        """
+        处理单个Spine资产组（skel, atlas, pngs）的降级。
+        始终尝试进行降级操作。
+        """
+        version = SpineUtils.get_skel_version(skel_path, log)
+        log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
+        with tempfile.TemporaryDirectory() as conv_out_dir_str:
+            conv_output_dir = Path(conv_out_dir_str)
+
+            atlas_success = SpineUtils.run_atlas_downgrader(
+                atlas_path, conv_output_dir, atlas_converter_path, log
+            )
+
+            if atlas_success:
+                log(f'      > {t("log.spine.atlas_downgrade_success")}')
+                for converted_file in conv_output_dir.iterdir():
+                    shutil.copy2(converted_file, output_dir / converted_file.name)
+                    log(f"        - {converted_file.name}")
+            else:
+                log(f'      ✗ {t("log.spine.atlas_downgrade_failed")}.')
+
+            output_skel_path = output_dir / skel_path.name
+            skel_success, _ = SpineUtils.run_skel_converter(
+                input_data=skel_path,
+                converter_path=skel_converter_path,
+                target_version=target_version,
+                output_path=output_skel_path,
+                log=log
+            )
+            if not skel_success:
+                log(f'    ✗ {t("log.spine.skel_conversion_failed_using_original")}')

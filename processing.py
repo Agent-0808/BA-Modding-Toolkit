@@ -2,19 +2,17 @@
 
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
-import os
 import traceback
 from pathlib import Path
 from PIL import Image
 import shutil
 import re
 import tempfile
-import subprocess
 from dataclasses import dataclass
 from typing import Callable, Any, Literal
 
 from i18n import t
-from utils import CRCUtils, no_log, get_skel_version
+from utils import CRCUtils, SpineUtils, no_log
 
 # -------- 类型别名 ---------
 
@@ -248,196 +246,6 @@ def _save_and_crc(
         log(traceback.format_exc())
         return False, t("message.save_or_crc_error", error=e)
 
-# ====== Spine 转换工具相关 ======
-
-def convert_skel(
-    input_data: bytes | Path,
-    converter_path: Path,
-    target_version: str,
-    output_path: Path | None = None,
-    log: LogFunc = no_log,
-) -> tuple[bool, bytes]:
-    """
-    通用的 Spine .skel 文件转换器，支持升级和降级。
-    
-    Args:
-        input_data: 输入数据，可以是 bytes 或 Path 对象
-        converter_path: 转换器可执行文件的路径
-        target_version: 目标版本号 (例如 "4.2.33" 或 "3.8.75")
-        output_path: 可选的输出文件路径，如果提供则将结果保存到该路径
-        log: 日志记录函数
-        
-    Returns:
-        tuple[bool, bytes]: (是否成功, 转换后的数据)
-    """
-    # 统一将输入数据读取为字节
-    original_bytes: bytes
-    if isinstance(input_data, Path):
-        try:
-            original_bytes = input_data.read_bytes()
-        except OSError as e:
-            log(f'  > ❌ {t("log.file.read_in_memory_failed", path=input_data, error=e)}')
-            return False, b""
-    else:
-        original_bytes = input_data
-
-    try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_dir_path = Path(temp_dir)
-            
-            # 准备输入文件
-            temp_input_path = temp_dir_path / "input.skel"
-            temp_input_path.write_bytes(original_bytes)
-
-            current_version = get_skel_version(temp_input_path, log)
-            if not current_version:
-                log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
-                return False, original_bytes
-
-            # 准备输出文件
-            temp_output_path = output_path if output_path else temp_dir_path / "output.skel"
-            
-            command = [
-                str(converter_path),
-                str(temp_input_path),
-                str(temp_output_path),
-                "-v",
-                target_version
-            ]
-            
-            log(f'    > {t("log.spine.converting_skel", name=temp_input_path.name)}')
-            log(f'      > {t("log.spine.version_conversion", current=current_version, target=target_version)}')
-            log(f'      > {t("log.spine.executing_command", command=" ".join(command))}')
-            
-            result = subprocess.run(
-                command, 
-                capture_output=True, 
-                text=True, 
-                encoding='utf-8', 
-                errors='ignore',
-            )
-            
-            if result.returncode == 0:
-                return True, temp_output_path.read_bytes()
-            else:
-                log(f'      ✗ {t("log.spine.skel_conversion_failed")}:')
-                log(f"        stdout: {result.stdout.strip()}")
-                log(f"        stderr: {result.stderr.strip()}")
-                return False, original_bytes
-
-    except Exception as e:
-        log(f'    ❌ {t("log.error_detail", error=e)}')
-        return False, original_bytes
-
-def _handle_skel_upgrade(
-    skel_bytes: bytes,
-    resource_name: str,
-    spine_options: SpineOptions | None = None,
-    log: LogFunc = no_log,
-) -> bytes:
-    """
-    处理 .skel 文件的版本检查和升级。
-    如果无需升级或升级失败，则返回原始字节。
-    """
-    # 检查Spine升级功能是否可用
-    if spine_options is None or not spine_options.is_enabled():
-        return skel_bytes
-    
-    try:
-        log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
-        # 检测 skel 的 spine 版本
-        current_version = get_skel_version(skel_bytes, log)
-        target_major_minor = ".".join(spine_options.target_version.split('.')[:2])
-        
-        # 仅在主版本或次版本不匹配时才尝试升级
-        if current_version and not current_version.startswith(target_major_minor):
-            log(f'      > {t("log.spine.version_mismatch_converting", current=current_version, target=spine_options.target_version)}')
-
-            skel_success, upgraded_content = convert_skel(
-                input_data=skel_bytes,
-                converter_path=spine_options.converter_path,
-                target_version=spine_options.target_version,
-                log=log
-            )
-            if skel_success:
-                log(f'    > {t("log.spine.skel_conversion_success", name=resource_name)}')
-                return upgraded_content
-            else:
-                log(f'    ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
-
-    except Exception as e:
-        log(f'      ❌ {t("log.error_detail", error=e)}')
-
-    # 默认返回原始字节
-    return skel_bytes
-
-def _run_spine_atlas_downgrader(
-    input_atlas: Path, 
-    output_dir: Path, 
-    converter_path: Path,
-    log: LogFunc = no_log
-) -> bool:
-    """使用 SpineAtlasDowngrade.exe 转换图集数据。"""
-    try:
-        # 转换器需要在源图集所在的目录中找到源PNG文件。
-        # input_atlas 路径已指向包含所有必要文件的临时目录。
-        cmd = [str(converter_path), str(input_atlas), str(output_dir)]
-        log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')
-        log(f'      > {t("log.spine.executing_command", command=" ".join(cmd))}')
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=False)
-        
-        if result.returncode == 0:
-            return True
-        else:
-            log(f'      ✗ {t("log.spine.atlas_conversion_failed")}:')
-            log(f"        stdout: {result.stdout.strip()}")
-            log(f"        stderr: {result.stderr.strip()}")
-            return False
-    except Exception as e:
-        log(f'      ✗ {t("log.error_detail", error=e)}')
-        return False
-
-def _process_spine_group_downgrade(
-    skel_path: Path,
-    atlas_path: Path,
-    output_dir: Path,
-    downgrade_options: SpineDowngradeOptions,
-    log: LogFunc = no_log,
-) -> None:
-    """
-    处理单个Spine资产组（skel, atlas, pngs）的降级。
-    始终尝试进行降级操作。
-    """
-    version = get_skel_version(skel_path, log)
-    log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
-    with tempfile.TemporaryDirectory() as conv_out_dir_str:
-        conv_output_dir = Path(conv_out_dir_str)
-        
-        # 降级 Atlas 和关联的 PNG
-        atlas_success = _run_spine_atlas_downgrader(
-            atlas_path, conv_output_dir, downgrade_options.atlas_converter_path, log
-        )
-        
-        if atlas_success:
-            log(f'      > {t("log.spine.atlas_downgrade_success")}')
-            for converted_file in conv_output_dir.iterdir():
-                shutil.copy2(converted_file, output_dir / converted_file.name)
-                log(f"        - {converted_file.name}")
-        else:
-            log(f'      ✗ {t("log.spine.atlas_downgrade_failed")}.')
-
-        # 降级 Skel
-        output_skel_path = output_dir / skel_path.name
-        skel_success, _ = convert_skel(
-            input_data=skel_path,
-            converter_path=downgrade_options.skel_converter_path,
-            target_version=downgrade_options.target_version,
-            output_path=output_skel_path,
-            log=log
-        )
-        if not skel_success:
-            log(f'    ✗ {t("log.spine.skel_conversion_failed_using_original")}')
-
 
 # ====== 寻找对应文件 ======
 
@@ -668,10 +476,12 @@ def process_asset_packing(
                     content = f.read()
                 
                 if file_path.suffix.lower() == '.skel':
-                    content = _handle_skel_upgrade(
+                    content = SpineUtils.handle_skel_upgrade(
                         skel_bytes=content,
                         resource_name=asset_key,
-                        spine_options=spine_options,
+                        enabled=spine_options.enabled,
+                        converter_path=spine_options.converter_path,
+                        target_version=spine_options.target_version,
                         log=log
                     )
             replacement_map[asset_key] = content
@@ -830,8 +640,12 @@ def process_asset_extraction(
                     processed_files.update(png_paths)
 
                     # 调用辅助函数处理该资产组
-                    _process_spine_group_downgrade(
-                        skel_path, atlas_path, output_dir, downgrade_options, log
+                    SpineUtils.handle_group_downgrade(
+                        skel_path, atlas_path, output_dir,
+                        downgrade_options.skel_converter_path,
+                        downgrade_options.atlas_converter_path,
+                        downgrade_options.target_version,
+                        log
                     )
                 
                 # --- 阶段 3: 复制剩余的独立文件 ---
@@ -886,10 +700,12 @@ def _extract_assets_from_bundle(
             elif obj.type == AssetType.TextAsset:
                 asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
                 if resource_name.lower().endswith('.skel'):
-                    content = _handle_skel_upgrade(
+                    content = SpineUtils.handle_skel_upgrade(
                         skel_bytes=asset_bytes,
                         resource_name=resource_name,
-                        spine_options=spine_options,
+                        enabled=spine_options.enabled,
+                        converter_path=spine_options.converter_path,
+                        target_version=spine_options.target_version,
                         log=log
                     )
                 else:

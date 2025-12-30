@@ -206,7 +206,8 @@
 			"list_cleared": "列表已清空",
 			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件",
 			"no_changes_made": "该文件未进行任何修改，未保存。",
-			"no_files_updated": "未更新任何文件。"
+			"no_files_updated": "未更新任何文件。",
+			"not_exist": "文件不存在: {path}"
 		},
 		"config": {
 			"reset": "已重置为默认设置",
