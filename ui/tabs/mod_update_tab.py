@@ -8,7 +8,7 @@ from pathlib import Path
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox
+from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
 from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
 from utils import get_search_resource_dirs
 
@@ -24,25 +24,17 @@ class ModUpdateTab(TabFrame):
         self.mod_file_list: list[Path] = []
         
         # --- 模式切换 ---
-        mode_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
-        mode_frame.pack(fill=tk.X, pady=(0, 10))
-        
         self.mode_var = tk.StringVar(value="single")
         
-        style = ttk.Style()
-        style.configure("Toolbutton",
-                        background=Theme.MUTED_BG,
-                        foreground=Theme.TEXT_NORMAL,
-                        font=Theme.BUTTON_FONT,
-                        padding=(10, 5),
-                        borderwidth=1,
-                        relief=tk.FLAT)
-        style.map("Toolbutton",
-                  background=[('selected', Theme.FRAME_BG), ('active', '#e0e0e0')],
-                  relief=[('selected', tk.GROOVE)])
-
-        ttk.Radiobutton(mode_frame, text=t("ui.mod_update.mode_single"), variable=self.mode_var, value="single", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Radiobutton(mode_frame, text=t("ui.mod_update.mode_batch"), variable=self.mode_var, value="batch", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.mode_switcher = ModeSwitcher(
+            self,
+            self.mode_var,
+            [
+                ("single", t("ui.mod_update.mode_single")),
+                ("batch", t("ui.mod_update.mode_batch"))
+            ],
+            command=self._switch_view
+        )
 
         # --- 容器框架 ---
         self.single_frame = tk.Frame(self, bg=Theme.WINDOW_BG)

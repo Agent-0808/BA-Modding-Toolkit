@@ -7,7 +7,7 @@ from pathlib import Path
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox
+from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
 from ui.utils import is_multiple_drop, select_file
 from utils import get_search_resource_dirs
 
@@ -19,27 +19,17 @@ class JpGbConversionTab(TabFrame):
         self.global_bundle_path: Path | None = None
         
         # --- 转换模式选择 ---
-        mode_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
-        mode_frame.pack(fill=tk.X, pady=(0, 10))
-        
         self.mode_var = tk.StringVar(value="jp_to_global")
         
-        style = ttk.Style()
-        style.configure("Toolbutton",
-                        background=Theme.MUTED_BG,
-                        foreground=Theme.TEXT_NORMAL,
-                        font=Theme.BUTTON_FONT,
-                        padding=(10, 5),
-                        borderwidth=1,
-                        relief=tk.FLAT)
-        style.map("Toolbutton",
-                  background=[('selected', Theme.FRAME_BG), ('active', '#e0e0e0')],
-                  relief=[('selected', tk.GROOVE)])
-
-        ttk.Radiobutton(mode_frame, text=t("ui.jp_gb_convert.mode_jp_to_gb"), variable=self.mode_var,
-                       value="jp_to_global", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Radiobutton(mode_frame, text=t("ui.jp_gb_convert.mode_gb_to_jp"), variable=self.mode_var,
-                       value="global_to_jp", command=self._switch_view, style="Toolbutton").pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.mode_switcher = ModeSwitcher(
+            self,
+            self.mode_var,
+            [
+                ("jp_to_global", t("ui.jp_gb_convert.mode_jp_to_gb")),
+                ("global_to_jp", t("ui.jp_gb_convert.mode_gb_to_jp"))
+            ],
+            command=self._switch_view
+        )
 
         # --- 文件输入区域 ---
         self.file_frame = tk.Frame(self, bg=Theme.WINDOW_BG)

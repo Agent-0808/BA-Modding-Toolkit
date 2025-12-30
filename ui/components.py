@@ -1,6 +1,7 @@
 # ui/components.py
 
 import tkinter as tk
+import tkinter.ttk as ttk
 from tkinterdnd2 import DND_FILES
 from pathlib import Path
 from typing import Callable
@@ -78,6 +79,7 @@ class Theme:
     LOG_FG = '#ecf0f1'
     STATUS_BAR_BG = '#34495e'
     STATUS_BAR_FG = '#ecf0f1'
+    MODE_SWITCHER_ACTIVE = '#e0e0e0'
 
     # 字体
     FRAME_FONT = ("Microsoft YaHei", 11, "bold")
@@ -366,6 +368,68 @@ class UIComponents:
         combo_kwargs.update(kwargs)
         
         return ttk.Combobox(parent, **combo_kwargs)
+
+
+class ModeSwitcher:
+    """可复用的模式切换组件，使用Radiobutton实现"""
+
+    def __init__(self, parent, mode_var: tk.StringVar, options: list[tuple[str, str]], command: Callable[[], None] | None = None):
+        """
+        初始化模式切换组件
+
+        Args:
+            parent: 父组件
+            mode_var: 模式变量
+            options: 选项列表，每个元素为 (value, text) 元组
+            command: 模式切换时的回调函数
+        """
+        self.parent = parent
+        self.mode_var = mode_var
+        self.options = options
+        self.command = command
+
+        self._setup_style()
+        self.frame = self._create_widgets()
+
+    def _setup_style(self):
+        """设置Radiobutton样式"""
+        style = ttk.Style()
+        style.configure("Toolbutton",
+                        background=Theme.MUTED_BG,
+                        foreground=Theme.TEXT_NORMAL,
+                        font=Theme.BUTTON_FONT,
+                        padding=(10, 5),
+                        borderwidth=1,
+                        relief=tk.FLAT)
+        style.map("Toolbutton",
+                  background=[('selected', Theme.FRAME_BG), ('active', Theme.MODE_SWITCHER_ACTIVE)],
+                  relief=[('selected', tk.GROOVE)])
+
+    def _create_widgets(self) -> tk.Frame:
+        """创建组件UI"""
+        frame = tk.Frame(self.parent, bg=Theme.WINDOW_BG)
+        frame.pack(fill=tk.X, pady=(0, 10))
+
+        for value, text in self.options:
+            ttk.Radiobutton(
+                frame,
+                text=text,
+                variable=self.mode_var,
+                value=value,
+                command=self._on_mode_change,
+                style="Toolbutton"
+            ).pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        return frame
+
+    def _on_mode_change(self):
+        """模式切换回调"""
+        if self.command:
+            self.command()
+
+    def get_frame(self) -> tk.Frame:
+        """获取组件框架"""
+        return self.frame
 
 
 class FileListbox:
