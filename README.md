@@ -1,4 +1,4 @@
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![GitHub License](https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit) ![GitHub Release](https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit) ![GitHub Repo stars](https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total)
 
 ![Title](assets/title.png)
 
@@ -8,35 +8,16 @@
 
 [简体中文](README_zh-CN.md) | English
 
-A toolkit for automating the creation and updating of Blue Archive Mod Bundle files.
+A toolkit based on UnityPy for automating the creation and updating of Blue Archive mods.
 
-## Getting Started
+Supports Steam version (PC) and mobile versions (Global/JP server, Android/iOS).
 
-### Install Python
-Please ensure that Python 3.10 or higher is installed.
+## Running
 
-You can download and install Python from the [official website](https://www.python.org/downloads/).
+You can download the latest version of the executable file from the [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) page, and double-click to run the program.
 
-When you run `python --version` in the console, you should see something like `Python 3.12.4`.
+## Program Functionalities
 
-### Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-If you encounter a `Failed building wheel` error in this step, it may be because PyPI has not provided a compatible version of UnityPy. Please try using a slightly older version of Python, such as Python 3.13 or 3.12.
-
-### Run the Program
-```bash
-python main.pyw
-```
-Alternatively, you can double-click the `main.pyw` file to launch the program.
-
-If the program fails to start, please try running commands below in the console to check if the environment is configured correctly. 
-```bash
-python maincli.py env
-```
-
-## Program Interface Description
 The program contains multiple functional tabs:
 - **Mod 更新** (Mod Update): Update or port Mod files between different platforms
     - **单个更新** (Single Update): Update a single Mod file
@@ -46,15 +27,29 @@ The program contains multiple functional tabs:
 - **资源提取** (Asset Extractor): Extract specified types of assets from Bundle files
 - **JP/GB转换** (JP/GB Conversion): Convert between JP server format and Global server format
 
-Click the **Settings** button at the top of the main interface to open the advanced settings window.
-The program can save user configurations to the `config.ini` file, which will be automatically restored upon next startup.
 
-### Settings Interface
+## How to Use
+
+### Settings
+- Click the **Settings** button at the top of the main interface to open the settings window, configure the game root directory and output directory.
+- Click the "Save" button to save the configuration, which will be automatically restored upon next startup.
+
+<details>
+<summary>Click to expand detailed settings interface description</summary>
 
 ![Settings](assets/help/gui-help-settings-en.png)
 
 #### Directory Settings
-- **游戏根目录** (Game Root Directory): Set the game installation directory. The program can automatically detect resource subdirectories
+- **游戏根目录** (Game Root Directory): Set the game installation directory.
+    - The program can automatically detect the following subdirectories:
+    ```
+    "BlueArchive_Data/StreamingAssetsPUB/Resource/GameData/Windows",
+    "BlueArchive_Data/StreamingAssetsPUB/Resource/Preload/Windows",
+    "GameData/Windows",
+    "Preload/Windows",
+    "GameData/Android",
+    "Preload/Android",
+    ```
 - **输出目录** (Output Directory): Set the save location for generated files
 
 #### Global Options
@@ -84,14 +79,9 @@ The program can save user configurations to the `config.ini` file, which will be
 - The `SpineAtlasDowngrade.exe` program is used during **asset extraction** to convert `.atlas` files to Spine 3.8 format, making it easier for mod creators to edit.
     - If you only need to update mods, you don't need to configure this option.
 
-## How to Use
+</details>
 
 ![How to update a mod with BAMT GUI](assets/help/gui-help-mod-update-en.png)
-
-- First, open the Settings window and configure the game root directory and output directory.
-- If you are updating or creating a Mod for the Steam version, check the "CRC 修正" (CRC Fix) option.
-- It is recommended to check the "创建备份" (Create Backup) option to prevent accidental overwriting of original files.
-- Click the "Save" button to save the configuration, which will be automatically restored upon next startup.
 
 ### Mod 更新 (Mod Update)
 #### 单个更新 (Single Update)
@@ -152,15 +142,14 @@ This feature is for extracting assets from existing Bundle files for modificatio
 ### JP/GB转换 (JP/GB Conversion)
 Conversion between JP server format (two separate Bundle files) and Global server format (one Bundle file) for a mod that modified the Spine assets.
 
-#### JP -> Global Conversion
-1. Select the Global server Bundle file (as the base file)
-2. Select the JP TextAsset Bundle and Texture2D Bundle files
-3. Click the "开始转换" (Start Conversion) button, the program will extract assets from the two JP server Bundles and merge them into the Global server version file
-
-#### Global -> JP Conversion
-1. Select the Global server Bundle file (source file)
-2. Select the JP TextAsset Bundle and Texture2D Bundle files (as template)
-3. Click the "开始转换" (Start Conversion) button, the program will split the Global server format Bundle into the two JP server Bundle files
+1. Select the conversion direction at the top of the page (JP -> Global or Global -> JP)
+2. Select the Global server Bundle file (as the base file or source file depending on the conversion direction)
+3. Select the JP server Bundle file list (supports multiple files, can be dragged and dropped or browsed to select)
+   - You can manually select multiple JP server Bundle files
+   - If you have configured the game root directory in the settings and enabled "Auto Search", the matching JP files will be automatically found after selecting the Global server file
+4. Click the "开始转换" (Start Conversion) button
+   - JP -> Global: The program will extract assets from the list of JP server Bundle files and merge them into the Global server version file
+   - Global -> JP: The program will split the Global server format Bundle into the list of JP server Bundle files
 
 ## Command Line Interface (CLI)
 
@@ -259,7 +248,6 @@ The table below lists tested environment configurations for reference.
 |:------------------- |:-------------- |:--------------- |:-------------- |:------ | :--- |
 | Windows 10          | 3.12.4         | 1.23.0          | 10.4.0         | ✅     | Dev Env |
 | Windows 10          | 3.13.7         | 1.23.0          | 11.3.0         | ✅     |  |
-| Ubuntu 22.04 (WSL2) | 3.10.12        | 1.23.0          | 10.4.0         | ✅     |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0          | 12.0.0         | ✅     |  |
 
 ## Linux Support
@@ -269,6 +257,15 @@ The table below lists tested environment configurations for reference.
 - **Use Virtual Environment**: To avoid conflicts with system environments and dependencies, **it is strongly recommended to use a Python virtual environment (venv) to run this program**.
 
 ## Developing
+
+Please ensure that Python 3.12 or higher is installed.
+
+```bash
+git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
+cd BA-Modding-Toolkit
+pip install -r requirements.txt
+python main.pyw
+```
 
 The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
 
@@ -299,9 +296,11 @@ BA-Modding-Toolkit/
 ├── maincli.py       # Command-line interface entry point
 ├── processing.py    # Core processing logic
 ├── utils.py         # Utility classes and helper functions
+├── i18n.py          # Internationalization functionality
 │ 
 │ # ============= Misc. =============
 │ 
+├── locales/         # Language files
 ├── requirements.txt # Python dependency list
 ├── config.ini       # Local configuration file (automatically generated)
 ├── LICENSE          # Project license file
@@ -316,11 +315,12 @@ BA-Modding-Toolkit/
 - [Deathemonic](https://github.com/Deathemonic): Patching CRC with [BA-CY](https://github.com/Deathemonic/BA-CY).
 - [kalina](https://github.com/kalinaowo): Creating the prototype of the `CRCUtils` class, the starting point of BAMT.
 - [afiseleo](https://github.com/fiseleo): Helping with the CLI version.
+- [com55](https://github.com/com55): Assisting with Github workflow (compiling Python to executable).
 - [wang606](https://github.com/wang606): Spine version conversion feature based on [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) project.
     - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit. 
 
 This project uses the following excellent 3rd-party libraries:
 
 - [UnityPy](https://github.com/K0lb3/UnityPy): Core library for parsing and manipulating Unity Bundle files
-- [Pillow](https://python-pillow.github.io/): Used for processing texture assets in the game
+- [Pillow](https://python-pillow.github.io/): Export functionality for Texture2D type assets in the game
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): Adds drag-and-drop functionality support for Tkinter

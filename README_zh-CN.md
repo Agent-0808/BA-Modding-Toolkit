@@ -260,11 +260,11 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 
 ## 开发
 
-### 从源代码运行
-
 请安装 Python 3.12+ 版本，安装依赖后运行：
 
 ```bash
+git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
+cd BA-Modding-Toolkit
 pip install -r requirements.txt
 python main.pyw
 ```
