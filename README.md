@@ -4,7 +4,7 @@
 
 # BA Modding Toolkit
 
-> Sorry for my program being written in Chinese without i18n support, but I believe it's easy to use with this README.
+> Note: i18n support is currently being added. As a temporary transition solution, non-Chinese users will use "debug" language by default when launching the program, which will display localization keys. This should largely help English users use the program.
 
 [简体中文](README_zh-CN.md) | English
 
@@ -240,6 +240,8 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 
 </details>
 
+## Technical Details
+
 ### Tested Environments
 
 The table below lists tested environment configurations for reference.
@@ -250,11 +252,11 @@ The table below lists tested environment configurations for reference.
 | Windows 10          | 3.13.7         | 1.23.0          | 11.3.0         | ✅     |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0          | 12.0.0         | ✅     |  |
 
-## Linux Support
+### Linux Support
 
 - **GUI Compatibility**: The GUI program is built on the `tkinter` library and uses `tkinterdnd2` for drag-and-drop functionality. Since support for tkinter varies across Linux distributions, the graphical interface may not display or run correctly on Linux.
 - **Recommendation**: Linux users are advised to use the **Command Line Interface (CLI)** version `maincli.py`. The CLI version implements most functions and does not depend on any GUI libraries, and has been tested to work correctly.
-- **Use Virtual Environment**: To avoid conflicts with system environments and dependencies, **it is strongly recommended to use a Python virtual environment (venv) to run this program**.
+- **Use Virtual Environment**: To avoid conflicts with system environments and dependencies, it is strongly recommended to use a Python virtual environment (venv) to run this program.
 
 ## Developing
 

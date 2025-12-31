@@ -242,6 +242,8 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 
 </details>
 
+## 技术细节
+
 ### 经过测试的环境
 
 下表列出了经过测试的环境配置，供参考。
@@ -252,11 +254,11 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 | Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
-## Linux 支持
+### Linux 支持
 
 - **GUI 兼容性**：GUI 程序基于 `tkinter` 库构建，并使用了 `tkinterdnd2` 实现拖拽功能。由于 Linux 各发行版对 tkinter 的支持情况不一，图形界面可能无法在 Linux 上正常显示或运行。
 - **推荐方案**：建议 Linux 用户直接使用 **命令行接口 (CLI)** 版本 `maincli.py`。CLI 版本实现了大部分功能，且不依赖任何 GUI 库，经测试可以正常运行。
-- **使用虚拟环境**：为了避免系统环境与依赖库产生冲突，**强烈建议使用 Python 虚拟环境 (venv) 来运行本程序**。
+- **使用虚拟环境**：为了避免系统环境与依赖库产生冲突，强烈建议使用 Python 虚拟环境 (venv) 来运行本程序。
 
 ## 开发
 
