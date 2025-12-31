@@ -2,6 +2,7 @@
 
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
+from UnityPy.files import ObjectReader as Obj
 import traceback
 from pathlib import Path
 from PIL import Image
@@ -28,7 +29,7 @@ AssetKey = str | int | tuple[str, str]
 AssetContent = bytes | Image.Image | None  
 
 # 从对象生成资源键的函数，接收UnityPy对象和一个额外参数，返回该资源的键
-KeyGeneratorFunc = Callable[[UnityPy.classes.Object, Any], AssetKey]
+KeyGeneratorFunc = Callable[[Obj, Any], AssetKey]
 
 # 日志函数类型
 LogFunc = Callable[[str], None]  
@@ -79,6 +80,20 @@ class SpineDowngradeOptions:
             and self.target_version
             and self.target_version.count(".") == 2
         )
+
+"""
+资源匹配策略集合，用于在不同场景下生成资源键。
+
+策略说明：
+- path_id: 使用 Unity 对象的 path_id 作为键，适用于精确匹配
+- container: 使用 Unity 对象的 container 作为键
+- name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配
+"""
+MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
+    'path_id': lambda obj, data: obj.path_id,
+    'container': lambda obj, data: obj.container,
+    'name_type': lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name),
+}
 
 # ====== 读取与保存相关 ======
 
@@ -467,21 +482,22 @@ def process_asset_packing(
         for file_path in input_files:
             asset_key: AssetKey
             content: AssetContent
-            if file_path.suffix.lower() == ".png":
-                asset_key = file_path.stem
+            suffix: str = file_path.suffix.lower()
+            if suffix == ".png":
+                asset_key = (file_path.stem, AssetType.Texture2D.name)
                 content = Image.open(file_path).convert("RGBA")
             else: # .skel, .atlas
-                asset_key = file_path.name
+                asset_key = (file_path.name, AssetType.TextAsset.name)
                 with open(file_path, "rb") as f:
                     content = f.read()
                 
                 if file_path.suffix.lower() == '.skel':
                     content = SpineUtils.handle_skel_upgrade(
                         skel_bytes=content,
-                        resource_name=asset_key,
-                        enabled=spine_options.enabled,
-                        converter_path=spine_options.converter_path,
-                        target_version=spine_options.target_version,
+                        resource_name=asset_key[0],
+                        enabled=spine_options.enabled if spine_options else False,
+                        converter_path=spine_options.converter_path if spine_options else None,
+                        target_version=spine_options.target_version if spine_options else None,
                         log=log
                     )
             replacement_map[asset_key] = content
@@ -490,10 +506,7 @@ def process_asset_packing(
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
         # 2. 定义用于在 bundle 中查找资源的 key 生成函数
-        def key_func(obj: UnityPy.classes.Object, data: Any) -> AssetKey | None:
-            if obj.type in {AssetType.Texture2D, AssetType.TextAsset}:
-                return data.m_Name
-            return None
+        key_func = MATCH_STRATEGIES['name_type']
 
         # 3. 应用替换
         replacement_count, replaced_assets_log, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
@@ -504,7 +517,7 @@ def process_asset_packing(
             return False, t("message.packer.no_matching_assets_to_pack")
         
         # 报告替换结果
-        log(f"\n✅ {t('log.b2b.strategy_success', name="mName", count=replacement_count)}:")
+        log(f"\n✅ {t('log.b2b.strategy_success', name='name_type', count=replacement_count)}:")
         for item in replaced_assets_log:
             log(f"  - {item}")
 
@@ -515,10 +528,14 @@ def process_asset_packing(
             log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             # 为了找到原始文件名，我们需要反向查找
             original_filenames = {
-                f.stem if f.suffix.lower() == '.png' else f.name: f.name for f in input_files
+                (f.stem, AssetType.Texture2D.name): f.name for f in input_files if f.suffix.lower() == '.png'
             }
+            original_filenames.update({
+                (f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
+            })
             for key in sorted(unmatched_keys):
-                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key)})")
+                key_display = f"[{key[1]}] {key[0]}" if isinstance(key, tuple) else key
+                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
 
         # 4. 保存和修正
         output_path = output_dir / target_bundle_path.name
@@ -703,9 +720,9 @@ def _extract_assets_from_bundle(
                     content = SpineUtils.handle_skel_upgrade(
                         skel_bytes=asset_bytes,
                         resource_name=resource_name,
-                        enabled=spine_options.enabled,
-                        converter_path=spine_options.converter_path,
-                        target_version=spine_options.target_version,
+                        enabled=spine_options.enabled if spine_options else False,
+                        converter_path=spine_options.converter_path if spine_options else None,
+                        target_version=spine_options.target_version if spine_options else None,
                         log=log
                     )
                 else:
@@ -750,8 +767,9 @@ def _b2b_replace(
 
     # 定义匹配策略
     strategies: list[tuple[str, KeyGeneratorFunc]] = [
-        ('path_id', lambda obj, data: obj.path_id),
-        ('name_type', lambda obj, data: (data.m_Name, obj.type.name))
+        ('path_id', MATCH_STRATEGIES['path_id']),
+        ('container', MATCH_STRATEGIES['container']),
+        ('name_type', MATCH_STRATEGIES['name_type'])
     ]
 
     for name, key_func in strategies:
@@ -772,8 +790,8 @@ def _b2b_replace(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.b2b.writing_to_new_bundle")}')
         
-        replacement_count, replaced_logs, _ \
-        = _apply_replacements(new_env, old_assets_map, key_func, log)
+        replacement_count, replaced_logs, _ = _apply_replacements(
+            new_env, old_assets_map, key_func, log)
         
         # 4. 如果当前策略成功替换了至少一个资源，就结束
         if replacement_count > 0:
@@ -1049,11 +1067,10 @@ def process_jp_to_global_conversion(
         log(f'  > {t("log.jp_convert.global_base_file", name=global_bundle_path.name)}')
         log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_bundle_paths))}')
         
-        # 1. 从所有日服包中构建一个完整的“替换清单”
+        # 1. 从所有日服包中构建一个完整的"替换清单"
         log(f'\n--- {t("log.section.extracting_from_jp")} ---')
         replacement_map: dict[AssetKey, AssetContent] = {}
-        # 定义资源标识符为 (资源名, 资源类型)
-        key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
+        key_func = MATCH_STRATEGIES['container']
         
         # 根据日服文件名动态确定要提取的资源类型
         asset_types = _get_asset_types_from_jp_filenames(jp_bundle_paths)
@@ -1093,9 +1110,9 @@ def process_jp_to_global_conversion(
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.b2b.strategy_success', name='(JP->GB)', count=replacement_count)}:")
+        log(f"\n✅ {t('log.b2b.strategy_success', name='container', count=replacement_count)}:")
         for item in replaced_logs:
-            log(item)
+            log(f"  - {item}")
         
         # 3. 保存最终文件
         output_path = output_dir / global_bundle_path.name
@@ -1155,7 +1172,7 @@ def process_global_to_jp_conversion(
             return False, t("message.jp_convert.load_global_source_failed")
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
-        key_func: KeyGeneratorFunc = lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name)
+        key_func = MATCH_STRATEGIES['container']
 
         # 根据日服模板文件名确定要提取哪些类型的资源
         asset_types = _get_asset_types_from_jp_filenames(jp_template_paths)
@@ -1189,9 +1206,9 @@ def process_global_to_jp_conversion(
             )
             
             if replacement_count > 0:
-                log(f"  > {t('log.jp_convert.template_updated', count=replacement_count)}:")
+                log(f"\n✅ {t('log.b2b.strategy_success', name='container', count=replacement_count)}:")
                 for item in replaced_logs:
-                    log(f"    - {item}")
+                    log(f"  - {item}")
                 
                 output_path = output_dir / jp_template_path.name
                 save_ok, save_msg = _save_and_crc(
