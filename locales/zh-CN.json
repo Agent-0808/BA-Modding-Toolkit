@@ -152,9 +152,9 @@
 			"extraction_complete": "提取完成，共输出 {count} 个文件。"
 		},
 		"mod_update": {
-			"b2b_failed": "Bundle-to-Bundle 替换过程失败，请检查日志获取详细信息。",
 			"no_matching_assets_to_replace": "没有找到任何名称匹配的资源进行替换，无法继续更新。",
-			"success": "一键更新成功！"
+			"success": "一键更新成功！",
+			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。"
 		},
 		"jp_convert": {
 			"load_global_failed": "无法加载国际服源文件",
@@ -271,7 +271,7 @@
 			"move_to_output": "移动提取的文件到输出目录",
 			"process_spine_downgrade": "处理Spine资产并降级",
 			"copy_standalone_files": "复制独立文件",
-			"b2b_replace": "Bundle-to-Bundle 替换",
+			"asset_migration": "资源迁移",
 			"merging_assets": "合并资源",
 			"extracting_from_global": "正在从国际服文件提取资源",
 			"extracting_from_jp": "正在从日服文件提取资源",
@@ -307,7 +307,7 @@
 			"copying_file": "复制文件: {name}",
 			"no_standalone_files_to_copy": "没有需要复制的独立文件。"
 		},
-		"b2b": {
+		"migration": {
 			"extracting_from_old_bundle": "正在从旧版 bundle 中提取指定类型的资源: {types}",
 			"loading_new_bundle": "正在加载新版 bundle...",
 			"trying_strategy": "正在尝试使用 '{name}' 策略进行匹配",
@@ -322,7 +322,7 @@
 		"mod_update": {
 			"using_old_mod": "使用旧版 Mod: {name}",
 			"using_new_resource": "使用新版资源: {name}",
-			"b2b_complete": "B2B 替换完成，共处理 {count} 个资源。",
+			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
 			"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
 			"all_processes_complete": "全部流程处理完成！",
 			"batch_start": "开始批量处理...",

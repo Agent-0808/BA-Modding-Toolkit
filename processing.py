@@ -137,28 +137,6 @@ def load_bundle(
     log(f'❌ {t("log.file.load_failed", path=bundle_path)}')
     return None
 
-def create_backup(
-    original_path: Path,
-    backup_mode: str = "default",
-    log: LogFunc = no_log,
-) -> bool:
-    """
-    创建原始文件的备份
-    backup_mode: "default" - 在原文件后缀后添加.bak
-                 "b2b" - 重命名为orig_(原名)
-    """
-    try:
-        if backup_mode == "b2b":
-            backup_path = original_path.with_name(f"orig_{original_path.name}")
-        else:
-            backup_path = original_path.with_suffix(original_path.suffix + '.bak')
-
-        shutil.copy2(original_path, backup_path)
-        return True
-    except Exception as e:
-        log(f'❌ {t("log.file.backup_failed", error=e)}')
-        return False
-
 def save_bundle(
     env: UnityPy.Environment,
     output_path: Path,
@@ -517,7 +495,7 @@ def process_asset_packing(
             return False, t("message.packer.no_matching_assets_to_pack")
         
         # 报告替换结果
-        log(f"\n✅ {t('log.b2b.strategy_success', name='name_type', count=replacement_count)}:")
+        log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
         for item in replaced_assets_log:
             log(f"  - {item}")
 
@@ -741,7 +719,7 @@ def _extract_assets_from_bundle(
 
     return replacement_map
 
-def _b2b_replace(
+def _migrate_bundle_assets(
     old_bundle_path: Path,
     new_bundle_path: Path,
     asset_types_to_replace: set[str],
@@ -749,18 +727,18 @@ def _b2b_replace(
     log: LogFunc = no_log,
 ) -> tuple[UnityPy.Environment | None, int]:
     """
-    执行 Bundle-to-Bundle 的核心替换逻辑。
+    执行asset迁移的核心替换逻辑。
     asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 的子集 或 {"ALL"}）
     按顺序尝试多种匹配策略（path_id, name_type），一旦有策略成功替换了至少一个资源，就停止并返回结果。
     返回一个元组 (modified_env, replacement_count)，如果失败则 modified_env 为 None。
     """
     # 1. 加载 bundles
-    log(t("log.b2b.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
+    log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
     old_env = load_bundle(old_bundle_path, log)
     if not old_env:
         return None, 0
     
-    log(t("log.b2b.loading_new_bundle"))
+    log(t("log.migration.loading_new_bundle"))
     new_env = load_bundle(new_bundle_path, log)
     if not new_env:
         return None, 0
@@ -773,37 +751,37 @@ def _b2b_replace(
     ]
 
     for name, key_func in strategies:
-        log(f'\n{t("log.b2b.trying_strategy", name=name)}')
+        log(f'\n{t("log.migration.trying_strategy", name=name)}')
         
         # 2. 根据当前策略从旧版 bundle 构建“替换清单”
-        log(f'  > {t("log.b2b.extracting_from_old_bundle_simple")}')
+        log(f'  > {t("log.migration.extracting_from_old_bundle_simple")}')
         old_assets_map = _extract_assets_from_bundle(
             old_env, asset_types_to_replace, key_func, spine_options, log
         )
         
         if not old_assets_map:
-            log(f"  > ⚠️ {t('common.warning')}: {t('log.b2b.strategy_no_assets_found', name=name)}")
+            log(f"  > ⚠️ {t('common.warning')}: {t('log.migration.strategy_no_assets_found', name=name)}")
             continue
 
-        log(f'  > {t("log.b2b.extraction_complete", name=name, count=len(old_assets_map))}')
+        log(f'  > {t("log.migration.extraction_complete", name=name, count=len(old_assets_map))}')
 
         # 3. 根据当前策略应用替换
-        log(f'  > {t("log.b2b.writing_to_new_bundle")}')
+        log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
         replacement_count, replaced_logs, _ = _apply_replacements(
             new_env, old_assets_map, key_func, log)
         
         # 4. 如果当前策略成功替换了至少一个资源，就结束
         if replacement_count > 0:
-            log(f"\n✅ {t('log.b2b.strategy_success', name=name, count=replacement_count)}:")
+            log(f"\n✅ {t('log.migration.strategy_success', name=name, count=replacement_count)}:")
             for item in replaced_logs:
                 log(f"  - {item}")
             return new_env, replacement_count
 
-        log(f'  > {t("log.b2b.strategy_no_match", name=name)}')
+        log(f'  > {t("log.migration.strategy_no_match", name=name)}')
 
     # 5. 所有策略都失败了
-    log(f"\n⚠️ {t('common.warning')}: {t('log.b2b.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
+    log(f"\n⚠️ {t('common.warning')}: {t('log.migration.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
     return None, 0
 
 def process_mod_update(
@@ -822,7 +800,7 @@ def process_mod_update(
     并可选地进行CRC校验修正以确保文件兼容性。
     
     处理流程的主要阶段：
-    - Bundle-to-Bundle替换：将旧版Mod中的指定类型资源替换到新版资源文件中
+    - asset迁移：将旧版Mod中的指定类型资源替换到新版资源文件中
         - 支持替换Texture2D、TextAsset、Mesh等资源类型
         - 可选地升级Spine动画资源的Skel版本
     - CRC修正：根据选项决定是否对新生成的文件进行CRC校验修正
@@ -844,9 +822,9 @@ def process_mod_update(
         log(f'  > {t("log.mod_update.using_old_mod", name=old_mod_path.name)}')
         log(f'  > {t("log.mod_update.using_new_resource", name=new_bundle_path.name)}')
 
-        # 进行Bundle to Bundle 替换
-        log(f'\n--- {t("log.section.b2b_replace")} ---')
-        modified_env, replacement_count = _b2b_replace(
+        # 进行asset迁移
+        log(f'\n--- {t("log.section.asset_migration")} ---')
+        modified_env, replacement_count = _migrate_bundle_assets(
             old_bundle_path=old_mod_path, 
             new_bundle_path=new_bundle_path, 
             asset_types_to_replace=asset_types_to_replace, 
@@ -855,11 +833,11 @@ def process_mod_update(
         )
 
         if not modified_env:
-            return False, t("message.mod_update.b2b_failed")
+            return False, t("message.mod_update.migration_failed")
         if replacement_count == 0:
             return False, t("message.mod_update.no_matching_assets_to_replace")
         
-        log(f'  > {t("log.mod_update.b2b_complete", count=replacement_count)}')
+        log(f'  > {t("log.mod_update.migration_complete", count=replacement_count)}')
         
         # 保存和修正文件
         output_path = output_dir / new_bundle_path.name
@@ -1110,7 +1088,7 @@ def process_jp_to_global_conversion(
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.b2b.strategy_success', name='container', count=replacement_count)}:")
+        log(f"\n✅ {t('log.migration.strategy_success', name='container', count=replacement_count)}:")
         for item in replaced_logs:
             log(f"  - {item}")
         
@@ -1206,7 +1184,7 @@ def process_global_to_jp_conversion(
             )
             
             if replacement_count > 0:
-                log(f"\n✅ {t('log.b2b.strategy_success', name='container', count=replacement_count)}:")
+                log(f"\n✅ {t('log.migration.strategy_success', name='container', count=replacement_count)}:")
                 for item in replaced_logs:
                     log(f"  - {item}")
                 
