@@ -39,14 +39,14 @@ class JpGbConversionTab(TabFrame):
         self.global_frame, self.global_label = UIComponents.create_file_drop_zone(
             self.file_frame, t("ui.jp_gb_convert.role_global_source"), 
             self.drop_global_bundle, self.browse_global_bundle,
-            clear_cmd=self.clear_callback('global_bundle_path')
+            clear_cmd=self.clear_callback('global_bundle_path'),
+            label_text=t("ui.jp_gb_convert.placeholder_global_bundle")
         )
 
         # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件)
         self.jp_files_listbox = FileListbox(
             self.file_frame, 
             title=t("ui.jp_gb_convert.role_jp_source"), 
-            file_list=[], 
             placeholder_text=t("ui.jp_gb_convert.placeholder_jp_files"),
             height=3,
             logger=self.logger
@@ -111,9 +111,10 @@ class JpGbConversionTab(TabFrame):
     def _auto_find_jp_files(self):
         """当指定了 Global 文件后，自动在资源目录查找所有匹配的 JP 文件"""
         if not self.app.game_resource_dir_var.get():
-            self.logger.log(t("log.jp_convert.auto_search_no_game_dir"))
+            self.logger.log(f'⚠️ {t("log.jp_convert.auto_search_no_game_dir")}')
             return
         if not self.global_bundle_path:
+            self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.global_bundle_path)}')
             return
             
         self.run_in_thread(self._find_worker)
@@ -158,7 +159,7 @@ class JpGbConversionTab(TabFrame):
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.create_output_dir_error", error=e))
+            self.logger.log(f'❌ {t("message.create_dir_failed_detail",path=output_dir, error=e)}')
             return
         
         # 2. 准备选项

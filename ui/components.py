@@ -267,22 +267,22 @@ class UIComponents:
         return frame, label
 
     @staticmethod
-    def create_file_drop_zone(parent, title, drop_cmd, browse_cmd, search_path_var=None, clear_cmd: Callable[[], None] | None = None):
+    def create_file_drop_zone(parent, title, drop_cmd, browse_cmd, search_path_var=None, clear_cmd: Callable[[], None] | None = None, label_text: str | None = None):
         """创建文件拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd, 
-            t("ui.drop_zone.file_hint"), 
+            label_text if label_text is not None else t("ui.drop_zone.file_hint"), 
             t("action.browse_file"),
             search_path_var,
             clear_cmd=clear_cmd
         )
 
     @staticmethod
-    def create_folder_drop_zone(parent, title, drop_cmd, browse_cmd, clear_cmd: Callable[[], None] | None = None):
+    def create_folder_drop_zone(parent, title, drop_cmd, browse_cmd, clear_cmd: Callable[[], None] | None = None, label_text: str | None = None):
         """创建文件夹拖放区域"""
         return UIComponents.create_drop_zone(
             parent, title, drop_cmd, browse_cmd,
-            t("ui.drop_zone.folder_hint"),
+            label_text if label_text is not None else t("ui.drop_zone.folder_hint"),
             t("action.browse_folder"),
             search_path_var=None,
             clear_cmd=clear_cmd
@@ -435,7 +435,7 @@ class ModeSwitcher:
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
     
-    def __init__(self, parent, title:str, file_list:list[Path], placeholder_text:str, height=10, logger=None,
+    def __init__(self, parent, title:str, file_list:list[Path] = [], placeholder_text:str | None = None, height=10, logger=None,
     display_formatter: Callable[[Path], str] | None = None, 
     on_files_added: Callable[[list[Path]], None] | None = None
     ):

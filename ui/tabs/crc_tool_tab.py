@@ -19,18 +19,17 @@ class CrcToolTab(TabFrame):
         # 1. 待修正文件
         _, self.modified_label = UIComponents.create_file_drop_zone(
             self, t("ui.label.modified_file"), self.drop_modified, self.browse_modified,
-            clear_cmd=self.clear_callback('modified_path')
+            clear_cmd=self.clear_callback('modified_path'),
+            label_text=t("ui.crc_tool.placeholder_modified")
         )
 
         # 2. 原始文件 - 使用新的 search_path_var 参数来显示查找路径
         original_frame, self.original_label = UIComponents.create_file_drop_zone(
             self, t("ui.label.original_file"), self.drop_original, self.browse_original,
             search_path_var=self.app.game_resource_dir_var,
-            clear_cmd=self.clear_callback('original_path')
+            clear_cmd=self.clear_callback('original_path'),
+            label_text=t("ui.crc_tool.placeholder_origin")
         )
-        
-        # 自定义拖放区的提示文本，使其更具指导性
-        self.original_label.config(text=t("ui.mod_update.placeholder_new"))
 
         # 3. 操作按钮
         action_button_frame = tk.Frame(self) # 使用与父框架相同的背景色
@@ -84,13 +83,10 @@ class CrcToolTab(TabFrame):
         
         game_dir_str = self.app.game_resource_dir_var.get()
         if not game_dir_str:
-            self.logger.log(t("log.game_dir_not_set"))
+            self.logger.log(f'⚠️ {t("log.game_dir_not_set")}')
             return
 
         base_game_dir = Path(game_dir_str)
-        if not base_game_dir.is_dir():
-            self.logger.log(t("log.game_dir_not_exist", path=game_dir_str))
-            return
         
         # 构造搜索目录列表
         search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
@@ -108,7 +104,7 @@ class CrcToolTab(TabFrame):
                 break # 找到后即停止搜索
         
         if not found:
-            self.logger.log(t("log.file_not_found_in_dirs", filename=path.name))
+            self.logger.log(f'⚠️ {t("log.file_not_found_in_dirs", filename=path.name)}')
 
     def _validate_paths(self):
         if not self.original_path or not self.modified_path:
@@ -142,7 +138,7 @@ class CrcToolTab(TabFrame):
         try:
             # 确保有输出目录变量
             if not self.app.output_dir_var or not self.app.output_dir_var.get():
-                self.logger.log(t("log.output_dir_not_set"))
+                self.logger.log(f'❌ {t("log.output_dir_not_set")}')
                 messagebox.showerror(t("common.error"), t("message.output_dir_not_set"))
                 self.logger.status(t("log.status.failed"))
                 return False
@@ -155,13 +151,13 @@ class CrcToolTab(TabFrame):
             try:
                 is_crc_match = CRCUtils.check_crc_match(self.original_path, self.modified_path)
             except Exception as e:
-                self.logger.log(t("log.crc.check_failed", error=e))
+                self.logger.log(f'❌ {t("log.crc.check_failed", error=e)}')
                 messagebox.showerror(t("common.error"), t("message.crc.check_failed"))
                 self.logger.status(t("log.status.error", error=e))
                 return False
             
             if is_crc_match:
-                self.logger.log(t("log.crc.match_no_correction_needed"))
+                self.logger.log(f'⚠️ {t("log.crc.match_no_correction_needed")}')
                 messagebox.showinfo(t("common.result"), t("message.crc.match_no_correction_needed"))
                 self.logger.status(t("log.status.calculation_done"))
                 return True
@@ -181,7 +177,7 @@ class CrcToolTab(TabFrame):
                 self.logger.log(t("log.crc.correction_success"))
                 messagebox.showinfo(t("common.success"), t("message.crc.correction_success", path=output_path))
             else:
-                self.logger.log(t("log.crc.correction_failed"))
+                self.logger.log(f'❌ {t("log.crc.correction_failed")}')
                 messagebox.showerror(t("common.fail"), t("message.crc.correction_failed"))
             self.logger.status(t("log.status.done"))
             return success
@@ -202,12 +198,12 @@ class CrcToolTab(TabFrame):
             with open(target_path, "rb") as f: file_data = f.read()
             crc_hex = f"{CRCUtils.compute_crc32(file_data):08X}"
             
-            self.logger.log(t(f"log.crc.file_crc32", crc=crc_hex))
+            self.logger.log(t("log.crc.file_crc32", crc=crc_hex))
             self.logger.status(t("log.status.calculation_done"))
-            messagebox.showinfo(t("common.result"), t(f"message.crc.file_crc32", crc=crc_hex))
+            messagebox.showinfo(t("common.result"), t("message.crc.file_crc32", crc=crc_hex))
             
         except Exception as e:
-            self.logger.log(t("log.crc.calculation_error", error=e))
+            self.logger.log(f'❌ {t("log.crc.calculation_error", error=e)}')
             self.logger.status(t("log.status.error", error=e))
             messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
@@ -234,7 +230,7 @@ class CrcToolTab(TabFrame):
                 self.logger.log(t("log.crc.match_no"))
                 messagebox.showwarning(t("common.result"), f"{msg}{t('message.crc.match_no')}")
         except Exception as e:
-            self.logger.log(t("log.crc.calculation_error", error=e))
+            self.logger.log(f'❌ {t("log.crc.calculation_error", error=e)}')
             self.logger.status(t("log.status.error", error=e))
             messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 

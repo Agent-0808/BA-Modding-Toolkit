@@ -19,13 +19,15 @@ class AssetPackerTab(TabFrame):
         # 资源文件夹
         _, self.folder_label = UIComponents.create_folder_drop_zone(
             self, t("ui.label.assets_folder_to_pack"), self.drop_folder, self.browse_folder,
-            clear_cmd=self.clear_callback('folder_path')
+            clear_cmd=self.clear_callback('folder_path'),
+            label_text=t("ui.packer.placeholder_assets")
         )
 
         # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
             self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle,
-            clear_cmd=self.clear_callback('bundle_path')
+            clear_cmd=self.clear_callback('bundle_path'),
+            label_text=t("ui.packer.placeholder_bundle")
         )
         
         # 操作按钮区域
@@ -125,7 +127,7 @@ class AssetPackerTab(TabFrame):
             generated_bundle_filename = self.bundle_path.name
             self.final_output_path = output_dir / generated_bundle_filename
             
-            self.logger.log(t("log.packer.pack_success_path", path=self.final_output_path))
+            self.logger.log(f'✅ {t("log.packer.pack_success_path", path=self.final_output_path)}')
             self.logger.log(t("log.replace_original", button=t('action.replace_original')))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)

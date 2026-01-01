@@ -61,16 +61,17 @@ class ModUpdateTab(TabFrame):
         # 1. 旧版 Mod 文件
         _, self.old_mod_label = UIComponents.create_file_drop_zone(
             parent, t("ui.label.mod_file"), self.drop_old_mod, self.browse_old_mod,
-            clear_cmd=self.clear_callback('old_mod_path')
+            clear_cmd=self.clear_callback('old_mod_path'),
+            label_text=t("ui.mod_update.placeholder_old")
         )
         
         # 2. 新版游戏资源文件
         new_mod_frame, self.new_mod_label = UIComponents.create_file_drop_zone(
             parent, t("ui.label.target_resource_bundle"), self.drop_new_mod, self.browse_new_mod,
             search_path_var=self.app.game_resource_dir_var,
-            clear_cmd=self.clear_callback('new_mod_path')
+            clear_cmd=self.clear_callback('new_mod_path'),
+            label_text=t("ui.mod_update.placeholder_new")
         )
-        self.new_mod_label.config(text=t("ui.mod_update.placeholder_new"))
 
         # 操作按钮区域
         action_button_frame = tk.Frame(parent)
@@ -120,10 +121,6 @@ class ModUpdateTab(TabFrame):
         self.logger.status(t("log.status.ready"))
 
     def auto_find_new_bundle(self):
-        if not all([self.old_mod_path, self.app.game_resource_dir_var.get()]):
-            self.new_mod_label.config(text=t("ui.mod_update.warn_need_guide"), fg=Theme.COLOR_WARNING)
-            messagebox.showwarning(t("common.tip"), t("message.missing_paths"))
-            return
         self.run_in_thread(self._find_new_bundle_worker)
         
     def _find_new_bundle_worker(self):

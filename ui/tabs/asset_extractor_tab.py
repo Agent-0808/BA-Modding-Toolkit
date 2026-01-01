@@ -21,7 +21,8 @@ class AssetExtractorTab(TabFrame):
         # 目标 Bundle 文件
         _, self.bundle_label = UIComponents.create_file_drop_zone(
             self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle,
-            clear_cmd=self.clear_callback('bundle_path')
+            clear_cmd=self.clear_callback('bundle_path'),
+            label_text=t("ui.extractor.placeholder_bundle")
         )
         
         # 输出目录

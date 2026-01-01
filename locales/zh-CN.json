@@ -100,6 +100,7 @@
 		"save_success": "文件保存成功。",
 		"save_and_crc_success": "文件保存和CRC修正成功。",
 		"save_or_crc_error": "保存或修正文件时发生错误: {error}",
+		"same_file": "两个路径一致！",
 		"config": {
 			"saved": "配置已保存。",
 			"loaded": "配置已加载。",
@@ -110,7 +111,7 @@
 		"packer": {
 			"require_folder_with_assets": "请输入包含了要打包的资源文件的文件夹。",
 			"missing_paths": "请确保已选择目标 Bundle、待打包资源文件夹，并在全局设置中指定了输出目录。",
-			"generated_file_not_found_manual": "⚠️ 警告：无法自动找到生成的文件。",
+			"generated_file_not_found_manual": "无法自动找到生成的文件。",
 			"generated_file_not_found_for_replace": "找不到已生成的替换文件。\n请先成功执行一次'生成替换文件'。",
 			"load_target_bundle_failed": "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。",
 			"no_supported_files_found": "在指定文件夹中没有找到任何支持的文件 ({extensions})。",
@@ -128,8 +129,8 @@
 			"calculation_error": "计算CRC时发生错误:\n{error}",
 			"modified_file_crc32": "待修正文件 CRC32: {crc}",
 			"original_file_crc32": "原始文件　 CRC32: {crc}",
-			"match_yes": "✅ CRC值匹配: 是",
-			"match_no": "❌ CRC值匹配: 否",
+			"match_yes": "CRC值匹配: ✅是",
+			"match_no": "CRC值匹配: ❌否",
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 '{name}' 未能生成。"
 		},
 		"spine": {
@@ -167,9 +168,7 @@
 			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
 			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
 			"save_asset_bundle_failed": "保存 {type} bundle 失败: {message}"
-		},
-		"same_file": "两个路径一致！",
-		"create_output_dir_error": "无法创建输出目录: {error}"
+		}
 	},
 	"log": {
 		"status": {
@@ -241,7 +240,7 @@
 		},
 		"packer": {
 			"start_packing": "开始从资源文件夹打包...",
-			"pack_success_path": "✅ 打包成功。文件已输出至: {path}",
+			"pack_success_path": "打包成功。文件已输出至: {path}",
 			"found_files_to_process": "找到 {count} 个待处理文件，正在扫描 bundle 并进行替换...",
 			"no_assets_packed": "没有执行任何成功的资源打包。",
 			"check_files_and_bundle": "请检查：\n1. 文件名是否与 bundle 内的资源名完全匹配。\n2. bundle 文件是否正确。",
@@ -253,15 +252,14 @@
 			"loaded_original": "已加载原始文件: {file}",
 			"loaded_modified": "已加载待修正文件: {file}",
 			"start_correction": "开始CRC修正过程...",
-			"check_failed": "⚠️ 警告: 检测CRC值时发生错误: {error}",
-			"match_no_correction_needed": "⚠️ CRC值已匹配，无需修正",
+			"check_failed": "检测CRC值时发生错误: {error}",
+			"match_no_correction_needed": "CRC值已匹配，无需修正",
 			"correction_success": "CRC 修正成功！",
-			"correction_failed": "❌ CRC修正失败",
-			"calculation_error": "❌ 计算CRC时发生错误: {error}",
+			"correction_failed": "CRC修正失败",
+			"calculation_error": "计算CRC时发生错误: {error}",
 			"match_yes": "CRC值匹配: ✅是",
 			"match_no": "CRC值匹配: ❌否",
-			"preparing": "准备修正CRC...",
-			"file_crc32": "文件 CRC 32： {crc}",
+			"file_crc32": "文件的 CRC32 值： {crc}",
 			"modified_file_crc32": "待修正文件 CRC32：{crc}",
 			"original_file_crc32": "原始文件　 CRC32：{crc}"
 		},
@@ -356,16 +354,16 @@
 			"extracted_count": "提取了 {count} 个资源。",
 			"asset_bundle_saved_to": "{type} Bundle 已保存至: {path}",
 			"global_to_jp_complete": "Global -> JP转换完成！",
-			"auto_search_no_game_dir": "⚠️ 自动查找失败：未设置游戏资源目录。",
-			"no_jp_version_found": "  > ❌ 未能找到该 Global 文件的日服对应版本。",
-			"auto_match_count": "  > 已自动匹配到 {count} 个日服文件。",
+			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
+			"no_jp_version_found": "未能找到该 Global 文件的日服对应版本。",
+			"auto_match_count": "已自动匹配到 {count} 个日服文件。",
 			"template_updated": "更新的文件数量：{count}"
 		},
-		"game_dir_not_exist": "⚠️ 警告: 游戏资源目录 '{path}' 不存在。",
-		"game_dir_not_set": "⚠️ 警告: 未设置游戏资源目录，无法自动寻找原始文件。",
-		"file_not_found_in_dirs": "⚠️ 警告: 未能在指定的资源目录中找到对应的原始文件 '{filename}'。",
+		"game_dir_not_exist": "游戏资源目录 '{path}' 不存在。",
+		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
+		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 '{filename}'。",
 		"file_found_in_subdir": "已在 '{subdir}' 中自动找到并加载原始文件: {filename}",
-		"output_dir_not_set": "❌ 错误: 未设置输出目录",
+		"output_dir_not_set": "未设置输出目录",
 		"error_detail": "发生错误：{error}",
 		"error_processing": "处理过程中发生错误：{error}",
 		"processing_filename": "正在处理文件: {name}",
@@ -396,23 +394,22 @@
 		"mod_update": {
 			"mode_single": "单个更新",
 			"mode_batch": "批量更新",
-			"placeholder_old": "拖放旧版 Mod 文件到此处",
-			"placeholder_new": "拖入修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
+			"placeholder_old": "拖放待更新旧版 Mod 文件到此处\n或点击下方按钮选择",
+			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_searching": "正在搜索对应资源...",
-			"status_not_found": "未找到匹配资源：{message}",
-			"warn_need_guide": "请先选择旧版 Mod 并设置游戏目录以启用自动搜索。"
+			"status_not_found": "未找到匹配资源：{message}"
 		},
 		"crc_tool": {
-			"placeholder_modified": "拖放已修改的 Bundle",
-			"placeholder_origin": "拖放原始 Bundle (用于提取 CRC)"
+			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",
+			"placeholder_origin": "选择待修正文件后将自动查找原始文件\n或手动拖放/浏览文件"
 		},
 		"packer": {
-			"placeholder_assets": "拖放包含资源(.png/.skel/.atlas)的文件夹",
-			"placeholder_bundle": "拖放目标 Bundle 文件"
+			"placeholder_assets": "拖放包含待打包资源 (.png/.skel/.atlas) 的文件夹\n或点击下方按钮选择",
+			"placeholder_bundle": "拖放目标 Bundle 文件\n或点击下方按钮选择"
 		},
 		"extractor": {
-			"placeholder_bundle": "拖放要提取的 Bundle 文件",
+			"placeholder_bundle": "拖放要提取资源的 Bundle 文件\n或点击下方按钮选择",
 			"options_title": "提取选项"
 		},
 		"jp_gb_convert": {
@@ -423,7 +420,8 @@
 			"role_global_source": "国际服 Bundle (源文件)",
 			"global_bundle": "国际服 Bundle",
 			"role_global_target": "国际服 Bundle (目标文件)",
-			"role_jp_target": "日服 Bundle (目标文件)"
+			"role_jp_target": "日服 Bundle (目标文件)",
+			"placeholder_global_bundle": "拖放国际服的Bundle文件\n或点击下方按钮选择"
 		},
 		"dialog": {
 			"select": "选择{type}",
