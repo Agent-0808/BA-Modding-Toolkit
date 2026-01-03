@@ -9,7 +9,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, select_file, select_directory, open_directory
+from ui.utils import handle_drop, select_file, select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
@@ -67,10 +67,7 @@ class AssetExtractorTab(TabFrame):
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
     def drop_bundle(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
-            return
-        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("ui.label.target_bundle_file"))
+        handle_drop(event, callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")))
 
     def browse_bundle(self):
         select_file(

@@ -9,7 +9,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
-from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
+from ui.utils import handle_drop, replace_file, select_file, select_directory
 from utils import get_search_resource_dirs
 
 class ModUpdateTab(TabFrame):
@@ -85,11 +85,7 @@ class ModUpdateTab(TabFrame):
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=2)
 
     def drop_old_mod(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("common.warning"), t("message.drop_single_file"))
-            return
-        path = Path(event.data.strip('{}'))
-        self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.label.mod_file"), callback=self.auto_find_new_bundle)
+        handle_drop(event, callback=lambda path: self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.label.mod_file"), callback=self.auto_find_new_bundle))
 
     def browse_old_mod(self):
         select_file(
@@ -100,11 +96,7 @@ class ModUpdateTab(TabFrame):
         )
 
     def drop_new_mod(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("common.warning"), t("message.drop_single_file"))
-            return
-        path = Path(event.data.strip('{}'))
-        self.set_new_mod_file(path)
+        handle_drop(event, callback=self.set_new_mod_file)
 
     def browse_new_mod(self):
         select_file(

@@ -8,7 +8,7 @@ import shutil
 from i18n import t
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, replace_file, select_file
+from ui.utils import handle_drop, replace_file, select_file
 from utils import CRCUtils, get_search_resource_dirs
 
 class CrcToolTab(TabFrame):
@@ -44,10 +44,7 @@ class CrcToolTab(TabFrame):
                                    bg_color=Theme.BUTTON_DANGER_BG, padx=10, pady=5).grid(row=0, column=2, sticky="ew", padx=5)
 
     def drop_original(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
-            return
-        self.set_original_file(Path(event.data.strip('{}')))
+        handle_drop(event, callback=self.set_original_file)
 
     def browse_original(self):
         select_file(
@@ -58,10 +55,7 @@ class CrcToolTab(TabFrame):
         )
     
     def drop_modified(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
-            return
-        self.set_modified_file(Path(event.data.strip('{}')))
+        handle_drop(event, callback=self.set_modified_file)
     def browse_modified(self):
         select_file(
             title=t("ui.dialog.select", type=t("ui.label.modified_file")),

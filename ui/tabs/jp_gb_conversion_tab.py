@@ -8,7 +8,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
-from ui.utils import is_multiple_drop, select_file
+from ui.utils import handle_drop, select_file
 from utils import get_search_resource_dirs
 
 class JpGbConversionTab(TabFrame):
@@ -90,12 +90,8 @@ class JpGbConversionTab(TabFrame):
 
     # --- 国际服文件处理 ---
     def drop_global_bundle(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
-            return
-        path = Path(event.data.strip('{}'))
-        callback = lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None
-        self.set_file_path('global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), callback=callback)
+        callback = lambda path: self.set_file_path('global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None)
+        handle_drop(event, callback=callback)
     
     def browse_global_bundle(self):
         select_file(

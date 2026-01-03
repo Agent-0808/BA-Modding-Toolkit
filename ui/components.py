@@ -611,7 +611,7 @@ class FileListbox:
             if self.on_files_added:
                 self.on_files_added(added_paths)
     
-    def _handle_drop(self, event):
+    def _handle_drop(self, event: tk.Event):
         """处理拖放事件"""
         # tkinterdnd2 返回的events.data有{}的形式也有空格分隔的形式，要用自带的函数处理
         raw_paths = event.widget.tk.splitlist(event.data)

@@ -8,7 +8,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents
-from ui.utils import is_multiple_drop, replace_file, select_file, select_directory
+from ui.utils import handle_drop, replace_file, select_file, select_directory
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
@@ -42,10 +42,7 @@ class AssetPackerTab(TabFrame):
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=10)
 
     def drop_bundle(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_file"))
-            return
-        self.set_file_path('bundle_path', self.bundle_label, Path(event.data.strip('{}')), t("ui.label.target_bundle_file"))
+        handle_drop(event, callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")))
     
     def browse_bundle(self):
         select_file(
@@ -56,19 +53,13 @@ class AssetPackerTab(TabFrame):
         )
     
     def drop_folder(self, event):
-        if is_multiple_drop(event.data):
-            messagebox.showwarning(t("message.invalid_operation"), t("message.drop_single_folder"))
-            return
+        def validate_folder(path: Path) -> bool:
+            if not path.is_dir():
+                messagebox.showwarning(t("message.invalid_operation"), t("message.packer.require_folder_with_assets"))
+                return False
+            return True
         
-        # 获取拖放的文件路径并转换为Path对象
-        dropped_path = Path(event.data.strip('{}'))
-        
-        # 检查是否是文件夹
-        if not dropped_path.is_dir():
-            messagebox.showwarning(t("message.invalid_operation"), t("message.packer.require_folder_with_assets"))
-            return
-            
-        self.set_folder_path('folder_path', self.folder_label, dropped_path, t("ui.label.assets_folder_to_pack"))
+        handle_drop(event, callback=lambda path: self.set_folder_path('folder_path', self.folder_label, path, t("ui.label.assets_folder_to_pack")), error_message=t("message.drop_single_folder"), validation_callback=validate_folder)
 
     def browse_folder(self):
         folder_path = select_directory(

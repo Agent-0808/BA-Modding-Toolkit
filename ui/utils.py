@@ -20,6 +20,47 @@ def is_multiple_drop(data: str) -> bool:
     """
     return '} {' in data
 
+def handle_drop(event, 
+                callback: Callable[[Path], None],
+                allow_multiple: bool = False,
+                error_title: str = None,
+                error_message: str = None,
+                validation_callback: Callable[[Path], bool] | None = None) -> bool:
+    """
+    通用的拖放事件处理函数
+    
+    Args:
+        event: 拖放事件对象
+        callback: 处理单个文件路径的回调函数，接收Path对象
+        allow_multiple: 是否允许多个文件，默认为False
+        error_title: 错误提示标题，默认为"message.invalid_operation"
+        error_message: 错误提示消息，默认为"message.drop_single_file"
+        validation_callback: 自定义验证函数，接收Path对象，返回bool表示是否有效
+    
+    Returns:
+        是否成功处理（False表示因多文件限制或验证失败而未处理）
+    """
+    if is_multiple_drop(event.data):
+        if not allow_multiple:
+            messagebox.showwarning(
+                error_title or t("message.invalid_operation"), 
+                error_message or t("message.drop_single_file")
+            )
+            return False
+        else:
+            paths = [Path(p) for p in event.widget.tk.splitlist(event.data)]
+            for path in paths:
+                if validation_callback and not validation_callback(path):
+                    return False
+                callback(path)
+            return True
+    
+    path = Path(event.data.strip('{}'))
+    if validation_callback and not validation_callback(path):
+        return False
+    callback(path)
+    return True
+
 def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = False) -> None:
     """
     打开文件资源管理器。
