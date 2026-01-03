@@ -613,8 +613,8 @@ class FileListbox:
     
     def _handle_drop(self, event):
         """处理拖放事件"""
-
-        raw_paths = event.data.strip('{}').split('} {')
+        # tkinterdnd2 返回的events.data有{}的形式也有空格分隔的形式，要用自带的函数处理
+        raw_paths = event.widget.tk.splitlist(event.data)
         paths_to_add = []
         
         for p_str in raw_paths:

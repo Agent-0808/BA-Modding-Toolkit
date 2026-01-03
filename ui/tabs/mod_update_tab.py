@@ -140,8 +140,7 @@ class ModUpdateTab(TabFrame):
             self.master.after(0, self.set_new_mod_file, found_path)
             self.logger.status(t("log.status.ready"))
         else:
-            short_message = message.split('。')[0]
-            ui_message = t("ui.mod_update.status_not_found", message=short_message)
+            ui_message = t("ui.mod_update.status_not_found", message=message)
             self.new_mod_label.config(text=ui_message, fg=Theme.COLOR_ERROR)
             self.logger.status(t("log.status.search_not_found"))
 
@@ -337,13 +336,3 @@ class ModUpdateTab(TabFrame):
             self.logger.log(failed_list)
 
         self.logger.status(t("log.status.done"))
-
-    # 设置文件路径的通用方法
-    def set_file_path(self, attr_name: str, label: tk.Label, path: Path, label_text: str, callback=None):
-        """设置文件路径并更新标签显示"""
-        setattr(self, attr_name, path)
-        label.config(text=f"{label_text}: {path.name}", fg=Theme.COLOR_SUCCESS)
-        self.logger.log(t("log.file.loaded", path=path))
-        self.logger.status(t("log.status.ready"))
-        if callback:
-            callback()
