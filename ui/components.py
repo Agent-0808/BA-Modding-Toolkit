@@ -80,11 +80,20 @@ class Theme:
     STATUS_BAR_BG = '#34495e'
     STATUS_BAR_FG = '#ecf0f1'
     MODE_SWITCHER_ACTIVE = '#e0e0e0'
+    
+    # 侧边栏颜色
+    SIDEBAR_BG = '#2c3e50'
+    SIDEBAR_BUTTON_BG = '#34495e'
+    SIDEBAR_BUTTON_FG = '#ecf0f1'
+    SIDEBAR_BUTTON_ACTIVE_BG = '#3498db'
+    SIDEBAR_BUTTON_ACTIVE_FG = '#ffffff'
 
     # 字体
     FRAME_FONT = ("Microsoft YaHei", 11, "bold")
     INPUT_FONT = ("Microsoft YaHei", 9)
+    STATUS_BAR_FONT = ("Microsoft YaHei", 9)
     BUTTON_FONT = ("Microsoft YaHei", 10, "bold")
+    SIDEBAR_FONT = ("Microsoft YaHei", 9, "bold")
     LOG_FONT = ("SimSun", 9)
 
 

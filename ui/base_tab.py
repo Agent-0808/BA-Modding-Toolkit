@@ -1,7 +1,6 @@
 # ui/base_tab.py
 
 import tkinter as tk
-from tkinter import ttk
 from pathlib import Path
 import threading
 from typing import Callable, TYPE_CHECKING
@@ -12,10 +11,10 @@ from .components import Theme
 if TYPE_CHECKING:
     from ui.app import App
 
-class TabFrame(ttk.Frame):
+class TabFrame(tk.Frame):
     """所有Tab页面的基类，提供通用功能和结构。"""
-    def __init__(self, parent: ttk.Notebook, app: 'App'):
-        super().__init__(parent, padding=10)
+    def __init__(self, parent: tk.Frame, app: 'App'):
+        super().__init__(parent, bg=Theme.WINDOW_BG)
         self.app = app
         self.logger = app.logger
         self.create_widgets()

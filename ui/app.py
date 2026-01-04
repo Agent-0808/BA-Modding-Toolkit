@@ -1,9 +1,8 @@
 # ui/app.py
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, messagebox
 from pathlib import Path
-import os
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
@@ -119,7 +118,7 @@ class App(tk.Frame):
 
         # 下方日志区域
         bottom_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
-        paned_window.add(bottom_frame, weight=1)
+        paned_window.add(bottom_frame, weight=0)
 
         # 顶部框架，用于放置设置按钮
         top_controls_frame = tk.Frame(top_frame, bg=Theme.WINDOW_BG)
@@ -137,26 +136,24 @@ class App(tk.Frame):
         top_controls_frame.columnconfigure(1, weight=1)
         top_controls_frame.rowconfigure(0, weight=1)  # 确保按钮垂直居中
 
-        self.notebook = self.create_notebook(top_frame)
-        
-        # 创建日志区域
+        # 创建日志区域（需要在侧边栏之前创建，因为侧边栏会创建Tab，Tab需要logger）
         self.log_text = self.create_log_area(bottom_frame)
 
         # 底部状态栏 - 固定在窗口底部
         self.status_label = tk.Label(self.master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                     font=Theme.INPUT_FONT, bg=Theme.STATUS_BAR_BG, fg=Theme.STATUS_BAR_FG, padx=10,
+                                     font=Theme.STATUS_BAR_FONT, bg=Theme.STATUS_BAR_BG, fg=Theme.STATUS_BAR_FG, padx=10,
                                      height=1)  # 固定高度，确保不会被子组件挤压
         self.status_label.grid(row=1, column=0, sticky="ew", padx=0, pady=0)  # 使用grid固定在底部，无边距
         
         self.logger = Logger(self.master, self.log_text, self.status_label)
         
+        # 创建侧边栏导航布局（logger创建后才能创建Tab）
+        self.create_sidebar_layout(top_frame)
+        
         # 在logger创建后记录配置加载信息
         language = self.language_var.get()
         self.logger.log(t("log.config.loaded"))
         self.logger.log(t("log.config.language", language=language))
-        
-        # 将 logger 和共享变量传递给 Tabs
-        self.populate_notebook()
         
         # 绑定窗口大小变化事件，确保布局正确
         self.master.bind('<Configure>', self._on_window_configure)
@@ -227,30 +224,94 @@ class App(tk.Frame):
         else:
             self.logger.log(t("log.config.save_failed"))
             messagebox.showerror(t("common.error"), t("message.config.save_failed"))
-    # --- 方法结束 ---
+
     
-    def create_notebook(self, parent):
-        style = ttk.Style()
-        # 自定义Notebook样式以匹配主题
-        style.configure("TNotebook", background=Theme.WINDOW_BG, borderwidth=0)
-        style.configure("TNotebook.Tab", 
-                        font=Theme.BUTTON_FONT, 
-                        padding=[10, 5],
-                        background=Theme.MUTED_BG,
-                        foreground=Theme.TEXT_NORMAL)
-        style.map("TNotebook.Tab",
-                  background=[("selected", Theme.FRAME_BG)],
-                  foreground=[("selected", Theme.TEXT_TITLE)])
-
-        notebook = ttk.Notebook(parent, style="TNotebook")
-        notebook.pack(fill=tk.BOTH, expand=True)
-        return notebook
-
+    def create_sidebar_layout(self, parent):
+        """创建侧边栏导航布局：左侧按钮，右侧内容区域"""
+        # 清空父容器的布局配置
+        parent.pack_propagate(False)
+        
+        # 左侧侧边栏
+        sidebar_frame = tk.Frame(parent, bg=Theme.SIDEBAR_BG, width=120)
+        sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar_frame.pack_propagate(False)  # 固定宽度
+        
+        # 右侧内容区域
+        self.content_frame = tk.Frame(parent, bg=Theme.WINDOW_BG)
+        self.content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        self.content_frame.pack_propagate(False)
+        
+        # 创建所有Tab页面
+        self.populate_tabs()
+        
+        # 创建侧边栏按钮
+        self.create_sidebar_buttons(sidebar_frame)
+        
+        # 默认显示第一个Tab
+        if self.tabs:
+            self.show_tab(self.tabs[0])
+    
+    def populate_tabs(self):
+        """创建并添加所有的Tab页面到内容区域。"""
+        self.tabs = []
+        self.tab_buttons = []
+        
+        # 创建Tab页面
+        mod_update_tab = ModUpdateTab(self.content_frame, self)
+        crc_tool_tab = CrcToolTab(self.content_frame, self)
+        asset_packer_tab = AssetPackerTab(self.content_frame, self)
+        asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
+        jp_gb_conversion_tab = JpGbConversionTab(self.content_frame, self)
+        
+        self.tabs.extend([
+            (mod_update_tab, t("ui.tabs.mod_update")),
+            (crc_tool_tab, t("ui.tabs.crc_tool")),
+            (asset_packer_tab, t("ui.tabs.asset_packer")),
+            (asset_extractor_tab, t("ui.tabs.asset_extractor")),
+            (jp_gb_conversion_tab, t("ui.tabs.jp_gb_convert"))
+        ])
+        
+        # 将所有Tab放置在content_frame的同一位置
+        for tab, _ in self.tabs:
+            tab.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+    
+    def create_sidebar_buttons(self, sidebar_frame):
+        """创建侧边栏导航按钮"""
+        for tab, title in self.tabs:
+            btn = UIComponents.create_button(
+                sidebar_frame,
+                text = title,
+                command = lambda t=tab: self.show_tab(t),
+                wraplength=100
+            )
+            btn.pack(fill=tk.X, padx=5, pady=2)
+            self.tab_buttons.append((btn, tab))
+    
+    def show_tab(self, tab_to_show):
+        """显示指定的Tab页面"""
+        # 如果传入的是元组，提取tab对象
+        if isinstance(tab_to_show, tuple):
+            tab_to_show = tab_to_show[0]
+        
+        # 隐藏所有Tab
+        for tab, _ in self.tabs:
+            tab.pack_forget()
+        
+        # 显示目标Tab
+        tab_to_show.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 更新按钮样式
+        for btn, tab in self.tab_buttons:
+            if tab == tab_to_show:
+                btn.config(bg=Theme.SIDEBAR_BUTTON_ACTIVE_BG, fg=Theme.SIDEBAR_BUTTON_ACTIVE_FG)
+            else:
+                btn.config(bg=Theme.SIDEBAR_BUTTON_BG, fg=Theme.SIDEBAR_BUTTON_FG)
+    
     def create_log_area(self, parent):
         log_frame = tk.LabelFrame(parent, text=t("ui.log_area"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0) # 日志区不需要顶部pady
 
-        log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=10) #添加 height 参数
+        log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=8) #添加 height 参数
         scrollbar = tk.Scrollbar(log_frame, orient=tk.VERTICAL, command=log_text.yview)
         log_text.configure(yscrollcommand=scrollbar.set)
         
@@ -258,11 +319,3 @@ class App(tk.Frame):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         log_text.config(state=tk.DISABLED)
         return log_text
-
-    def populate_notebook(self):
-        """创建并添加所有的Tab页面到Notebook。"""
-        self.notebook.add(ModUpdateTab(self.notebook, self), text=t("ui.tabs.mod_update"))
-        self.notebook.add(CrcToolTab(self.notebook, self), text=t("ui.tabs.crc_tool"))
-        self.notebook.add(AssetPackerTab(self.notebook, self), text=t("ui.tabs.asset_packer"))
-        self.notebook.add(AssetExtractorTab(self.notebook, self), text=t("ui.tabs.asset_extractor"))
-        self.notebook.add(JpGbConversionTab(self.notebook, self), text=t("ui.tabs.jp_gb_convert"))
