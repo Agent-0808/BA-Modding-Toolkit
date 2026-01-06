@@ -117,27 +117,27 @@ class App(tk.Frame):
         paned_window.add(top_frame, weight=1)
 
         # 下方日志区域
-        bottom_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
-        paned_window.add(bottom_frame, weight=0)
+        log_panel_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
+        paned_window.add(log_panel_frame, weight=0)
 
         # 顶部框架，用于放置设置按钮
-        top_controls_frame = tk.Frame(top_frame, bg=Theme.WINDOW_BG)
-        top_controls_frame.pack(fill=tk.X, pady=(0, 10))
+        header_buttons_frame = tk.Frame(top_frame, bg=Theme.WINDOW_BG)
+        header_buttons_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 使用grid布局让按钮横向拉伸填满
-        settings_button = UIComponents.create_button(top_controls_frame, t("ui.settings.title"), self.open_settings_dialog, bg_color=Theme.BUTTON_WARNING_BG)
+        settings_button = UIComponents.create_button(header_buttons_frame, t("ui.settings.title"), self.open_settings_dialog, bg_color=Theme.BUTTON_WARNING_BG)
         settings_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
-        environment_button = UIComponents.create_button(top_controls_frame, t("action.environment"), self.show_environment_info, bg_color=Theme.BUTTON_SECONDARY_BG)
+        environment_button = UIComponents.create_button(header_buttons_frame, t("action.environment"), self.show_environment_info, bg_color=Theme.BUTTON_SECONDARY_BG)
         environment_button.grid(row=0, column=1, sticky="ew")
         
         # 设置列权重，让按钮均匀拉伸
-        top_controls_frame.columnconfigure(0, weight=1)
-        top_controls_frame.columnconfigure(1, weight=1)
-        top_controls_frame.rowconfigure(0, weight=1)  # 确保按钮垂直居中
+        header_buttons_frame.columnconfigure(0, weight=1)
+        header_buttons_frame.columnconfigure(1, weight=1)
+        header_buttons_frame.rowconfigure(0, weight=1)  # 确保按钮垂直居中
 
         # 创建日志区域（需要在侧边栏之前创建，因为侧边栏会创建Tab，Tab需要logger）
-        self.log_text = self.create_log_area(bottom_frame)
+        self.log_text = self.create_log_area(log_panel_frame)
 
         # 底部状态栏 - 固定在窗口底部
         self.status_label = tk.Label(self.master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W,
@@ -232,9 +232,9 @@ class App(tk.Frame):
         parent.pack_propagate(False)
         
         # 左侧侧边栏
-        sidebar_frame = tk.Frame(parent, bg=Theme.SIDEBAR_BG, width=120)
-        sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
-        sidebar_frame.pack_propagate(False)  # 固定宽度
+        self.sidebar_frame = tk.Frame(parent, bg=Theme.SIDEBAR_BG, width=120)
+        self.sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
+        self.sidebar_frame.pack_propagate(False)  # 固定宽度
         
         # 右侧内容区域
         self.content_frame = tk.Frame(parent, bg=Theme.WINDOW_BG)
@@ -245,7 +245,7 @@ class App(tk.Frame):
         self.populate_tabs()
         
         # 创建侧边栏按钮
-        self.create_sidebar_buttons(sidebar_frame)
+        self.create_sidebar_buttons()
         
         # 默认显示第一个Tab
         if self.tabs:
@@ -275,11 +275,11 @@ class App(tk.Frame):
         for tab, _ in self.tabs:
             tab.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
     
-    def create_sidebar_buttons(self, sidebar_frame):
+    def create_sidebar_buttons(self):
         """创建侧边栏导航按钮"""
         for tab, title in self.tabs:
             btn = UIComponents.create_button(
-                sidebar_frame,
+                self.sidebar_frame,
                 text = title,
                 command = lambda t=tab: self.show_tab(t),
                 wraplength=100

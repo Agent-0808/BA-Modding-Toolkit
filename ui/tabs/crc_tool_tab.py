@@ -40,8 +40,9 @@ class CrcToolTab(TabFrame):
                                    bg_color=Theme.BUTTON_SUCCESS_BG, padx=10, pady=5).grid(row=0, column=0, sticky="ew", padx=5)
         UIComponents.create_button(action_button_frame, t("action.calculate_crc"), self.calculate_values_thread,
                                    bg_color=Theme.BUTTON_PRIMARY_BG, padx=10, pady=5).grid(row=0, column=1, sticky="ew", padx=5)
-        UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread,
-                                   bg_color=Theme.BUTTON_DANGER_BG, padx=10, pady=5).grid(row=0, column=2, sticky="ew", padx=5)
+        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread,
+                                    bg_color=Theme.BUTTON_DANGER_BG, padx=10, pady=5, state="disabled")
+        self.replace_button.grid(row=0, column=2, sticky="ew", padx=5)
 
     def drop_original(self, event):
         handle_drop(event, callback=self.set_original_file)
@@ -126,6 +127,9 @@ class CrcToolTab(TabFrame):
         if self._validate_paths(): self.run_in_thread(self.replace_original)
 
     def run_correction(self):
+        self.final_output_path = None
+        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        
         self.logger.log("\n" + "="*50)
         self.logger.log(t("log.crc.start_correction"))
         self.logger.status(t("common.processing"))
@@ -168,7 +172,10 @@ class CrcToolTab(TabFrame):
             success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.enable_padding_var.get())
             
             if success:
+                self.final_output_path = output_path
                 self.logger.log(t("log.crc.correction_success"))
+                self.logger.log(t("log.replace_original", button=t('action.replace_original')))
+                self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
                 messagebox.showinfo(t("common.success"), t("message.crc.correction_success", path=output_path))
             else:
                 self.logger.log(f'❌ {t("log.crc.correction_failed")}')
@@ -229,8 +236,13 @@ class CrcToolTab(TabFrame):
             messagebox.showerror(t("common.error"), t("message.crc.calculation_error", error=e))
 
     def replace_original(self):
+        if self.final_output_path and self.final_output_path.exists():
+            source_path = self.final_output_path
+        else:
+            source_path = self.modified_path
+            
         success = replace_file(
-            source_path=self.modified_path,
+            source_path=source_path,
             dest_path=self.original_path,
             create_backup=self.app.create_backup_var.get(),
             ask_confirm=True,
