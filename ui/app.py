@@ -89,6 +89,9 @@ class App(tk.Frame):
         self.atlas_downgrade_path_var = tk.StringVar()
         self.spine_downgrade_version_var = tk.StringVar()  # 添加Spine降级版本变量
         
+        # Spine 3.8 文件名修正选项
+        self.enable_spine38_namefix_var = tk.BooleanVar()
+        
         # 语言设置
         self.language_var = tk.StringVar(value="zh-CN")
         

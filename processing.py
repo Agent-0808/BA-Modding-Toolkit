@@ -422,6 +422,7 @@ def process_asset_packing(
     output_dir: Path,
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
+    enable_rename_fix: bool | None = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -440,9 +441,15 @@ def process_asset_packing(
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
+        enable_rename_fix: 是否启用旧版 Spine 3.8 文件名修正
         log: 日志记录函数，默认为空函数
     """
+    temp_asset_folder = None
     try:
+        if enable_rename_fix:
+            temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(asset_folder, log)
+            asset_folder = temp_asset_folder
+
         env = load_bundle(target_bundle_path, log)
         if not env:
             return False, t("message.packer.load_target_bundle_failed")
@@ -535,6 +542,12 @@ def process_asset_packing(
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
         return False, t("message.error_during_process", error=e)
+    finally:
+        if temp_asset_folder:
+            try:
+                shutil.rmtree(temp_asset_folder)
+            except Exception:
+                pass
 
 def process_asset_extraction(
     bundle_path: Path,

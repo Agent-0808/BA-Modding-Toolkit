@@ -556,3 +556,70 @@ class SpineUtils:
             )
             if not skel_success:
                 log(f'    ✗ {t("log.spine.skel_conversion_failed_using_original")}')
+
+    @staticmethod
+    def normalize_legacy_spine_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
+        """
+        修正旧版 Spine 3.8 文件名格式
+        将类似 CH0808_home2.png 的文件重命名为 CH0808_home_2.png
+        并更新 .atlas 文件中的引用
+        此函数创建一个临时目录，复制所有文件并在其中进行重命名，不修改用户原始文件。
+
+        Returns:
+            临时目录路径，包含修正后的文件
+        """
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
+
+            filename_mapping: dict[str, str] = {}
+
+            for source_file in source_folder_path.iterdir():
+                if not source_file.is_file():
+                    continue
+
+                dest_file = temp_dir_path / source_file.name
+
+                if source_file.suffix.lower() == '.png':
+                    old_name = source_file.stem
+                    new_name = old_name
+
+                    match = re.search(r'^(.*)(\d+)$', old_name)
+                    if match:
+                        prefix = match.group(1)
+                        number = match.group(2)
+                        new_name = f"{prefix}_{number}"
+
+                    if new_name != old_name:
+                        old_filename = source_file.name
+                        new_filename = f"{new_name}.png"
+                        dest_file = temp_dir_path / new_filename
+                        filename_mapping[old_filename] = new_filename
+                        log(f"  - {t('log.file.rename', old=old_filename, new=new_filename)}")
+
+                shutil.copy2(source_file, dest_file)
+
+            for atlas_file in temp_dir_path.glob('*.atlas'):
+                try:
+                    content = atlas_file.read_text(encoding='utf-8')
+                    modified = False
+
+                    for old_name, new_name in filename_mapping.items():
+                        if old_name in content:
+                            content = content.replace(old_name, new_name)
+                            modified = True
+
+                    if modified:
+                        atlas_file.write_text(content, encoding='utf-8')
+                        log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
+
+                except Exception as e:
+                    log(f"  ❌ {t("log.error_detail", error=e)}")
+
+            final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
+            final_temp_path = Path(final_temp_dir)
+
+            for item in temp_dir_path.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, final_temp_path / item.name)
+
+            return final_temp_path

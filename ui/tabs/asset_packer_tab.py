@@ -30,6 +30,17 @@ class AssetPackerTab(TabFrame):
             label_text=t("ui.packer.placeholder_bundle")
         )
         
+        # 旧版 Spine 文件名修正选项
+        options_frame = tk.Frame(self, bg=Theme.FRAME_BG)
+        options_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.spine38_namefix_checkbutton = UIComponents.create_checkbutton(
+            options_frame,
+            "修正旧版Spine文件名",
+            self.app.enable_spine38_namefix_var
+        )
+        self.spine38_namefix_checkbutton.pack(anchor=tk.W)
+
         # 操作按钮区域
         action_button_frame = tk.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=10)
@@ -111,6 +122,7 @@ class AssetPackerTab(TabFrame):
             output_dir = output_dir,
             save_options = save_options,
             spine_options = spine_options,
+            enable_rename_fix = self.app.enable_spine38_namefix_var.get(),
             log = self.logger.log
         )
         
