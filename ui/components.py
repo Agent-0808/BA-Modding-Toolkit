@@ -191,12 +191,13 @@ class UIComponents:
         return tk.Button(parent, text=text, command=command, **button_kwargs)
 
     @staticmethod
-    def create_checkbutton(parent, text, variable):
+    def create_checkbutton(parent, text, variable, command=None):
         """创建复选框组件"""
         return tk.Checkbutton(
             parent, 
             text=text, 
             variable=variable,
+            command=command,
             font=Theme.INPUT_FONT, 
             bg=Theme.FRAME_BG, 
             fg=Theme.TEXT_NORMAL, 
@@ -309,7 +310,7 @@ class UIComponents:
             select_cmd: 选择按钮命令
             open_cmd: 打开按钮命令（可选）
             placeholder_text: 占位符文本（可选）
-            show_open_button: 是否显示"开"按钮，默认为True
+            open_button: 是否显示"开"按钮，默认为True
             
         Returns:
             创建的框架组件
@@ -357,7 +358,6 @@ class UIComponents:
         Returns:
             创建的下拉框组件
         """
-        import tkinter.ttk as ttk
         
         # 设置默认字体
         if font is None:

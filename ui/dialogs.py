@@ -58,9 +58,9 @@ class SettingsDialog(tk.Toplevel):
         global_options_frame = tk.LabelFrame(container, text=t("ui.settings.group_global"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=5, pady=5)
         global_options_frame.pack(fill=tk.X, pady=(5, 0))
         
-        self.padding_checkbox = tk.Checkbutton(global_options_frame, text=t("option.padding"), variable=self.app.enable_padding_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
-        crc_checkbox = tk.Checkbutton(global_options_frame, text=t("option.crc_correction"), variable=self.app.enable_crc_correction_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG, command=self.toggle_padding_checkbox_state)
-        backup_checkbox = tk.Checkbutton(global_options_frame, text=t("option.backup"), variable=self.app.create_backup_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
+        self.padding_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.padding"), self.app.enable_padding_var)
+        crc_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.crc_correction"), self.app.enable_crc_correction_var, self.toggle_padding_checkbox_state)
+        backup_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.backup"), self.app.create_backup_var)
 
         # 压缩方式下拉框
         compression_frame = tk.Frame(global_options_frame, bg=Theme.FRAME_BG)
@@ -86,10 +86,10 @@ class SettingsDialog(tk.Toplevel):
         asset_checkbox_container = tk.Frame(asset_replace_frame, bg=Theme.FRAME_BG)
         asset_checkbox_container.pack(fill=tk.X)
         
-        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_all"), variable=self.app.replace_all_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT)
-        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_texture"), variable=self.app.replace_texture2d_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
-        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_textasset"), variable=self.app.replace_textasset_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
-        tk.Checkbutton(asset_checkbox_container, text=t("option.replace_mesh"), variable=self.app.replace_mesh_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG).pack(side=tk.LEFT, padx=(0, 20))
+        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_all"), self.app.replace_all_var).pack(side=tk.LEFT)
+        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_texture"), self.app.replace_texture2d_var).pack(side=tk.LEFT, padx=(0, 20))
+        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_textasset"), self.app.replace_textasset_var).pack(side=tk.LEFT, padx=(0, 20))
+        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_mesh"), self.app.replace_mesh_var).pack(side=tk.LEFT, padx=(0, 20))
         
         # Spine 转换器设置
         spine_frame = tk.LabelFrame(container, text=t("ui.settings.group_spine"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
@@ -99,7 +99,7 @@ class SettingsDialog(tk.Toplevel):
         spine_options_frame = tk.Frame(spine_frame, bg=Theme.FRAME_BG)
         spine_options_frame.pack(fill=tk.X)
         
-        spine_conversion_checkbox = tk.Checkbutton(spine_options_frame, text=t("option.spine_conversion"), variable=self.app.enable_spine_conversion_var, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, selectcolor=Theme.INPUT_BG)
+        spine_conversion_checkbox = UIComponents.create_checkbutton(spine_options_frame, t("option.spine_conversion"), self.app.enable_spine_conversion_var)
         spine_conversion_checkbox.pack(side=tk.LEFT, padx=(0, 10))
         
         # 目标版本输入框
