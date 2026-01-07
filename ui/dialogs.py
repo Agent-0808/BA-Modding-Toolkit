@@ -1,15 +1,18 @@
 # ui/dialogs.py
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 from pathlib import Path
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ui.app import App
 
 from i18n import t
 from .components import Theme, UIComponents
 from .utils import select_file
 
 class SettingsDialog(tk.Toplevel):
-    def __init__(self, master, app_instance):
+    def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance # 保存主应用的引用
 
