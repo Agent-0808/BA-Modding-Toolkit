@@ -50,7 +50,7 @@ class SettingsDialog(tk.Toplevel):
         language_label = tk.Label(language_frame, text=t("ui.label.language"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
         language_label.pack(side=tk.LEFT, padx=(0, 10))
         
-        language_combo = UIComponents.create_combobox(language_frame, textvariable=self.app.language_var, values=["zh-CN", "debug"], width=10)
+        language_combo = UIComponents.create_combobox(language_frame, textvariable=self.app.language_var, values=self.app.available_languages, width=10)
         language_combo.pack(side=tk.LEFT)
         language_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
         
@@ -203,11 +203,15 @@ class SettingsDialog(tk.Toplevel):
     def _on_language_changed(self, event=None):
         """语言选择改变时的处理"""
         selected_language = self.app.language_var.get()
-        self.app.logger.log(f"语言已切换为: {selected_language}")
+        self.app.logger.log(t("log.config.language_changed", language=selected_language))
         
-        # 弹出提示对话框
-        messagebox.showinfo(
+        # 弹出确认对话框
+        if messagebox.askyesno(
             t("common.tip"),
             t("message.config.language_changed"),
             parent=self
-        )
+        ):
+            # 保存配置
+            self.app.save_current_config()
+            # 关闭程序
+            self.master.destroy()

@@ -94,6 +94,7 @@ class App(tk.Frame):
         
         # 语言设置
         self.language_var = tk.StringVar(value="zh-CN")
+        self.available_languages = i18n_manager.get_available_languages()
         
         # 设置默认值
         self._set_default_values()

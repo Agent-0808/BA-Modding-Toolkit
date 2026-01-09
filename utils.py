@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from i18n import t
+from i18n import i18n_manager, t
 
 def no_log(message):
     """A dummy logger that does nothing."""
@@ -233,9 +233,17 @@ def get_environment_info():
     except AttributeError:
         tkinterdnd2_version = "Unknown"
 
-    import sys
+    # --- Locale and Encoding Information (crucial for file path/text bugs) ---
+    try:
+        import locale
+        lang_code, encoding = locale.getdefaultlocale()
+        system_locale = f"{lang_code} (Encoding: {encoding})"
+    except (ValueError, TypeError):
+        system_locale = "Could not determine"
+
+
     import platform
-    import locale
+    import sys
 
     def _is_admin():
         if sys.platform == 'win32':
@@ -246,35 +254,33 @@ def get_environment_info():
                 return False
         return False # 在非Windows系统上不是管理员
 
-    # --- System Information ---
     lines: list[str] = []
-    lines.append("--- System Information ---")
-    lines.append(f"Operating System:  {platform.system()} {platform.release()} ({platform.architecture()[0]})")
-    lines.append(f"System Platform:   {sys.platform}")
 
-    # --- Locale and Encoding Information (crucial for file path/text bugs) ---
-    try:
-        lang_code, encoding = locale.getdefaultlocale()
-        system_locale = f"{lang_code} (Encoding: {encoding})"
-    except (ValueError, TypeError):
-        system_locale = "Could not determine"
-    
-    lines.append(f"System Locale:     {system_locale}")
-    lines.append(f"Filesystem Enc:    {sys.getfilesystemencoding()}")
-    lines.append(f"Preferred Enc:     {locale.getpreferredencoding()}")
+    # --- Available Languages ---
+    lines.append("\n--- BA Modding Toolkit ---")
+    lines.append(f"Current Language:    {i18n_manager.lang}")
+    lines.append(f"Available Languages: {', '.join(i18n_manager.get_available_languages())}")
+
+    # --- System Information ---
+    lines.append("\n--- System Information ---")
+    lines.append(f"Operating System:    {platform.system()} {platform.release()} ({platform.architecture()[0]})")
+    lines.append(f"System Platform:     {sys.platform}")
+    lines.append(f"System Locale:       {system_locale}")
+    lines.append(f"Filesystem Enc:      {sys.getfilesystemencoding()}")
+    lines.append(f"Preferred Enc:       {locale.getpreferredencoding()}")
     
     # --- Python Information ---
     lines.append("\n--- Python Information ---")
-    lines.append(f"Python Version:    {sys.version.splitlines()[0]}")
-    lines.append(f"Python Executable: {sys.executable}")
-    lines.append(f"Working Directory: {Path.cwd()}")
-    lines.append(f"Running as Admin:  {_is_admin()}")
+    lines.append(f"Python Version:      {sys.version.splitlines()[0]}")
+    lines.append(f"Python Executable:   {sys.executable}")
+    lines.append(f"Working Directory:   {Path.cwd()}")
+    lines.append(f"Running as Admin:    {_is_admin()}")
 
     # --- Library Versions ---
     lines.append("\n--- Library Versions ---")
-    lines.append(f"UnityPy Version:   {unitypy_version}")
-    lines.append(f"Pillow Version:    {pillow_version}")
-    lines.append(f"Tkinter Version:   {tk_version}")
+    lines.append(f"UnityPy Version:     {unitypy_version}")
+    lines.append(f"Pillow Version:      {pillow_version}")
+    lines.append(f"Tkinter Version:     {tk_version}")
     lines.append(f"TkinterDnD2 Version: {tkinterdnd2_version}")
     
     lines.append("")

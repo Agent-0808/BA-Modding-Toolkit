@@ -145,6 +145,22 @@ class I18n:
             self.lang = lang
             self.load_translations()
 
+    def get_available_languages(self) -> list[str]:
+        """获取可用的语言列表"""
+        languages = []
+        
+        if self.locales_dir.exists():
+            for json_file in self.locales_dir.glob("*.json"):
+                lang_code = json_file.stem
+                languages.append(lang_code)
+        
+        languages.sort()
+        
+        if "debug" not in languages:
+            languages.append("debug")
+        
+        return languages
+
 # 创建全局 i18n 实例
 i18n_manager = I18n()
 t = i18n_manager.t
