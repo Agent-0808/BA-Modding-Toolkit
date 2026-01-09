@@ -3,179 +3,232 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from ui.app import App
 
 from i18n import t
-from .components import Theme, UIComponents
+from .components import Theme, UIComponents, ScrollableFrame
 from .utils import select_file
 
 class SettingsDialog(tk.Toplevel):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
-        self.app = app_instance # 保存主应用的引用
+        self.app = app_instance
 
+        self._setup_window()
+
+        self.scroll_frame = ScrollableFrame(self)
+        self.scroll_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        self.content_area = self.scroll_frame.viewport
+
+        self._init_path_settings()
+        self._init_app_settings()
+        self._init_global_options()
+        self._init_asset_options()
+        self._init_spine_settings()
+
+        self._init_footer_buttons()
+
+        self._setup_variable_traces()
+
+    def _setup_window(self):
+        """设置窗口基本属性"""
         self.title(t("ui.settings.title"))
-        self.geometry("500x700")
+        self.geometry("600x700")
         self.configure(bg=Theme.WINDOW_BG)
-        self.transient(master) # 绑定到主窗口
+        self.transient(self.master)
 
-        # --- 将原有的全局设置UI搬到这里 ---
-        container = tk.Frame(self, bg=Theme.WINDOW_BG, padx=15, pady=15)
-        container.pack(fill=tk.BOTH, expand=True)
+    def _create_section(self, title: str) -> tk.LabelFrame:
+        """
+        创建一个带有标题的LabelFrame
 
-        # --- 游戏资源目录 ---
-        UIComponents.create_directory_path_entry(
-            container, t("ui.label.game_root_dir"), self.app.game_resource_dir_var,
-            self.app.select_game_resource_directory, self.app.open_game_resource_in_explorer,
-            placeholder_text=t("ui.label.resource_dir")
+        Args:
+            title: 分节标题
+
+        Returns:
+            创建的LabelFrame组件
+        """
+        section = tk.LabelFrame(
+            self.content_area,
+            text=title,
+            font=Theme.FRAME_FONT,
+            fg=Theme.TEXT_TITLE,
+            bg=Theme.FRAME_BG,
+            padx=15,
+            pady=12
+        )
+        section.pack(fill=tk.X, pady=(0, 10))
+        return section
+
+    def _add_form_row(self, parent: tk.Widget, widget: tk.Widget, label: str | None = None, tooltip: str | None = None) -> None:
+        """
+        核心布局函数: 使用 Grid 布局实现 Label(Col 0) | Widget(Col 1) | Tooltip(Col 2)
+
+        Args:
+            parent: 父容器
+            widget: 控件
+            label: 标签文本
+            tooltip: 可选的提示文本
+        """
+        current_row = parent.grid_size()[1]
+
+        if label:
+            label_widget = tk.Label(parent, text=label, font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL, width=20, anchor="w")
+            label_widget.grid(row=current_row, column=0, sticky="w", padx=(0, 10), pady=5)
+
+        widget.grid(row=current_row, column=1, sticky="ew", padx=5, pady=5)
+
+        if tooltip:
+            tooltip_icon = UIComponents.create_tooltip_icon(parent, tooltip)
+            tooltip_icon.grid(row=current_row, column=2, padx=(5, 0), pady=5)
+
+        parent.columnconfigure(1, weight=1)
+
+    def _add_path_selector_row(self, parent: tk.Widget, label: str, variable: tk.StringVar, action: Callable[[], None], open_cmd: Callable[[], None] | None = None, tooltip: str | None = None) -> None:
+        """
+        专门用于路径选择的复合行构建
+
+        Args:
+            parent: 父容器
+            label: 标签文本
+            variable: 路径变量
+            action: 选择路径的回调函数
+            open_cmd: 打开路径的回调函数（可选）
+            tooltip: 可选的提示文本
+        """
+        path_widget = UIComponents.create_path_entry(parent, None, variable, action, open_cmd, None, True)
+        self._add_form_row(parent, path_widget, label, tooltip)
+
+    def _init_path_settings(self):
+        """初始化路径设置"""
+        section = self._create_section(t("ui.settings.group_paths"))
+
+        self._add_path_selector_row(
+            section,
+            t("ui.label.game_root_dir"),
+            self.app.game_resource_dir_var,
+            self.app.select_game_resource_directory,
+            self.app.open_game_resource_in_explorer
         )
 
-        # --- 输出目录 ---
-        UIComponents.create_directory_path_entry(
-            container, t("ui.label.output_dir"), self.app.output_dir_var,
-            self.app.select_output_directory, self.app.open_output_dir_in_explorer,
-            placeholder_text=t("ui.label.output_dir")
+        self._add_path_selector_row(
+            section,
+            t("ui.label.output_dir"),
+            self.app.output_dir_var,
+            self.app.select_output_directory,
+            self.app.open_output_dir_in_explorer
         )
-        
-        # 应用设置
-        app_settings_frame = tk.LabelFrame(container, text=t("ui.settings.group_app"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
-        app_settings_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        # 语言选择
-        language_frame = tk.Frame(app_settings_frame, bg=Theme.FRAME_BG)
-        language_frame.pack(fill=tk.X)
-        
-        language_label = tk.Label(language_frame, text=t("ui.label.language"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
-        language_label.pack(side=tk.LEFT, padx=(0, 10))
-        
-        language_combo = UIComponents.create_combobox(language_frame, textvariable=self.app.language_var, values=self.app.available_languages, width=10)
-        language_combo.pack(side=tk.LEFT)
+
+    def _init_app_settings(self):
+        """初始化应用设置"""
+        section = self._create_section(t("ui.settings.group_app"))
+
+        language_combo = UIComponents.create_combobox(section, self.app.language_var, self.app.available_languages, width=10)
         language_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
-        
-        # 选项设置
-        global_options_frame = tk.LabelFrame(container, text=t("ui.settings.group_global"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=5, pady=5)
-        global_options_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        self.padding_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.padding"), self.app.enable_padding_var)
-        crc_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.crc_correction"), self.app.enable_crc_correction_var, self.toggle_padding_checkbox_state)
-        backup_checkbox = UIComponents.create_checkbutton(global_options_frame, t("option.backup"), self.app.create_backup_var)
+        self._add_form_row(section, language_combo, t("ui.label.language"))
 
-        # 压缩方式下拉框
-        compression_frame = tk.Frame(global_options_frame, bg=Theme.FRAME_BG)
-        compression_label = tk.Label(compression_frame, text=t("ui.label.compression_method"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
-        compression_combo = UIComponents.create_combobox(compression_frame, textvariable=self.app.compression_method_var, values=["lzma", "lz4", "original", "none"], width=10)
+    def _init_global_options(self):
+        """初始化全局选项"""
+        section = self._create_section(t("ui.settings.group_global"))
 
-        # 布局 - 使用统一的grid布局确保高度对齐
-        crc_checkbox.grid(row=0, column=0, sticky="w", padx=(0, 5))
-        self.padding_checkbox.grid(row=0, column=1, sticky="w", padx=(0, 5))
-        backup_checkbox.grid(row=0, column=2, sticky="w", padx=(0, 5))
-        
-        compression_frame.grid(row=0, column=3, sticky="w", padx=(0, 5))
-        compression_label.pack(side=tk.LEFT)
-        compression_combo.pack(side=tk.LEFT)
-        
-        # 设置行权重确保垂直对齐
-        global_options_frame.rowconfigure(0, weight=1)
-        
-        # 资源替换类型选项
-        asset_replace_frame = tk.LabelFrame(container, text=t("ui.settings.group_assets"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
-        asset_replace_frame.pack(fill=tk.X, pady=8)
-        
-        asset_checkbox_container = tk.Frame(asset_replace_frame, bg=Theme.FRAME_BG)
-        asset_checkbox_container.pack(fill=tk.X)
-        
-        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_all"), self.app.replace_all_var).pack(side=tk.LEFT)
-        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_texture"), self.app.replace_texture2d_var).pack(side=tk.LEFT, padx=(0, 20))
-        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_textasset"), self.app.replace_textasset_var).pack(side=tk.LEFT, padx=(0, 20))
-        UIComponents.create_checkbutton(asset_checkbox_container, t("option.replace_mesh"), self.app.replace_mesh_var).pack(side=tk.LEFT, padx=(0, 20))
-        
-        # Spine 转换器设置
-        spine_frame = tk.LabelFrame(container, text=t("ui.settings.group_spine"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=5)
-        spine_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        # Spine 转换选项
-        spine_options_frame = tk.Frame(spine_frame, bg=Theme.FRAME_BG)
-        spine_options_frame.pack(fill=tk.X)
-        
-        spine_conversion_checkbox = UIComponents.create_checkbutton(spine_options_frame, t("option.spine_conversion"), self.app.enable_spine_conversion_var)
-        spine_conversion_checkbox.pack(side=tk.LEFT, padx=(0, 10))
-        
-        # 目标版本输入框
-        spine_version_label = tk.Label(spine_options_frame, text=t("ui.label.target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
-        spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        spine_version_entry = UIComponents.create_textbox_entry(
-            spine_options_frame, 
-            textvariable=self.app.target_spine_version_var,
-            placeholder_text=t("ui.label.spine_version")
-        )
-        spine_version_entry.pack(side=tk.LEFT)
+        crc_checkbox = UIComponents.create_checkbutton(section, t("option.crc_correction"), self.app.enable_crc_correction_var)
+        self._add_form_row(section, crc_checkbox)
 
-        # Spine 转换器路径设置
-        UIComponents.create_file_path_entry(
-            spine_frame, t("ui.label.skel_converter_path"), self.app.spine_converter_path_var,
+        self.padding_checkbox = UIComponents.create_checkbutton(section, t("option.padding"), self.app.enable_padding_var)
+        self._add_form_row(section, self.padding_checkbox)
+
+        backup_checkbox = UIComponents.create_checkbutton(section, t("option.backup"), self.app.create_backup_var)
+        self._add_form_row(section, backup_checkbox)
+
+        compression_combo = UIComponents.create_combobox(section, self.app.compression_method_var, ["lzma", "lz4", "original", "none"], width=10)
+        self._add_form_row(section, compression_combo, t("ui.label.compression_method"))
+
+    def _init_asset_options(self):
+        """初始化资源替换选项"""
+        section = self._create_section(t("ui.settings.group_assets"))
+
+        replace_all_checkbox = UIComponents.create_checkbutton(section, t("option.replace_all"), self.app.replace_all_var)
+        self._add_form_row(section, replace_all_checkbox)
+
+        replace_texture_checkbox = UIComponents.create_checkbutton(section, t("option.replace_texture"), self.app.replace_texture2d_var)
+        self._add_form_row(section, replace_texture_checkbox)
+
+        replace_textasset_checkbox = UIComponents.create_checkbutton(section, t("option.replace_textasset"), self.app.replace_textasset_var)
+        self._add_form_row(section, replace_textasset_checkbox)
+
+        replace_mesh_checkbox = UIComponents.create_checkbutton(section, t("option.replace_mesh"), self.app.replace_mesh_var)
+        self._add_form_row(section, replace_mesh_checkbox)
+
+    def _init_spine_settings(self):
+        """初始化Spine设置"""
+        section = self._create_section(t("ui.settings.group_spine"))
+
+        spine_conversion_checkbox = UIComponents.create_checkbutton(section, t("option.spine_conversion"), self.app.enable_spine_conversion_var)
+        self._add_form_row(section, spine_conversion_checkbox)
+
+        spine_version_entry = UIComponents.create_textbox_entry(section, self.app.target_spine_version_var, placeholder_text=t("ui.label.spine_version"))
+        self._add_form_row(section, spine_version_entry, t("ui.label.target_version"))
+
+        self._add_path_selector_row(
+            section,
+            t("ui.label.skel_converter_path"),
+            self.app.spine_converter_path_var,
             self.select_spine_converter_path
         )
-        
-        # Spine 降级工具路径设置
-        UIComponents.create_file_path_entry(
-            spine_frame, t("ui.label.atlas_downgrade_path"), self.app.atlas_downgrade_path_var,
+
+        self._add_path_selector_row(
+            section,
+            t("ui.label.atlas_downgrade_path"),
+            self.app.atlas_downgrade_path_var,
             self.select_atlas_downgrade_path
         )
 
-        # 初始化所有动态UI的状态
-        self.toggle_padding_checkbox_state()
-        
-        # 添加配置操作按钮
-        config_buttons_frame = tk.Frame(container, bg=Theme.WINDOW_BG)
-        config_buttons_frame.pack(fill=tk.X, pady=(15, 0))
-        
-        # 配置网格布局，让三个按钮均匀分布
-        config_buttons_frame.columnconfigure(0, weight=1)
-        config_buttons_frame.columnconfigure(1, weight=1)
-        config_buttons_frame.columnconfigure(2, weight=1)
-        
-        save_button = UIComponents.create_button(config_buttons_frame, t("common.save"), self.app.save_current_config, bg_color=Theme.BUTTON_SUCCESS_BG)
+    def _init_footer_buttons(self):
+        """初始化底部按钮栏"""
+        footer_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
+        footer_frame.pack(fill=tk.X, padx=15, pady=15)
+
+        footer_frame.columnconfigure(0, weight=1)
+        footer_frame.columnconfigure(1, weight=1)
+        footer_frame.columnconfigure(2, weight=1)
+
+        save_button = UIComponents.create_button(footer_frame, t("common.save"), self.app.save_current_config, bg_color=Theme.BUTTON_SUCCESS_BG)
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        
-        load_button = UIComponents.create_button(config_buttons_frame, t("common.load"), self.load_config, bg_color=Theme.BUTTON_WARNING_BG)
+
+        load_button = UIComponents.create_button(footer_frame, t("common.load"), self.load_config, bg_color=Theme.BUTTON_WARNING_BG)
         load_button.grid(row=0, column=1, sticky="ew", padx=5)
-        
-        reset_button = UIComponents.create_button(config_buttons_frame, t("common.reset"), self.reset_to_default, bg_color=Theme.BUTTON_DANGER_BG)
+
+        reset_button = UIComponents.create_button(footer_frame, t("common.reset"), self.reset_to_default, bg_color=Theme.BUTTON_DANGER_BG)
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
-    def toggle_padding_checkbox_state(self):
-        """根据CRC修正复选框的状态，启用或禁用添加私货复选框"""
+    def _setup_variable_traces(self):
+        """设置变量变化监听"""
+        self.app.enable_crc_correction_var.trace_add("write", self._on_crc_change)
+
+    def _on_crc_change(self, *args):
+        """CRC修正复选框状态变化时的处理"""
         if self.app.enable_crc_correction_var.get():
             self.padding_checkbox.config(state=tk.NORMAL)
         else:
             self.app.enable_padding_var.set(False)
             self.padding_checkbox.config(state=tk.DISABLED)
-    
+
     def load_config(self):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
             self.app.logger.log(t("log.status.ready"))
             messagebox.showinfo(t("common.success"), t("message.config.loaded"))
-            # 更新UI状态
-            self.toggle_padding_checkbox_state()
         else:
             self.app.logger.log(t("log.config.load_failed"))
             messagebox.showerror(t("common.error"), t("message.config.load_failed"))
-    
+
     def reset_to_default(self):
         """重置为默认设置"""
         if messagebox.askyesno(t("common.tip"), t("message.confirm_reset_settings")):
-            # 使用统一的默认值设置方法
             self.app._set_default_values()
-            
-            # 更新UI状态
-            self.toggle_padding_checkbox_state()
-            
             self.app.logger.log(t("log.config.reset"))
-    
+
     def select_spine_converter_path(self):
         """选择Spine转换器路径"""
         select_file(

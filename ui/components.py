@@ -299,24 +299,28 @@ class UIComponents:
         )
 
     @staticmethod
-    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True):
+    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True, auto_pack=False):
         """
         创建路径输入框组件
-        
+
         Args:
             parent: 父组件
-            title: 标题
+            title: 标题（可选，用于向后兼容）
             textvariable: 文本变量
             select_cmd: 选择按钮命令
             open_cmd: 打开按钮命令（可选）
             placeholder_text: 占位符文本（可选）
             open_button: 是否显示"开"按钮，默认为True
-            
+            auto_pack: 是否自动pack布局，默认为False（False时返回Frame供手动布局，True时返回LabelFrame并自动pack）
+
         Returns:
             创建的框架组件
         """
-        frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=8, pady=8)
-        frame.pack(fill=tk.X, pady=5)
+        if auto_pack:
+            frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=8, pady=8)
+            frame.pack(fill=tk.X, pady=5)
+        else:
+            frame = tk.Frame(parent, bg=Theme.FRAME_BG)
 
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
@@ -327,19 +331,19 @@ class UIComponents:
         if open_button and open_cmd is not None:
             open_btn = UIComponents.create_button(frame, t("action.open_short"), open_cmd, bg_color=Theme.BUTTON_SECONDARY_BG, style="compact")
             open_btn.pack(side=tk.LEFT)
-            
+
         return frame
 
     # 保留原函数作为向后兼容的包装器
     @staticmethod
     def create_directory_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text=None):
         """创建目录路径输入框组件（向后兼容）"""
-        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True)
+        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True, auto_pack=True)
 
     @staticmethod
     def create_file_path_entry(parent, title, textvariable, select_cmd):
         """创建文件路径输入框组件（向后兼容）"""
-        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
+        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False, auto_pack=True)
 
     @staticmethod
     def create_combobox(parent, textvariable, values, state="readonly", width=None, font=None, **kwargs):
@@ -376,7 +380,35 @@ class UIComponents:
         # 合并其他参数
         combo_kwargs.update(kwargs)
         
-        return ttk.Combobox(parent, **combo_kwargs)
+        combobox = ttk.Combobox(parent, **combo_kwargs)
+        
+        # 阻止鼠标滚轮事件,避免滚动时改变选项
+        combobox.bind("<MouseWheel>", lambda e: "break")
+        
+        return combobox
+
+    @staticmethod
+    def create_tooltip_icon(parent, text: str) -> tk.Label:
+        """
+        创建一个带有'ⓘ'符号的Label,鼠标悬停时显示Tooltip
+        
+        Args:
+            parent: 父组件
+            text: 提示文本
+            
+        Returns:
+            创建的Label组件
+        """
+        label = tk.Label(
+            parent,
+            text="ⓘ",
+            fg=Theme.BUTTON_PRIMARY_BG,
+            bg=Theme.FRAME_BG,
+            font=("Microsoft YaHei", 10, "bold"),
+            cursor="question_arrow"
+        )
+        Tooltip(label, text)
+        return label
 
 
 class ModeSwitcher:
@@ -717,5 +749,135 @@ class FileListbox:
         return self.frame
     
     def get_listbox(self):
-        """获取列表框控件，用于直接操作"""
+        """获取列表框控件,用于直接操作"""
         return self.listbox
+
+
+class Tooltip:
+    """悬浮提示组件,鼠标悬停时显示提示信息"""
+    
+    def __init__(self, widget, text: str, delay: int = 500):
+        """
+        初始化悬浮提示
+        
+        Args:
+            widget: 要绑定提示的控件
+            text: 提示文本
+            delay: 延迟显示时间(毫秒)
+        """
+        self.widget = widget
+        self.text = text
+        self.delay = delay
+        self.tip_window = None
+        self.tip_id = None
+        
+        self.widget.bind("<Enter>", self._show_tip)
+        self.widget.bind("<Leave>", self._hide_tip)
+    
+    def _show_tip(self, event=None):
+        """显示提示框"""
+        if self.tip_id:
+            self.widget.after_cancel(self.tip_id)
+            self.tip_id = None
+        
+        self.tip_id = self.widget.after(self.delay, self._create_tip_window)
+    
+    def _hide_tip(self, event=None):
+        """隐藏提示框"""
+        if self.tip_id:
+            self.widget.after_cancel(self.tip_id)
+            self.tip_id = None
+        
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
+    
+    def _create_tip_window(self):
+        """创建提示窗口"""
+        if self.tip_window:
+            return
+        
+        x, y, _, _ = self.widget.bbox("insert")
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 25
+        
+        self.tip_window = tk.Toplevel(self.widget)
+        self.tip_window.wm_overrideredirect(True)
+        self.tip_window.wm_geometry(f"+{x}+{y}")
+        
+        label = tk.Label(
+            self.tip_window,
+            text=self.text,
+            justify=tk.LEFT,
+            background="#ffffe0",
+            relief=tk.SOLID,
+            borderwidth=1,
+            font=("Microsoft YaHei", 9),
+            padx=5,
+            pady=3
+        )
+        label.pack(ipadx=1)
+
+
+class ScrollableFrame(tk.Frame):
+    """可滚动的Frame容器,支持鼠标滚轮"""
+    
+    def __init__(self, parent, *args, **kwargs):
+        """
+        初始化可滚动Frame
+        
+        Args:
+            parent: 父控件
+            *args: Frame位置参数
+            **kwargs: Frame关键字参数
+        """
+        super().__init__(parent, *args, **kwargs)
+        
+        self.canvas = tk.Canvas(self, bg=Theme.WINDOW_BG, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.viewport = tk.Frame(self.canvas, bg=Theme.WINDOW_BG)
+        
+        self.viewport.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        
+        self.canvas.create_window((0, 0), window=self.viewport, anchor="nw", width=self.canvas.winfo_width())
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        self._bind_mouse_wheel()
+        self._bind_resize_event()
+    
+    def _bind_resize_event(self):
+        """绑定窗口大小变化事件,使内容宽度自适应"""
+        self.canvas.bind("<Configure>", self._on_canvas_resize)
+    
+    def _on_canvas_resize(self, event):
+        """Canvas大小变化时调整内容窗口宽度"""
+        self.canvas.itemconfig(self.canvas.find_withtag("all")[0], width=event.width)
+    
+    def _bind_mouse_wheel(self) -> None:
+        """绑定鼠标进入/离开事件,实现滚轮焦点切换"""
+        self.bind('<Enter>', self._on_mouse_enter)
+        self.bind('<Leave>', self._on_mouse_leave)
+
+    def _on_mouse_enter(self, event: tk.Event) -> None:
+        """鼠标进入区域,绑定全局滚轮事件"""
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_mouse_leave(self, event: tk.Event) -> None:
+        """鼠标离开区域,解绑全局滚轮事件"""
+        self.canvas.unbind_all("<MouseWheel>")
+
+    def _on_mousewheel(self, event: tk.Event) -> None:
+        """处理鼠标滚轮事件"""
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def destroy(self) -> None:
+        """销毁时清理绑定"""
+        self.canvas.unbind_all("<MouseWheel>")
+        self.canvas.unbind("<Configure>")
+        super().destroy()
