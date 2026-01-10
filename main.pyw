@@ -1,11 +1,14 @@
 # main.py
 
 from tkinterdnd2 import TkinterDnD
+import ttkbootstrap
 from ui import App
 
 if __name__ == "__main__":
-    # 使用 TkinterDnD.Tk() 作为主窗口以支持拖放
+    # 先创建 TkinterDnD 窗口
     root = TkinterDnD.Tk()
+    # 应用 ttkbootstrap 样式
+    ttkbootstrap.Style(theme='cosmo')
     
     # 创建并运行应用
     app = App(root)

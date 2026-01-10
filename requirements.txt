@@ -1,3 +1,4 @@
 tkinterdnd2
 UnityPy==1.23.0
 Pillow
+ttkbootstrap>=1.10.1

@@ -286,7 +286,7 @@ class App(tk.Frame):
                 self.sidebar_frame,
                 text = title,
                 command = lambda t=tab: self.show_tab(t),
-                wraplength=100
+                bootstyle="secondary"  # 确保按钮颜色比侧边栏背景稍浅
             )
             btn.pack(fill=tk.X, padx=5, pady=2)
             self.tab_buttons.append((btn, tab))
@@ -307,12 +307,12 @@ class App(tk.Frame):
         # 更新按钮样式
         for btn, tab in self.tab_buttons:
             if tab == tab_to_show:
-                btn.config(bg=Theme.SIDEBAR_BUTTON_ACTIVE_BG, fg=Theme.SIDEBAR_BUTTON_ACTIVE_FG)
+                btn.config(bootstyle="primary")  # 激活状态使用更亮的样式
             else:
-                btn.config(bg=Theme.SIDEBAR_BUTTON_BG, fg=Theme.SIDEBAR_BUTTON_FG)
+                btn.config(bootstyle="secondary")  # 非激活状态使用稍浅样式，比侧边栏背景稍浅
     
     def create_log_area(self, parent):
-        log_frame = tk.LabelFrame(parent, text=t("ui.log_area"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, pady=2)
+        log_frame = tk.LabelFrame(parent, text=t("ui.log_area"), font=Theme.FRAME_FONT, fg=Theme.TEXT_LIGHT, bg=Theme.LOG_BG, pady=2)
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0) # 日志区不需要顶部pady
 
         log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=8) #添加 height 参数
