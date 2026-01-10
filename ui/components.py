@@ -191,11 +191,19 @@ class UIComponents:
         return tk.Button(parent, text=text, command=command, **button_kwargs)
 
     @staticmethod
-    def create_checkbutton(parent, text, variable, command=None):
-        """创建复选框组件"""
-        return tk.Checkbutton(
+    def create_checkbutton(parent, text, variable, command=None, form_row=False):
+        """创建复选框组件
+        
+        Args:
+            parent: 父组件
+            text: 复选框文本（form_row=True时忽略）
+            variable: 变量
+            command: 命令回调
+            form_row: 是否作为表单行使用（True时不显示文本，文本由外部Label显示）
+        """
+        checkbutton = tk.Checkbutton(
             parent, 
-            text=text, 
+            text="" if form_row else text, 
             variable=variable,
             command=command,
             font=Theme.INPUT_FONT, 
@@ -204,6 +212,7 @@ class UIComponents:
             selectcolor=Theme.INPUT_BG,
             relief=tk.FLAT
         )
+        return checkbutton
 
     @staticmethod
     def _debounce_wraplength(event: tk.Event) -> None:
@@ -299,7 +308,7 @@ class UIComponents:
         )
 
     @staticmethod
-    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True, auto_pack=False):
+    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True, form_row=False):
         """
         创建路径输入框组件
 
@@ -311,16 +320,16 @@ class UIComponents:
             open_cmd: 打开按钮命令（可选）
             placeholder_text: 占位符文本（可选）
             open_button: 是否显示"开"按钮，默认为True
-            auto_pack: 是否自动pack布局，默认为False（False时返回Frame供手动布局，True时返回LabelFrame并自动pack）
+            form_row: 是否作为表单行使用（True时返回Frame供手动布局，False时返回LabelFrame并自动pack）
 
         Returns:
             创建的框架组件
         """
-        if auto_pack:
+        if form_row:
+            frame = tk.Frame(parent, bg=Theme.FRAME_BG)
+        else:
             frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=8, pady=8)
             frame.pack(fill=tk.X, pady=5)
-        else:
-            frame = tk.Frame(parent, bg=Theme.FRAME_BG)
 
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5), ipady=3)
@@ -338,12 +347,12 @@ class UIComponents:
     @staticmethod
     def create_directory_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text=None):
         """创建目录路径输入框组件（向后兼容）"""
-        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True, auto_pack=True)
+        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True)
 
     @staticmethod
     def create_file_path_entry(parent, title, textvariable, select_cmd):
         """创建文件路径输入框组件（向后兼容）"""
-        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False, auto_pack=True)
+        return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
 
     @staticmethod
     def create_combobox(parent, textvariable, values, state="readonly", width=None, font=None, **kwargs):

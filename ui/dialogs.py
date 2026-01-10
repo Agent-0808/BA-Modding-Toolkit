@@ -97,7 +97,7 @@ class SettingsDialog(tk.Toplevel):
             open_cmd: 打开路径的回调函数（可选）
             tooltip: 可选的提示文本
         """
-        path_widget = UIComponents.create_path_entry(parent, None, variable, action, open_cmd, None, True)
+        path_widget = UIComponents.create_path_entry(parent, None, variable, action, open_cmd, None, True, form_row=True)
         self._add_form_row(parent, path_widget, label, tooltip)
 
     def _init_path_settings(self):
@@ -132,14 +132,14 @@ class SettingsDialog(tk.Toplevel):
         """初始化全局选项"""
         section = self._create_section(t("ui.settings.group_global"))
 
-        crc_checkbox = UIComponents.create_checkbutton(section, t("option.crc_correction"), self.app.enable_crc_correction_var)
-        self._add_form_row(section, crc_checkbox)
+        crc_checkbox = UIComponents.create_checkbutton(section, t("option.crc_correction"), self.app.enable_crc_correction_var, form_row=True)
+        self._add_form_row(section, crc_checkbox, t("option.crc_correction"), "测试文本")
 
-        self.padding_checkbox = UIComponents.create_checkbutton(section, t("option.padding"), self.app.enable_padding_var)
-        self._add_form_row(section, self.padding_checkbox)
+        self.padding_checkbox = UIComponents.create_checkbutton(section, t("option.padding"), self.app.enable_padding_var, form_row=True)
+        self._add_form_row(section, self.padding_checkbox, t("option.padding"))
 
-        backup_checkbox = UIComponents.create_checkbutton(section, t("option.backup"), self.app.create_backup_var)
-        self._add_form_row(section, backup_checkbox)
+        backup_checkbox = UIComponents.create_checkbutton(section, t("option.backup"), self.app.create_backup_var, form_row=True)
+        self._add_form_row(section, backup_checkbox, t("option.backup"))
 
         compression_combo = UIComponents.create_combobox(section, self.app.compression_method_var, ["lzma", "lz4", "original", "none"], width=10)
         self._add_form_row(section, compression_combo, t("ui.label.compression_method"))
@@ -148,24 +148,24 @@ class SettingsDialog(tk.Toplevel):
         """初始化资源替换选项"""
         section = self._create_section(t("ui.settings.group_assets"))
 
-        replace_all_checkbox = UIComponents.create_checkbutton(section, t("option.replace_all"), self.app.replace_all_var)
-        self._add_form_row(section, replace_all_checkbox)
+        replace_all_checkbox = UIComponents.create_checkbutton(section, t("option.replace_all"), self.app.replace_all_var, form_row=True)
+        self._add_form_row(section, replace_all_checkbox, t("option.replace_all"))
 
-        replace_texture_checkbox = UIComponents.create_checkbutton(section, t("option.replace_texture"), self.app.replace_texture2d_var)
-        self._add_form_row(section, replace_texture_checkbox)
+        replace_texture_checkbox = UIComponents.create_checkbutton(section, t("option.replace_texture"), self.app.replace_texture2d_var, form_row=True)
+        self._add_form_row(section, replace_texture_checkbox, t("option.replace_texture"))
 
-        replace_textasset_checkbox = UIComponents.create_checkbutton(section, t("option.replace_textasset"), self.app.replace_textasset_var)
-        self._add_form_row(section, replace_textasset_checkbox)
+        replace_textasset_checkbox = UIComponents.create_checkbutton(section, t("option.replace_textasset"), self.app.replace_textasset_var, form_row=True)
+        self._add_form_row(section, replace_textasset_checkbox, t("option.replace_textasset"))
 
-        replace_mesh_checkbox = UIComponents.create_checkbutton(section, t("option.replace_mesh"), self.app.replace_mesh_var)
-        self._add_form_row(section, replace_mesh_checkbox)
+        replace_mesh_checkbox = UIComponents.create_checkbutton(section, t("option.replace_mesh"), self.app.replace_mesh_var, form_row=True)
+        self._add_form_row(section, replace_mesh_checkbox, t("option.replace_mesh"))
 
     def _init_spine_settings(self):
         """初始化Spine设置"""
         section = self._create_section(t("ui.settings.group_spine"))
 
-        spine_conversion_checkbox = UIComponents.create_checkbutton(section, t("option.spine_conversion"), self.app.enable_spine_conversion_var)
-        self._add_form_row(section, spine_conversion_checkbox)
+        spine_conversion_checkbox = UIComponents.create_checkbutton(section, t("option.spine_conversion"), self.app.enable_spine_conversion_var, form_row=True)
+        self._add_form_row(section, spine_conversion_checkbox, t("option.spine_conversion"))
 
         spine_version_entry = UIComponents.create_textbox_entry(section, self.app.target_spine_version_var, placeholder_text=t("ui.label.spine_version"))
         self._add_form_row(section, spine_version_entry, t("ui.label.target_version"))
