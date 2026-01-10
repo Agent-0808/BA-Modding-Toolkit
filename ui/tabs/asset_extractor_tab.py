@@ -33,7 +33,7 @@ class AssetExtractorTab(TabFrame):
         )
 
         # 资源类型选项
-        options_frame = tk.LabelFrame(self, text=t("ui.extractor.options_title"), font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=10, pady=10)
+        options_frame = ttk.Labelframe(self, text=t("ui.extractor.options_title"))
         options_frame.pack(fill=tk.X, pady=5)
         
         # Spine 降级选项

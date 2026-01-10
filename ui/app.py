@@ -3,6 +3,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from pathlib import Path
+from ttkbootstrap.scrolled import ScrolledText 
+import ttkbootstrap.constants
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
@@ -235,8 +237,8 @@ class App(tk.Frame):
         # 清空父容器的布局配置
         parent.pack_propagate(False)
         
-        # 左侧侧边栏
-        self.sidebar_frame = tk.Frame(parent, bg=Theme.SIDEBAR_BG, width=120)
+        # 左侧侧边栏 - 使用ttk.Frame并设置bootstyle="dark"实现深色背景
+        self.sidebar_frame = ttk.Frame(parent, bootstyle="dark", width=120)
         self.sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
         self.sidebar_frame.pack_propagate(False)  # 固定宽度
         
@@ -284,11 +286,13 @@ class App(tk.Frame):
         for tab, title in self.tabs:
             btn = UIComponents.create_button(
                 self.sidebar_frame,
-                text = title,
-                command = lambda t=tab: self.show_tab(t),
-                bootstyle="secondary"  # 确保按钮颜色比侧边栏背景稍浅
+                text=title,
+                command=lambda t=tab: self.show_tab(t),
+                # 初始样式设为 secondary 或 light-outline，使其在深色背景上可见
+                bootstyle="light-outline" 
             )
-            btn.pack(fill=tk.X, padx=5, pady=2)
+            # 增加 ipadx/ipady 让按钮看起来更饱满
+            btn.pack(fill=tk.X, padx=5, pady=2) 
             self.tab_buttons.append((btn, tab))
     
     def show_tab(self, tab_to_show):
@@ -312,14 +316,40 @@ class App(tk.Frame):
                 btn.config(bootstyle="secondary")  # 非激活状态使用稍浅样式，比侧边栏背景稍浅
     
     def create_log_area(self, parent):
-        log_frame = tk.LabelFrame(parent, text=t("ui.log_area"), font=Theme.FRAME_FONT, fg=Theme.TEXT_LIGHT, bg=Theme.LOG_BG, pady=2)
-        log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0) # 日志区不需要顶部pady
+        """
+        创建日志区域，使用自定义的深色风格
+        """
+        # 创建外层容器（带标题的边框）
+        log_frame = ttk.Labelframe(
+            parent, 
+            text=t("ui.log_area"), 
+            bootstyle="default",
+            padding=2
+        )
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0)
 
-        log_text = tk.Text(log_frame, wrap=tk.WORD, bg=Theme.LOG_BG, fg=Theme.LOG_FG, font=Theme.LOG_FONT, relief=tk.FLAT, bd=0, padx=5, pady=5, insertbackground=Theme.LOG_FG, height=8) #添加 height 参数
-        scrollbar = tk.Scrollbar(log_frame, orient=tk.VERTICAL, command=log_text.yview)
-        log_text.configure(yscrollcommand=scrollbar.set)
-        
-        log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        log_text.config(state=tk.DISABLED)
-        return log_text
+        # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
+        st = ScrolledText(
+            log_frame,
+            padding=5,
+            height=8,
+            autohide=True,            # 自动隐藏滚动条
+            bootstyle="round" # 滚动条样式
+        )
+        st.pack(fill=tk.BOTH, expand=True)
+
+        # 这里直接操作 st.text (内部的 Text 组件) 来修改颜色
+        st.text.configure(
+            font=Theme.LOG_FONT,
+            background=Theme.LOG_BG,
+            foreground=Theme.LOG_FG,
+            selectbackground="#3a5a7a",      # 选中时的背景色
+            insertbackground=Theme.LOG_FG,        # 光标颜色
+            state=tk.DISABLED                # 初始设为不可编辑
+        )
+
+        # 保存引用以防被垃圾回收（虽然在 pack 后通常不需要）
+        self.log_scrolled_wrapper = st
+
+        # 返回内部的 Text 组件，这样你现有的 Logger 类无需修改即可直接使用
+        return st.text

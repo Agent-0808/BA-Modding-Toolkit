@@ -106,14 +106,9 @@ class UIComponents:
     @staticmethod
     def create_textbox_entry(parent, textvariable, width=None, placeholder_text=None, readonly=False):
         """创建统一的文本输入框组件"""
-        entry = tk.Entry(
-            parent, 
-            textvariable=textvariable, 
-            font=Theme.INPUT_FONT, 
-            bg=Theme.INPUT_BG, 
-            fg=Theme.TEXT_NORMAL, 
-            relief=tk.SUNKEN, 
-            bd=1,
+        entry = ttk.Entry(
+            parent,
+            textvariable=textvariable,
             width=width
         )
         
@@ -126,12 +121,10 @@ class UIComponents:
             def on_focus_in(event):
                 if entry.get() == placeholder_text:
                     entry.delete(0, tk.END)
-                    entry.config(fg=Theme.TEXT_NORMAL)
             
             def on_focus_out(event):
                 if not entry.get():
                     entry.insert(0, placeholder_text)
-                    entry.config(fg=Theme.TEXT_NORMAL)
             
             # 初始显示占位符
             if not entry.get():
@@ -264,14 +257,14 @@ class UIComponents:
             search_path_var: (可选) 搜索路径变量
             clear_cmd: (可选) 清除按钮回调。点击清除按钮时，UI会自动恢复初始状态，并调用此函数清理外部变量。
         """
-        frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=15, pady=12)
+        frame = ttk.Labelframe(parent, text=title, padding=(15, 12))
         frame.pack(fill=tk.X, pady=(0, 5))
 
         # 如果提供了 search_path_var，则在拖放区上方添加查找路径输入框
         if search_path_var is not None:
-            search_frame = tk.Frame(frame, bg=Theme.FRAME_BG)
+            search_frame = ttk.Frame(frame)
             search_frame.pack(fill=tk.X, pady=(0, 8))
-            tk.Label(search_frame, text=t("ui.label.search_path"), bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL).pack(side=tk.LEFT, padx=(0,5))
+            ttk.Label(search_frame, text=t("ui.label.search_path")).pack(side=tk.LEFT, padx=(0,5))
             UIComponents.create_textbox_entry(
                 search_frame, 
                 textvariable=search_path_var,
@@ -287,7 +280,7 @@ class UIComponents:
         label.bind('<Configure>', UIComponents._debounce_wraplength)
 
         # 按钮容器 (用于并排显示浏览和清除按钮)
-        btn_frame = tk.Frame(frame, bg=Theme.FRAME_BG)
+        btn_frame = ttk.Frame(frame)
         btn_frame.pack(anchor=tk.CENTER)
 
         # 浏览按钮
@@ -347,7 +340,7 @@ class UIComponents:
             创建的框架组件
         """
         if form_row:
-            frame = tk.Frame(parent, bg=Theme.FRAME_BG)
+            frame = ttk.Frame(parent)
         else:
             frame = tk.LabelFrame(parent, text=title, font=Theme.FRAME_FONT, fg=Theme.TEXT_TITLE, bg=Theme.FRAME_BG, padx=8, pady=8)
             frame.pack(fill=tk.X, pady=5)
@@ -665,14 +658,10 @@ class FileListbox:
     def _create_widgets(self, title):
         """创建组件UI"""
         # 创建框架
-        self.frame = tk.LabelFrame(
+        self.frame = ttk.Labelframe(
             self.parent, 
             text=title, 
-            font=Theme.FRAME_FONT, 
-            fg=Theme.TEXT_TITLE, 
-            bg=Theme.FRAME_BG, 
-            padx=15, 
-            pady=12
+            padding=(15, 12)
         )
         self.frame.columnconfigure(0, weight=1)
         
