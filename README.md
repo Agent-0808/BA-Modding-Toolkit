@@ -326,3 +326,4 @@ This project uses the following excellent 3rd-party libraries:
 - [UnityPy](https://github.com/K0lb3/UnityPy): Core library for parsing and manipulating Unity Bundle files
 - [Pillow](https://python-pillow.github.io/): Export functionality for Texture2D type assets in the game
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): Adds drag-and-drop functionality support for Tkinter
+- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap): Modern Tkinter theme library

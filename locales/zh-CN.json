@@ -392,7 +392,8 @@
 			"group_global": "全局选项",
 			"group_assets": "资源处理选项",
 			"group_spine": "Spine 工具设置",
-			"group_app": "应用设置"
+			"group_app": "应用设置",
+			"group_paths": "路径设置"
 		},
 		"mod_update": {
 			"mode_single": "单个更新",

@@ -328,3 +328,4 @@ BA-Modding-Toolkit/
 - [UnityPy](https://github.com/K0lb3/UnityPy): 用于解析和操作 Unity Bundle 文件的核心库
 - [Pillow](https://python-pillow.github.io/): 游戏中的 Texture2D 类型资产的导出功能
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): 为 Tkinter 添加拖放功能支持
+- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap): 现代化的 Tkinter 主题库

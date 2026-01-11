@@ -2,9 +2,9 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox
+import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.scrolled import ScrolledText 
-import ttkbootstrap.constants
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
@@ -107,7 +107,7 @@ class App(tk.Frame):
         self.master.grid_columnconfigure(0, weight=1)  # 主内容区域可扩展
         
         # 创建主内容框架
-        main_frame = tk.Frame(self.master, bg=Theme.WINDOW_BG)
+        main_frame = tb.Frame(self.master)
         main_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         
         # 主内容框架也使用grid布局
@@ -115,19 +115,19 @@ class App(tk.Frame):
         main_frame.grid_columnconfigure(0, weight=1)
         
         # 使用可拖动的 PanedWindow 作为主内容区域
-        paned_window = ttk.PanedWindow(main_frame, orient=tk.VERTICAL)
+        paned_window = ttk.PanedWindow(main_frame, orient="vertical", bootstyle="secondary")
         paned_window.grid(row=1, column=0, sticky="nsew")
 
         # 上方控制面板
-        top_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
+        top_frame = tb.Frame(paned_window)
         paned_window.add(top_frame, weight=1)
 
         # 下方日志区域
-        log_panel_frame = tk.Frame(paned_window, bg=Theme.WINDOW_BG)
+        log_panel_frame = tb.Frame(paned_window)
         paned_window.add(log_panel_frame, weight=0)
 
         # 顶部框架，用于放置设置按钮
-        header_buttons_frame = tk.Frame(top_frame, bg=Theme.WINDOW_BG)
+        header_buttons_frame = tb.Frame(top_frame)
         header_buttons_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 使用grid布局让按钮横向拉伸填满
@@ -146,9 +146,8 @@ class App(tk.Frame):
         self.log_text = self.create_log_area(log_panel_frame)
 
         # 底部状态栏 - 固定在窗口底部
-        self.status_label = tk.Label(self.master, text="", bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                     font=Theme.STATUS_BAR_FONT, bg=Theme.STATUS_BAR_BG, fg=Theme.STATUS_BAR_FG, padx=10,
-                                     height=1)  # 固定高度，确保不会被子组件挤压
+        self.status_label = tb.Label(self.master, relief=tk.SUNKEN, padding=(5,0),
+                                     font=Theme.STATUS_BAR_FONT, bootstyle="inverse-bg")
         self.status_label.grid(row=1, column=0, sticky="ew", padx=0, pady=0)  # 使用grid固定在底部，无边距
         
         self.logger = Logger(self.master, self.log_text, self.status_label)
@@ -160,16 +159,6 @@ class App(tk.Frame):
         language = self.language_var.get()
         self.logger.log(t("log.config.loaded"))
         self.logger.log(t("log.config.language", language=language))
-        
-        # 绑定窗口大小变化事件，确保布局正确
-        self.master.bind('<Configure>', self._on_window_configure)
-    
-    def _on_window_configure(self, event):
-        """处理窗口大小变化事件"""
-        # 确保状态栏始终可见
-        if event.widget == self.master:
-            # 可以在这里添加额外的布局调整逻辑
-            pass
 
     def open_settings_dialog(self):
         """打开高级设置对话框"""

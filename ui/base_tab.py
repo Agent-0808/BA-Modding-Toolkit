@@ -28,7 +28,7 @@ class TabFrame(tk.Frame):
 
     def set_file_path(self, path_var_name: str, label_widget: tk.Label, path: Path, file_type_name: str, callback: Callable[[], None] | None = None):
         setattr(self, path_var_name, path)
-        label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
+        label_widget.config(text=f"{path.name}", bootstyle="success")
         self.logger.log(t("log.file.loaded_type", type=file_type_name, name=path.name))
         self.logger.status(t("log.status.loaded", type=file_type_name))
         if callback:
@@ -36,7 +36,7 @@ class TabFrame(tk.Frame):
 
     def set_folder_path(self, path_var_name: str, label_widget: tk.Label, path: Path, folder_type_name: str):
         setattr(self, path_var_name, path)
-        label_widget.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
+        label_widget.config(text=f"{path.name}", bootstyle="success")
         self.logger.log(t("log.file.loaded_type", type=folder_type_name, name=path.name))
         self.logger.status(t("log.status.loaded", type=folder_type_name))
 

@@ -1,8 +1,8 @@
 # ui/tabs/mod_update_tab.py
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-from tkinterdnd2 import DND_FILES
+from tkinter import messagebox
+import ttkbootstrap as tb
 from pathlib import Path
 
 from i18n import t
@@ -37,8 +37,8 @@ class ModUpdateTab(TabFrame):
         )
 
         # --- 容器框架 ---
-        self.single_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
-        self.batch_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
+        self.single_frame = tb.Frame(self)
+        self.batch_frame = tb.Frame(self)
         
         # 创建两种模式的UI
         self._create_single_mode_widgets(self.single_frame)
@@ -108,7 +108,7 @@ class ModUpdateTab(TabFrame):
             
     def set_new_mod_file(self, path: Path):
         self.new_mod_path = path
-        self.new_mod_label.config(text=f"{path.name}", fg=Theme.COLOR_SUCCESS)
+        self.new_mod_label.config(text=path.name, bootstyle="success")
         self.logger.log(t("log.file.loaded", path=path))
         self.logger.status(t("log.status.ready"))
 
@@ -116,7 +116,7 @@ class ModUpdateTab(TabFrame):
         self.run_in_thread(self._find_new_bundle_worker)
         
     def _find_new_bundle_worker(self):
-        self.new_mod_label.config(text=t("ui.mod_update.status_searching"), fg=Theme.COLOR_WARNING)
+        self.new_mod_label.config(text=t("ui.mod_update.status_searching"), bootstyle="warning")
         self.logger.status(t("log.status.processing_detailed"))
         
         base_game_dir = Path(self.app.game_resource_dir_var.get())
@@ -133,7 +133,7 @@ class ModUpdateTab(TabFrame):
             self.logger.status(t("log.status.ready"))
         else:
             ui_message = t("ui.mod_update.status_not_found", message=message)
-            self.new_mod_label.config(text=ui_message, fg=Theme.COLOR_ERROR)
+            self.new_mod_label.config(text=ui_message, bootstyle="danger")
             self.logger.status(t("log.status.search_not_found"))
 
     def run_update_thread(self):
@@ -248,7 +248,7 @@ class ModUpdateTab(TabFrame):
             )
             self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
             
-            run_button = tk.Button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg=Theme.BUTTON_SUCCESS_BG, fg=Theme.BUTTON_FG, relief=tk.FLAT, padx=15, pady=8)
+            run_button = UIComponents.create_button(parent, text=t("action.start"), command=self.run_batch_update_thread, font=Theme.BUTTON_FONT, bg_color=Theme.BUTTON_SUCCESS_BG, relief=tk.FLAT, padx=15, pady=8)
             run_button.pack(fill=tk.X, pady=5)
 
     def run_batch_update_thread(self):

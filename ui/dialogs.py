@@ -1,7 +1,7 @@
 # ui/dialogs.py
 
 import tkinter as tk
-import ttkbootstrap as ttk
+import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -12,7 +12,7 @@ from i18n import t
 from .components import Theme, UIComponents, ScrollableFrame, SettingRow
 from .utils import select_file
 
-class SettingsDialog(tk.Toplevel):
+class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance
@@ -40,7 +40,7 @@ class SettingsDialog(tk.Toplevel):
         self.configure(bg=Theme.WINDOW_BG)
         self.transient(self.master)
 
-    def _create_section(self, title: str) -> ttk.Labelframe:
+    def _create_section(self, title: str) -> tb.Labelframe:
         """
         创建一个带有标题的LabelFrame
 
@@ -50,7 +50,7 @@ class SettingsDialog(tk.Toplevel):
         Returns:
             创建的LabelFrame组件
         """
-        section = ttk.Labelframe(
+        section = tb.Labelframe(
             self.content_area,
             text=title,
             bootstyle="default"

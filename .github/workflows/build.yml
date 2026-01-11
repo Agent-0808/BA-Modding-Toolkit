@@ -44,12 +44,14 @@ jobs:
             UnityPy.classes
             PIL
             tkinterdnd2
+            ttkbootstrap
           # 包含依赖包的数据文件
           include-package-data: |
             UnityPy
             PIL
             tkinterdnd2
             archspec
+            ttkbootstrap
           windows-console-mode: disable
           output-dir: build
           output-file: "BA-Modding-Toolkit.exe"

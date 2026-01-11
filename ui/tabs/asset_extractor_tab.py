@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import ttkbootstrap as tb
 from pathlib import Path
 import os
 
@@ -33,28 +34,27 @@ class AssetExtractorTab(TabFrame):
         )
 
         # 资源类型选项
-        options_frame = ttk.Labelframe(self, text=t("ui.extractor.options_title"))
+        options_frame = tb.Labelframe(self, text=t("ui.extractor.options_title"))
         options_frame.pack(fill=tk.X, pady=5)
         
         # Spine 降级选项
-        spine_downgrade_frame = tk.Frame(options_frame, bg=Theme.FRAME_BG)
+        spine_downgrade_frame = tb.Frame(options_frame)
         spine_downgrade_frame.pack(fill=tk.X, pady=5)
         
         atlas_downgrade_check = UIComponents.create_checkbutton(
             spine_downgrade_frame, t("option.spine_downgrade"), self.app.enable_atlas_downgrade_var
         )
-        atlas_downgrade_check.pack(side=tk.LEFT, padx=(0, 10))
+        atlas_downgrade_check.pack(side=tk.LEFT, padx=10)
         
         # Spine 降级版本输入框
-        spine_version_label = tk.Label(spine_downgrade_frame, text=t("ui.label.downgrade_target_version"), font=Theme.INPUT_FONT, bg=Theme.FRAME_BG, fg=Theme.TEXT_NORMAL)
-        spine_version_label.pack(side=tk.LEFT, padx=(0, 5))
+        spine_version_label = tb.Label(spine_downgrade_frame, text=t("ui.label.downgrade_target_version"))
+        spine_version_label.pack(side=tk.LEFT, padx=5)
         
         self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
             spine_downgrade_frame,
             textvariable=self.app.spine_downgrade_version_var,
             width=10
         )
-        self.spine_downgrade_version_entry.pack(side=tk.LEFT)
         self.spine_downgrade_version_entry.pack(side=tk.LEFT)
         
         # 操作按钮
