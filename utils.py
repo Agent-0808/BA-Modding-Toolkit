@@ -233,6 +233,14 @@ def get_environment_info():
     except AttributeError:
         tkinterdnd2_version = "Unknown"
 
+    try:
+        import importlib.metadata
+        tb_version = importlib.metadata.version('ttkbootstrap')
+    except ImportError:
+        tb_version = "Not installed"
+    except (AttributeError, importlib.metadata.PackageNotFoundError):
+        tb_version = "Unknown"
+
     # --- Locale and Encoding Information (crucial for file path/text bugs) ---
     try:
         import locale
@@ -255,6 +263,7 @@ def get_environment_info():
         return False # 在非Windows系统上不是管理员
 
     lines: list[str] = []
+    lines.append("======== Environment Information ========")
 
     # --- Available Languages ---
     lines.append("\n--- BA Modding Toolkit ---")
@@ -282,6 +291,7 @@ def get_environment_info():
     lines.append(f"Pillow Version:      {pillow_version}")
     lines.append(f"Tkinter Version:     {tk_version}")
     lines.append(f"TkinterDnD2 Version: {tkinterdnd2_version}")
+    lines.append(f"ttkbootstrap Version:{tb_version}")
     
     lines.append("")
 

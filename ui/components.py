@@ -269,7 +269,7 @@ class UIComponents:
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
         # 创建显示区域 Label
-        drop_zone = tb.Label(frame, text=label_text, relief="groove", anchor="center", justify="center", padding=10, font=Theme.DROP_ZONE_FONT, bootstyle="inverse-light")
+        drop_zone = tb.Label(frame, text=label_text, relief="sunken", anchor="center", justify="center", padding=10, font=Theme.DROP_ZONE_FONT, bootstyle="inverse-light")
         drop_zone.pack(fill=tk.X, pady=(0, 8))
         drop_zone.drop_target_register(DND_FILES)
         drop_zone.dnd_bind('<<Drop>>', drop_cmd)
