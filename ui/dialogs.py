@@ -3,13 +3,14 @@
 import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
+from ttkbootstrap.widgets.scrolled import ScrolledFrame
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
     from ui.app import App
 
 from i18n import t
-from .components import Theme, UIComponents, ScrollableFrame, SettingRow
+from .components import Theme, UIComponents, SettingRow
 from .utils import select_file
 
 class SettingsDialog(tb.Toplevel):
@@ -19,9 +20,10 @@ class SettingsDialog(tb.Toplevel):
 
         self._setup_window()
 
-        self.scroll_frame = ScrollableFrame(self)
+        self.scroll_frame = ScrolledFrame(self, autohide=True)
         self.scroll_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
-        self.content_area = self.scroll_frame.viewport
+        self.content_area = tb.Frame(self.scroll_frame)
+        self.content_area.pack(fill=tk.BOTH, expand=True, padx=(0, 15))
 
         self._init_path_settings()
         self._init_app_settings()
@@ -180,20 +182,20 @@ class SettingsDialog(tb.Toplevel):
 
     def _init_footer_buttons(self):
         """初始化底部按钮栏"""
-        footer_frame = ttk.Frame(self)
+        footer_frame = tb.Frame(self)
         footer_frame.pack(fill=tk.X, padx=15, pady=15)
 
         footer_frame.columnconfigure(0, weight=1)
         footer_frame.columnconfigure(1, weight=1)
         footer_frame.columnconfigure(2, weight=1)
 
-        save_button = ttk.Button(footer_frame, text=t("common.save"), command=self.app.save_current_config, bootstyle="success")
+        save_button = tb.Button(footer_frame, text=t("common.save"), command=self.app.save_current_config, bootstyle="success")
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-        load_button = ttk.Button(footer_frame, text=t("common.load"), command=self.load_config, bootstyle="warning")
+        load_button = tb.Button(footer_frame, text=t("common.load"), command=self.load_config, bootstyle="warning") 
         load_button.grid(row=0, column=1, sticky="ew", padx=5)
 
-        reset_button = ttk.Button(footer_frame, text=t("common.reset"), command=self.reset_to_default, bootstyle="danger")
+        reset_button = tb.Button(footer_frame, text=t("common.reset"), command=self.reset_to_default, bootstyle="danger")
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
     def _setup_variable_traces(self):

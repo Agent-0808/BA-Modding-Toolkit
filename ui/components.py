@@ -97,6 +97,10 @@ class Theme:
     BUTTON_FONT = ("Microsoft YaHei", 10, "bold")
     SIDEBAR_FONT = ("Microsoft YaHei", 9, "bold")
     LOG_FONT = ("SimSun", 9)
+    TOOLTIP_FONT = ("Microsoft YaHei", 9)
+
+    # Tooltip 颜色
+    TOOLTIP_BG = '#ffffe0'
 
 
 # --- UI 组件工厂 ---
@@ -418,12 +422,11 @@ class UIComponents:
         Returns:
             创建的Label组件
         """
-        label = tk.Label(
+        label = tb.Label(
             parent,
             text="ⓘ",
-            fg=Theme.BUTTON_PRIMARY_BG,
-            bg=Theme.FRAME_BG,
-            font=("Microsoft YaHei", 10, "bold"),
+            font=Theme.TOOLTIP_FONT,
+            style="info",
             cursor="question_arrow"
         )
         Tooltip(label, text)
@@ -637,7 +640,7 @@ class FileListbox:
     def _create_widgets(self, title):
         """创建组件UI"""
         # 创建框架
-        self.frame = ttk.Labelframe(
+        self.frame = tb.Labelframe(
             self.parent, 
             text=title, 
             padding=(15, 12)
@@ -645,7 +648,7 @@ class FileListbox:
         self.frame.columnconfigure(0, weight=1)
         
         # 创建列表框区域
-        list_frame = tk.Frame(self.frame, bg=Theme.FRAME_BG)
+        list_frame = tb.Frame(self.frame)
         list_frame.grid(row=0, column=0, sticky="nsew", pady=(0, 10))
         self.frame.rowconfigure(0, weight=1)
         list_frame.columnconfigure(0, weight=1)
@@ -661,8 +664,8 @@ class FileListbox:
         )
         
         # 创建滚动条
-        v_scrollbar = tk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.listbox.yview)
-        h_scrollbar = tk.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.listbox.xview)
+        v_scrollbar = tb.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.listbox.yview)
+        h_scrollbar = tb.Scrollbar(list_frame, orient=tk.HORIZONTAL, command=self.listbox.xview)
         self.listbox.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
         
         # 布局
@@ -932,79 +935,14 @@ class Tooltip:
         self.tip_window.wm_overrideredirect(True)
         self.tip_window.wm_geometry(f"+{x}+{y}")
         
-        label = tk.Label(
+        label = tb.Label(
             self.tip_window,
             text=self.text,
             justify=tk.LEFT,
-            background="#ffffe0",
+            background=Theme.TOOLTIP_BG,
             relief=tk.SOLID,
             borderwidth=1,
-            font=("Microsoft YaHei", 9),
-            padx=5,
-            pady=3
+            font=Theme.TOOLTIP_FONT,
+            padding=(5, 3)
         )
         label.pack(ipadx=1)
-
-
-class ScrollableFrame(tk.Frame):
-    """可滚动的Frame容器,支持鼠标滚轮"""
-    
-    def __init__(self, parent, *args, **kwargs):
-        """
-        初始化可滚动Frame
-        
-        Args:
-            parent: 父控件
-            *args: Frame位置参数
-            **kwargs: Frame关键字参数
-        """
-        super().__init__(parent, *args, **kwargs)
-        
-        self.canvas = tk.Canvas(self, bg=Theme.WINDOW_BG, highlightthickness=0)
-        self.scrollbar = tk.Scrollbar(self, orient=tk.VERTICAL, command=self.canvas.yview)
-        self.viewport = tk.Frame(self.canvas, bg=Theme.WINDOW_BG)
-        
-        self.viewport.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
-        
-        self.canvas.create_window((0, 0), window=self.viewport, anchor="nw", width=self.canvas.winfo_width())
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self._bind_mouse_wheel()
-        self._bind_resize_event()
-    
-    def _bind_resize_event(self):
-        """绑定窗口大小变化事件,使内容宽度自适应"""
-        self.canvas.bind("<Configure>", self._on_canvas_resize)
-    
-    def _on_canvas_resize(self, event):
-        """Canvas大小变化时调整内容窗口宽度"""
-        self.canvas.itemconfig(self.canvas.find_withtag("all")[0], width=event.width)
-    
-    def _bind_mouse_wheel(self) -> None:
-        """绑定鼠标进入/离开事件,实现滚轮焦点切换"""
-        self.bind('<Enter>', self._on_mouse_enter)
-        self.bind('<Leave>', self._on_mouse_leave)
-
-    def _on_mouse_enter(self, event: tk.Event) -> None:
-        """鼠标进入区域,绑定全局滚轮事件"""
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
-    def _on_mouse_leave(self, event: tk.Event) -> None:
-        """鼠标离开区域,解绑全局滚轮事件"""
-        self.canvas.unbind_all("<MouseWheel>")
-
-    def _on_mousewheel(self, event: tk.Event) -> None:
-        """处理鼠标滚轮事件"""
-        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-    def destroy(self) -> None:
-        """销毁时清理绑定"""
-        self.canvas.unbind_all("<MouseWheel>")
-        self.canvas.unbind("<Configure>")
-        super().destroy()

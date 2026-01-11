@@ -4,7 +4,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import ttkbootstrap as tb
 from pathlib import Path
-from ttkbootstrap.scrolled import ScrolledText 
+from ttkbootstrap.widgets.scrolled import ScrolledText 
 
 from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
