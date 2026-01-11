@@ -126,22 +126,6 @@ class App(tk.Frame):
         log_panel_frame = tb.Frame(paned_window)
         paned_window.add(log_panel_frame, weight=0)
 
-        # 顶部框架，用于放置设置按钮
-        header_buttons_frame = tb.Frame(top_frame)
-        header_buttons_frame.pack(fill=tk.X, pady=(0, 10))
-        
-        # 使用grid布局让按钮横向拉伸填满
-        settings_button = UIComponents.create_button(header_buttons_frame, t("ui.settings.title"), self.open_settings_dialog, bootstyle="warning")
-        settings_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
-        
-        environment_button = UIComponents.create_button(header_buttons_frame, t("action.environment"), self.show_environment_info, bootstyle="info")
-        environment_button.grid(row=0, column=1, sticky="ew")
-        
-        # 设置列权重，让按钮均匀拉伸
-        header_buttons_frame.columnconfigure(0, weight=1)
-        header_buttons_frame.columnconfigure(1, weight=1)
-        header_buttons_frame.rowconfigure(0, weight=1)  # 确保按钮垂直居中
-
         # 创建日志区域（需要在侧边栏之前创建，因为侧边栏会创建Tab，Tab需要logger）
         self.log_text = self.create_log_area(log_panel_frame)
 
@@ -277,12 +261,24 @@ class App(tk.Frame):
                 self.sidebar_frame,
                 text=title,
                 command=lambda t=tab: self.show_tab(t),
-                # 初始样式设为 secondary 或 light-outline，使其在深色背景上可见
                 bootstyle="light-outline" 
             )
             # 增加 ipadx/ipady 让按钮看起来更饱满
-            btn.pack(fill=tk.X, padx=5, pady=2) 
+            btn.pack(fill=tk.X, padx=5, pady=(5,0)) 
             self.tab_buttons.append((btn, tab))
+        
+        # 添加分隔线
+        separator = tb.Frame(self.sidebar_frame, height=2, bootstyle="secondary")
+        separator.pack(fill=tk.X, padx=5, pady=(10,5))
+        
+        # 在底部添加设置按钮
+        settings_btn = UIComponents.create_button(
+            self.sidebar_frame,
+            text=t("ui.settings.title"),
+            command=self.open_settings_dialog,
+            bootstyle="info"
+        )
+        settings_btn.pack(fill=tk.X, padx=5, pady=(5,0))
     
     def show_tab(self, tab_to_show):
         """显示指定的Tab页面"""

@@ -405,7 +405,7 @@ class SettingRow:
         left_frame = tb.Frame(parent)
         left_frame.pack(side=tk.LEFT, anchor="w")
         
-        lbl = tb.Label(left_frame, text=text, font=Theme.INPUT_FONT)
+        lbl = tb.Label(left_frame, text=text)
         lbl.pack(side=tk.LEFT)
         
         if tooltip_text:
@@ -431,7 +431,7 @@ class SettingRow:
             container,
             variable=variable,
             command=command,
-            style="success.Round.Toggle",  # ttkbootstrap 特有样式
+            style="success-square-toggle",
             text=""  # 开关本身不需要文字，文字在左侧 Label
         )
         chk.pack(side=tk.RIGHT)
@@ -456,9 +456,11 @@ class SettingRow:
         
         # 按钮在最右
         if open_cmd:
-            tb.Button(right_frame, text=t("action.open_short"), command=open_cmd, style="info").pack(side=tk.RIGHT, padx=(5,0))
+            UIComponents.create_button(right_frame, t("action.open_short"), open_cmd, bootstyle="info", style="compact"
+            ).pack(side=tk.RIGHT, padx=(5,0))
             
-        tb.Button(right_frame, text=t("action.select_short"), command=select_cmd, style="primary").pack(side=tk.RIGHT, padx=(5,0))
+        UIComponents.create_button(right_frame, t("action.select_short"), select_cmd, bootstyle="primary", style="compact"
+        ).pack(side=tk.RIGHT, padx=(5,0))
         
         # 输入框填充剩余中间区域
         entry = tb.Entry(right_frame, textvariable=path_var)
@@ -514,6 +516,55 @@ class SettingRow:
         combobox = tb.Combobox(container, textvariable=text_var, values=values, width=10)
         combobox.pack(side=tk.RIGHT, padx=(10, 0))
         return combobox
+
+    @staticmethod
+    def create_radiobutton_row(
+        parent: tk.Widget,
+        label: str,
+        text_var: tk.StringVar,
+        values: list[str] | list[tuple[str, str]],
+        tooltip: str | None = None
+    ) -> tb.Frame:
+        """创建单选按钮行"""
+        container = SettingRow.create_container(parent)
+        SettingRow._add_label_area(container, label, tooltip)
+        
+        right_frame = tb.Frame(container)
+        right_frame.pack(side=tk.RIGHT)
+        
+        for value in values:
+            if isinstance(value, tuple):
+                value, text = value
+            else:
+                text = value
+            
+            tb.Radiobutton(
+                right_frame,
+                text=text,
+                variable=text_var,
+                value=value,
+                bootstyle="outline-toolbutton"
+            ).pack(side=tk.LEFT, padx=3)
+        
+        return container
+
+    @staticmethod
+    def create_button_row(
+        parent: tk.Widget,
+        label: str,
+        button_text: str,
+        command: Callable[[], None],
+        tooltip: str | None = None,
+        bootstyle: str = "info"
+    ) -> tb.Frame:
+        """创建按钮行"""
+        container = SettingRow.create_container(parent)
+        SettingRow._add_label_area(container, label, tooltip)
+        
+        button = UIComponents.create_button(container, button_text, command, bootstyle=bootstyle, style="compact")
+        button.pack(side=tk.RIGHT)
+        
+        return container
 
 
 class ModeSwitcher:

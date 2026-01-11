@@ -41,7 +41,7 @@
 		"clear_list": "清空列表",
 		"replace_original": "覆盖原文件",
 		"create_backup": "创建备份",
-		"environment": "运行环境",
+		"print": "打印",
 		"start": "开始",
 		"update": "更新",
 		"pack": "打包",
@@ -458,7 +458,8 @@
 			"original_file": "原始文件",
 			"modified_file": "待修正文件",
 			"downgrade_target_version": "目标版本",
-			"language": "Language"
+			"language": "Language",
+			"environment": "运行环境"
 		},
 		"log_area": "日志",
 		"status_label": "状态："

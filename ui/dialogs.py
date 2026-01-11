@@ -72,14 +72,6 @@ class SettingsDialog(tb.Toplevel):
             open_cmd=self.app.open_game_resource_in_explorer
         )
 
-        SettingRow.create_path_selector(
-            section,
-            label=t("ui.label.output_dir"),
-            path_var=self.app.output_dir_var,
-            select_cmd=self.app.select_output_directory,
-            open_cmd=self.app.open_output_dir_in_explorer
-        )
-
     def _init_app_settings(self):
         """初始化应用设置"""
         section = self._create_section(t("ui.settings.group_app"))
@@ -89,6 +81,14 @@ class SettingsDialog(tb.Toplevel):
             label=t("ui.label.language"),
             text_var=self.app.language_var,
             values=self.app.available_languages
+        )
+
+        SettingRow.create_path_selector(
+            section,
+            label=t("ui.label.output_dir"),
+            path_var=self.app.output_dir_var,
+            select_cmd=self.app.select_output_directory,
+            open_cmd=self.app.open_output_dir_in_explorer
         )
 
     def _init_global_options(self):
@@ -114,7 +114,7 @@ class SettingsDialog(tb.Toplevel):
             variable=self.app.create_backup_var
         )
 
-        SettingRow.create_combobox_row(
+        SettingRow.create_radiobutton_row(
             section,
             label=t("ui.label.compression_method"),
             text_var=self.app.compression_method_var,
