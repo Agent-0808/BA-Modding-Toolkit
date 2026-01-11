@@ -46,10 +46,10 @@ class AssetPackerTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        run_button = UIComponents.create_button(action_button_frame, t("action.pack"), self.run_replacement_thread, bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
+        run_button = UIComponents.create_button(action_button_frame, t("action.pack"), self.run_replacement_thread, bootstyle="success")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=10)
         
-        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bg_color=Theme.BUTTON_DANGER_BG, padx=15, pady=8, state="disabled")
+        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=10)
 
     def drop_bundle(self, event):

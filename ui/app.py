@@ -1,7 +1,7 @@
 # ui/app.py
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
@@ -115,7 +115,7 @@ class App(tk.Frame):
         main_frame.grid_columnconfigure(0, weight=1)
         
         # 使用可拖动的 PanedWindow 作为主内容区域
-        paned_window = ttk.PanedWindow(main_frame, orient="vertical", bootstyle="secondary")
+        paned_window = tb.Panedwindow(main_frame, orient="vertical", bootstyle="secondary")
         paned_window.grid(row=1, column=0, sticky="nsew")
 
         # 上方控制面板
@@ -131,10 +131,10 @@ class App(tk.Frame):
         header_buttons_frame.pack(fill=tk.X, pady=(0, 10))
         
         # 使用grid布局让按钮横向拉伸填满
-        settings_button = UIComponents.create_button(header_buttons_frame, t("ui.settings.title"), self.open_settings_dialog, bg_color=Theme.BUTTON_WARNING_BG)
+        settings_button = UIComponents.create_button(header_buttons_frame, t("ui.settings.title"), self.open_settings_dialog, bootstyle="warning")
         settings_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         
-        environment_button = UIComponents.create_button(header_buttons_frame, t("action.environment"), self.show_environment_info, bg_color=Theme.BUTTON_SECONDARY_BG)
+        environment_button = UIComponents.create_button(header_buttons_frame, t("action.environment"), self.show_environment_info, bootstyle="info")
         environment_button.grid(row=0, column=1, sticky="ew")
         
         # 设置列权重，让按钮均匀拉伸
@@ -226,13 +226,13 @@ class App(tk.Frame):
         # 清空父容器的布局配置
         parent.pack_propagate(False)
         
-        # 左侧侧边栏 - 使用ttk.Frame并设置bootstyle="dark"实现深色背景
-        self.sidebar_frame = ttk.Frame(parent, bootstyle="dark", width=120)
+        # 左侧侧边栏 - 使用Frame并设置bootstyle="dark"实现深色背景
+        self.sidebar_frame = tb.Frame(parent, bootstyle="dark", width=120)
         self.sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
         self.sidebar_frame.pack_propagate(False)  # 固定宽度
         
         # 右侧内容区域
-        self.content_frame = tk.Frame(parent, bg=Theme.WINDOW_BG)
+        self.content_frame = tb.Frame(parent)
         self.content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
         self.content_frame.pack_propagate(False)
         
@@ -309,7 +309,7 @@ class App(tk.Frame):
         创建日志区域，使用自定义的深色风格
         """
         # 创建外层容器（带标题的边框）
-        log_frame = ttk.Labelframe(
+        log_frame = tb.Labelframe(
             parent, 
             text=t("ui.log_area"), 
             bootstyle="default",

@@ -1,7 +1,7 @@
 # ui/tabs/asset_extractor_tab.py
 
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import messagebox
 import ttkbootstrap as tb
 from pathlib import Path
 import os
@@ -63,7 +63,7 @@ class AssetExtractorTab(TabFrame):
         action_frame.grid_columnconfigure(0, weight=1)
 
         run_button = UIComponents.create_button(action_frame, t("action.extract"), self.run_extraction_thread,
-                                                 bg_color=Theme.BUTTON_SUCCESS_BG, padx=15, pady=8)
+                                                 bootstyle="success")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
     def drop_bundle(self, event):

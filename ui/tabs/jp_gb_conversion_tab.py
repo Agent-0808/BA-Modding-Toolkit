@@ -1,7 +1,7 @@
 # ui/tabs/jp_gb_conversion_tab.py
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
 from pathlib import Path
 
 from i18n import t
@@ -71,8 +71,7 @@ class JpGbConversionTab(TabFrame):
         self.run_button = UIComponents.create_button(
             action_button_frame, t("action.convert"),
             self.run_conversion_thread,
-            bg_color=Theme.BUTTON_SUCCESS_BG,
-            style="short"
+            bootstyle="success"
         )
         self.run_button.pack(fill=tk.X)
         
