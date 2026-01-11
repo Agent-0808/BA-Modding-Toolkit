@@ -100,6 +100,7 @@ class Theme:
 
     # Tooltip 颜色
     TOOLTIP_BG = '#ffffe0'
+    TOOLTIP_FG = '#080808'
 
 
 # --- UI 组件工厂 ---
@@ -254,7 +255,7 @@ class UIComponents:
         # 清除逻辑
         def _handle_clear():
             # 1. 恢复 UI 至初始状态 (文本、背景、字体颜色)
-            drop_zone.config(text=label_text)
+            drop_zone.config(text=label_text, bootstyle="inverse-light")
             # 2. 调用外部清理逻辑 (如果存在)
             if clear_cmd:
                 clear_cmd()
@@ -373,7 +374,7 @@ class UIComponents:
         return combobox
 
     @staticmethod
-    def create_tooltip_icon(parent, text: str) -> tk.Label:
+    def create_tooltip_icon(parent, text: str) -> tb.Label:
         """
         创建一个带有'ⓘ'符号的Label,鼠标悬停时显示Tooltip
         """
@@ -587,7 +588,7 @@ class ModeSwitcher:
 
         self.frame = self._create_widgets()
 
-    def _create_widgets(self) -> tk.Frame:
+    def _create_widgets(self) -> tb.Frame:
         """创建组件UI"""
         frame = tb.Frame(self.parent)
         frame.pack(fill=tk.X, pady=(0, 10))
@@ -599,7 +600,7 @@ class ModeSwitcher:
                 value=value,
                 command=self._on_mode_change,
                 style="outline-toolbutton"
-            ).pack(side=tk.LEFT, fill=tk.X, expand=True)
+            ).pack(side=tk.LEFT, fill=tk.X, padx=2, expand=True)
 
         return frame
 
@@ -608,7 +609,7 @@ class ModeSwitcher:
         if self.command:
             self.command()
 
-    def get_frame(self) -> tk.Frame:
+    def get_frame(self) -> tb.Frame:
         """获取组件框架"""
         return self.frame
 
@@ -689,7 +690,7 @@ class FileListbox:
         self._add_placeholder()
         
         # 创建按钮区域
-        button_frame = tk.Frame(self.frame, bg=Theme.FRAME_BG)
+        button_frame = tb.Frame(self.frame)
         button_frame.grid(row=1, column=0, sticky="ew")
         button_frame.columnconfigure((0, 1, 2, 3), weight=1)
         
@@ -947,6 +948,7 @@ class Tooltip:
             text=self.text,
             justify=tk.LEFT,
             background=Theme.TOOLTIP_BG,
+            foreground=Theme.TOOLTIP_FG,
             relief=tk.SOLID,
             borderwidth=1,
             font=Theme.TOOLTIP_FONT,

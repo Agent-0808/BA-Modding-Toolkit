@@ -1,8 +1,8 @@
 # ui/tabs/asset_extractor_tab.py
 
 import tkinter as tk
-from tkinter import messagebox
 import ttkbootstrap as tb
+from tkinter import messagebox
 from pathlib import Path
 import os
 
@@ -58,7 +58,7 @@ class AssetExtractorTab(TabFrame):
         self.spine_downgrade_version_entry.pack(side=tk.LEFT)
         
         # 操作按钮
-        action_frame = tk.Frame(self)
+        action_frame = tb.Frame(self)
         action_frame.pack(fill=tk.X, pady=10)
         action_frame.grid_columnconfigure(0, weight=1)
 

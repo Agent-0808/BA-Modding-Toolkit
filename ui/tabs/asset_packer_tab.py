@@ -1,6 +1,7 @@
 # ui/tabs/asset_packer_tab.py
 
 import tkinter as tk
+import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
 from i18n import t
@@ -31,7 +32,7 @@ class AssetPackerTab(TabFrame):
         )
         
         # 旧版 Spine 文件名修正选项
-        options_frame = tk.Frame(self, bg=Theme.FRAME_BG)
+        options_frame = tb.Frame(self)
         options_frame.pack(fill=tk.X, pady=(5, 0))
         
         self.spine38_namefix_checkbutton = UIComponents.create_checkbutton(
@@ -42,7 +43,7 @@ class AssetPackerTab(TabFrame):
         self.spine38_namefix_checkbutton.pack(anchor=tk.W)
 
         # 操作按钮区域
-        action_button_frame = tk.Frame(self)
+        action_button_frame = tb.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 

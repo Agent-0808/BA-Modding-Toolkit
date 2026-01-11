@@ -1,8 +1,8 @@
 # ui/tabs/mod_update_tab.py
 
 import tkinter as tk
-from tkinter import messagebox
 import ttkbootstrap as tb
+from tkinter import messagebox
 from pathlib import Path
 
 from i18n import t
@@ -74,7 +74,7 @@ class ModUpdateTab(TabFrame):
         )
 
         # 操作按钮区域
-        action_button_frame = tk.Frame(parent)
+        action_button_frame = tb.Frame(parent)
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 

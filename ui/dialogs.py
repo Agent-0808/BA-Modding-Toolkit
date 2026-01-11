@@ -39,7 +39,6 @@ class SettingsDialog(tb.Toplevel):
         """设置窗口基本属性"""
         self.title(t("ui.settings.title"))
         self.geometry("600x700")
-        self.configure(bg=Theme.WINDOW_BG)
         self.transient(self.master)
 
     def _create_section(self, title: str) -> tb.Labelframe:

@@ -28,7 +28,6 @@ class App(tk.Frame):
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
         self.master.geometry("600x789")
-        self.master.configure(bg=Theme.WINDOW_BG)
 
     def _set_default_values(self):
         """设置所有共享变量的默认值。"""
@@ -261,7 +260,8 @@ class App(tk.Frame):
                 self.sidebar_frame,
                 text=title,
                 command=lambda t=tab: self.show_tab(t),
-                bootstyle="light-outline" 
+                bootstyle="light-outline",
+                padding=(0, 5)
             )
             # 增加 ipadx/ipady 让按钮看起来更饱满
             btn.pack(fill=tk.X, padx=5, pady=(5,0)) 

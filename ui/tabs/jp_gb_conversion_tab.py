@@ -1,6 +1,7 @@
 # ui/tabs/jp_gb_conversion_tab.py
 
 import tkinter as tk
+import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
 
@@ -32,7 +33,7 @@ class JpGbConversionTab(TabFrame):
         )
 
         # --- 文件输入区域 ---
-        self.file_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
+        self.file_frame = tb.Frame(self)
         self.file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
         
         # 1. 国际服 Bundle 文件 (单文件拖放区)
@@ -54,7 +55,7 @@ class JpGbConversionTab(TabFrame):
         self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
         # --- 选项设置区域 ---
-        options_frame = tk.Frame(self, bg=Theme.WINDOW_BG)
+        options_frame = tb.Frame(self)
         options_frame.pack(fill=tk.X)
         
         # 自动搜索开关
@@ -65,7 +66,7 @@ class JpGbConversionTab(TabFrame):
         ).pack(side=tk.LEFT, padx=5)
         
         # --- 操作按钮 ---
-        action_button_frame = tk.Frame(self)
+        action_button_frame = tb.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=2)
         
         self.run_button = UIComponents.create_button(
