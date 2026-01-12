@@ -94,16 +94,10 @@ class I18n:
         self._get_template.cache_clear()
 
     @lru_cache(maxsize=1024)
-    def _get_template(self, key: str, **kwargs) -> str:
+    def _get_template(self, key: str) -> str:
         """
         内部方法：仅负责查找原始字符串并缓存结果
         """
-        # Debug 模式直接返回键名
-        if self.lang == "debug":
-            if kwargs:
-                return f"{key}({', '.join(f'{k}={v}' for k, v in kwargs.items())})"
-            return key
-
         keys = key.split(".")
         try:
             value = reduce(lambda d, k: d[k], keys, self.translations)
@@ -118,15 +112,15 @@ class I18n:
         用法: t("log.success", msg="更新成功")
         对应的 JSON: { "log": { "success": "成功: {msg}" } }
         """
-        # Debug 模式下传入参数信息
-        if self.lang == "debug" and kwargs:
-            template = self._get_template(_key, **kwargs)
-        else:
-            template = self._get_template(_key)
+        template = self._get_template(_key)
         
         # 如果没有传参数，直接返回
         if not kwargs:
             return template
+        
+        # Debug 模式或键缺失时，返回键名和参数
+        if self.lang == "debug" or template == _key:
+            return f"{_key}({', '.join(f'{k}={v}' for k, v in kwargs.items())})"
             
         try:
             # 使用 python 标准的 format 方法进行替换

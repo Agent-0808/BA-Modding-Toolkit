@@ -89,15 +89,14 @@ class Theme:
     SIDEBAR_BUTTON_ACTIVE_FG = '#ffffff'
 
     # 字体
-    FRAME_FONT = ("Microsoft YaHei", 11, "bold")
     DROP_ZONE_FONT = ("Microsoft YaHei", 9)
     INPUT_FONT = ("Microsoft YaHei", 9)
     STATUS_BAR_FONT = ("Microsoft YaHei", 9)
-    BUTTON_FONT = ("Microsoft YaHei", 10, "bold")
-    SIDEBAR_FONT = ("Microsoft YaHei", 9, "bold")
-    LOG_FONT = ("SimSun", 9)
+    BUTTON_FONT = ("Segoe UI", 10, "bold")
+    SIDEBAR_FONT = ("Segoe UI", 9)
+    LOG_FONT = ("Consolas", 9)
     TOOLTIP_FONT = ("Microsoft YaHei", 9)
-
+    
     # Tooltip 颜色
     TOOLTIP_BG = '#ffffe0'
     TOOLTIP_FG = '#080808'

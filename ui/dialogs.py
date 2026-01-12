@@ -214,6 +214,8 @@ class SettingsDialog(tb.Toplevel):
 
     def _on_crc_change(self, *args):
         """CRC修正复选框状态变化时的处理"""
+        if not self.winfo_exists():
+            return
         if self.app.enable_crc_correction_var.get():
             self.padding_checkbox.config(state=tk.NORMAL)
         else:
@@ -228,8 +230,8 @@ class SettingsDialog(tb.Toplevel):
         self._language_changing = True
         
         if messagebox.askyesno(t("common.tip"), t("message.config.language_changed")):
-            self.destroy()
             self.app.save_current_config()
+            self.destroy()
             self.master.quit()
         else:
             self._language_changing = False

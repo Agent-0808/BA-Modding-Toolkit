@@ -210,7 +210,7 @@ class App(tk.Frame):
         parent.pack_propagate(False)
         
         # 左侧侧边栏 - 使用Frame并设置bootstyle="dark"实现深色背景
-        self.sidebar_frame = tb.Frame(parent, bootstyle="dark", width=120)
+        self.sidebar_frame = tb.Frame(parent, bootstyle="dark", width=140)
         self.sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
         self.sidebar_frame.pack_propagate(False)  # 固定宽度
         
@@ -328,9 +328,10 @@ class App(tk.Frame):
             font=Theme.LOG_FONT,
             background=Theme.LOG_BG,
             foreground=Theme.LOG_FG,
-            selectbackground="#3a5a7a",      # 选中时的背景色
-            insertbackground=Theme.LOG_FG,        # 光标颜色
-            state=tk.DISABLED                # 初始设为不可编辑
+            selectbackground="#3a5a7a",     # 选中时的背景色
+            insertbackground=Theme.LOG_FG,  # 光标颜色
+            state=tk.DISABLED,              # 初始设为不可编辑
+            spacing1=2,                     # 段前间距（像素）
         )
 
         # 保存引用以防被垃圾回收（虽然在 pack 后通常不需要）
