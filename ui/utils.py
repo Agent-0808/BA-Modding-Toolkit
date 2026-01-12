@@ -7,7 +7,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
-import configparser
+import toml
 from typing import Callable, TYPE_CHECKING
 if TYPE_CHECKING:
     from ui.app import App
@@ -260,69 +260,53 @@ def select_file(title: str,
 # --- 配置管理类 ---
 
 class ConfigManager:
-    """配置管理类，负责保存和读取应用设置到config.ini文件"""
+    """配置管理类，负责保存和读取应用设置到config.toml文件"""
     
-    def __init__(self, config_file="config.ini"):
+    def __init__(self, config_file="config.toml"):
         self.config_file = Path(config_file)
-        self.config = configparser.ConfigParser()
         
     def save_config(self, app: "App"):
         """保存当前应用配置到文件"""
         try:
-            # 清空现有配置
-            self.config.clear()
-            
-            # 添加目录设置
-            self.config['Directories'] = {
-                'game_resource_dir': app.game_resource_dir_var.get(),
-                'output_dir': app.output_dir_var.get(),
-                'auto_detect_subdirs': str(app.auto_detect_subdirs_var.get())
+            data = {
+                "Directories": {
+                    "game_resource_dir": app.game_resource_dir_var.get(),
+                    "auto_detect_subdirs": app.auto_detect_subdirs_var.get(),
+                    "auto_search": app.auto_search_var.get()
+                },
+                "AppSettings": {
+                    "language": app.language_var.get(),
+                    "output_dir": app.output_dir_var.get()
+                },
+                "GlobalOptions": {
+                    "enable_padding": app.enable_padding_var.get(),
+                    "enable_crc_correction": app.enable_crc_correction_var.get(),
+                    "create_backup": app.create_backup_var.get(),
+                    "compression_method": app.compression_method_var.get()
+                },
+                "ResourceTypes": {
+                    "replace_texture2d": app.replace_texture2d_var.get(),
+                    "replace_textasset": app.replace_textasset_var.get(),
+                    "replace_mesh": app.replace_mesh_var.get(),
+                    "replace_all": app.replace_all_var.get()
+                },
+                "SpineConverter": {
+                    "enable_spine_conversion": app.enable_spine_conversion_var.get(),
+                    "spine_converter_path": app.spine_converter_path_var.get(),
+                    "target_spine_version": app.target_spine_version_var.get()
+                },
+                "SpineDowngrade": {
+                    "enable_atlas_downgrade": app.enable_atlas_downgrade_var.get(),
+                    "atlas_downgrade_path": app.atlas_downgrade_path_var.get(),
+                    "spine_downgrade_version": app.spine_downgrade_version_var.get()
+                },
+                "Tabs": {
+                    "enable_spine38_namefix": app.enable_spine38_namefix_var.get()
+                }
             }
             
-            # 添加全局选项
-            self.config['GlobalOptions'] = {
-                'enable_padding': str(app.enable_padding_var.get()),
-                'enable_crc_correction': str(app.enable_crc_correction_var.get()),
-                'create_backup': str(app.create_backup_var.get()),
-                'compression_method': app.compression_method_var.get(),
-                'auto_search': str(app.auto_search_var.get())
-            }
-            
-            # 添加资源类型选项
-            self.config['ResourceTypes'] = {
-                'replace_texture2d': str(app.replace_texture2d_var.get()),
-                'replace_textasset': str(app.replace_textasset_var.get()),
-                'replace_mesh': str(app.replace_mesh_var.get()),
-                'replace_all': str(app.replace_all_var.get())
-            }
-            
-            # 添加Spine转换器选项
-            self.config['SpineConverter'] = {
-                'enable_spine_conversion': str(app.enable_spine_conversion_var.get()),
-                'spine_converter_path': app.spine_converter_path_var.get(),
-                'target_spine_version': app.target_spine_version_var.get()
-            }
-            
-            # 添加Spine降级选项
-            self.config['SpineDowngrade'] = {
-                'enable_atlas_downgrade': str(app.enable_atlas_downgrade_var.get()),
-                'atlas_downgrade_path': app.atlas_downgrade_path_var.get(),
-                'spine_downgrade_version': app.spine_downgrade_version_var.get()
-            }
-            
-            # 添加语言设置
-            self.config['Language'] = {
-                'language': app.language_var.get()
-            }
-            
-            # 添加Asset Packer选项
-            self.config['AssetPacker'] = {
-                'enable_spine38_namefix': str(app.enable_spine38_namefix_var.get())
-            }
-            
-            # 写入文件
             with open(self.config_file, 'w', encoding='utf-8') as f:
-                self.config.write(f)
+                toml.dump(data, f)
                 
             return True
         except Exception as e:
@@ -335,71 +319,44 @@ class ConfigManager:
             if not self.config_file.exists():
                 return False
                 
-            self.config.read(self.config_file, encoding='utf-8')
+            with open(self.config_file, 'r', encoding='utf-8') as f:
+                data = toml.load(f)
             
-            # 加载目录设置
-            if 'Directories' in self.config:
-                if 'game_resource_dir' in self.config['Directories']:
-                    app.game_resource_dir_var.set(self.config['Directories']['game_resource_dir'])
-                if 'output_dir' in self.config['Directories']:
-                    app.output_dir_var.set(self.config['Directories']['output_dir'])
-                if 'auto_detect_subdirs' in self.config['Directories']:
-                    app.auto_detect_subdirs_var.set(self.config['Directories']['auto_detect_subdirs'].lower() == 'true')
+            dirs: dict[str] = data.get("Directories", {})
+            app.game_resource_dir_var.set(dirs.get("game_resource_dir", ""))
+            app.auto_detect_subdirs_var.set(dirs.get("auto_detect_subdirs", False))
+            app.auto_search_var.set(dirs.get("auto_search", False))
             
-            # 加载全局选项
-            if 'GlobalOptions' in self.config:
-                if 'enable_padding' in self.config['GlobalOptions']:
-                    app.enable_padding_var.set(self.config['GlobalOptions']['enable_padding'].lower() == 'true')
-                if 'enable_crc_correction' in self.config['GlobalOptions']:
-                    app.enable_crc_correction_var.set(self.config['GlobalOptions']['enable_crc_correction'].lower() == 'true')
-                if 'create_backup' in self.config['GlobalOptions']:
-                    app.create_backup_var.set(self.config['GlobalOptions']['create_backup'].lower() == 'true')
-                if 'compression_method' in self.config['GlobalOptions']:
-                    app.compression_method_var.set(self.config['GlobalOptions']['compression_method'])
-                if 'auto_search' in self.config['GlobalOptions']:
-                    app.auto_search_var.set(self.config['GlobalOptions']['auto_search'].lower() == 'true')
+            app_settings = data.get("AppSettings", {})
+            if not hasattr(app, 'language_var'):
+                app.language_var = tk.StringVar()
+            app.language_var.set(app_settings.get("language", ""))
+            app.output_dir_var.set(app_settings.get("output_dir", ""))
             
-            # 加载资源类型选项
-            if 'ResourceTypes' in self.config:
-                if 'replace_texture2d' in self.config['ResourceTypes']:
-                    app.replace_texture2d_var.set(self.config['ResourceTypes']['replace_texture2d'].lower() == 'true')
-                if 'replace_textasset' in self.config['ResourceTypes']:
-                    app.replace_textasset_var.set(self.config['ResourceTypes']['replace_textasset'].lower() == 'true')
-                if 'replace_mesh' in self.config['ResourceTypes']:
-                    app.replace_mesh_var.set(self.config['ResourceTypes']['replace_mesh'].lower() == 'true')
-                if 'replace_all' in self.config['ResourceTypes']:
-                    app.replace_all_var.set(self.config['ResourceTypes']['replace_all'].lower() == 'true')
+            global_options = data.get("GlobalOptions", {})
+            app.enable_padding_var.set(global_options.get("enable_padding", False))
+            app.enable_crc_correction_var.set(global_options.get("enable_crc_correction", False))
+            app.create_backup_var.set(global_options.get("create_backup", False))
+            app.compression_method_var.set(global_options.get("compression_method", ""))
             
-            # 加载Spine转换器选项
-            if 'SpineConverter' in self.config:
-                if 'spine_converter_path' in self.config['SpineConverter']:
-                    app.spine_converter_path_var.set(self.config['SpineConverter']['spine_converter_path'])
-                if 'enable_spine_conversion' in self.config['SpineConverter']:
-                    app.enable_spine_conversion_var.set(self.config['SpineConverter']['enable_spine_conversion'].lower() == 'true')
-                if 'target_spine_version' in self.config['SpineConverter']:
-                    app.target_spine_version_var.set(self.config['SpineConverter']['target_spine_version'])
+            resource_types = data.get("ResourceTypes", {})
+            app.replace_texture2d_var.set(resource_types.get("replace_texture2d", False))
+            app.replace_textasset_var.set(resource_types.get("replace_textasset", False))
+            app.replace_mesh_var.set(resource_types.get("replace_mesh", False))
+            app.replace_all_var.set(resource_types.get("replace_all", False))
             
-            # 加载Spine降级选项
-            if 'SpineDowngrade' in self.config:
-                if 'atlas_downgrade_path' in self.config['SpineDowngrade']:
-                    app.atlas_downgrade_path_var.set(self.config['SpineDowngrade']['atlas_downgrade_path'])
-                if 'enable_atlas_downgrade' in self.config['SpineDowngrade']:
-                    app.enable_atlas_downgrade_var.set(self.config['SpineDowngrade']['enable_atlas_downgrade'].lower() == 'true')
-                if 'spine_downgrade_version' in self.config['SpineDowngrade']:
-                    app.spine_downgrade_version_var.set(self.config['SpineDowngrade']['spine_downgrade_version'])
+            spine_converter = data.get("SpineConverter", {})
+            app.enable_spine_conversion_var.set(spine_converter.get("enable_spine_conversion", False))
+            app.spine_converter_path_var.set(spine_converter.get("spine_converter_path", ""))
+            app.target_spine_version_var.set(spine_converter.get("target_spine_version", ""))
             
-            # 加载语言设置
-            if 'Language' in self.config and 'language' in self.config['Language']:
-                # 如果language_var不存在，创建它
-                if not hasattr(app, 'language_var'):
-                    import tkinter as tk
-                    app.language_var = tk.StringVar()
-                app.language_var.set(self.config['Language']['language'])
+            spine_downgrade = data.get("SpineDowngrade", {})
+            app.enable_atlas_downgrade_var.set(spine_downgrade.get("enable_atlas_downgrade", False))
+            app.atlas_downgrade_path_var.set(spine_downgrade.get("atlas_downgrade_path", ""))
+            app.spine_downgrade_version_var.set(spine_downgrade.get("spine_downgrade_version", ""))
             
-            # 加载Asset Packer选项
-            if 'AssetPacker' in self.config:
-                if 'enable_spine38_namefix' in self.config['AssetPacker']:
-                    app.enable_spine38_namefix_var.set(self.config['AssetPacker']['enable_spine38_namefix'].lower() == 'true')
+            tabs = data.get("Tabs", {})
+            app.enable_spine38_namefix_var.set(tabs.get("enable_spine38_namefix", False))
             
             return True
         except Exception as e:
