@@ -38,10 +38,10 @@ class CrcToolTab(TabFrame):
         action_button_frame.grid_columnconfigure((0, 1, 2), weight=1)
         
         UIComponents.create_button(action_button_frame, t("action.run_crc_correction"), self.run_correction_thread,
-                                   bootstyle="success").grid(row=0, column=0, sticky="ew", padx=5)
+                                   bootstyle="success", style="large").grid(row=0, column=0, sticky="ew", padx=5)
         UIComponents.create_button(action_button_frame, t("action.calculate_crc"), self.calculate_values_thread,
-                                   bootstyle="primary").grid(row=0, column=1, sticky="ew", padx=5)  
-        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled")
+                                   bootstyle="primary", style="large").grid(row=0, column=1, sticky="ew", padx=5)  
+        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled", style="large")
         self.replace_button.grid(row=0, column=2, sticky="ew", padx=5)
 
     def drop_original(self, event):

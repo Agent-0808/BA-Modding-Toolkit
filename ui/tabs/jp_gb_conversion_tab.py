@@ -72,7 +72,8 @@ class JpGbConversionTab(TabFrame):
         self.run_button = UIComponents.create_button(
             action_button_frame, t("action.convert"),
             self.run_conversion_thread,
-            bootstyle="success"
+            bootstyle="success",
+            style="large"
         )
         self.run_button.pack(fill=tk.X)
         

@@ -78,10 +78,10 @@ class ModUpdateTab(TabFrame):
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
 
-        self.run_button = UIComponents.create_button(action_button_frame, t("action.update"), self.run_update_thread, bootstyle="success")
+        self.run_button = UIComponents.create_button(action_button_frame, t("action.update"), self.run_update_thread, bootstyle="success", style="large")
         self.run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=2)
         
-        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled")
+        self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled", style="large")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=2)
 
     def drop_old_mod(self, event):
@@ -248,7 +248,7 @@ class ModUpdateTab(TabFrame):
             )
             self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
             
-            run_button = UIComponents.create_button(parent, text=t("action.start"), command=self.run_batch_update_thread, bootstyle="success")
+            run_button = UIComponents.create_button(parent, text=t("action.start"), command=self.run_batch_update_thread, bootstyle="success", style="large")
             run_button.pack(fill=tk.X, pady=5)
 
     def run_batch_update_thread(self):

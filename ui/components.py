@@ -168,6 +168,10 @@ class UIComponents:
 
         if style == "compact":
             button_kwargs["padding"] = (2, 2)
+        elif style == "short":
+            button_kwargs["padding"] = (10, 3)
+        elif style == "large":
+            button_kwargs["padding"] = (15, 6)
         else:
             button_kwargs["padding"] = padding if padding is not None else (10, 5)
 
@@ -250,7 +254,7 @@ class UIComponents:
         btn_frame.pack(anchor=tk.CENTER)
 
         # 浏览按钮
-        UIComponents.create_button(btn_frame, button_text, browse_cmd, bootstyle="primary", style="compact").pack(side=tk.LEFT, padx=(0, 5))
+        UIComponents.create_button(btn_frame, button_text, browse_cmd, bootstyle="primary", style="short").pack(side=tk.LEFT, padx=(0, 5))
 
         # 清除逻辑
         def _handle_clear():
@@ -261,7 +265,7 @@ class UIComponents:
                 clear_cmd()
 
         # 清除按钮
-        UIComponents.create_button(btn_frame, t("action.clear"), _handle_clear, bootstyle="warning", style="compact").pack(side=tk.LEFT)
+        UIComponents.create_button(btn_frame, t("action.clear"), _handle_clear, bootstyle="warning", style="short").pack(side=tk.LEFT)
 
         return frame, drop_zone
 

@@ -63,7 +63,7 @@ class AssetExtractorTab(TabFrame):
         action_frame.grid_columnconfigure(0, weight=1)
 
         run_button = UIComponents.create_button(action_frame, t("action.extract"), self.run_extraction_thread,
-                                                 bootstyle="success")
+                                                 bootstyle="success", style="large")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
     def drop_bundle(self, event):

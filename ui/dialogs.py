@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from ui.app import App
 
 from i18n import t
+from utils import get_environment_info
 from .components import Theme, UIComponents, SettingRow
 from .utils import select_file
 
@@ -17,6 +18,7 @@ class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance
+        self._language_changing = False
 
         self._setup_window()
 
@@ -88,6 +90,14 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.output_dir_var,
             select_cmd=self.app.select_output_directory,
             open_cmd=self.app.open_output_dir_in_explorer
+        )
+
+        SettingRow.create_button_row(
+            section,
+            label=t("ui.label.environment"),
+            button_text=t("action.print"),
+            command=self.print_environment_info,
+            bootstyle="info"
         )
 
     def _init_global_options(self):
@@ -200,6 +210,7 @@ class SettingsDialog(tb.Toplevel):
     def _setup_variable_traces(self):
         """设置变量变化监听"""
         self.app.enable_crc_correction_var.trace_add("write", self._on_crc_change)
+        self.app.language_var.trace_add("write", self._on_language_change)
 
     def _on_crc_change(self, *args):
         """CRC修正复选框状态变化时的处理"""
@@ -208,6 +219,20 @@ class SettingsDialog(tb.Toplevel):
         else:
             self.app.enable_padding_var.set(False)
             self.padding_checkbox.config(state=tk.DISABLED)
+
+    def _on_language_change(self, *args):
+        """语言选项变化时的处理"""
+        if self._language_changing:
+            return
+        
+        self._language_changing = True
+        
+        if messagebox.askyesno(t("common.tip"), t("message.config.language_changed")):
+            self.destroy()
+            self.app.save_current_config()
+            self.master.quit()
+        else:
+            self._language_changing = False
 
     def load_config(self):
         """加载配置文件并更新UI"""
@@ -247,3 +272,7 @@ class SettingsDialog(tb.Toplevel):
             ),
             logger=self.app.logger.log
         )
+
+    def print_environment_info(self):
+        """打印环境信息"""
+        self.app.logger.log(get_environment_info())
