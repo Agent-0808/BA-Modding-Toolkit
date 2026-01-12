@@ -315,6 +315,11 @@ class ConfigManager:
                 'language': app.language_var.get()
             }
             
+            # 添加Asset Packer选项
+            self.config['AssetPacker'] = {
+                'enable_spine38_namefix': str(app.enable_spine38_namefix_var.get())
+            }
+            
             # 写入文件
             with open(self.config_file, 'w', encoding='utf-8') as f:
                 self.config.write(f)
@@ -390,6 +395,11 @@ class ConfigManager:
                     import tkinter as tk
                     app.language_var = tk.StringVar()
                 app.language_var.set(self.config['Language']['language'])
+            
+            # 加载Asset Packer选项
+            if 'AssetPacker' in self.config:
+                if 'enable_spine38_namefix' in self.config['AssetPacker']:
+                    app.enable_spine38_namefix_var.set(self.config['AssetPacker']['enable_spine38_namefix'].lower() == 'true')
             
             return True
         except Exception as e:

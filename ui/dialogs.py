@@ -18,7 +18,6 @@ class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance
-        self._language_changing = False
 
         self._setup_window()
 
@@ -34,8 +33,6 @@ class SettingsDialog(tb.Toplevel):
         self._init_spine_settings()
 
         self._init_footer_buttons()
-
-        self._setup_variable_traces()
 
     def _setup_window(self):
         """设置窗口基本属性"""
@@ -77,12 +74,13 @@ class SettingsDialog(tb.Toplevel):
         """初始化应用设置"""
         section = self._create_section(t("ui.settings.group_app"))
 
-        SettingRow.create_combobox_row(
+        self.language_combo = SettingRow.create_combobox_row(
             section,
             label=t("ui.label.language"),
             text_var=self.app.language_var,
             values=self.app.available_languages
         )
+        self.language_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
 
         SettingRow.create_path_selector(
             section,
@@ -108,7 +106,8 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.crc_correction"),
             variable=self.app.enable_crc_correction_var,
-            tooltip="测试文本"
+            tooltip="测试文本",
+            command=self._on_crc_changed
         )
 
         self.padding_checkbox = SettingRow.create_switch(
@@ -207,12 +206,7 @@ class SettingsDialog(tb.Toplevel):
         reset_button = UIComponents.create_button(footer_frame, text=t("common.reset"), command=self.reset_to_default, bootstyle="danger")
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
-    def _setup_variable_traces(self):
-        """设置变量变化监听"""
-        self.app.enable_crc_correction_var.trace_add("write", self._on_crc_change)
-        self.app.language_var.trace_add("write", self._on_language_change)
-
-    def _on_crc_change(self, *args):
+    def _on_crc_changed(self):
         """CRC修正复选框状态变化时的处理"""
         if not self.winfo_exists():
             return
@@ -222,19 +216,12 @@ class SettingsDialog(tb.Toplevel):
             self.app.enable_padding_var.set(False)
             self.padding_checkbox.config(state=tk.DISABLED)
 
-    def _on_language_change(self, *args):
+    def _on_language_changed(self, event):
         """语言选项变化时的处理"""
-        if self._language_changing:
-            return
-        
-        self._language_changing = True
-        
-        if messagebox.askyesno(t("common.tip"), t("message.config.language_changed")):
+        if messagebox.askyesno(t("common.tip"), t("message.config.language_changed"), parent=self):
             self.app.save_current_config()
             self.destroy()
             self.master.quit()
-        else:
-            self._language_changing = False
 
     def load_config(self):
         """加载配置文件并更新UI"""
@@ -243,11 +230,11 @@ class SettingsDialog(tb.Toplevel):
             messagebox.showinfo(t("common.success"), t("message.config.loaded"))
         else:
             self.app.logger.log(t("log.config.load_failed"))
-            messagebox.showerror(t("common.error"), t("message.config.load_failed"))
+            messagebox.showerror(t("common.error"), t("message.config.load_failed"), parent=self)
 
     def reset_to_default(self):
         """重置为默认设置"""
-        if messagebox.askyesno(t("common.tip"), t("message.confirm_reset_settings")):
+        if messagebox.askyesno(t("common.tip"), t("message.confirm_reset_settings"), parent=self):
             self.app._set_default_values()
             self.app.logger.log(t("log.config.reset"))
 

@@ -61,6 +61,9 @@ class App(tk.Frame):
         self.enable_atlas_downgrade_var.set(False)
         self.atlas_downgrade_path_var.set("")
         self.spine_downgrade_version_var.set("3.8.75")  # 设置默认值
+        
+        # Asset Packer 选项
+        self.enable_spine38_namefix_var.set(False)
 
     def init_shared_variables(self):
         """初始化所有Tabs共享的变量。"""
@@ -309,14 +312,14 @@ class App(tk.Frame):
             parent, 
             text=t("ui.log_area"), 
             bootstyle="default",
-            padding=2
+            padding=(5, 0)
         )
-        log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=0)
+        log_frame.pack(fill=tk.BOTH, expand=True)
 
         # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
         st = ScrolledText(
             log_frame,
-            padding=5,
+            padding=0,
             height=8,
             autohide=True,            # 自动隐藏滚动条
             bootstyle="round" # 滚动条样式
