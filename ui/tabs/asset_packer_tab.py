@@ -32,12 +32,12 @@ class AssetPackerTab(TabFrame):
         )
         
         # 旧版 Spine 文件名修正选项
-        options_frame = tb.Frame(self)
+        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(5, 0))
         
         self.spine38_namefix_checkbutton = UIComponents.create_checkbutton(
             options_frame,
-            "修正旧版Spine文件名",
+            t("option.spine38_name_fix"),
             self.app.enable_spine38_namefix_var
         )
         self.spine38_namefix_checkbutton.pack(anchor=tk.W)

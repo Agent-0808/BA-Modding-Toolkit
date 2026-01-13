@@ -55,7 +55,7 @@ class JpGbConversionTab(TabFrame):
         self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
         # --- 选项设置区域 ---
-        options_frame = tb.Frame(self)
+        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X)
         
         # 自动搜索开关
@@ -63,7 +63,7 @@ class JpGbConversionTab(TabFrame):
             options_frame,
             text=t("option.auto_search"),
             variable=self.app.auto_search_var
-        ).pack(side=tk.LEFT, padx=5)
+        ).pack(side=tk.LEFT, pady=5)
         
         # --- 操作按钮 ---
         action_button_frame = tb.Frame(self)
@@ -75,7 +75,7 @@ class JpGbConversionTab(TabFrame):
             bootstyle="success",
             style="large"
         )
-        self.run_button.pack(fill=tk.X)
+        self.run_button.pack(fill=tk.X, pady=10)
         
         # 初始化视图标签
         self._switch_view()

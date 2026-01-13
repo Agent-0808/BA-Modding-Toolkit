@@ -28,34 +28,34 @@ class AssetExtractorTab(TabFrame):
         
         # 输出目录
         self.output_frame = UIComponents.create_directory_path_entry(
-            self, t("ui.label.output_dir"), self.subdir_var,
+            self, t("option.output_dir"), self.subdir_var,
             self.select_output_dir, self.open_output_dir,
-            placeholder_text=t("ui.dialog.select", type=t("ui.label.output_dir"))
+            placeholder_text=t("ui.dialog.select", type=t("option.output_dir"))
         )
 
         # 资源类型选项
-        options_frame = tb.Labelframe(self, text=t("ui.extractor.options_title"))
-        options_frame.pack(fill=tk.X, pady=5)
+        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
+        options_frame.pack(fill=tk.X, pady=(5,0))
         
         # Spine 降级选项
         spine_downgrade_frame = tb.Frame(options_frame)
-        spine_downgrade_frame.pack(fill=tk.X, pady=5)
+        spine_downgrade_frame.pack(fill=tk.X)
         
         atlas_downgrade_check = UIComponents.create_checkbutton(
             spine_downgrade_frame, t("option.spine_downgrade"), self.app.enable_atlas_downgrade_var
         )
-        atlas_downgrade_check.pack(side=tk.LEFT, padx=10)
+        atlas_downgrade_check.pack(side=tk.LEFT)
         
         # Spine 降级版本输入框
-        spine_version_label = tb.Label(spine_downgrade_frame, text=t("ui.label.downgrade_target_version"))
-        spine_version_label.pack(side=tk.LEFT, padx=5)
+        spine_version_label = tb.Label(spine_downgrade_frame, text=t("option.downgrade_target_version"))
+        spine_version_label.pack(side=tk.LEFT, padx = (28, 0))
         
         self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
             spine_downgrade_frame,
             textvariable=self.app.spine_downgrade_version_var,
             width=10
         )
-        self.spine_downgrade_version_entry.pack(side=tk.LEFT)
+        self.spine_downgrade_version_entry.pack(side=tk.LEFT, padx = (8, 0))
         
         # 操作按钮
         action_frame = tb.Frame(self)
@@ -85,7 +85,7 @@ class AssetExtractorTab(TabFrame):
             
         selected_dir = select_directory(
             var=None,
-            title=t("ui.dialog.select", type=t("ui.label.output_dir")),
+            title=t("ui.dialog.select", type=t("option.output_dir")),
             logger=self.logger.log
         )
         

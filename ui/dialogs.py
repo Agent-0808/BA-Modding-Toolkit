@@ -64,7 +64,7 @@ class SettingsDialog(tb.Toplevel):
 
         SettingRow.create_path_selector(
             section,
-            label=t("ui.label.game_root_dir"),
+            label=t("option.game_root_dir"),
             path_var=self.app.game_resource_dir_var,
             select_cmd=self.app.select_game_resource_directory,
             open_cmd=self.app.open_game_resource_in_explorer
@@ -76,7 +76,7 @@ class SettingsDialog(tb.Toplevel):
 
         self.language_combo = SettingRow.create_combobox_row(
             section,
-            label=t("ui.label.language"),
+            label=t("option.language"),
             text_var=self.app.language_var,
             values=self.app.available_languages
         )
@@ -84,7 +84,7 @@ class SettingsDialog(tb.Toplevel):
 
         SettingRow.create_path_selector(
             section,
-            label=t("ui.label.output_dir"),
+            label=t("option.output_dir"),
             path_var=self.app.output_dir_var,
             select_cmd=self.app.select_output_directory,
             open_cmd=self.app.open_output_dir_in_explorer
@@ -124,7 +124,7 @@ class SettingsDialog(tb.Toplevel):
 
         SettingRow.create_radiobutton_row(
             section,
-            label=t("ui.label.compression_method"),
+            label=t("option.compression_method"),
             text_var=self.app.compression_method_var,
             values=["lzma", "lz4", "original", "none"]
         )
@@ -169,21 +169,21 @@ class SettingsDialog(tb.Toplevel):
 
         SettingRow.create_entry_row(
             section,
-            label=t("ui.label.target_version"),
+            label=t("option.target_version"),
             text_var=self.app.target_spine_version_var,
             placeholder_text=t("ui.label.spine_version")
         )
 
         SettingRow.create_path_selector(
             section,
-            label=t("ui.label.skel_converter_path"),
+            label=t("option.skel_converter_path"),
             path_var=self.app.spine_converter_path_var,
             select_cmd=self.select_spine_converter_path
         )
 
         SettingRow.create_path_selector(
             section,
-            label=t("ui.label.atlas_downgrade_path"),
+            label=t("option.atlas_downgrade_path"),
             path_var=self.app.atlas_downgrade_path_var,
             select_cmd=self.select_atlas_downgrade_path
         )
@@ -197,13 +197,13 @@ class SettingsDialog(tb.Toplevel):
         footer_frame.columnconfigure(1, weight=1)
         footer_frame.columnconfigure(2, weight=1)
 
-        save_button = UIComponents.create_button(footer_frame, text=t("common.save"), command=self.app.save_current_config, bootstyle="success")
+        save_button = UIComponents.create_button(footer_frame, text=t("action.save"), command=self.app.save_current_config, bootstyle="success")
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-        load_button = UIComponents.create_button(footer_frame, text=t("common.load"), command=self.load_config, bootstyle="warning") 
+        load_button = UIComponents.create_button(footer_frame, text=t("action.load"), command=self.load_config, bootstyle="warning") 
         load_button.grid(row=0, column=1, sticky="ew", padx=5)
 
-        reset_button = UIComponents.create_button(footer_frame, text=t("common.reset"), command=self.reset_to_default, bootstyle="danger")
+        reset_button = UIComponents.create_button(footer_frame, text=t("action.reset"), command=self.reset_to_default, bootstyle="danger")
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
     def _on_crc_changed(self):

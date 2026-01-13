@@ -162,8 +162,14 @@ def replace_file(source_path: Path,
     try: 
         if create_backup: 
             backup_path = dest_path.with_suffix(dest_path.suffix + '.backup') 
+            
+            try:
+                shutil.copy2(dest_path, backup_path) 
+            except Exception as e:
+                log(t("log.file.backup_failed", error=e)) 
+                messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
+                return False
             log(t("log.file.backed_up", path=backup_path)) 
-            shutil.copy2(dest_path, backup_path) 
         
         log(t("log.file.overwritten", path=dest_path)) 
         shutil.copy2(source_path, dest_path) 

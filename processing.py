@@ -575,7 +575,7 @@ def process_asset_extraction(
         log("\n" + "="*50)
         log(t("log.extractor.starting_extraction", filename=bundle_path.name))
         log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
-        log(f"{t('ui.label.output_dir')}: {output_dir}")
+        log(f"{t('option.output_dir')}: {output_dir}")
 
         env = load_bundle(bundle_path, log)
         if not env:
