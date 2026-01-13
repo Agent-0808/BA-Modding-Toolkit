@@ -307,7 +307,8 @@ class ConfigManager:
                     "spine_downgrade_version": app.spine_downgrade_version_var.get()
                 },
                 "Tabs": {
-                    "enable_spine38_namefix": app.enable_spine38_namefix_var.get()
+                    "enable_spine38_namefix": app.enable_spine38_namefix_var.get(),
+                    "enable_bleed": app.enable_bleed_var.get()
                 }
             }
             
@@ -363,6 +364,7 @@ class ConfigManager:
             
             tabs = data.get("Tabs", {})
             app.enable_spine38_namefix_var.set(tabs.get("enable_spine38_namefix", False))
+            app.enable_bleed_var.set(tabs.get("enable_bleed", False))
             
             return True
         except Exception as e:

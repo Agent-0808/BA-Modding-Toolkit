@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from typing import Callable, Any, Literal
 
 from i18n import t
-from utils import CRCUtils, SpineUtils, no_log
+from utils import CRCUtils, SpineUtils, ImageUtils, no_log
 
 # -------- 类型别名 ---------
 
@@ -423,6 +423,7 @@ def process_asset_packing(
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
     enable_rename_fix: bool | None = False,
+    enable_bleed: bool | None = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -431,6 +432,7 @@ def process_asset_packing(
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
     可选地升级 Spine 动画的 Skel 资源版本。
+    可选地对 PNG 文件进行 Bleed 处理。
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
     因为打包资源的操作在原理上是替换目标Bundle内的资源，因此里面可能有混用打包和替换的叫法。
     返回 (是否成功, 状态消息) 的元组。
@@ -442,6 +444,7 @@ def process_asset_packing(
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
         enable_rename_fix: 是否启用旧版 Spine 3.8 文件名修正
+        enable_bleed: 是否对 PNG 文件进行 Bleed 处理
         log: 日志记录函数，默认为空函数
     """
     temp_asset_folder = None
@@ -471,6 +474,9 @@ def process_asset_packing(
             if suffix == ".png":
                 asset_key = (file_path.stem, AssetType.Texture2D.name)
                 content = Image.open(file_path).convert("RGBA")
+                if enable_bleed:
+                    content = ImageUtils.bleed_image(content)
+                    log(f"  > {t('log.packer.bleed_processed', name=file_path.stem)}")
             else: # .skel, .atlas
                 asset_key = (file_path.name, AssetType.TextAsset.name)
                 with open(file_path, "rb") as f:

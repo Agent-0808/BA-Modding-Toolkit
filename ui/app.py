@@ -64,6 +64,7 @@ class App(tk.Frame):
         
         # Asset Packer 选项
         self.enable_spine38_namefix_var.set(False)
+        self.enable_bleed_var.set(False)
 
     def init_shared_variables(self):
         """初始化所有Tabs共享的变量。"""
@@ -93,8 +94,9 @@ class App(tk.Frame):
         self.atlas_downgrade_path_var = tk.StringVar()
         self.spine_downgrade_version_var = tk.StringVar()  # 添加Spine降级版本变量
         
-        # Spine 3.8 文件名修正选项
+        # Asset Packer Bleed 选项
         self.enable_spine38_namefix_var = tk.BooleanVar()
+        self.enable_bleed_var = tk.BooleanVar()
         
         # 语言设置
         self.language_var = tk.StringVar(value="zh-CN")

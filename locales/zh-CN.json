@@ -69,7 +69,8 @@
 		"atlas_downgrade_path": "Atlas 降级工具路径",
 		"compression_method": "压缩方式",
 		"downgrade_target_version": "目标版本",
-		"spine38_name_fix": "修正旧版Spine文件名"
+		"enable_bleed": "启用 Bleed 处理图像",
+		"enable_spine38_name_fix": "修正旧版 Spine 文件名"
 	},
 	"file_type": {
 		"executable": "可执行文件",
@@ -255,7 +256,8 @@
 			"check_files_and_bundle": "请检查：\n1. 文件名是否与 bundle 内的资源名完全匹配。\n2. bundle 文件是否正确。",
 			"packing_complete": "打包完成: 成功打包 {success} / {total} 个资源。",
 			"unmatched_files_warning": "以下文件未在bundle中找到对应的资源",
-			"attempted_match": "尝试匹配: '{key}'"
+			"attempted_match": "尝试匹配: '{key}'",
+			"bleed_processed": "对图像 {name} 进行了 Bleed 处理"
 		},
 		"crc": {
 			"loaded_original": "已加载原始文件: {file}",

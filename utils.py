@@ -4,6 +4,7 @@ import binascii
 import os
 import re
 import shutil
+from PIL import Image
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -482,12 +483,12 @@ class SpineUtils:
             return skel_bytes
 
         try:
-            log(f'    > {t("log.spine.skel_detected", name=resource_name)}')
+            log(f'  > {t("log.spine.skel_detected", name=resource_name)}')
             current_version = SpineUtils.get_skel_version(skel_bytes, log)
             target_major_minor = ".".join(target_version.split('.')[:2])
 
             if current_version and not current_version.startswith(target_major_minor):
-                log(f'      > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+                log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
 
                 skel_success, upgraded_content = SpineUtils.run_skel_converter(
                     input_data=skel_bytes,
@@ -496,13 +497,13 @@ class SpineUtils:
                     log=log
                 )
                 if skel_success:
-                    log(f'    > {t("log.spine.skel_conversion_success", name=resource_name)}')
+                    log(f'  > {t("log.spine.skel_conversion_success", name=resource_name)}')
                     return upgraded_content
                 else:
-                    log(f'    ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
+                    log(f'  ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
 
         except Exception as e:
-            log(f'      ❌ {t("log.error_detail", error=e)}')
+            log(f'    ❌ {t("log.error_detail", error=e)}')
 
         return skel_bytes
 
@@ -639,3 +640,47 @@ class SpineUtils:
                     shutil.copy2(item, final_temp_path / item.name)
 
             return final_temp_path
+
+class ImageUtils:
+    @staticmethod
+    def bleed_image(image: Image.Image, iteration: int = 8) -> Image.Image:
+        """
+        对图像进行 Bleed 处理。
+        """
+        if image.mode != 'RGBA':
+            image = image.convert('RGBA')
+
+        width, height = image.size
+        original_alpha = image.getchannel('A')
+        
+        # 优化：使用 LUT 代替逐像素操作
+        lut = [255] * 256
+        lut[0] = 0
+        mask = original_alpha.point(lut)
+
+        # 优化：如果没有完全透明像素，直接返回
+        if original_alpha.getextrema()[0] > 0:
+            return image
+
+        current_canvas = image.copy()
+        
+        for _ in range(iteration):
+            layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            offsets = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            
+            for dx, dy in offsets:
+                shifted = current_canvas.transform(
+                    (width, height),
+                    Image.Transform.AFFINE,
+                    (1, 0, -dx, 0, 1, -dy)
+                )
+                layer.alpha_composite(shifted)
+            
+            layer.alpha_composite(current_canvas)
+            current_canvas = layer
+
+        result = Image.composite(image, current_canvas, mask)
+        r, g, b, _ = result.split()
+        final = Image.merge("RGBA", (r, g, b, original_alpha))
+
+        return final

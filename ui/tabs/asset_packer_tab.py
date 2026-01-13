@@ -37,10 +37,17 @@ class AssetPackerTab(TabFrame):
         
         self.spine38_namefix_checkbutton = UIComponents.create_checkbutton(
             options_frame,
-            t("option.spine38_name_fix"),
+            t("option.enable_spine38_name_fix"),
             self.app.enable_spine38_namefix_var
         )
-        self.spine38_namefix_checkbutton.pack(anchor=tk.W)
+        self.spine38_namefix_checkbutton.pack(anchor=tk.W, pady=5)
+        
+        self.bleed_checkbutton = UIComponents.create_checkbutton(
+            options_frame,
+            t("option.enable_bleed"),
+            self.app.enable_bleed_var
+        )
+        self.bleed_checkbutton.pack(anchor=tk.W, pady=5)
 
         # 操作按钮区域
         action_button_frame = tb.Frame(self)
@@ -124,6 +131,7 @@ class AssetPackerTab(TabFrame):
             save_options = save_options,
             spine_options = spine_options,
             enable_rename_fix = self.app.enable_spine38_namefix_var.get(),
+            enable_bleed = self.app.enable_bleed_var.get(),
             log = self.logger.log
         )
         
