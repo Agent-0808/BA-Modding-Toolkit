@@ -8,7 +8,7 @@ from i18n import t
 
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents
+from ui.components import Theme, UIComponents, SettingRow
 from ui.utils import handle_drop, replace_file, select_file, select_directory
 
 class AssetPackerTab(TabFrame):
@@ -35,19 +35,19 @@ class AssetPackerTab(TabFrame):
         options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(5, 0))
         
-        self.spine38_namefix_checkbutton = UIComponents.create_checkbutton(
+        SettingRow.create_switch(
             options_frame,
-            t("option.enable_spine38_name_fix"),
-            self.app.enable_spine38_namefix_var
+            label=t("option.enable_spine38_name_fix"),
+            variable=self.app.enable_spine38_namefix_var,
+            tooltip=t("option.enable_spine38_name_fix_info")
         )
-        self.spine38_namefix_checkbutton.pack(anchor=tk.W, pady=5)
         
-        self.bleed_checkbutton = UIComponents.create_checkbutton(
+        SettingRow.create_switch(
             options_frame,
-            t("option.enable_bleed"),
-            self.app.enable_bleed_var
+            label=t("option.enable_bleed"),
+            variable=self.app.enable_bleed_var,
+            tooltip=t("option.enable_bleed_info")
         )
-        self.bleed_checkbutton.pack(anchor=tk.W, pady=5)
 
         # 操作按钮区域
         action_button_frame = tb.Frame(self)

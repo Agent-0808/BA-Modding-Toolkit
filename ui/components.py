@@ -456,7 +456,7 @@ class SettingRow:
         
         # 右侧区域容器
         right_frame = tb.Frame(container)
-        right_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
+        right_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(50, 0))
         
         # 按钮在最右
         if open_cmd:
@@ -478,13 +478,14 @@ class SettingRow:
         label: str,
         text_var: tk.StringVar,
         tooltip: str | None = None,
-        placeholder_text: str | None = None
+        placeholder_text: str | None = None,
+        expand: bool = False
     ) -> tb.Entry:
         """创建输入行"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
-        entry = tb.Entry(container, textvariable=text_var)
+        entry = tb.Entry(container, textvariable=text_var, width = 10)
         # 使用传统方式实现占位符功能
         if placeholder_text:
             # 初始显示占位符
@@ -502,7 +503,10 @@ class SettingRow:
             entry.bind('<FocusIn>', on_focus_in)
             entry.bind('<FocusOut>', on_focus_out)
         
-        entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
+        if expand:
+            entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
+        else:
+            entry.pack(side=tk.RIGHT, padx=(10, 0))
         return entry
 
     @staticmethod

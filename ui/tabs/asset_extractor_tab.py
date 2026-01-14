@@ -9,7 +9,7 @@ import os
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents
+from ui.components import Theme, UIComponents, SettingRow
 from ui.utils import handle_drop, select_file, select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
@@ -38,24 +38,20 @@ class AssetExtractorTab(TabFrame):
         options_frame.pack(fill=tk.X, pady=(5,0))
         
         # Spine 降级选项
-        spine_downgrade_frame = tb.Frame(options_frame)
-        spine_downgrade_frame.pack(fill=tk.X)
-        
-        atlas_downgrade_check = UIComponents.create_checkbutton(
-            spine_downgrade_frame, t("option.spine_downgrade"), self.app.enable_atlas_downgrade_var
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.spine_downgrade"),
+            variable=self.app.enable_atlas_downgrade_var,
+            tooltip=t("option.spine_downgrade_info")
         )
-        atlas_downgrade_check.pack(side=tk.LEFT)
         
         # Spine 降级版本输入框
-        spine_version_label = tb.Label(spine_downgrade_frame, text=t("option.downgrade_target_version"))
-        spine_version_label.pack(side=tk.LEFT, padx = (28, 0))
-        
-        self.spine_downgrade_version_entry = UIComponents.create_textbox_entry(
-            spine_downgrade_frame,
-            textvariable=self.app.spine_downgrade_version_var,
-            width=10
+        SettingRow.create_entry_row(
+            options_frame,
+            label=t("option.downgrade_target_version"),
+            text_var=self.app.spine_downgrade_version_var,
+            tooltip=t("option.downgrade_target_version_info")
         )
-        self.spine_downgrade_version_entry.pack(side=tk.LEFT, padx = (8, 0))
         
         # 操作按钮
         action_frame = tb.Frame(self)

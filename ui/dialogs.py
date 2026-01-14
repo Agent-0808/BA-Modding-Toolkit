@@ -67,7 +67,8 @@ class SettingsDialog(tb.Toplevel):
             label=t("option.game_root_dir"),
             path_var=self.app.game_resource_dir_var,
             select_cmd=self.app.select_game_resource_directory,
-            open_cmd=self.app.open_game_resource_in_explorer
+            open_cmd=self.app.open_game_resource_in_explorer,
+            tooltip=t("option.game_root_dir_info")
         )
 
     def _init_app_settings(self):
@@ -78,7 +79,8 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.language"),
             text_var=self.app.language_var,
-            values=self.app.available_languages
+            values=self.app.available_languages,
+            tooltip=t("option.language_info")
         )
         self.language_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
 
@@ -87,7 +89,8 @@ class SettingsDialog(tb.Toplevel):
             label=t("option.output_dir"),
             path_var=self.app.output_dir_var,
             select_cmd=self.app.select_output_directory,
-            open_cmd=self.app.open_output_dir_in_explorer
+            open_cmd=self.app.open_output_dir_in_explorer,
+            tooltip=t("option.output_dir_info")
         )
 
         SettingRow.create_button_row(
@@ -106,27 +109,30 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.crc_correction"),
             variable=self.app.enable_crc_correction_var,
-            tooltip="测试文本",
+            tooltip=t("option.crc_correction_info"),
             command=self._on_crc_changed
         )
 
         self.padding_checkbox = SettingRow.create_switch(
             section,
             label=t("option.padding"),
-            variable=self.app.enable_padding_var
+            variable=self.app.enable_padding_var,
+            tooltip=t("option.padding_info")
         )
 
         SettingRow.create_switch(
             section,
             label=t("option.backup"),
-            variable=self.app.create_backup_var
+            variable=self.app.create_backup_var,
+            tooltip=t("option.backup_info")
         )
 
         SettingRow.create_radiobutton_row(
             section,
             label=t("option.compression_method"),
             text_var=self.app.compression_method_var,
-            values=["lzma", "lz4", "original", "none"]
+            values=["lzma", "lz4", "original", "none"],
+            tooltip=t("option.compression_method_info")
         )
 
     def _init_asset_options(self):
@@ -136,25 +142,29 @@ class SettingsDialog(tb.Toplevel):
         SettingRow.create_switch(
             section,
             label=t("option.replace_all"),
-            variable=self.app.replace_all_var
+            variable=self.app.replace_all_var,
+            tooltip=t("option.replace_all_info")
         )
 
         SettingRow.create_switch(
             section,
             label=t("option.replace_texture"),
-            variable=self.app.replace_texture2d_var
+            variable=self.app.replace_texture2d_var,
+            tooltip=t("option.replace_texture_info")
         )
 
         SettingRow.create_switch(
             section,
             label=t("option.replace_textasset"),
-            variable=self.app.replace_textasset_var
+            variable=self.app.replace_textasset_var,
+            tooltip=t("option.replace_textasset_info")
         )
 
         SettingRow.create_switch(
             section,
             label=t("option.replace_mesh"),
-            variable=self.app.replace_mesh_var
+            variable=self.app.replace_mesh_var,
+            tooltip=t("option.replace_mesh_info")
         )
 
     def _init_spine_settings(self):
@@ -164,28 +174,32 @@ class SettingsDialog(tb.Toplevel):
         SettingRow.create_switch(
             section,
             label=t("option.spine_conversion"),
-            variable=self.app.enable_spine_conversion_var
+            variable=self.app.enable_spine_conversion_var,
+            tooltip=t("option.spine_conversion_info")
         )
 
         SettingRow.create_entry_row(
             section,
             label=t("option.target_version"),
             text_var=self.app.target_spine_version_var,
-            placeholder_text=t("ui.label.spine_version")
+            placeholder_text=t("ui.label.spine_version"),
+            tooltip=t("option.target_version_info")
         )
 
         SettingRow.create_path_selector(
             section,
             label=t("option.skel_converter_path"),
             path_var=self.app.spine_converter_path_var,
-            select_cmd=self.select_spine_converter_path
+            select_cmd=self.select_spine_converter_path,
+            tooltip=t("option.skel_converter_path_info")
         )
 
         SettingRow.create_path_selector(
             section,
             label=t("option.atlas_downgrade_path"),
             path_var=self.app.atlas_downgrade_path_var,
-            select_cmd=self.select_atlas_downgrade_path
+            select_cmd=self.select_atlas_downgrade_path,
+            tooltip=t("option.atlas_downgrade_path_info")
         )
 
     def _init_footer_buttons(self):

@@ -8,7 +8,7 @@ from pathlib import Path
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
+from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher, SettingRow
 from ui.utils import handle_drop, select_file
 from utils import get_search_resource_dirs
 
@@ -59,11 +59,12 @@ class JpGbConversionTab(TabFrame):
         options_frame.pack(fill=tk.X)
         
         # 自动搜索开关
-        UIComponents.create_checkbutton(
+        SettingRow.create_switch(
             options_frame,
-            text=t("option.auto_search"),
-            variable=self.app.auto_search_var
-        ).pack(side=tk.LEFT, pady=5)
+            label=t("option.auto_search"),
+            variable=self.app.auto_search_var,
+            tooltip=t("option.auto_search_info")
+        )
         
         # --- 操作按钮 ---
         action_button_frame = tb.Frame(self)
