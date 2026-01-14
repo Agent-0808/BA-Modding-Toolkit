@@ -105,10 +105,11 @@ class SettingsDialog(tb.Toplevel):
         """初始化全局选项"""
         section = self._create_section(t("ui.settings.group_global"))
 
-        crc_checkbox = SettingRow.create_switch(
+        SettingRow.create_radiobutton_row(
             section,
             label=t("option.crc_correction"),
-            variable=self.app.enable_crc_correction_var,
+            text_var=self.app.enable_crc_correction_var,
+            values=[("auto", t("common.auto")), ("true", t("common.on")), ("false", t("common.off"))],
             tooltip=t("option.crc_correction_info"),
             command=self._on_crc_changed
         )
@@ -221,10 +222,11 @@ class SettingsDialog(tb.Toplevel):
         reset_button.grid(row=0, column=2, sticky="ew", padx=(5, 0))
 
     def _on_crc_changed(self):
-        """CRC修正复选框状态变化时的处理"""
+        """CRC修正选项状态变化时的处理"""
         if not self.winfo_exists():
             return
-        if self.app.enable_crc_correction_var.get():
+        crc_value = self.app.enable_crc_correction_var.get()
+        if crc_value in ["auto", "true"]:
             self.padding_checkbox.config(state=tk.NORMAL)
         else:
             self.app.enable_padding_var.set(False)

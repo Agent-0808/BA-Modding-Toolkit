@@ -161,8 +161,18 @@ class JpGbConversionTab(TabFrame):
             return
         
         # 2. 准备选项
+        crc_setting = self.app.enable_crc_correction_var.get()
+        perform_crc = False
+        
+        if crc_setting == "auto":
+            platform, unity_version = processing.get_unity_platform_info(self.global_bundle_path)
+            self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
+            perform_crc = platform == "StandaloneWindows64"
+        elif crc_setting == "true":
+            perform_crc = True
+        
         save_options = processing.SaveOptions(
-            perform_crc=self.app.enable_crc_correction_var.get(),
+            perform_crc=perform_crc,
             enable_padding=self.app.enable_padding_var.get(),
             compression=self.app.compression_method_var.get()
         )

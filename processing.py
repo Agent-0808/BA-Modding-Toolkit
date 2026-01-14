@@ -2,7 +2,7 @@
 
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
-from UnityPy.files import ObjectReader as Obj
+from UnityPy.files import ObjectReader as Obj, SerializedFile
 import traceback
 from pathlib import Path
 from PIL import Image
@@ -96,6 +96,28 @@ MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
 }
 
 # ====== 读取与保存相关 ======
+
+def get_unity_platform_info(input: Path | UnityPy.Environment) -> tuple[str, str]:
+    """
+    获取 Bundle 文件的平台信息和 Unity 版本。
+    
+    Returns:
+        tuple[str, str]: (平台名称, Unity版本) 的元组
+                         如果找不到则返回 ("UnknownPlatform", "Unknown")
+    """
+    if isinstance(input, Path):
+        env = UnityPy.load(str(input))
+    elif isinstance(input, UnityPy.Environment):
+        env = input
+    else:
+        raise ValueError("input 必须是 Path 或 UnityPy.Environment 类型")
+    
+    for file_obj in env.files.values():
+        for inner_obj in file_obj.files.values():
+            if isinstance(inner_obj, SerializedFile) and hasattr(inner_obj, 'target_platform'):
+                return inner_obj.target_platform.name, inner_obj.unity_version
+    
+    return "UnknownPlatform", "Unknown"
 
 def load_bundle(
     bundle_path: Path,

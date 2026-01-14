@@ -39,7 +39,7 @@ class App(tk.Frame):
         # 共享变量
         self.output_dir_var.set(str(Path.cwd() / "output"))
         self.enable_padding_var.set(False)
-        self.enable_crc_correction_var.set(True)
+        self.enable_crc_correction_var.set("auto")
         self.create_backup_var.set(True)
         self.compression_method_var.set("lzma")
         
@@ -73,7 +73,7 @@ class App(tk.Frame):
         self.auto_detect_subdirs_var = tk.BooleanVar()
         self.output_dir_var = tk.StringVar()
         self.enable_padding_var = tk.BooleanVar()
-        self.enable_crc_correction_var = tk.BooleanVar()
+        self.enable_crc_correction_var = tk.StringVar()
         self.create_backup_var = tk.BooleanVar()
         self.compression_method_var = tk.StringVar()
         # JP/GB转换自动搜索选项

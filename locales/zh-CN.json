@@ -16,7 +16,8 @@
 		"all": "全部",
 		"fail": "失败",
 		"result": "结果",
-		"unknown": "未知"
+		"unknown": "未知",
+		"auto": "自动"
 	},
 	"action": {
 		"browse": "浏览",
@@ -53,7 +54,7 @@
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
 		"auto_detect_subdirs_info": "",
 		"crc_correction": "CRC修正",
-		"crc_correction_info": "修正 Bundle 文件的 CRC 校验值，防止文件被修改后出现“不正常的客户端”提示。\nSteam 版本必须开启此选项，手机端无需开启。",
+		"crc_correction_info": "修正 Bundle 文件的 CRC 校验值，防止文件被修改后出现“不正常的客户端”提示。\nSteam 版本必须开启此选项，手机端无需开启。\n选择“自动”时，会根据 Bundle 文件的平台信息自动判断是否需要开启。",
 		"padding": "添加私货",
 		"padding_info": "在文件末端添加`0x08080808`",
 		"backup": "创建备份",
@@ -403,6 +404,7 @@
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
 		"compressing_bundle_data": "压缩 Bundle 数据",
 		"replace_resource_failed": "替换资源 [{type}] '{name}' 时发生错误: {error}",
+		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "<{type} 资源>"
 	},
 	"ui": {

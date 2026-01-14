@@ -531,7 +531,8 @@ class SettingRow:
         label: str,
         text_var: tk.StringVar,
         values: list[str] | list[tuple[str, str]],
-        tooltip: str | None = None
+        tooltip: str | None = None,
+        command: Callable[[], None] | None = None
     ) -> tb.Frame:
         """创建单选按钮行"""
         container = SettingRow.create_container(parent)
@@ -551,7 +552,8 @@ class SettingRow:
                 text=text,
                 variable=text_var,
                 value=value,
-                bootstyle="outline-toolbutton"
+                bootstyle="outline-toolbutton",
+                command=command
             ).pack(side=tk.LEFT, padx=3)
         
         return container

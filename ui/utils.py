@@ -342,7 +342,7 @@ class ConfigManager:
             
             global_options = data.get("GlobalOptions", {})
             app.enable_padding_var.set(global_options.get("enable_padding", False))
-            app.enable_crc_correction_var.set(global_options.get("enable_crc_correction", False))
+            app.enable_crc_correction_var.set(global_options.get("enable_crc_correction", "auto"))
             app.create_backup_var.set(global_options.get("create_backup", False))
             app.compression_method_var.set(global_options.get("compression_method", ""))
             
