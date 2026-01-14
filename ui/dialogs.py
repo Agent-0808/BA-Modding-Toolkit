@@ -26,8 +26,8 @@ class SettingsDialog(tb.Toplevel):
         self.content_area = tb.Frame(self.scroll_frame)
         self.content_area.pack(fill=tk.BOTH, expand=True, padx=(0, 15))
 
-        self._init_path_settings()
         self._init_app_settings()
+        self._init_path_settings()
         self._init_global_options()
         self._init_asset_options()
         self._init_spine_settings()
@@ -180,10 +180,10 @@ class SettingsDialog(tb.Toplevel):
 
         SettingRow.create_entry_row(
             section,
-            label=t("option.target_version"),
+            label=t("option.spine_target_version"),
             text_var=self.app.target_spine_version_var,
             placeholder_text=t("ui.label.spine_version"),
-            tooltip=t("option.target_version_info")
+            tooltip=t("option.spine_target_version_info")
         )
 
         SettingRow.create_path_selector(

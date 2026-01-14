@@ -24,8 +24,13 @@ jobs:
           architecture: 'x64'
           cache: 'pip'
 
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: uv export --no-hashes -o requirements.txt && pip install -r requirements.txt
 
       - name: Build Executable with Nuitka
         uses: Nuitka/Nuitka-Action@main
@@ -33,18 +38,15 @@ jobs:
           nuitka-version: main
           script-name: main.pyw
           mode: onefile
+
           low-memory: true
           # 经测试使用mingw64可以避免堆内存问题
           mingw64: true
           enable-plugins: tk-inter
           # 包含代码依赖包
           include-package: |
-            UnityPy
             UnityPy.resources
-            UnityPy.classes
-            PIL
             tkinterdnd2
-            ttkbootstrap
           # 包含依赖包的数据文件
           include-package-data: |
             UnityPy

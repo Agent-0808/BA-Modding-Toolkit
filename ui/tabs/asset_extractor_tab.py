@@ -48,9 +48,9 @@ class AssetExtractorTab(TabFrame):
         # Spine 降级版本输入框
         SettingRow.create_entry_row(
             options_frame,
-            label=t("option.downgrade_target_version"),
+            label=t("option.spine_downgrade_target_version"),
             text_var=self.app.spine_downgrade_version_var,
-            tooltip=t("option.downgrade_target_version_info")
+            tooltip=t("option.spine_downgrade_target_version_info")
         )
         
         # 操作按钮
