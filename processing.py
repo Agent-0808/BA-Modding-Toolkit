@@ -406,6 +406,14 @@ def _apply_replacements(
         try:
             data = obj.read()
             asset_key = key_func(obj, data)
+            
+            # 跳过 asset_key 为 None 的对象（如 GameObject、Transform 等）
+            if asset_key is None:
+                continue
+            
+            # 额外检查：确保类型在白名单中
+            if obj.type not in REPLACEABLE_ASSET_TYPES:
+                continue
 
             if asset_key in tasks:
                 content = tasks.pop(asset_key)
@@ -418,10 +426,8 @@ def _apply_replacements(
                     # content 是 bytes，需要解码成 str
                     data.m_Script = content.decode("utf-8", "surrogateescape")
                     data.save()
-                elif obj.type in {AssetType.Mesh, AssetType.Material, AssetType.Shader, AssetType.AnimationClip}:
-                    obj.set_raw_data(content)
-                elif "ALL" in replacement_map.get("__mode__", set()): 
-                # Check for a special key if we're in "ALL" mode
+                else:
+                    # 其他类型直接设置原始数据
                     obj.set_raw_data(content)
 
                 replacement_count += 1
@@ -622,6 +628,9 @@ def process_asset_extraction(
             for obj in env.objects:
                 if obj.type.name not in asset_types_to_extract:
                     continue
+                # 确保类型在白名单中
+                if obj.type not in REPLACEABLE_ASSET_TYPES:
+                    continue
                 try:
                     data = obj.read()
                     resource_name = getattr(data, 'm_Name', None)
@@ -718,12 +727,17 @@ def _extract_assets_from_bundle(
     replace_all = "ALL" in asset_types_to_replace
 
     for obj in env.objects:
-        # 如果不是“ALL”模式，则只处理在指定集合中的类型
-        if not replace_all and obj.type.name not in asset_types_to_replace:
-            continue
-
         try:
             data = obj.read()
+            
+            # 统一过滤：只提取可替换的资源类型
+            if obj.type not in REPLACEABLE_ASSET_TYPES:
+                continue
+            
+            # 如果不是"ALL"模式，则只处理在指定集合中的类型
+            if not replace_all and obj.type.name not in asset_types_to_replace:
+                continue
+
             asset_key = key_func(obj, data)
             if asset_key is None or not getattr(data, 'm_Name', None):
                 continue
@@ -753,7 +767,7 @@ def _extract_assets_from_bundle(
             if content is not None:
                 replacement_map[asset_key] = content
         except Exception as e:
-            log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(obj.read(), 'm_Name', 'N/A'), error=e)}")
+            log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
 
     if replace_all:
         replacement_map["__mode__"] = {"ALL"}
@@ -990,9 +1004,59 @@ JP_FILENAME_TYPE_MAP = {
     "prefabs": "Prefab",
 }
 
+# 可替换的资源类型白名单
+# 这些是实际的资源类型，不应包括容器对象（如 AssetBundle）或元数据对象
+REPLACEABLE_ASSET_TYPES: set[AssetType] = {
+    # 纹理类
+    AssetType.Texture2D,
+    AssetType.Texture3D,
+    AssetType.Cubemap,
+    AssetType.RenderTexture,
+    AssetType.CustomRenderTexture,
+    AssetType.Sprite,
+    AssetType.SpriteAtlas,
+
+    # 文本和脚本类
+    AssetType.TextAsset,
+    AssetType.MonoBehaviour,
+    AssetType.MonoScript,
+
+    # 音频类
+    AssetType.AudioClip,
+
+    # 网格和材质类
+    AssetType.Mesh,
+    AssetType.Material,
+    AssetType.Shader,
+
+    # 动画类
+    AssetType.AnimationClip,
+    AssetType.Animator,
+    AssetType.AnimatorController,
+    AssetType.RuntimeAnimatorController,
+    AssetType.Avatar,
+    AssetType.AvatarMask,
+
+    # 字体类
+    AssetType.Font,
+
+    # 视频类
+    AssetType.VideoClip,
+
+    # 地形类
+    AssetType.TerrainData,
+
+    # 其他资源类
+    AssetType.PhysicMaterial,
+    AssetType.ComputeShader,
+    AssetType.Flare,
+    AssetType.LensFlare,
+}
+
 def _get_asset_types_from_jp_filenames(jp_paths: list[Path]) -> set[str]:
     """
     分析日服bundle文件名列表，以确定它们包含的资源类型。
+    只返回可替换的资源类型。
     """
     asset_types = set()
     # 用于查找类型部分的正则表达式，例如 "-textures-"
@@ -1004,7 +1068,13 @@ def _get_asset_types_from_jp_filenames(jp_paths: list[Path]) -> set[str]:
             type_key = match.group(1)
             asset_type_name = JP_FILENAME_TYPE_MAP.get(type_key)
             if asset_type_name:
-                asset_types.add(asset_type_name)
+                # 只添加在白名单中的类型
+                try:
+                    asset_type = AssetType[asset_type_name]
+                    if asset_type in REPLACEABLE_ASSET_TYPES:
+                        asset_types.add(asset_type_name)
+                except KeyError:
+                    pass
 
     return asset_types
 
