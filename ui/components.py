@@ -77,6 +77,7 @@ class Theme:
     # 特殊组件颜色
     LOG_BG = '#2c3e50'
     LOG_FG = '#ecf0f1'
+    LOG_SELECTED = '#3a5a7a'
     STATUS_BAR_BG = '#34495e'
     STATUS_BAR_FG = '#ecf0f1'
     MODE_SWITCHER_ACTIVE = '#e0e0e0'

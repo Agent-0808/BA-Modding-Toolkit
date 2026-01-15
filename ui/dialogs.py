@@ -38,6 +38,11 @@ class SettingsDialog(tb.Toplevel):
         """设置窗口基本属性"""
         self.title(t("ui.settings.title"))
         self.geometry("600x700")
+        # 设置窗口图标
+        icon_path = self.app.root_path / "assets" / "eligma.ico"
+        if icon_path.exists():
+            self.iconbitmap(icon_path)
+
         self.transient(self.master)
 
     def _create_section(self, title: str) -> tb.Labelframe:

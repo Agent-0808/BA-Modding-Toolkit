@@ -10,13 +10,14 @@ from utils import get_environment_info
 from ui.components import Theme, Logger, UIComponents
 from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
+from ui.base_tab import TabFrame
 from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
 from i18n import i18n_manager, t, get_system_language
 
 class App(tk.Frame):
-    def __init__(self, master):
+    def __init__(self, master: tk.Tk):
         super().__init__(master)
-        self.master = master
+        self.master: tk.Tk = master
         self.setup_main_window()
         self.config_manager = ConfigManager()
         self.init_shared_variables()
@@ -28,6 +29,11 @@ class App(tk.Frame):
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
         self.master.geometry("600x789")
+        self.root_path: Path = Path(__file__).parent.parent
+        # 设置窗口图标
+        icon_path = self.root_path / "assets" / "eligma.ico"
+        if icon_path.exists():
+            self.master.iconbitmap(icon_path)
 
     def _set_default_values(self):
         """设置所有共享变量的默认值。"""
@@ -236,8 +242,8 @@ class App(tk.Frame):
     
     def populate_tabs(self):
         """创建并添加所有的Tab页面到内容区域。"""
-        self.tabs = []
-        self.tab_buttons = []
+        self.tabs: list[tuple[TabFrame, str]] = []
+        self.tab_buttons: list[tuple[tb.Button, TabFrame]] = []
         
         # 创建Tab页面
         mod_update_tab = ModUpdateTab(self.content_frame, self)
@@ -290,7 +296,8 @@ class App(tk.Frame):
         # 如果传入的是元组，提取tab对象
         if isinstance(tab_to_show, tuple):
             tab_to_show = tab_to_show[0]
-        
+        assert(isinstance(tab_to_show, TabFrame))
+
         # 隐藏所有Tab
         for tab, _ in self.tabs:
             tab.pack_forget()
@@ -333,7 +340,7 @@ class App(tk.Frame):
             font=Theme.LOG_FONT,
             background=Theme.LOG_BG,
             foreground=Theme.LOG_FG,
-            selectbackground="#3a5a7a",     # 选中时的背景色
+            selectbackground=Theme.LOG_SELECTED, # 选中时的背景色
             insertbackground=Theme.LOG_FG,  # 光标颜色
             state=tk.DISABLED,              # 初始设为不可编辑
             spacing1=2,                     # 段前间距（像素）
