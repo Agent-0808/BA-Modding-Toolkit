@@ -226,7 +226,7 @@ def _save_and_crc(
         }
         compression_str = compression_map.get(save_options.compression, save_options.compression.upper())
         crc_status_str = t("common.on") if save_options.perform_crc else t("common.off")
-        log(f"  > {t('log.file.saving_bundle', compression=compression_str, crc_status=crc_status_str)}")
+        log(f"  > {t('log.file.saving_bundle_prefix')} [{t('log.file.compression_method', compression=compression_str)}] [{t('log.file.crc_correction', crc_status=crc_status_str)}]")
 
         # 从 env 生成修改后的压缩 bundle 数据
         modified_data = compress_bundle(env, save_options.compression, log)
@@ -1033,7 +1033,7 @@ def find_all_jp_counterparts(
         log(f'  > ❌ {t("log.search.find_failed")}: {prefix_message}')
         return []
     
-    log(f"  > {t('log.search.using_prefix', prefix=prefix)}")
+    log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
 
     jp_files: list[Path] = []
     seen_names = set()

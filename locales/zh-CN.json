@@ -54,7 +54,7 @@
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
 		"auto_detect_subdirs_info": "",
 		"crc_correction": "CRC修正",
-		"crc_correction_info": "修正 Bundle 文件的 CRC 校验值，防止文件被修改后出现“不正常的客户端”提示。\nSteam 版本必须开启此选项，手机端无需开启。\n选择“自动”时，会根据 Bundle 文件的平台信息自动判断是否需要开启。",
+		"crc_correction_info": "修正 Bundle 文件的 CRC 校验值，防止文件被修改后出现“不正常的客户端”提示。\nSteam 版本必须开启此选项，手机端无需开启。\n选择“自动”时，会根据目标 Bundle 文件的平台信息自动判断是否需要开启。",
 		"padding": "添加私货",
 		"padding_info": "在文件末端添加`0x08080808`",
 		"backup": "创建备份",
@@ -70,11 +70,11 @@
 		"replace_all": "ALL",
 		"replace_all_info": "替换所有类型资源\n测试性，不建议启用",
 		"spine_conversion": "启用 Spine 版本转换",
-		"spine_conversion_info": "调用外部程序，将 .skel 文件转换为支持的版本\n需要配置 Skel 转换器的路径。",
+		"spine_conversion_info": "（可选扩展功能）\n调用外部程序，将 .skel 文件转换为支持的版本\n需要配置 Skel 转换器的路径。",
 		"spine_target_version": "目标版本",
 		"spine_target_version_info": "格式应为 \"A.B.C\" 形式",
 		"spine_downgrade": "启用 Spine 降级",
-		"spine_downgrade_info": "调用外部程序，导出支持旧版 Spine 的文件（.skel 与 .atlas）\n需要配置 Skel 转换器与 Atlas 降级工具的路径。",
+		"spine_downgrade_info": "（可选扩展功能）\n调用外部程序，导出支持旧版 Spine 的文件（.skel 与 .atlas）\n需要配置 Skel 转换器与 Atlas 降级工具的路径。",
 		"spine_downgrade_target_version": "目标版本",
 		"spine_downgrade_target_version_info": "格式应为 \"A.B.C\" 形式",
 		"auto_search": "自动搜索对应文件",
@@ -103,7 +103,6 @@
 		"atlas_downgrade": "SpineAtlasDowngrade.exe"
 	},
 	"message": {
-		"confirm_operation": "确定要执行此操作吗？",
 		"confirm_replace_file": "此操作将覆盖文件: {path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
 		"confirm_reset_settings": "确定要重置为默认设置吗？",
 		"file_not_found": "找不到文件: {path}",
@@ -142,8 +141,7 @@
 		"packer": {
 			"require_folder_with_assets": "请输入包含了要打包的资源文件的文件夹。",
 			"missing_paths": "请确保已选择目标 Bundle、待打包资源文件夹，并在全局设置中指定了输出目录。",
-			"generated_file_not_found_manual": "无法自动找到生成的文件。",
-			"generated_file_not_found_for_replace": "找不到已生成的替换文件。\n请先成功执行一次'生成替换文件'。",
+			"generated_file_not_found_for_replace": "找不到已生成的替换文件。\n请先成功执行一次\"生成替换文件\"。",
 			"load_target_bundle_failed": "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。",
 			"no_supported_files_found": "在指定文件夹中没有找到任何支持的文件 ({extensions})。",
 			"no_matching_assets_to_pack": "没有找到任何名称匹配的资源进行打包。",
@@ -162,16 +160,16 @@
 			"original_file_crc32": "原始文件　 CRC32: {crc}",
 			"match_yes": "CRC值匹配: ✅是",
 			"match_no": "CRC值匹配: ❌否",
-			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 '{name}' 未能生成。"
+			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
 		"spine": {
 			"missing_downgrade_tool": "已启用 Spine 降级，但未指定有效的 SpineAtlasDowngrade.exe 路径。",
 			"missing_converter_tool": "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。"
 		},
 		"search": {
-			"date_pattern_not_found": "无法在文件名 '{filename}' 中找到日期模式 (YYYY-MM-DD)，无法确定用于匹配的文件前缀。",
+			"date_pattern_not_found": "无法在文件名 \"{filename}\" 中找到日期模式 (YYYY-MM-DD)，无法确定用于匹配的文件前缀。",
 			"prefix_extracted": "前缀提取成功",
-			"check_file_exists": "请检查 '{path}' 是否存在。",
+			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
 			"load_old_mod_failed": "加载旧版Mod文件失败。",
 			"no_texture2d_in_old_mod": "旧版Mod文件中不包含任何 Texture2D 资源。",
@@ -179,7 +177,6 @@
 			"no_matching_texture_found": "在所有候选文件中都未找到与旧版Mod贴图名称匹配的资源。无法确定正确的新版文件。"
 		},
 		"extractor": {
-			"load_bundle_failed": "无法加载 Bundle 文件。请检查文件是否损坏。",
 			"no_assets_found": "未找到指定类型的可提取资源。",
 			"extraction_complete": "提取完成，共输出 {count} 个文件。"
 		},
@@ -191,13 +188,13 @@
 		"jp_convert": {
 			"load_global_failed": "无法加载国际服源文件",
 			"load_jp_asset_failed": "无法加载日服 {type} 文件",
-			"jp_to_global_success": "JP -> Global转换成功！\n已替换 {asset_count} 个 资源",
-			"global_to_jp_success": "Global -> JP转换成功！\n已替换 {bundle_count} 个Bundle，{asset_count} 个资源",
+			"jp_to_global_success": "JP -> Global 转换成功！\n已替换 {asset_count} 个 资源",
+			"global_to_jp_success": "Global -> JP 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
 			"conversion_error": "转换过程中发生错误:\n{error}",
 			"load_global_source_failed": "无法加载国际服源文件",
 			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
 			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
-			"save_asset_bundle_failed": "保存 {type} bundle 失败: {message}"
+			"save_asset_bundle_failed": "保存 {type} Bundle 失败: {message}"
 		}
 	},
 	"log": {
@@ -219,17 +216,18 @@
 		"file": {
 			"loaded": "已加载: {path}",
 			"loaded_type": "已加载 {type}: {name}",
-			"saving_bundle": "正在保存 Bundle... [压缩方式: {compression}] [CRC修正: {crc_status}]",
+			"saving_bundle_prefix": "正在保存 Bundle...",
+			"compression_method": "压缩方式: {compression}",
+			"crc_correction": "CRC修正: {crc_status}",
 			"saved": "已将输出文件保存至: {path}",
 			"backed_up": "已将文件备份至: {path}",
 			"overwritten": "已覆盖: {path}",
 			"backup_failed": "创建备份文件失败: {error}",
-			"read_in_memory_failed": "无法在内存中读取文件 '{name}': {error}",
-			"load_failed": "无法以任何方式加载 '{path}'。",
-			"save_failed": "保存文件到 '{path}' 时失败: {error}",
-			"save_or_crc_failed": "保存或修正 bundle 文件到 '{path}' 时失败: {error}",
+			"read_in_memory_failed": "无法在内存中读取文件 \"{name}\": {error}",
+			"load_failed": "无法以任何方式加载 \"{path}\"。",
+			"save_failed": "保存文件到 \"{path}\" 时失败: {error}",
+			"save_or_crc_failed": "保存或修正 bundle 文件到 \"{path}\" 时失败: {error}",
 			"directory_opened": "已打开目录：{path}",
-			"writing": "正在写入文件: {path}",
 			"added_count": "已添加 {count} 个文件",
 			"removed_count": "已移除 {count} 个文件",
 			"list_cleared": "列表已清空",
@@ -244,8 +242,7 @@
 			"save_failed": "保存配置失败: {error}",
 			"load_failed": "读取失败",
 			"loaded": "已读取配置文件",
-			"language": "当前语言：{language}",
-			"language_changed": "语言已切换为: {language}"
+			"language": "当前语言：{language}"
 		},
 		"spine": {
 			"skel_converter_set": "已设置 Skel 转换器: {path}",
@@ -257,9 +254,7 @@
 			"skel_conversion_success": "skel 转换成功",
 			"skel_conversion_failed": "skel 转换失败",
 			"skel_detected": "检测到 .skel 文件: {name}",
-			"version_match_or_undetectable": "版本匹配或无法检测 ({version})，无需转换。",
 			"version_mismatch_converting": "检测到Spine版本不匹配（当前{current}，目标{target}），将进行转换。",
-			"skel_detect_or_upgrade_error": "检测或升级 .skel 文件 '{name}' 时发生错误: {error}",
 			"converting_atlas": "正在转换 Atlas: {name}",
 			"atlas_conversion_failed": "Atlas 转换失败",
 			"version_detected_downgrading": "检测到Spine版本: {version}，尝试降级...",
@@ -278,7 +273,7 @@
 			"check_files_and_bundle": "请检查：\n1. 文件名是否与 bundle 内的资源名完全匹配。\n2. bundle 文件是否正确。",
 			"packing_complete": "打包完成: 成功打包 {success} / {total} 个资源。",
 			"unmatched_files_warning": "以下文件未在bundle中找到对应的资源",
-			"attempted_match": "尝试匹配: '{key}'",
+			"attempted_match": "尝试匹配: \"{key}\"",
 			"bleed_processed": "对图像 {name} 进行了 Bleed 处理"
 		},
 		"crc": {
@@ -297,21 +292,15 @@
 			"original_file_crc32": "原始文件　 CRC32：{crc}"
 		},
 		"section": {
-			"export_modified_bundle": "导出修改后的 Bundle 文件",
 			"extract_to_temp": "提取资源到临时目录",
 			"move_to_output": "移动提取的文件到输出目录",
 			"process_spine_downgrade": "处理Spine资产并降级",
 			"copy_standalone_files": "复制独立文件",
 			"asset_migration": "资源迁移",
-			"merging_assets": "合并资源",
 			"extracting_from_global": "正在从国际服文件提取资源",
 			"extracting_from_jp": "正在从日服文件提取资源",
 			"applying_to_global": "正在应用到国际服文件",
-			"processing_filename": "正在处理文件: {name}",
-			"processing_asset_bundle": "正在处理 {type} Bundle",
 			"migration_complete": "迁移完成: {text_count} 个 TextAsset, {tex_count} 个 Texture2D",
-			"saving_asset_bundle": "保存 {type} Bundle",
-			"no_asset_skipping_save": "源文件中无 {type}，跳过保存 {type} Bundle",
 			"conversion_complete": "转换完成"
 		},
 		"compression": {
@@ -319,17 +308,16 @@
 			"none_short": "无"
 		},
 		"search": {
-			"searching_for_file": "正在为 '{name}' 搜索对应文件...",
-			"file_prefix": "文件前缀: '{prefix}'",
+			"searching_for_file": "正在为 \"{name}\" 搜索对应文件...",
+			"file_prefix": "文件前缀: \"{prefix}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
 			"old_mod_texture_count": "旧版Mod包含 {count} 个贴图资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
-			"using_prefix": "使用文件前缀: '{prefix}'",
 			"found_count": "成功查找到 {count} 个匹配文件。"
 		},
 		"extractor": {
-			"starting_extraction": "开始从 '{filename}' 提取资源...",
+			"starting_extraction": "开始从 \"{filename}\" 提取资源...",
 			"extraction_types": "提取类型: {types}",
 			"using_temp_dir": "使用临时目录: {path}",
 			"skipping_unnamed": "跳过一个未命名的 {type} 资源",
@@ -340,13 +328,13 @@
 		"migration": {
 			"extracting_from_old_bundle": "正在从旧版 bundle 中提取指定类型的资源: {types}",
 			"loading_new_bundle": "正在加载新版 bundle...",
-			"trying_strategy": "正在尝试使用 '{name}' 策略进行匹配",
+			"trying_strategy": "正在尝试使用 \"{name}\" 策略进行匹配",
 			"extracting_from_old_bundle_simple": "从旧版 bundle 提取资源...",
-			"strategy_no_assets_found": "使用 '{name}' 策略未在旧版 bundle 中找到任何指定类型的资源。",
-			"extraction_complete": "提取完成: 使用 '{name}' 策略提取了 {count} 个资源。",
+			"strategy_no_assets_found": "使用 \"{name}\" 策略未在旧版 bundle 中找到任何指定类型的资源。",
+			"extraction_complete": "提取完成: 使用 \"{name}\" 策略提取了 {count} 个资源。",
 			"writing_to_new_bundle": "向新版 bundle 写入资源...",
-			"strategy_success": "策略 '{name}' 成功替换了 {count} 个资源",
-			"strategy_no_match": "策略 '{name}' 未能匹配到任何资源。",
+			"strategy_success": "策略 \"{name}\" 成功替换了 {count} 个资源",
+			"strategy_no_match": "策略 \"{name}\" 未能匹配到任何资源。",
 			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。"
 		},
 		"mod_update": {
@@ -365,35 +353,24 @@
 		"jp_convert": {
 			"error_jp_to_global": "在JP -> Global转换过程中发生错误: {error}",
 			"error_global_to_jp": "在Global -> JP转换过程中发生错误: {error}",
-			"source_is_target_type": "源文件已是 '{type}' 类型。",
 			"found_match": "成功找到: {path}",
-			"no_match_found": "未能找到匹配的文件。",
-			"searching_jp_counterparts": "正在为 '{name}' 搜索对应的JP文件...",
+			"searching_jp_counterparts": "正在为 \"{name}\" 搜索对应的JP文件...",
 			"starting_jp_to_global": "开始JP -> Global转换...",
 			"global_base_file": "国际服源文件: {name}",
 			"jp_asset_file": "日服 {type} 文件: {name}",
 			"jp_files_count": "选中的日服文件数量: {count}",
 			"extracted_count_from_jp": "从日服文件提取了 {count} 个资源",
 			"no_assets_replaced": "未替换任何资源",
-			"type_mismatch": "类型不匹配，跳过替换: {name} (目标: {target}, 源: {source})",
-			"replacing_asset": "替换 {type}: {name}",
-			"adding_asset": "添加 {type}: {name}",
-			"merge_complete": "合并完成，共处理了 {text_count} 个 TextAsset 和 {tex_count} 个 Texture2D",
 			"jp_to_global_complete": "JP -> Global转换完成！",
 			"starting_global_to_jp": "开始Global -> JP转换...",
 			"global_source_file": "国际服源文件: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
-			"asset_bundle_saved_to": "{type} Bundle 已保存至: {path}",
 			"global_to_jp_complete": "Global -> JP转换完成！",
-			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
-			"no_jp_version_found": "未能找到该 Global 文件的日服对应版本。",
-			"auto_match_count": "已自动匹配到 {count} 个日服文件。",
-			"template_updated": "更新的文件数量：{count}"
+			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。"
 		},
-		"game_dir_not_exist": "游戏资源目录 '{path}' 不存在。",
 		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
-		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 '{filename}'。",
-		"file_found_in_subdir": "已在 '{subdir}' 中自动找到并加载原始文件: {filename}",
+		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 \"{filename}\"。",
+		"file_found_in_subdir": "已在 \"{subdir}\" 中自动找到并加载原始文件: {filename}",
 		"output_dir_not_set": "未设置输出目录",
 		"error_detail": "发生错误：{error}",
 		"error_processing": "处理过程中发生错误：{error}",
@@ -402,8 +379,7 @@
 		"process_failed": "处理失败: {error}",
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
-		"compressing_bundle_data": "压缩 Bundle 数据",
-		"replace_resource_failed": "替换资源 [{type}] '{name}' 时发生错误: {error}",
+		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "<{type} 资源>"
 	},
