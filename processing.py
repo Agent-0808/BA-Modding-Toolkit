@@ -10,7 +10,7 @@ import shutil
 import re
 import tempfile
 from dataclasses import dataclass
-from typing import Callable, Any, Literal
+from typing import Callable, Any, Literal, NamedTuple
 
 from i18n import t
 from utils import CRCUtils, SpineUtils, ImageUtils, no_log
@@ -21,9 +21,13 @@ from utils import CRCUtils, SpineUtils, ImageUtils, no_log
 AssetKey 表示资源的唯一标识符，在不同的流程中可以使用不同的键
     str 类型 表示资源名称，在资源打包工具中使用
     int 类型 表示 path_id
-    tuple[str, str] 类型 表示 (名称, 类型) 元组
+    NameTypeKey 类型 表示 (名称, 类型) 的命名元组
 """
-AssetKey = str | int | tuple[str, str]
+class NameTypeKey(NamedTuple):
+    name: str | None
+    type: str
+
+AssetKey = str | int | NameTypeKey
 
 # 资源的具体内容，可以是字节数据、PIL图像或None
 AssetContent = bytes | Image.Image | None  
@@ -92,7 +96,7 @@ class SpineDowngradeOptions:
 MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
     'path_id': lambda obj, data: obj.path_id,
     'container': lambda obj, data: obj.container,
-    'name_type': lambda obj, data: (getattr(data, 'm_Name', None), obj.type.name),
+    'name_type': lambda obj, data: NameTypeKey(getattr(data, 'm_Name', None), obj.type.name),
 }
 
 # ====== 读取与保存相关 ======
@@ -380,7 +384,7 @@ def _apply_replacements(
     replacement_map: dict[AssetKey, AssetContent],
     key_func: KeyGeneratorFunc,
     log: LogFunc = no_log,
-) -> tuple[int, list[str], set[AssetKey]]:
+) -> tuple[int, list[str], list[AssetKey]]:
     """
     将“替换清单”中的资源应用到目标环境中。
 
@@ -431,7 +435,11 @@ def _apply_replacements(
                     obj.set_raw_data(content)
 
                 replacement_count += 1
-                log_message = f"[{obj.type.name}] {resource_name}"
+                if isinstance(asset_key, NameTypeKey):
+                    key_display = f"[{asset_key.type}] {asset_key.name}"
+                else:
+                    key_display = str(asset_key)
+                log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
                 replaced_assets_log.append(log_message)
 
         except Exception as e:
@@ -442,7 +450,7 @@ def _apply_replacements(
                 pass
             log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
 
-    return replacement_count, replaced_assets_log, set(tasks.keys())
+    return replacement_count, replaced_assets_log, list(tasks.keys())
 
 def process_asset_packing(
     target_bundle_path: Path,
@@ -500,20 +508,20 @@ def process_asset_packing(
             content: AssetContent
             suffix: str = file_path.suffix.lower()
             if suffix == ".png":
-                asset_key = (file_path.stem, AssetType.Texture2D.name)
+                asset_key = NameTypeKey(file_path.stem, AssetType.Texture2D.name)
                 content = Image.open(file_path).convert("RGBA")
                 if enable_bleed:
                     content = ImageUtils.bleed_image(content)
                     log(f"  > {t('log.packer.bleed_processed', name=file_path.stem)}")
             else: # .skel, .atlas
-                asset_key = (file_path.name, AssetType.TextAsset.name)
+                asset_key = NameTypeKey(file_path.name, AssetType.TextAsset.name)
                 with open(file_path, "rb") as f:
                     content = f.read()
                 
                 if file_path.suffix.lower() == '.skel':
                     content = SpineUtils.handle_skel_upgrade(
                         skel_bytes=content,
-                        resource_name=asset_key[0],
+                        resource_name=asset_key.name,
                         enabled=spine_options.enabled if spine_options else False,
                         converter_path=spine_options.converter_path if spine_options else None,
                         target_version=spine_options.target_version if spine_options else None,
@@ -547,13 +555,16 @@ def process_asset_packing(
             log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             # 为了找到原始文件名，我们需要反向查找
             original_filenames = {
-                (f.stem, AssetType.Texture2D.name): f.name for f in input_files if f.suffix.lower() == '.png'
+                NameTypeKey(f.stem, AssetType.Texture2D.name): f.name for f in input_files if f.suffix.lower() == '.png'
             }
             original_filenames.update({
-                (f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
+                NameTypeKey(f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
             })
             for key in sorted(unmatched_keys):
-                key_display = f"[{key[1]}] {key[0]}" if isinstance(key, tuple) else key
+                if isinstance(key, NameTypeKey):
+                    key_display = f"[{key.type}] {key.name}"
+                else:
+                    key_display = str(key)
                 log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
 
         # 4. 保存和修正
@@ -823,7 +834,7 @@ def _migrate_bundle_assets(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
-        replacement_count, replaced_logs, _ = _apply_replacements(
+        replacement_count, replaced_logs, unmatched_keys = _apply_replacements(
             new_env, old_assets_map, key_func, log)
         
         # 4. 如果当前策略成功替换了至少一个资源，就结束
