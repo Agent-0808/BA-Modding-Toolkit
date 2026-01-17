@@ -26,8 +26,12 @@ AssetKey 表示资源的唯一标识符，在不同的流程中可以使用不�
 class NameTypeKey(NamedTuple):
     name: str | None
     type: str
+class ContNameTypeKey(NamedTuple):
+    container: str | None
+    name: str
+    type: str
 
-AssetKey = str | int | NameTypeKey
+AssetKey = str | int | NameTypeKey | ContNameTypeKey
 
 # 资源的具体内容，可以是字节数据、PIL图像或None
 AssetContent = bytes | Image.Image | None  
@@ -90,13 +94,15 @@ class SpineDowngradeOptions:
 
 策略说明：
 - path_id: 使用 Unity 对象的 path_id 作为键，适用于精确匹配
-- container: 使用 Unity 对象的 container 作为键
+- container: 使用 Unity 对象的 container 作为键（弃用）
 - name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配
+- cont_name_type: 使用 (容器名, 资源名, 资源类型) 作为键，适用于按容器、名称和类型匹配，用于跨版本移植
 """
 MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
     'path_id': lambda obj, data: obj.path_id,
     'container': lambda obj, data: obj.container,
-    'name_type': lambda obj, data: NameTypeKey(getattr(data, 'm_Name', None), obj.type.name),
+    'name_type': lambda obj, data: NameTypeKey(obj.peek_name(), obj.type.name),
+    'cont_name_type': lambda obj, data: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name),
 }
 
 # ====== 读取与保存相关 ======
@@ -812,8 +818,9 @@ def _migrate_bundle_assets(
     # 定义匹配策略
     strategies: list[tuple[str, KeyGeneratorFunc]] = [
         ('path_id', MATCH_STRATEGIES['path_id']),
-        ('container', MATCH_STRATEGIES['container']),
         ('name_type', MATCH_STRATEGIES['name_type'])
+        # ('container', MATCH_STRATEGIES['container']),
+        # 因为多个Mesh可能共享同一个Container，所以这个策略很可能失效，因此不使用
     ]
 
     for name, key_func in strategies:
@@ -1170,7 +1177,7 @@ def process_jp_to_global_conversion(
         # 1. 从所有日服包中构建一个完整的"替换清单"
         log(f'\n--- {t("log.section.extracting_from_jp")} ---')
         replacement_map: dict[AssetKey, AssetContent] = {}
-        key_func = MATCH_STRATEGIES['container']
+        key_func = MATCH_STRATEGIES['name_type']
         
         # 根据日服文件名动态确定要提取的资源类型
         asset_types = _get_asset_types_from_jp_filenames(jp_bundle_paths)
@@ -1210,7 +1217,7 @@ def process_jp_to_global_conversion(
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.migration.strategy_success', name='container', count=replacement_count)}:")
+        log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
         for item in replaced_logs:
             log(f"  - {item}")
         
@@ -1272,7 +1279,7 @@ def process_global_to_jp_conversion(
             return False, t("message.jp_convert.load_global_source_failed")
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
-        key_func = MATCH_STRATEGIES['container']
+        key_func = MATCH_STRATEGIES['name_type']
 
         # 根据日服模板文件名确定要提取哪些类型的资源
         asset_types = _get_asset_types_from_jp_filenames(jp_template_paths)
@@ -1306,7 +1313,7 @@ def process_global_to_jp_conversion(
             )
             
             if replacement_count > 0:
-                log(f"\n✅ {t('log.migration.strategy_success', name='container', count=replacement_count)}:")
+                log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
                 for item in replaced_logs:
                     log(f"  - {item}")
                 
