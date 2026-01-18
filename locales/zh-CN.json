@@ -381,7 +381,7 @@
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
 		"platform_info": "目标平台: {platform} (Unity {version})",
-		"unnamed_resource": "<{type} 资源>"
+		"unnamed_resource": "未命名的 {type} 资源"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",

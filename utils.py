@@ -600,6 +600,7 @@ class SpineUtils:
                     old_name = source_file.stem
                     new_name = old_name
 
+                    # TODO: 修复 [CH0144.png] -> [CH014_4.png]
                     match = re.search(r'^(.*)(\d+)$', old_name)
                     if match:
                         prefix = match.group(1)

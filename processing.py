@@ -22,22 +22,40 @@ AssetKey 表示资源的唯一标识符，在不同的流程中可以使用不�
     str 类型 表示资源名称，在资源打包工具中使用
     int 类型 表示 path_id
     NameTypeKey 类型 表示 (名称, 类型) 的命名元组
+    ContNameTypeKey 类型 表示 (容器名, 名称, 类型) 的命名元组
 """
 class NameTypeKey(NamedTuple):
     name: str | None
     type: str
+    def __str__(self) -> str:
+        return f"[{self.type}] {self.name}"
+
 class ContNameTypeKey(NamedTuple):
     container: str | None
     name: str
     type: str
+    def __str__(self) -> str:
+        return f"[{self.type}] {self.name} @ {self.container}"
 
 AssetKey = str | int | NameTypeKey | ContNameTypeKey
 
 # 资源的具体内容，可以是字节数据、PIL图像或None
 AssetContent = bytes | Image.Image | None  
 
-# 从对象生成资源键的函数，接收UnityPy对象和一个额外参数，返回该资源的键
-KeyGeneratorFunc = Callable[[Obj, Any], AssetKey]
+# 从对象生成资源键的函数，接收UnityPy对象，返回该资源的键
+KeyGeneratorFunc = Callable[[Obj], AssetKey]
+
+# 资源匹配策略集合，用于在不同场景下生成资源键。
+MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
+    # path_id: 使用 Unity 对象的 path_id 作为键，适用于相同版本精确匹配，主要方式
+    'path_id': lambda obj: obj.path_id,
+    # container: 使用 Unity 对象的 container 作为键（弃用，因为发现同一个container下可以用重名资源）
+    'container': lambda obj: obj.container,
+    # name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配，在Asset Packing中使用
+    'name_type': lambda obj: NameTypeKey(obj.peek_name(), obj.type.name),
+    # cont_name_type: 使用 (容器名, 资源名, 资源类型) 作为键，适用于按容器、名称和类型匹配，用于跨版本移植
+    'cont_name_type': lambda obj: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name),
+}
 
 # 日志函数类型
 LogFunc = Callable[[str], None]  
@@ -88,22 +106,6 @@ class SpineDowngradeOptions:
             and self.target_version
             and self.target_version.count(".") == 2
         )
-
-"""
-资源匹配策略集合，用于在不同场景下生成资源键。
-
-策略说明：
-- path_id: 使用 Unity 对象的 path_id 作为键，适用于精确匹配
-- container: 使用 Unity 对象的 container 作为键（弃用）
-- name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配
-- cont_name_type: 使用 (容器名, 资源名, 资源类型) 作为键，适用于按容器、名称和类型匹配，用于跨版本移植
-"""
-MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
-    'path_id': lambda obj, data: obj.path_id,
-    'container': lambda obj, data: obj.container,
-    'name_type': lambda obj, data: NameTypeKey(obj.peek_name(), obj.type.name),
-    'cont_name_type': lambda obj, data: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name),
-}
 
 # ====== 读取与保存相关 ======
 
@@ -358,7 +360,8 @@ def find_new_bundle_path(
         log(f'  > {t("common.fail")}: {msg}')
         return None, msg
     
-    old_textures_map = {obj.read().m_Name for obj in old_env.objects if obj.type == AssetType.Texture2D}
+    # TODO: 这个好像和_extract_assets_from_bundle有重复
+    old_textures_map = {obj.peek_name() for obj in old_env.objects if obj.type == AssetType.Texture2D}
     
     if not old_textures_map:
         msg = t("message.search.no_texture2d_in_old_mod")
@@ -374,7 +377,7 @@ def find_new_bundle_path(
         if not env: continue
         
         for obj in env.objects:
-            if obj.type == AssetType.Texture2D and obj.read().m_Name in old_textures_map:
+            if obj.type == AssetType.Texture2D and obj.peek_name() in old_textures_map:
                 msg = t("message.search.new_file_confirmed", name=candidate_path.name)
                 log(f"  ✅ {msg}")
                 return candidate_path, msg
@@ -415,7 +418,7 @@ def _apply_replacements(
         
         try:
             data = obj.read()
-            asset_key = key_func(obj, data)
+            asset_key = key_func(obj)
             
             # 跳过 asset_key 为 None 的对象（如 GameObject、Transform 等）
             if asset_key is None:
@@ -441,19 +444,12 @@ def _apply_replacements(
                     obj.set_raw_data(content)
 
                 replacement_count += 1
-                if isinstance(asset_key, NameTypeKey):
-                    key_display = f"[{asset_key.type}] {asset_key.name}"
-                else:
-                    key_display = str(asset_key)
+                key_display = str(asset_key)
                 log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
                 replaced_assets_log.append(log_message)
 
         except Exception as e:
-            resource_name_for_error = "N/A"
-            try:
-                resource_name_for_error = obj.read().m_Name
-            except Exception:
-                pass
+            resource_name_for_error = obj.peek_name() or t("log.unnamed_resource", type=obj.type.name)
             log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
 
     return replacement_count, replaced_assets_log, list(tasks.keys())
@@ -519,7 +515,7 @@ def process_asset_packing(
                 if enable_bleed:
                     content = ImageUtils.bleed_image(content)
                     log(f"  > {t('log.packer.bleed_processed', name=file_path.stem)}")
-            else: # .skel, .atlas
+            elif suffix in {".skel", ".atlas"}:
                 asset_key = NameTypeKey(file_path.name, AssetType.TextAsset.name)
                 with open(file_path, "rb") as f:
                     content = f.read()
@@ -533,13 +529,17 @@ def process_asset_packing(
                         target_version=spine_options.target_version if spine_options else None,
                         log=log
                     )
+            else:
+                assert(False, f"Unsupported suffix: {suffix}")
+                pass
             replacement_map[asset_key] = content
         
         original_tasks_count = len(replacement_map)
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
         # 2. 定义用于在 bundle 中查找资源的 key 生成函数
-        key_func = MATCH_STRATEGIES['name_type']
+        strategy_name = 'name_type'
+        key_func = MATCH_STRATEGIES[strategy_name]
 
         # 3. 应用替换
         replacement_count, replaced_assets_log, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
@@ -550,7 +550,7 @@ def process_asset_packing(
             return False, t("message.packer.no_matching_assets_to_pack")
         
         # 报告替换结果
-        log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
+        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}:")
         for item in replaced_assets_log:
             log(f"  - {item}")
 
@@ -755,19 +755,19 @@ def _extract_assets_from_bundle(
             if not replace_all and obj.type.name not in asset_types_to_replace:
                 continue
 
-            asset_key = key_func(obj, data)
+            asset_key = key_func(obj)
             if asset_key is None or not getattr(data, 'm_Name', None):
                 continue
             
             content: AssetContent | None = None
-            resource_name = data.m_Name
+            resource_name: str = data.m_Name
 
             if obj.type == AssetType.Texture2D:
-                content = data.image
+                content: Image.Image = data.image
             elif obj.type == AssetType.TextAsset:
                 asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
                 if resource_name.lower().endswith('.skel'):
-                    content = SpineUtils.handle_skel_upgrade(
+                    content: bytes = SpineUtils.handle_skel_upgrade(
                         skel_bytes=asset_bytes,
                         resource_name=resource_name,
                         enabled=spine_options.enabled if spine_options else False,
@@ -776,10 +776,10 @@ def _extract_assets_from_bundle(
                         log=log
                     )
                 else:
-                    content = asset_bytes
+                    content: bytes = asset_bytes
             # 对于其他类型，如果处于“ALL”模式或该类型被明确请求，则复制原始数据
             elif replace_all or obj.type.name in asset_types_to_replace:
-                content = obj.get_raw_data()
+                content: bytes = obj.get_raw_data()
 
             if content is not None:
                 replacement_map[asset_key] = content
@@ -818,7 +818,8 @@ def _migrate_bundle_assets(
     # 定义匹配策略
     strategies: list[tuple[str, KeyGeneratorFunc]] = [
         ('path_id', MATCH_STRATEGIES['path_id']),
-        ('name_type', MATCH_STRATEGIES['name_type'])
+        ('cont_name_type', MATCH_STRATEGIES['cont_name_type']),
+        ('name_type', MATCH_STRATEGIES['name_type']),
         # ('container', MATCH_STRATEGIES['container']),
         # 因为多个Mesh可能共享同一个Container，所以这个策略很可能失效，因此不使用
     ]
@@ -1177,7 +1178,8 @@ def process_jp_to_global_conversion(
         # 1. 从所有日服包中构建一个完整的"替换清单"
         log(f'\n--- {t("log.section.extracting_from_jp")} ---')
         replacement_map: dict[AssetKey, AssetContent] = {}
-        key_func = MATCH_STRATEGIES['name_type']
+        strategy_name = 'cont_name_type'
+        key_func = MATCH_STRATEGIES[strategy_name]
         
         # 根据日服文件名动态确定要提取的资源类型
         asset_types = _get_asset_types_from_jp_filenames(jp_bundle_paths)
@@ -1217,7 +1219,7 @@ def process_jp_to_global_conversion(
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
+        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}:")
         for item in replaced_logs:
             log(f"  - {item}")
         
@@ -1279,7 +1281,8 @@ def process_global_to_jp_conversion(
             return False, t("message.jp_convert.load_global_source_failed")
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
-        key_func = MATCH_STRATEGIES['name_type']
+        strategy_name = 'cont_name_type'
+        key_func = MATCH_STRATEGIES[strategy_name]
 
         # 根据日服模板文件名确定要提取哪些类型的资源
         asset_types = _get_asset_types_from_jp_filenames(jp_template_paths)
@@ -1313,7 +1316,7 @@ def process_global_to_jp_conversion(
             )
             
             if replacement_count > 0:
-                log(f"\n✅ {t('log.migration.strategy_success', name='name_type', count=replacement_count)}:")
+                log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}:")
                 for item in replaced_logs:
                     log(f"  - {item}")
                 
