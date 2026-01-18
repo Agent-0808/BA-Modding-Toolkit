@@ -38,6 +38,7 @@ jobs:
           nuitka-version: main
           script-name: main.pyw
           mode: onefile
+          windows-icon-from-ico: assets/eligma.ico
 
           low-memory: true
           # 经测试使用mingw64可以避免堆内存问题
@@ -46,14 +47,11 @@ jobs:
           # 包含代码依赖包
           include-package: |
             UnityPy.resources
-            tkinterdnd2
           # 包含依赖包的数据文件
           include-package-data: |
             UnityPy
-            PIL
-            tkinterdnd2
             archspec
-            ttkbootstrap
+          include-data-dir: assets=assets
           windows-console-mode: disable
           output-dir: build
           output-file: "BA-Modding-Toolkit.exe"
@@ -71,7 +69,6 @@ jobs:
       - name: Copy External Resources
         run: |
           Copy-Item -Path "locales" -Destination "build/locales" -Recurse
-          Copy-Item -Path "assets" -Destination "build/assets" -Recurse
         shell: powershell
 
       # 上传 Artifact
