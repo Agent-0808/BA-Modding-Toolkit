@@ -1,16 +1,35 @@
-![GitHub License](https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit) ![GitHub Release](https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit) ![GitHub Repo stars](https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total)
-
-![Title](assets/title.png)
+<div align="center" style="text-align:center">
+  <p>
+    <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/main/assets/title.png?raw=true/>
+  </p>
+  <p>
+    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
+    <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
+  </p>
+</div>
 
 # BA Modding Toolkit
 
 简体中文 | [English](README.md)
 
-一个基于 UnityPy 的工具集，可用于自动化制作与更新 Blue Archive（碧蓝档案/蔚蓝档案）游戏的 Mod 文件流程。
+一个基于 UnityPy 的工具集，可用于自动化制作与更新 Blue Archive（碧蓝档案/蔚蓝档案/ブルーアーカイブ）游戏的 Mod 文件流程。
 
 支持Steam版（PC）与手机版（国际服/日服，Android/iOS）。
 
-## 运行
+## 介绍
+
+![不正常的客户端](assets/help/abnormal-zh.png)
+
+- 从网上下载的 mod，替换了游戏目录下的对应文件，进游戏却显示“不正常的用戶端”，无法登录？
+- 从网上下载了发布于很久以前的 mod，但文件名与最新的不同？即使替换后进入游戏，对应的角色图像没有变化/完全不显示/游戏卡死？
+- 想要自己制作一个 mod，替换角色立绘，但没有 Unity 相关知识？
+- 想要解包游戏资源，提取角色立绘或其他资源？
+
+BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，无需对bundle文件手动操作。
+
+## 开始使用
 
 您可以从页面右方的 [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) 页面下载最新版本的可执行文件，直接双击运行即可启动程序。
 
@@ -109,6 +128,16 @@
 
 "计算CRC值" 按钮可用于手动查看单个或两个文件的 CRC 校验值。
 
+### 资源提取
+1. 拖放或浏览选择需要提取资源的 Bundle 文件
+2. 选择输出子目录的文件夹名称
+3. （可选）在设置窗口配置 `SpineAtlasDowngrade.exe` 程序的路径，并开启"启用 Spine 降级"选项，调用第三方程序将提取出的 Spine 文件转换为 Spine 3.8 格式
+4. 点击"开始提取"按钮，程序会自动提取指定类型的资源
+
+此功能适用于从现有 Bundle 文件中提取资源进行修改或预览。
+
+当前仅支持提取`Texture2D`（`.png`）、`TextAsset`（`.skel`、`.atlas`）类型文件
+
 ### 资源打包
 1. 拖放或浏览选择包含待打包资源的文件夹
    - 支持的文件类型：`.png`（贴图）、`.skel`、`.atlas`（Spine动画文件）
@@ -130,16 +159,6 @@
 将`texture`文件夹拖放到界面的第一个输入框中，并把对应的 Bundle 文件（例如`*-spinecharacters-ch0808_spr-*.bundle`）拖放至程序的第二个输入框中，点击“开始打包”按钮即可生成新的 Bundle 文件。
 
 这会使`texture`文件夹下的`*.png`、`*.skel`、`*.atlas`文件替换目标Bundle中的同名资源。
-
-### 资源提取
-1. 拖放或浏览选择需要提取资源的 Bundle 文件
-2. 选择输出子目录的文件夹名称
-3. 在设置窗口中勾选需要提取的资源类型
-    - 当前仅支持提取`Texture2D`（`.png`）、`TextAsset`（`.skel`、`.atlas`）类型文件
-4. （可选）在设置窗口配置 `SpineAtlasDowngrade.exe` 程序的路径，并开启"启用 Spine 降级"选项，调用第三方程序将提取出的 Spine 文件转换为 Spine 3.8 格式
-5. 点击"开始提取"按钮，程序会自动提取指定类型的资源
-
-此功能适用于从现有 Bundle 文件中提取资源进行修改或预览。
 
 ### JP/GB转换
 日服（多个文件）与国际服（一个文件）格式之间的互相转换。
@@ -254,12 +273,6 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 | Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
-### Linux 支持
-
-- **GUI 兼容性**：GUI 程序基于 `tkinter` 库构建，并使用了 `tkinterdnd2` 实现拖拽功能。由于 Linux 各发行版对 tkinter 的支持情况不一，图形界面可能无法在 Linux 上正常显示或运行。
-- **推荐方案**：建议 Linux 用户直接使用 **命令行接口 (CLI)** 版本 `maincli.py`。CLI 版本实现了大部分功能，且不依赖任何 GUI 库，经测试可以正常运行。
-- **使用虚拟环境**：为了避免系统环境与依赖库产生冲突，强烈建议使用 Python 虚拟环境 (venv) 来运行本程序。
-
 ## 开发
 
 请安装 Python 3.12+ 版本，安装依赖后运行：
@@ -267,8 +280,12 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 ```bash
 git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
 cd BA-Modding-Toolkit
-pip install -r requirements.txt
+
+python -m pip install -r requirements.txt
 python main.pyw
+# 或者使用 uv 管理依赖
+uv sync
+uv run main.pyw
 ```
 
 作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
@@ -301,12 +318,13 @@ BA-Modding-Toolkit/
 ├── processing.py    # 核心处理逻辑
 ├── utils.py         # 工具类和辅助函数
 ├── i18n.py          # 国际化功能相关
+├── locales/         # 语言文件
+├── config.toml      # 本地配置文件（自动生成）
 │ 
 │ # ============= 杂项 =============
 │ 
-├── locales/         # 语言文件
 ├── requirements.txt # Python依赖列表
-├── config.ini       # 本地配置文件（自动生成）
+├── pyproject.toml   # Python项目配置文件
 ├── LICENSE          # 项目许可证文件
 ├── assets/          # 项目资源文件夹
 │ └── help/              # 帮助文档中的图片
@@ -319,13 +337,21 @@ BA-Modding-Toolkit/
 - [Deathemonic](https://github.com/Deathemonic): 基于 [BA-CY](https://github.com/Deathemonic/BA-CY) 项目实现 CRC 修正功能。
 - [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型。
 - [afiseleo](https://github.com/fiseleo): 协助开发命令行版本。
-- [com55](https://github.com/com55): 协助了 Github 工作流（编译 Python 至可执行文件）。
+- [com55](https://github.com/com55): 指导了 Github 工作流文件编写。
 - [wang606](https://github.com/wang606): Spine 版本转换功能基于 [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) 项目。
   - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
 
+### 第三方库
 本项目使用了以下优秀的第三方库：
 
-- [UnityPy](https://github.com/K0lb3/UnityPy): 用于解析和操作 Unity Bundle 文件的核心库
-- [Pillow](https://python-pillow.github.io/): 游戏中的 Texture2D 类型资产的导出功能
-- [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): 为 Tkinter 添加拖放功能支持
-- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap): 现代化的 Tkinter 主题库
+- [UnityPy](https://github.com/K0lb3/UnityPy)（MIT License）: 用于解析和操作 Unity Bundle 文件的核心库
+- [Pillow](https://python-pillow.github.io/)（MIT License）: 游戏中的 Texture2D 类型资产的导出功能
+- [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2)（MIT License）: 为 Tkinter 添加拖放功能支持
+- [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap)（MIT License）: 现代化的 Tkinter 主题库
+- [toml](https://github.com/uiri/toml)（MIT License）: 用于解析和操作 TOML 配置文件的库
+
+## 另见
+一些好用的相关仓库：
+- [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：查询角色名称与内部文件ID之间的对应关系
+- [BA-AD](https://github.com/Deathemonic/BA-AD)：下载原版游戏资源
+- [SpineViewer](https://github.com/ww-rm/SpineViewer)：预览Spine动画文件

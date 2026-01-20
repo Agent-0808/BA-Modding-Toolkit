@@ -1,6 +1,14 @@
-![GitHub License](https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit) ![GitHub Release](https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit) ![GitHub Repo stars](https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total)
-
-![Title](assets/title.png)
+<div align="center" style="text-align:center">
+  <p>
+    <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/main/assets/title.png?raw=true/>
+  </p>
+  <p>
+    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
+    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
+    <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
+  </p>
+</div>
 
 # BA Modding Toolkit
 
@@ -8,11 +16,22 @@
 
 [简体中文](README_zh-CN.md) | English
 
-A toolkit based on UnityPy for automating the creation and updating of Blue Archive mods.
+A toolkit based on UnityPy for automating the creation and updating of Blue Archive/ブルーアーカイブ mods.
 
 Supports Steam version (PC) and mobile versions (Global/JP server, Android/iOS).
 
-## Running
+## Introduction
+
+![Abnormal Client](assets/help/abnormal-en.png)
+
+- Downloaded a mod from the internet, replaced the corresponding file in the game directory, but the game shows "Abnormal Client" and cannot login?
+- Downloaded a mod released a long time ago, but the filename is different from the latest version? Even after replacement, the character image doesn't change/doesn't display at all/game freezes?
+- Want to create your own mod to replace character illustrations, but don't have Unity knowledge?
+- Want to unpack game resources and extract character illustrations or other assets?
+
+BA Modding Toolkit can help you solve the above problems, with completely foolproof operations, no need to manually manipulate bundle files.
+
+## Getting Started
 
 You can download the latest version of the executable file from the [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) page, and double-click to run the program.
 
@@ -82,6 +101,7 @@ The program contains multiple functional tabs:
 </details>
 
 ![How to update a mod with BAMT GUI](assets/help/gui-help-mod-update-en.png)
+> Note: i18n support is still in development, these are temporary UI texts.
 
 ### Mod 更新 (Mod Update)
 #### 单个更新 (Single Update)
@@ -108,6 +128,16 @@ This feature can also be used to port mods between different platforms, just sel
 
 The "计算CRC值" (Calculate CRC Value) button can be used to manually view the CRC checksum of a single file or two files.
 
+### 资源提取 (Asset Extractor)
+1. Drag and drop or browse to select the Bundle file to extract assets from
+2. Select an output directory, the program will automatically create a subdirectory named after the Bundle file
+3. (Optional) In the settings window, configure `SpineAtlasDowngrade.exe` program path, and enable "启用 Spine 降级" (Enable Spine Downgrade) option. If enabled, the program will automatically call the third-party program to convert the Spine files to Spine 3.8 format in the extraction process.
+4. Click the "开始提取" (Start Extraction) button, the program will extract the specified types of assets
+
+This feature is for extracting assets from existing Bundle files for modification or preview.
+
+Supported asset types: `Texture2D` (`.png`), `TextAsset`(`.skel`、`.atlas`)
+
 ### 资源打包工具 (Asset Packer)
 1. Drag and drop or browse to select the folder containing assets to be packed
     - Supported file types: `.png` (textures), `.skel`, `.atlas` (Spine animation files)
@@ -129,15 +159,6 @@ After modifying these files, you can package them into a Bundle file using the "
 Drag the `texture` folder to the first input box of the interface, and drag the corresponding Bundle file (e.g., `*-spinecharacters-ch0808_spr-*.bundle`) to the second input box of the program, then click the "开始打包" (Start Packing) button to generate a new Bundle file.
 
 This will replace the assets with the same name in the target Bundle with the `*.png`, `*.skel`, and `*.atlas` files from the `texture` folder.
-
-### 资源提取 (Asset Extractor)
-1. Drag and drop or browse to select the Bundle file to extract assets from
-2. Select an output directory, the program will automatically create a subdirectory named after the Bundle file
-3. Check the asset types to extract in the settings window
-4. (Optional) In the settings window, configure `SpineAtlasDowngrade.exe` program path, and enable "启用 Spine 降级" (Enable Spine Downgrade) option. If enabled, the program will automatically call the third-party program to convert the Spine files to Spine 3.8 format in the extraction process.
-5. Click the "开始提取" (Start Extraction) button, the program will extract the specified types of assets
-
-This feature is for extracting assets from existing Bundle files for modification or preview.
 
 ### JP/GB转换 (JP/GB Conversion)
 Conversion between JP server format (two separate Bundle files) and Global server format (one Bundle file) for a mod that modified the Spine assets.
@@ -252,12 +273,6 @@ The table below lists tested environment configurations for reference.
 | Windows 10          | 3.13.7         | 1.23.0          | 11.3.0         | ✅     |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0          | 12.0.0         | ✅     |  |
 
-### Linux Support
-
-- **GUI Compatibility**: The GUI program is built on the `tkinter` library and uses `tkinterdnd2` for drag-and-drop functionality. Since support for tkinter varies across Linux distributions, the graphical interface may not display or run correctly on Linux.
-- **Recommendation**: Linux users are advised to use the **Command Line Interface (CLI)** version `maincli.py`. The CLI version implements most functions and does not depend on any GUI libraries, and has been tested to work correctly.
-- **Use Virtual Environment**: To avoid conflicts with system environments and dependencies, it is strongly recommended to use a Python virtual environment (venv) to run this program.
-
 ## Developing
 
 Please ensure that Python 3.12 or higher is installed.
@@ -265,8 +280,12 @@ Please ensure that Python 3.12 or higher is installed.
 ```bash
 git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
 cd BA-Modding-Toolkit
-pip install -r requirements.txt
+
+python -m pip install -r requirements.txt
 python main.pyw
+# or use uv to manage dependencies
+uv sync
+uv run main.pyw
 ```
 
 The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
@@ -299,12 +318,13 @@ BA-Modding-Toolkit/
 ├── processing.py    # Core processing logic
 ├── utils.py         # Utility classes and helper functions
 ├── i18n.py          # Internationalization functionality
+├── locales/         # Language files
+├── config.toml      # Local configuration file (automatically generated)
 │ 
 │ # ============= Misc. =============
 │ 
-├── locales/         # Language files
 ├── requirements.txt # Python dependency list
-├── config.ini       # Local configuration file (automatically generated)
+├── pyproject.toml   # Python项目配置文件
 ├── LICENSE          # Project license file
 ├── assets/          # Project asset folder
 │ └── help/              # Images in help documentation
@@ -317,13 +337,21 @@ BA-Modding-Toolkit/
 - [Deathemonic](https://github.com/Deathemonic): Patching CRC with [BA-CY](https://github.com/Deathemonic/BA-CY).
 - [kalina](https://github.com/kalinaowo): Creating the prototype of the `CRCUtils` class, the starting point of BAMT.
 - [afiseleo](https://github.com/fiseleo): Helping with the CLI version.
-- [com55](https://github.com/com55): Assisting with Github workflow (compiling Python to executable).
+- [com55](https://github.com/com55): Assisting with Github workflow.
 - [wang606](https://github.com/wang606): Spine version conversion feature based on [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) project.
     - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit. 
 
+### Third-Party Libraries
 This project uses the following excellent 3rd-party libraries:
 
 - [UnityPy](https://github.com/K0lb3/UnityPy): Core library for parsing and manipulating Unity Bundle files
 - [Pillow](https://python-pillow.github.io/): Export functionality for Texture2D type assets in the game
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2): Adds drag-and-drop functionality support for Tkinter
 - [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap): Modern Tkinter theme library
+- [toml](https://github.com/uiri/toml): TOML configuration file parser
+
+## See Also
+Some useful related repositories:
+- [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：Search for character names and internal file IDs
+- [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
+- [SpineViewer](https://github.com/ww-rm/SpineViewer)：Preview Spine animation files
