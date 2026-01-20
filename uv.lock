@@ -49,10 +49,11 @@ wheels = [
 
 [[package]]
 name = "ba-modding-toolkit"
-version = "0.12.1"
+version = "0.12.2"
 source = { virtual = "." }
 dependencies = [
     { name = "pillow" },
+    { name = "spineatlas" },
     { name = "tkinterdnd2" },
     { name = "toml" },
     { name = "ttkbootstrap" },
@@ -62,6 +63,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "pillow", specifier = ">=12.0.0" },
+    { name = "spineatlas", specifier = ">=1.0.12" },
     { name = "tkinterdnd2", specifier = ">=0.4.3" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "ttkbootstrap", specifier = ">=1.10.1" },
@@ -257,6 +259,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0a/ed/6106a55d98868c0edb82aa8ee4fa5fa89712acbe2ab5a307adf962ac67fb/pyfmodex-0.7.2.tar.gz", hash = "sha256:d9ad3d7841a1c4cf4733cbedc69389f84c58a640d23d0ffa083ad6080f35103c", size = 111830, upload-time = "2024-03-08T07:41:32.687Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/7b/f7fdcdf6a6e8fd951c41e91baae8c1cecfffc2ed3199157afd6ab5728716/pyfmodex-0.7.2-py3-none-any.whl", hash = "sha256:1c42112b788e80ee7b4b57ae25bbbc0a98eb1e32a8e7c9e1246698cdf72efa9d", size = 126703, upload-time = "2024-03-08T07:41:30.326Z" },
+]
+
+[[package]]
+name = "spineatlas"
+version = "1.0.12"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/52/3b/c135e11156b375b0be57253b2d292e689a6e3f19bce02845c50a50a9b621/spineatlas-1.0.12.tar.gz", hash = "sha256:91b7ec2c3f673e27e167cae77d411c068daef295686baa37aca926f9a394947d", size = 9781, upload-time = "2026-01-19T22:59:32.221Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/ae/48570ae0996b339fc941c8967188018955d7df8d631477c8f04b26949c71/spineatlas-1.0.12-py3-none-any.whl", hash = "sha256:a4dc8efa1a009612ed44b143f04028aab8f4291ef43e5df8bf83993846b84ff2", size = 8924, upload-time = "2026-01-19T22:59:30.941Z" },
 ]
 
 [[package]]
