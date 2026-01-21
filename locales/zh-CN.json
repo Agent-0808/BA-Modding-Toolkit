@@ -263,7 +263,8 @@
 			"missing_matching_atlas": "找到 {skel} 但缺少匹配的 {atlas}，将作为独立文件处理。",
 			"skel_conversion_failed_using_original": "skel 转换失败，将使用原始 .skel 文件。",
 			"no_skel_found": "在bundle中未找到 .skel 文件。",
-			"edit_atlas": "编辑了 Atlas 文件: {filename}"
+			"edit_atlas": "编辑了 Atlas 文件: {filename}",
+			"rescaling_page": "正在缩放页面 {page} (scale: {scale})"
 		},
 		"packer": {
 			"start_packing": "开始从资源文件夹打包...",
