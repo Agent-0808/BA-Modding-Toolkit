@@ -174,7 +174,8 @@
 			"load_old_mod_failed": "加载旧版Mod文件失败。",
 			"no_comparable_assets": "旧版Mod文件中不包含可比较的资源。",
 			"new_file_confirmed": "已确定新版文件: {name}",
-			"no_matching_asset_found": "在所有候选文件中都未找到与旧 Mod 资源名称匹配的资源。无法确定正确的新版文件。"
+			"no_matching_asset_found": "在所有候选文件中都未找到与旧 Mod 资源名称匹配的资源。无法确定正确的新版文件。",
+			"found_multiple_matches": "找到 {count} 个匹配的文件"
 		},
 		"extractor": {
 			"no_assets_found": "未找到指定类型的可提取资源。",
@@ -434,7 +435,10 @@
 		},
 		"dialog": {
 			"select": "选择{type}",
-			"add": "添加{type}"
+			"add": "添加{type}",
+			"select_file": "选择文件",
+			"multiple_matches_found": "找到 {count} 个匹配的文件：",
+			"selection_cancelled": "已取消选择"
 		},
 		"drop_zone": {
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",

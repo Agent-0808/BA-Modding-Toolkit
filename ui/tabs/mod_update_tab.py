@@ -9,6 +9,7 @@ from i18n import t
 import processing
 from ui.base_tab import TabFrame
 from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
+from ui.dialogs import FileSelectionDialog
 from ui.utils import handle_drop, replace_file, select_file, select_directory
 from utils import get_search_resource_dirs
 
@@ -122,19 +123,43 @@ class ModUpdateTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        found_path, message = processing.find_new_bundle_path(
+        found_paths, message = processing.find_new_bundle_path(
             self.old_mod_path,
             search_paths,
             self.logger.log
         )
         
-        if found_path:
-            self.master.after(0, self.set_new_mod_file, found_path)
-            self.logger.status(t("log.status.ready"))
-        else:
+        # 在主线程中处理结果
+        self.master.after(0, lambda: self._handle_search_result(found_paths, message))
+    
+    def _handle_search_result(self, found_paths: list[Path], message: str):
+        """处理搜索结果"""
+        if not found_paths:
+            # 没有找到匹配文件
             ui_message = t("ui.mod_update.status_not_found", message=message)
             self.new_mod_label.config(text=ui_message, bootstyle="danger")
             self.logger.status(t("log.status.search_not_found"))
+        elif len(found_paths) == 1:
+            # 只有一个匹配文件，直接使用
+            self.set_new_mod_file(found_paths[0])
+        else:
+            # 多个匹配文件，弹出选择对话框
+            dialog = FileSelectionDialog(
+                self.master,
+                title=t("ui.dialog.select_file"),
+                candidates=found_paths,
+                message=t("ui.dialog.multiple_matches_found", count=len(found_paths)),
+                display_formatter=lambda p: f"{p.parent.name} / {p.name}"
+            )
+            
+            selected_path = dialog.get_selected_path()
+            if selected_path:
+                self.set_new_mod_file(selected_path)
+            else:
+                # 用户取消了选择
+                ui_message = t("ui.mod_update.status_not_found", message=t("ui.dialog.selection_cancelled"))
+                self.new_mod_label.config(text=ui_message, bootstyle="warning")
+                self.logger.status(t("log.status.search_not_found"))
 
     def run_update_thread(self):
         if not all([self.old_mod_path, self.new_mod_path, self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
@@ -246,20 +271,21 @@ class ModUpdateTab(TabFrame):
 
     # --- 批量更新UI和逻辑 ---
     def _create_batch_mode_widgets(self, parent):
-            # 创建文件列表框，传入自定义显示格式：文件夹名 / 文件名
-            self.batch_file_listbox = FileListbox(
-                parent,
-                t("ui.label.mod_file"),
-                self.mod_file_list,
-                t("ui.mod_update.placeholder_batch"),
-                height=10,
-                logger=self.logger,
-                display_formatter=lambda p: f"{p.parent.name} / {p.name}"
-            )
-            self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-            
-            run_button = UIComponents.create_button(parent, text=t("action.start"), command=self.run_batch_update_thread, bootstyle="success", style="large")
-            run_button.pack(fill=tk.X, pady=5)
+        # 创建文件列表框，传入自定义显示格式：文件夹名 / 文件名
+        self.batch_file_listbox = FileListbox(
+            parent,
+            t("ui.label.mod_file"),
+            self.mod_file_list,
+            t("ui.mod_update.placeholder_batch"),
+            height=10,
+            logger=self.logger,
+            display_formatter=lambda p: f"{p.parent.name} / {p.name}"
+        )
+        self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        run_button = UIComponents.create_button(parent, text=t("action.start"), 
+            command=self.run_batch_update_thread, bootstyle="success", style="large")
+        run_button.pack(fill=tk.X, pady=5)
 
     def run_batch_update_thread(self):
         if not self.mod_file_list:

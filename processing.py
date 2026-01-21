@@ -314,15 +314,15 @@ def find_new_bundle_path(
     old_mod_path: Path,
     game_resource_dir: Path | list[Path],
     log: LogFunc = no_log,
-) -> tuple[Path | None, str]:
+) -> tuple[list[Path], str]:
     """
     根据旧版Mod文件，在游戏资源目录中智能查找对应的新版文件。
     
     Returns:
-        tuple[Path | None, str]: (找到的路径对象, 状态消息)
+        tuple[list[Path], str]: (找到的路径列表, 状态消息)
     """
     if not old_mod_path.exists():
-        return None, t("message.search.check_file_exists", path=old_mod_path)
+        return [], t("message.search.check_file_exists", path=old_mod_path)
 
     log(t("log.search.searching_for_file", name=old_mod_path.name))
 
@@ -348,7 +348,7 @@ def find_new_bundle_path(
     if not candidates:
         msg = t("message.search.no_matching_files_in_dir")
         log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
+        return [], msg
     log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
 
     # 3. 分析旧Mod的关键资源特征
@@ -358,7 +358,7 @@ def find_new_bundle_path(
     if not (old_env := load_bundle(old_mod_path, log)):
         msg = t("message.search.load_old_mod_failed")
         log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
+        return [], msg
 
     # 使用标准策略生成 Key，保持一致性
     key_func = MATCH_STRATEGIES['name_type']
@@ -374,30 +374,40 @@ def find_new_bundle_path(
     if not old_assets_fingerprint:
         msg = t("message.search.no_comparable_assets")
         log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
+        return [], msg
 
     log(f"  > {t('log.search.old_mod_asset_count', count=len(old_assets_fingerprint))}")
 
-    # 4. 遍历候选文件进行指纹比对
+    # 4. 遍历候选文件进行指纹比对，收集所有匹配的文件
+    matched_paths = []
     for candidate_path in candidates:
         log(f"  - {t('log.search.checking_candidate', name=candidate_path.name)}")
         
         if not (env := load_bundle(candidate_path, log)):
             continue
         
-        # 遍历新包中的对象，一旦发现匹配立即返回 (Early Exit)
+        # 检查新包中是否有匹配的资源
+        has_match = False
         for obj in env.objects:
             if obj.type in comparable_types:
-                # 同样的 Key 生成逻辑
                 candidate_key = key_func(obj)
                 if candidate_key in old_assets_fingerprint:
-                    msg = t("message.search.new_file_confirmed", name=candidate_path.name)
-                    log(f"  ✅ {msg}")
-                    return candidate_path, msg
+                    has_match = True
+                    break
+        
+        if has_match:
+            matched_paths.append(candidate_path)
+            msg = t("message.search.new_file_confirmed", name=candidate_path.name)
+            log(f"  ✅ {msg}")
     
-    msg = t("message.search.no_matching_asset_found")
-    log(f'  > {t("common.fail")}: {msg}')
-    return None, msg
+    if not matched_paths:
+        msg = t("message.search.no_matching_asset_found")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+    
+    msg = t("message.search.found_multiple_matches", count=len(matched_paths))
+    log(f"  > {msg}")
+    return matched_paths, msg
 
 # ====== 资源处理相关 ======
 
@@ -992,15 +1002,18 @@ def process_batch_mod_update(
         log(t("log.status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
         # 查找对应的新资源文件
-        new_bundle_path, find_message = find_new_bundle_path(
+        new_bundle_paths, find_message = find_new_bundle_path(
             old_mod_path, search_paths, log
         )
 
-        if not new_bundle_path:
+        if not new_bundle_paths:
             log(f'❌ {t("log.search.find_failed", message=find_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
             continue
+
+        # 使用第一个匹配的文件
+        new_bundle_path = new_bundle_paths[0]
 
         # 执行Mod更新处理
         success, process_message = process_mod_update(
