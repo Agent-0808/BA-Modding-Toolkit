@@ -317,35 +317,33 @@ def find_new_bundle_path(
 ) -> tuple[Path | None, str]:
     """
     根据旧版Mod文件，在游戏资源目录中智能查找对应的新版文件。
-    支持单个目录路径或目录路径列表。
-    返回 (找到的路径对象, 状态消息) 的元组。
+    
+    Returns:
+        tuple[Path | None, str]: (找到的路径对象, 状态消息)
     """
-    # TODO: 只用Texture2D比较好像不太对，但是it works
-
     if not old_mod_path.exists():
         return None, t("message.search.check_file_exists", path=old_mod_path)
 
     log(t("log.search.searching_for_file", name=old_mod_path.name))
 
     # 1. 提取文件名前缀
-    prefix, prefix_message = get_filename_prefix(str(old_mod_path.name), log)
-    if not prefix:
-        return None, prefix_message
+    if not (prefix_info := get_filename_prefix(str(old_mod_path.name), log))[0]:
+        return None, prefix_info[1]
+    
+    prefix, _ = prefix_info
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
     extension = '.bundle'
+    extension_backup = '.backup'
 
-    # 2. 处理单个目录或目录列表
-    if isinstance(game_resource_dir, Path):
-        search_dirs = [game_resource_dir]
-    else:
-        search_dirs = game_resource_dir
-
-    # 3. 查找所有候选文件（前缀相同且扩展名一致）
-    candidates: list[Path] = []
-    for search_dir in search_dirs:
-        if search_dir.exists() and search_dir.is_dir():
-            dir_candidates = [f for f in search_dir.iterdir() if f.is_file() and f.name.startswith(prefix) and f.suffix == extension]
-            candidates.extend(dir_candidates)
+    # 2. 收集所有候选文件
+    search_dirs = [game_resource_dir] if isinstance(game_resource_dir, Path) else game_resource_dir
+    
+    candidates = [
+        file for dir in search_dirs 
+        if dir.exists() and dir.is_dir()
+        for file in dir.iterdir()
+        if file.is_file() and file.name.startswith(prefix) and file.suffix != extension_backup
+    ]
     
     if not candidates:
         msg = t("message.search.no_matching_files_in_dir")
@@ -353,36 +351,51 @@ def find_new_bundle_path(
         return None, msg
     log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
 
-    # 4. 加载旧Mod获取贴图列表
-    old_env = load_bundle(old_mod_path, log)
-    if not old_env:
+    # 3. 分析旧Mod的关键资源特征
+    # 定义用于识别的资源类型
+    comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh}
+    
+    if not (old_env := load_bundle(old_mod_path, log)):
         msg = t("message.search.load_old_mod_failed")
         log(f'  > {t("common.fail")}: {msg}')
         return None, msg
+
+    # 使用标准策略生成 Key，保持一致性
+    key_func = MATCH_STRATEGIES['name_type']
     
-    # TODO: 这个好像和_extract_assets_from_bundle有重复
-    old_textures_map = {obj.peek_name() for obj in old_env.objects if obj.type == AssetType.Texture2D}
-    
-    if not old_textures_map:
-        msg = t("message.search.no_texture2d_in_old_mod")
+    # 仅提取 Key，不读取数据
+    # 使用 set 推导式构建指纹
+    old_assets_fingerprint = {
+        key_func(obj)
+        for obj in old_env.objects
+        if obj.type in comparable_types
+    }
+
+    if not old_assets_fingerprint:
+        msg = t("message.search.no_comparable_assets")
         log(f'  > {t("common.fail")}: {msg}')
         return None, msg
-    log(f"  > {t('log.search.old_mod_texture_count', count=len(old_textures_map))}")
 
-    # 5. 遍历候选文件，找到第一个包含匹配贴图的
+    log(f"  > {t('log.search.old_mod_asset_count', count=len(old_assets_fingerprint))}")
+
+    # 4. 遍历候选文件进行指纹比对
     for candidate_path in candidates:
         log(f"  - {t('log.search.checking_candidate', name=candidate_path.name)}")
         
-        env = load_bundle(candidate_path, log)
-        if not env: continue
+        if not (env := load_bundle(candidate_path, log)):
+            continue
         
+        # 遍历新包中的对象，一旦发现匹配立即返回 (Early Exit)
         for obj in env.objects:
-            if obj.type == AssetType.Texture2D and obj.peek_name() in old_textures_map:
-                msg = t("message.search.new_file_confirmed", name=candidate_path.name)
-                log(f"  ✅ {msg}")
-                return candidate_path, msg
+            if obj.type in comparable_types:
+                # 同样的 Key 生成逻辑
+                candidate_key = key_func(obj)
+                if candidate_key in old_assets_fingerprint:
+                    msg = t("message.search.new_file_confirmed", name=candidate_path.name)
+                    log(f"  ✅ {msg}")
+                    return candidate_path, msg
     
-    msg = t("message.search.no_matching_texture_found")
+    msg = t("message.search.no_matching_asset_found")
     log(f'  > {t("common.fail")}: {msg}')
     return None, msg
 

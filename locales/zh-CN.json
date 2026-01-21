@@ -172,9 +172,9 @@
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
 			"load_old_mod_failed": "加载旧版Mod文件失败。",
-			"no_texture2d_in_old_mod": "旧版Mod文件中不包含任何 Texture2D 资源。",
+			"no_comparable_assets": "旧版Mod文件中不包含可比较的资源。",
 			"new_file_confirmed": "已确定新版文件: {name}",
-			"no_matching_texture_found": "在所有候选文件中都未找到与旧版Mod贴图名称匹配的资源。无法确定正确的新版文件。"
+			"no_matching_asset_found": "在所有候选文件中都未找到与旧 Mod 资源名称匹配的资源。无法确定正确的新版文件。"
 		},
 		"extractor": {
 			"no_assets_found": "未找到指定类型的可提取资源。",
@@ -311,7 +311,7 @@
 			"searching_for_file": "正在为 \"{name}\" 搜索对应文件...",
 			"file_prefix": "文件前缀: \"{prefix}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
-			"old_mod_texture_count": "旧版Mod包含 {count} 个贴图资源。",
+			"old_mod_asset_count": "旧 Mod 包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
 			"found_count": "成功查找到 {count} 个匹配文件。"
