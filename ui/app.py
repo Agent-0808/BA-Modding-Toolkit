@@ -11,7 +11,7 @@ from ui.components import Theme, Logger, UIComponents
 from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
 from ui.base_tab import TabFrame
-from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JpGbConversionTab
+from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
 from i18n import i18n_manager, t, get_system_language
 
 class App(tk.Frame):
@@ -250,14 +250,14 @@ class App(tk.Frame):
         crc_tool_tab = CrcToolTab(self.content_frame, self)
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
-        jp_gb_conversion_tab = JpGbConversionTab(self.content_frame, self)
+        jp_gl_conversion_tab = JPGLConversionTab(self.content_frame, self)
         
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
             (crc_tool_tab, t("ui.tabs.crc_tool")),
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
-            (jp_gb_conversion_tab, t("ui.tabs.jp_gb_convert"))
+            (jp_gl_conversion_tab, t("ui.tabs.jp_conversion"))
         ])
         
         # 将所有Tab放置在content_frame的同一位置

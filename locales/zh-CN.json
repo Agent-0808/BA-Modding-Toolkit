@@ -391,7 +391,7 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"jp_gb_convert": "JP/GB 转换"
+			"jp_conversion": "JP/GL 转换"
 		},
 		"settings": {
 			"title": "设置",
@@ -422,9 +422,9 @@
 		"extractor": {
 			"placeholder_bundle": "拖放要提取资源的 Bundle 文件\n或点击下方按钮选择"
 		},
-		"jp_gb_convert": {
-			"mode_jp_to_gb": "JP → Global (合并)",
-			"mode_gb_to_jp": "Global → JP (拆分)",
+		"jp_conversion": {
+			"mode_jp_to_gl": "JP → Global (合并)",
+			"mode_gl_to_jp": "Global → JP (拆分)",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
 			"role_jp_source": "日服 Bundle (源文件)",
 			"role_global_source": "国际服 Bundle (源文件)",
