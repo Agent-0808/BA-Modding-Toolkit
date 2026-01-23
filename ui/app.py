@@ -65,7 +65,6 @@ class App(tk.Frame):
         
         # Spine 降级选项
         self.enable_atlas_downgrade_var.set(False)
-        self.atlas_downgrade_path_var.set("")
         self.spine_downgrade_version_var.set("3.8.75")  # 设置默认值
         
         # Asset Packer 选项
@@ -97,7 +96,6 @@ class App(tk.Frame):
         
         # Spine 降级选项
         self.enable_atlas_downgrade_var = tk.BooleanVar()
-        self.atlas_downgrade_path_var = tk.StringVar()
         self.spine_downgrade_version_var = tk.StringVar()  # 添加Spine降级版本变量
         
         # Asset Packer Bleed 选项

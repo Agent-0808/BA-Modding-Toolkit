@@ -117,13 +117,8 @@ class AssetExtractorTab(TabFrame):
             
         # 检查 Spine 降级选项
         if self.app.enable_atlas_downgrade_var.get():
-            atlas_downgrade_path = self.app.atlas_downgrade_path_var.get()
             spine_converter_path = self.app.spine_converter_path_var.get()
             
-            if not atlas_downgrade_path or not Path(atlas_downgrade_path).exists():
-                messagebox.showerror(t("common.error"), t("message.spine.missing_downgrade_tool"))
-                return
-                
             if not spine_converter_path or not Path(spine_converter_path).exists():
                 messagebox.showerror(t("common.error"), t("message.spine.missing_converter_tool"))
                 return
@@ -157,12 +152,11 @@ class AssetExtractorTab(TabFrame):
             
         # 传递 Spine 降级选项
         enable_atlas_downgrade = self.app.enable_atlas_downgrade_var.get()
-        atlas_downgrade_path = self.app.atlas_downgrade_path_var.get() if enable_atlas_downgrade else None
         spine_converter_path = self.app.spine_converter_path_var.get() if enable_atlas_downgrade else None
             
-        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, atlas_downgrade_path, spine_converter_path)
+        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path)
 
-    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, atlas_downgrade_path=None, spine_converter_path=None):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None):
         self.logger.status(t("log.status.extracting"))
         
         # 创建 SpineDowngradeOptions 对象（如果启用）
@@ -171,7 +165,6 @@ class AssetExtractorTab(TabFrame):
         downgrade_options = processing.SpineDowngradeOptions(
             enabled=enable_atlas_downgrade,
             skel_converter_path=Path(spine_converter_path),
-            atlas_converter_path=Path(atlas_downgrade_path),
             target_version=target_version
         )
         

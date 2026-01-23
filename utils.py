@@ -512,7 +512,6 @@ class SpineUtils:
     def run_atlas_downgrader(
         input_atlas: Path,
         output_dir: Path,
-        converter_path: Path,
         log: LogFunc = no_log,
     ) -> tuple[bool, list[str]]:
         """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
@@ -556,7 +555,6 @@ class SpineUtils:
         atlas_path: Path,
         output_dir: Path,
         skel_converter_path: Path,
-        atlas_converter_path: Path,
         target_version: str,
         log: LogFunc = no_log,
     ) -> None:
@@ -570,11 +568,11 @@ class SpineUtils:
             conv_output_dir = Path(conv_out_dir_str)
 
             atlas_success, processed_pngs = SpineUtils.run_atlas_downgrader(
-                atlas_path, conv_output_dir, atlas_converter_path, log
+                atlas_path, conv_output_dir, log
             )
 
             if atlas_success:
-                log(f'      > {t("log.spine.atlas_downgrade_success")}')
+                log(f'    > {t("log.spine.atlas_downgrade_success")}')
                 
                 for png_file in atlas_path.parent.glob("*.png"):
                     if png_file.name not in processed_pngs:
@@ -582,9 +580,9 @@ class SpineUtils:
                 
                 for converted_file in conv_output_dir.iterdir():
                     shutil.copy2(converted_file, output_dir / converted_file.name)
-                    log(f"        - {converted_file.name}")
+                    log(f"      - {converted_file.name}")
             else:
-                log(f'      ✗ {t("log.spine.atlas_downgrade_failed")}.')
+                log(f'    ✗ {t("log.spine.atlas_downgrade_failed")}.')
 
             output_skel_path = output_dir / skel_path.name
             skel_success, _ = SpineUtils.run_skel_converter(

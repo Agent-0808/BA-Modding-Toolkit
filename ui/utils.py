@@ -303,7 +303,6 @@ class ConfigManager:
                 },
                 "SpineDowngrade": {
                     "enable_atlas_downgrade": app.enable_atlas_downgrade_var.get(),
-                    "atlas_downgrade_path": app.atlas_downgrade_path_var.get(),
                     "spine_downgrade_version": app.spine_downgrade_version_var.get()
                 },
                 "Tabs": {
@@ -359,7 +358,6 @@ class ConfigManager:
             
             spine_downgrade = data.get("SpineDowngrade", {})
             app.enable_atlas_downgrade_var.set(spine_downgrade.get("enable_atlas_downgrade", False))
-            app.atlas_downgrade_path_var.set(spine_downgrade.get("atlas_downgrade_path", ""))
             app.spine_downgrade_version_var.set(spine_downgrade.get("spine_downgrade_version", ""))
             
             tabs = data.get("Tabs", {})

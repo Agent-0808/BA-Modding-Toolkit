@@ -200,14 +200,6 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.skel_converter_path_info")
         )
 
-        SettingRow.create_path_selector(
-            section,
-            label=t("option.atlas_downgrade_path"),
-            path_var=self.app.atlas_downgrade_path_var,
-            select_cmd=self.select_atlas_downgrade_path,
-            tooltip=t("option.atlas_downgrade_path_info")
-        )
-
     def _init_footer_buttons(self):
         """初始化底部按钮栏"""
         footer_frame = tb.Frame(self)
@@ -267,18 +259,6 @@ class SettingsDialog(tb.Toplevel):
             callback=lambda path: (
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
-            ),
-            log=self.app.logger.log
-        )
-
-    def select_atlas_downgrade_path(self):
-        """选择SpineAtlasDowngrade.exe路径"""
-        select_file(
-            title=t("ui.dialog.select", type=t("file_type.atlas_downgrade")),
-            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
-            callback=lambda path: (
-                self.app.atlas_downgrade_path_var.set(str(path)),
-                self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))
             ),
             log=self.app.logger.log
         )

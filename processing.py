@@ -92,7 +92,6 @@ class SpineDowngradeOptions:
     """封装了Spine版本降级相关的选项。"""
     enabled: bool = False
     skel_converter_path: Path | None = None
-    atlas_converter_path: Path | None = None
     target_version: str = "3.8.75"
 
     def is_valid(self) -> bool:
@@ -101,8 +100,6 @@ class SpineDowngradeOptions:
             self.enabled
             and self.skel_converter_path is not None
             and self.skel_converter_path.exists()
-            and self.atlas_converter_path is not None
-            and self.atlas_converter_path.exists()
             and self.target_version
             and self.target_version.count(".") == 2
         )
@@ -742,7 +739,6 @@ def process_asset_extraction(
                     SpineUtils.handle_group_downgrade(
                         skel_path, atlas_path, output_dir,
                         downgrade_options.skel_converter_path,
-                        downgrade_options.atlas_converter_path,
                         downgrade_options.target_version,
                         log
                     )
