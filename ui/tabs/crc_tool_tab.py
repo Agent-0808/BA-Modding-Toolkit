@@ -52,7 +52,7 @@ class CrcToolTab(TabFrame):
             title=t("ui.dialog.select", type=t("ui.label.original_file")),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_original_file,
-            logger=self.logger.log
+            log=self.logger.log
         )
     
     def drop_modified(self, event):
@@ -62,7 +62,7 @@ class CrcToolTab(TabFrame):
             title=t("ui.dialog.select", type=t("ui.label.modified_file")),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_modified_file,
-            logger=self.logger.log
+            log=self.logger.log
         )
 
     def set_original_file(self, path: Path):

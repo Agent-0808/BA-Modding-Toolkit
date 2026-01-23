@@ -172,9 +172,10 @@
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
 			"load_old_mod_failed": "加载旧版Mod文件失败。",
-			"no_texture2d_in_old_mod": "旧版Mod文件中不包含任何 Texture2D 资源。",
+			"no_comparable_assets": "旧版Mod文件中不包含可比较的资源。",
 			"new_file_confirmed": "已确定新版文件: {name}",
-			"no_matching_texture_found": "在所有候选文件中都未找到与旧版Mod贴图名称匹配的资源。无法确定正确的新版文件。"
+			"no_matching_asset_found": "在所有候选文件中都未找到与旧 Mod 资源名称匹配的资源。无法确定正确的新版文件。",
+			"found_multiple_matches": "找到 {count} 个匹配的文件"
 		},
 		"extractor": {
 			"no_assets_found": "未找到指定类型的可提取资源。",
@@ -312,7 +313,7 @@
 			"searching_for_file": "正在为 \"{name}\" 搜索对应文件...",
 			"file_prefix": "文件前缀: \"{prefix}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
-			"old_mod_texture_count": "旧版Mod包含 {count} 个贴图资源。",
+			"old_mod_asset_count": "旧 Mod 包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
 			"found_count": "成功查找到 {count} 个匹配文件。"
@@ -391,7 +392,7 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"jp_gb_convert": "JP/GB 转换"
+			"jp_conversion": "JP/GL 转换"
 		},
 		"settings": {
 			"title": "设置",
@@ -420,11 +421,11 @@
 			"placeholder_bundle": "拖放目标 Bundle 文件\n或点击下方按钮选择"
 		},
 		"extractor": {
-			"placeholder_bundle": "拖放要提取资源的 Bundle 文件\n或点击下方按钮选择"
+			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处"
 		},
-		"jp_gb_convert": {
-			"mode_jp_to_gb": "JP → Global (合并)",
-			"mode_gb_to_jp": "Global → JP (拆分)",
+		"jp_conversion": {
+			"mode_jp_to_gl": "JP → Global (合并)",
+			"mode_gl_to_jp": "Global → JP (拆分)",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
 			"role_jp_source": "日服 Bundle (源文件)",
 			"role_global_source": "国际服 Bundle (源文件)",
@@ -435,7 +436,10 @@
 		},
 		"dialog": {
 			"select": "选择{type}",
-			"add": "添加{type}"
+			"add": "添加{type}",
+			"select_file": "选择文件",
+			"multiple_matches_found": "找到 {count} 个匹配的文件：",
+			"selection_cancelled": "已取消选择"
 		},
 		"drop_zone": {
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",
@@ -452,6 +456,7 @@
 			"game_resource_dir": "游戏资源目录",
 			"assets_folder_to_pack": "待打包资源文件夹",
 			"target_bundle_file": "目标 Bundle 文件",
+			"bundles_to_extract": "待提取资源的 Bundle 文件",
 			"original_file": "原始文件",
 			"modified_file": "待修正文件",
 			"environment": "运行环境",

@@ -268,7 +268,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
             ),
-            logger=self.app.logger.log
+            log=self.app.logger.log
         )
 
     def select_atlas_downgrade_path(self):
@@ -280,9 +280,152 @@ class SettingsDialog(tb.Toplevel):
                 self.app.atlas_downgrade_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))
             ),
-            logger=self.app.logger.log
+            log=self.app.logger.log
         )
 
     def print_environment_info(self):
         """打印环境信息"""
         self.app.logger.log(get_environment_info())
+
+
+class FileSelectionDialog(tb.Toplevel):
+    """文件选择对话框，用于从多个候选文件中选择一个"""
+    
+    def __init__(self, master, title: str, candidates: list[Path], message: str = "", display_formatter: Callable[[Path], str] | None = None):
+        """
+        初始化文件选择对话框
+        
+        Args:
+            master: 父窗口
+            title: 对话框标题
+            candidates: 候选文件路径列表
+            message: 提示消息
+            display_formatter: 可选的文件名显示格式化函数 (Path -> str)。如果不提供，默认显示完整路径。
+        """
+        super().__init__(master)
+        self.title(title)
+        self.candidates = candidates
+        self.display_formatter = display_formatter
+        self.selected_path: Path | None = None
+        self.result_var = tk.BooleanVar(value=False)
+        
+        self._setup_window()
+        self._create_widgets(message)
+        
+        # 设置为模态窗口
+        self.transient(master)
+        self.grab_set()
+        
+        # 等待窗口关闭
+        self.wait_window(self)
+    
+    def _setup_window(self):
+        """设置窗口基本属性"""
+        self.geometry("800x200")
+        self.resizable(True, True)
+        
+        # 获取父窗口位置并计算对话框位置
+        self.update_idletasks()
+        parent_x = self.master.winfo_rootx()
+        parent_y = self.master.winfo_rooty()
+        parent_width = self.master.winfo_width()
+        parent_height = self.master.winfo_height()
+        
+        # 对话框在父窗口中心显示
+        x = parent_x + (parent_width - self.winfo_width()) // 2
+        y = parent_y + (parent_height - self.winfo_height()) // 2
+        
+        self.geometry(f"+{x}+{y}")
+    
+    def _create_widgets(self, message: str):
+        """创建对话框组件"""
+        # 主容器
+        main_frame = tb.Frame(self, padding=(15, 15))
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # 提示消息
+        if message:
+            msg_label = tb.Label(
+                main_frame,
+                text=message,
+                font=Theme.INPUT_FONT,
+                wraplength=550,
+                justify=tk.LEFT
+            )
+            msg_label.pack(fill=tk.X, pady=(0, 10))
+        
+        # 文件列表框
+        list_frame = tb.Frame(main_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        self.listbox = tk.Listbox(
+            list_frame,
+            font=Theme.INPUT_FONT,
+            bg=Theme.INPUT_BG,
+            fg=Theme.TEXT_NORMAL,
+            selectmode=tk.SINGLE,
+            relief=tk.SUNKEN,
+            height=4
+        )
+        
+        # 滚动条
+        v_scrollbar = tb.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.listbox.yview)
+        self.listbox.configure(yscrollcommand=v_scrollbar.set)
+        
+        # 布局
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # 填充候选文件
+        for candidate in self.candidates:
+            if self.display_formatter:
+                display_text = self.display_formatter(candidate)
+            else:
+                display_text = str(candidate)
+            self.listbox.insert(tk.END, display_text)
+        
+        # 默认选中第一个
+        if self.candidates:
+            self.listbox.selection_set(0)
+            self.listbox.activate(0)
+        
+        # 双击确认
+        self.listbox.bind("<Double-Button-1>", lambda e: self._on_confirm())
+        
+        # 按钮区域
+        button_frame = tb.Frame(main_frame)
+        button_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        UIComponents.create_button(
+            button_frame,
+            t("common.ok"),
+            self._on_confirm,
+            bootstyle="success"
+        ).pack(side=tk.RIGHT, padx=(5, 0))
+        
+        UIComponents.create_button(
+            button_frame,
+            t("common.cancel"),
+            self._on_cancel,
+            bootstyle="secondary"
+        ).pack(side=tk.RIGHT)
+    
+    def _on_confirm(self):
+        """确认选择"""
+        selection = self.listbox.curselection()
+        if selection:
+            index = selection[0]
+            if 0 <= index < len(self.candidates):
+                self.selected_path = self.candidates[index]
+                self.result_var.set(True)
+        self.destroy()
+    
+    def _on_cancel(self):
+        """取消选择"""
+        self.selected_path = None
+        self.result_var.set(False)
+        self.destroy()
+    
+    def get_selected_path(self) -> Path | None:
+        """获取用户选择的路径"""
+        return self.selected_path

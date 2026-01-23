@@ -9,22 +9,26 @@ import os
 from i18n import t
 import processing
 from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, SettingRow
+from ui.components import Theme, UIComponents, SettingRow, FileListbox
 from ui.utils import handle_drop, select_file, select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
-        self.bundle_path: Path | None = None
+        self.bundle_paths: list[Path] = []
         
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
         
-        # 目标 Bundle 文件
-        _, self.bundle_label = UIComponents.create_file_drop_zone(
-            self, t("ui.label.target_bundle_file"), self.drop_bundle, self.browse_bundle,
-            clear_cmd=self.clear_callback('bundle_path'),
-            label_text=t("ui.extractor.placeholder_bundle")
+        # 目标 Bundle 文件列表
+        self.bundle_listbox = FileListbox(
+            self,
+            title=t("ui.label.bundles_to_extract"),
+            file_list=self.bundle_paths,
+            placeholder_text=t("ui.extractor.placeholder_bundle"),
+            height=5,
+            logger=self.logger
         )
+        self.bundle_listbox.get_frame().pack(fill=tk.X, pady=(0, 5))
         
         # 输出目录
         self.output_frame = UIComponents.create_directory_path_entry(
@@ -62,16 +66,6 @@ class AssetExtractorTab(TabFrame):
                                                  bootstyle="success", style="large")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
-    def drop_bundle(self, event):
-        handle_drop(event, callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")))
-
-    def browse_bundle(self):
-        select_file(
-            title=t("ui.dialog.select", type=t("ui.label.target_bundle_file")),
-            callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")),
-            logger=self.logger.log
-        )
-    
     def select_output_dir(self):
         """选择输出子目录"""
         # 默认路径为输出目录
@@ -82,7 +76,7 @@ class AssetExtractorTab(TabFrame):
         selected_dir = select_directory(
             var=None,
             title=t("ui.dialog.select", type=t("option.output_dir")),
-            logger=self.logger.log
+            log=self.logger.log
         )
         
         if selected_dir:
@@ -117,7 +111,7 @@ class AssetExtractorTab(TabFrame):
         open_directory(output_path, create_if_not_exist=True)
 
     def run_extraction_thread(self):
-        if not self.bundle_path:
+        if not self.bundle_paths:
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
             
@@ -138,8 +132,8 @@ class AssetExtractorTab(TabFrame):
         
         # 获取子目录名
         subdir_name = self.subdir_var.get().strip()
-        if not subdir_name:
-            subdir_name = self.bundle_path.stem
+        if not subdir_name and len(self.bundle_paths) == 1:
+            subdir_name = self.bundle_paths[0].stem
         
         # 如果是相对路径，则与输出目录组合
         if subdir_name and not Path(subdir_name).is_absolute():
@@ -166,28 +160,23 @@ class AssetExtractorTab(TabFrame):
         atlas_downgrade_path = self.app.atlas_downgrade_path_var.get() if enable_atlas_downgrade else None
         spine_converter_path = self.app.spine_converter_path_var.get() if enable_atlas_downgrade else None
             
-        self.run_in_thread(self.run_extraction, self.bundle_path, final_output_path, asset_types, enable_atlas_downgrade, atlas_downgrade_path, spine_converter_path)
+        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, atlas_downgrade_path, spine_converter_path)
 
-    def run_extraction(self, bundle_path, output_dir, asset_types, enable_atlas_downgrade=False, atlas_downgrade_path=None, spine_converter_path=None):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, atlas_downgrade_path=None, spine_converter_path=None):
         self.logger.status(t("log.status.extracting"))
         
         # 创建 SpineDowngradeOptions 对象（如果启用）
-        downgrade_options = None
-        if enable_atlas_downgrade and atlas_downgrade_path and spine_converter_path:
-            # 获取用户输入的版本，如果为空则使用默认值
-            target_version = self.app.spine_downgrade_version_var.get().strip()
-            if not target_version:
-                target_version = "3.8.75"
-            
-            downgrade_options = processing.SpineDowngradeOptions(
-                enabled=True,
-                skel_converter_path=Path(spine_converter_path),
-                atlas_converter_path=Path(atlas_downgrade_path),
-                target_version=target_version
-            )
+        target_version = self.app.spine_downgrade_version_var.get().strip()
+        
+        downgrade_options = processing.SpineDowngradeOptions(
+            enabled=enable_atlas_downgrade,
+            skel_converter_path=Path(spine_converter_path),
+            atlas_converter_path=Path(atlas_downgrade_path),
+            target_version=target_version
+        )
         
         success, message = processing.process_asset_extraction(
-            bundle_path=bundle_path,
+            bundle_path=bundle_paths,
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
             downgrade_options=downgrade_options,

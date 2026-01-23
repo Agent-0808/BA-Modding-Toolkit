@@ -1,4 +1,4 @@
-# ui/tabs/jp_gb_conversion_tab.py
+# ui/tabs/jp_conversion_tab.py
 
 import tkinter as tk
 import ttkbootstrap as tb
@@ -12,7 +12,7 @@ from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher, Settin
 from ui.utils import handle_drop, select_file
 from utils import get_search_resource_dirs
 
-class JpGbConversionTab(TabFrame):
+class JPGLConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
 
     def create_widgets(self):
@@ -26,8 +26,8 @@ class JpGbConversionTab(TabFrame):
             self,
             self.mode_var,
             [
-                ("jp_to_global", t("ui.jp_gb_convert.mode_jp_to_gb")),
-                ("global_to_jp", t("ui.jp_gb_convert.mode_gb_to_jp"))
+                ("jp_to_global", t("ui.jp_conversion.mode_jp_to_gl")),
+                ("global_to_jp", t("ui.jp_conversion.mode_gl_to_jp"))
             ],
             command=self._switch_view
         )
@@ -38,17 +38,17 @@ class JpGbConversionTab(TabFrame):
         
         # 1. 国际服 Bundle 文件 (单文件拖放区)
         self.global_frame, self.global_label = UIComponents.create_file_drop_zone(
-            self.file_frame, t("ui.jp_gb_convert.role_global_source"), 
+            self.file_frame, t("ui.jp_conversion.role_global_source"), 
             self.drop_global_bundle, self.browse_global_bundle,
             clear_cmd=self.clear_callback('global_bundle_path'),
-            label_text=t("ui.jp_gb_convert.placeholder_global_bundle")
+            label_text=t("ui.jp_conversion.placeholder_global_bundle")
         )
 
         # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件)
         self.jp_files_listbox = FileListbox(
             self.file_frame, 
-            title=t("ui.jp_gb_convert.role_jp_source"), 
-            placeholder_text=t("ui.jp_gb_convert.placeholder_jp_files"),
+            title=t("ui.jp_conversion.role_jp_source"), 
+            placeholder_text=t("ui.jp_conversion.placeholder_jp_files"),
             height=3,
             logger=self.logger
         )
@@ -84,25 +84,25 @@ class JpGbConversionTab(TabFrame):
     def _switch_view(self):
         """根据选择的模式更新UI文案"""
         if self.mode_var.get() == "jp_to_global":
-            self.global_frame.config(text=t("ui.jp_gb_convert.role_global_target"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_gb_convert.role_jp_source"))
+            self.global_frame.config(text=t("ui.jp_conversion.role_global_target"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
         else:
-            self.global_frame.config(text=t("ui.jp_gb_convert.role_global_source"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_gb_convert.role_jp_target"))
+            self.global_frame.config(text=t("ui.jp_conversion.role_global_source"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
 
     # --- 国际服文件处理 ---
     def drop_global_bundle(self, event):
-        callback = lambda path: self.set_file_path('global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None)
+        callback = lambda path: self.set_file_path('global_bundle_path', self.global_label, path, t("ui.jp_conversion.global_bundle"), callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None)
         handle_drop(event, callback=callback)
     
     def browse_global_bundle(self):
         select_file(
-            title=t("ui.dialog.select", type=t("ui.jp_gb_convert.global_bundle")),
+            title=t("ui.dialog.select", type=t("ui.jp_conversion.global_bundle")),
             callback=lambda path: self.set_file_path(
-                'global_bundle_path', self.global_label, path, t("ui.jp_gb_convert.global_bundle"), 
+                'global_bundle_path', self.global_label, path, t("ui.jp_conversion.global_bundle"), 
                 callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None
             ),
-            logger=self.logger.log
+            log=self.logger.log
         )
 
     # --- 自动搜索逻辑 ---

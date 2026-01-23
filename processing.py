@@ -314,77 +314,100 @@ def find_new_bundle_path(
     old_mod_path: Path,
     game_resource_dir: Path | list[Path],
     log: LogFunc = no_log,
-) -> tuple[Path | None, str]:
+) -> tuple[list[Path], str]:
     """
     根据旧版Mod文件，在游戏资源目录中智能查找对应的新版文件。
-    支持单个目录路径或目录路径列表。
-    返回 (找到的路径对象, 状态消息) 的元组。
+    
+    Returns:
+        tuple[list[Path], str]: (找到的路径列表, 状态消息)
     """
-    # TODO: 只用Texture2D比较好像不太对，但是it works
-
     if not old_mod_path.exists():
-        return None, t("message.search.check_file_exists", path=old_mod_path)
+        return [], t("message.search.check_file_exists", path=old_mod_path)
 
     log(t("log.search.searching_for_file", name=old_mod_path.name))
 
     # 1. 提取文件名前缀
-    prefix, prefix_message = get_filename_prefix(str(old_mod_path.name), log)
-    if not prefix:
-        return None, prefix_message
+    if not (prefix_info := get_filename_prefix(str(old_mod_path.name), log))[0]:
+        return None, prefix_info[1]
+    
+    prefix, _ = prefix_info
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
     extension = '.bundle'
+    extension_backup = '.backup'
 
-    # 2. 处理单个目录或目录列表
-    if isinstance(game_resource_dir, Path):
-        search_dirs = [game_resource_dir]
-    else:
-        search_dirs = game_resource_dir
-
-    # 3. 查找所有候选文件（前缀相同且扩展名一致）
-    candidates: list[Path] = []
-    for search_dir in search_dirs:
-        if search_dir.exists() and search_dir.is_dir():
-            dir_candidates = [f for f in search_dir.iterdir() if f.is_file() and f.name.startswith(prefix) and f.suffix == extension]
-            candidates.extend(dir_candidates)
+    # 2. 收集所有候选文件
+    search_dirs = [game_resource_dir] if isinstance(game_resource_dir, Path) else game_resource_dir
+    
+    candidates = [
+        file for dir in search_dirs 
+        if dir.exists() and dir.is_dir()
+        for file in dir.iterdir()
+        if file.is_file() and file.name.startswith(prefix) and file.suffix != extension_backup
+    ]
     
     if not candidates:
         msg = t("message.search.no_matching_files_in_dir")
         log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
+        return [], msg
     log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
 
-    # 4. 加载旧Mod获取贴图列表
-    old_env = load_bundle(old_mod_path, log)
-    if not old_env:
+    # 3. 分析旧Mod的关键资源特征
+    # 定义用于识别的资源类型
+    comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh}
+    
+    if not (old_env := load_bundle(old_mod_path, log)):
         msg = t("message.search.load_old_mod_failed")
         log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
-    
-    # TODO: 这个好像和_extract_assets_from_bundle有重复
-    old_textures_map = {obj.peek_name() for obj in old_env.objects if obj.type == AssetType.Texture2D}
-    
-    if not old_textures_map:
-        msg = t("message.search.no_texture2d_in_old_mod")
-        log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
-    log(f"  > {t('log.search.old_mod_texture_count', count=len(old_textures_map))}")
+        return [], msg
 
-    # 5. 遍历候选文件，找到第一个包含匹配贴图的
+    # 使用标准策略生成 Key，保持一致性
+    key_func = MATCH_STRATEGIES['name_type']
+    
+    # 仅提取 Key，不读取数据
+    # 使用 set 推导式构建指纹
+    old_assets_fingerprint = {
+        key_func(obj)
+        for obj in old_env.objects
+        if obj.type in comparable_types
+    }
+
+    if not old_assets_fingerprint:
+        msg = t("message.search.no_comparable_assets")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    log(f"  > {t('log.search.old_mod_asset_count', count=len(old_assets_fingerprint))}")
+
+    # 4. 遍历候选文件进行指纹比对，收集所有匹配的文件
+    matched_paths = []
     for candidate_path in candidates:
         log(f"  - {t('log.search.checking_candidate', name=candidate_path.name)}")
         
-        env = load_bundle(candidate_path, log)
-        if not env: continue
+        if not (env := load_bundle(candidate_path, log)):
+            continue
         
+        # 检查新包中是否有匹配的资源
+        has_match = False
         for obj in env.objects:
-            if obj.type == AssetType.Texture2D and obj.peek_name() in old_textures_map:
-                msg = t("message.search.new_file_confirmed", name=candidate_path.name)
-                log(f"  ✅ {msg}")
-                return candidate_path, msg
+            if obj.type in comparable_types:
+                candidate_key = key_func(obj)
+                if candidate_key in old_assets_fingerprint:
+                    has_match = True
+                    break
+        
+        if has_match:
+            matched_paths.append(candidate_path)
+            msg = t("message.search.new_file_confirmed", name=candidate_path.name)
+            log(f"  ✅ {msg}")
     
-    msg = t("message.search.no_matching_texture_found")
-    log(f'  > {t("common.fail")}: {msg}')
-    return None, msg
+    if not matched_paths:
+        msg = t("message.search.no_matching_asset_found")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+    
+    msg = t("message.search.found_multiple_matches", count=len(matched_paths))
+    log(f"  > {msg}")
+    return matched_paths, msg
 
 # ====== 资源处理相关 ======
 
@@ -601,7 +624,7 @@ def process_asset_packing(
                 pass
 
 def process_asset_extraction(
-    bundle_path: Path,
+    bundle_path: Path | list[Path],
     output_dir: Path,
     asset_types_to_extract: set[str],
     downgrade_options: SpineDowngradeOptions | None = None,
@@ -613,7 +636,7 @@ def process_asset_extraction(
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
 
     Args:
-        bundle_path: 目标 Bundle 文件的路径。
+        bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
         asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
         downgrade_options: Spine资源降级的选项。
@@ -623,14 +646,21 @@ def process_asset_extraction(
         一个元组 (是否成功, 状态消息)。
     """
     try:
+        # 统一处理为列表
+        if isinstance(bundle_path, Path):
+            bundle_paths = [bundle_path]
+        else:
+            bundle_paths = bundle_path
+        
         log("\n" + "="*50)
-        log(t("log.extractor.starting_extraction", filename=bundle_path.name))
+        if len(bundle_paths) == 1:
+            log(t("log.extractor.starting_extraction", filename=bundle_paths[0].name))
+        else:
+            log(f"开始从 {len(bundle_paths)} 个 Bundle 文件中提取资源...")
+            for bp in bundle_paths:
+                log(f"  - {bp.name}")
         log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
         log(f"{t('option.output_dir')}: {output_dir}")
-
-        env = load_bundle(bundle_path, log)
-        if not env:
-            return False, t("message.load_failed")
 
         output_dir.mkdir(parents=True, exist_ok=True)
         downgrade_enabled = downgrade_options and downgrade_options.is_valid()
@@ -642,31 +672,38 @@ def process_asset_extraction(
             # --- 阶段 1: 统一提取所有相关资源到临时目录 ---
             log(f'\n--- {t("log.section.extract_to_temp")} ---')
             extraction_count = 0
-            for obj in env.objects:
-                if obj.type.name not in asset_types_to_extract:
+            
+            for bundle_file in bundle_paths:
+                env = load_bundle(bundle_file, log)
+                if not env:
+                    log(f"⚠️ 加载失败: {bundle_file.name}")
                     continue
-                # 确保类型在白名单中
-                if obj.type not in REPLACEABLE_ASSET_TYPES:
-                    continue
-                try:
-                    data = obj.read()
-                    resource_name = getattr(data, 'm_Name', None)
-                    if not resource_name:
-                        log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                
+                for obj in env.objects:
+                    if obj.type.name not in asset_types_to_extract:
                         continue
+                    # 确保类型在白名单中
+                    if obj.type not in REPLACEABLE_ASSET_TYPES:
+                        continue
+                    try:
+                        data = obj.read()
+                        resource_name = getattr(data, 'm_Name', None)
+                        if not resource_name:
+                            log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                            continue
 
-                    if obj.type == AssetType.TextAsset:
-                        dest_path = temp_extraction_dir / resource_name
-                        asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                        dest_path.write_bytes(asset_bytes)
-                    elif obj.type == AssetType.Texture2D:
-                        dest_path = temp_extraction_dir / f"{resource_name}.png"
-                        data.image.convert("RGBA").save(dest_path)
-                    
-                    log(f"  - {dest_path.name}")
-                    extraction_count += 1
-                except Exception as e:
-                    log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
+                        if obj.type == AssetType.TextAsset:
+                            dest_path = temp_extraction_dir / resource_name
+                            asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+                            dest_path.write_bytes(asset_bytes)
+                        elif obj.type == AssetType.Texture2D:
+                            dest_path = temp_extraction_dir / f"{resource_name}.png"
+                            data.image.convert("RGBA").save(dest_path)
+                        
+                        log(f"  - {dest_path.name}")
+                        extraction_count += 1
+                    except Exception as e:
+                        log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
 
             if extraction_count == 0:
                 msg = t("message.extractor.no_assets_found")
@@ -979,15 +1016,18 @@ def process_batch_mod_update(
         log(t("log.status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
         # 查找对应的新资源文件
-        new_bundle_path, find_message = find_new_bundle_path(
+        new_bundle_paths, find_message = find_new_bundle_path(
             old_mod_path, search_paths, log
         )
 
-        if not new_bundle_path:
+        if not new_bundle_paths:
             log(f'❌ {t("log.search.find_failed", message=find_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
             continue
+
+        # 使用第一个匹配的文件
+        new_bundle_path = new_bundle_paths[0]
 
         # 执行Mod更新处理
         success, process_message = process_mod_update(

@@ -64,11 +64,11 @@ def handle_update(args: argparse.Namespace, logger) -> None:
             logger.log(f"❌ Error: Game resource directory '{resource_dir}' does not exist or is not a directory.")
             return
         
-        found_path, message = processing.find_new_bundle_path(old_mod_path, resource_dir, logger.log)
-        if not found_path:
+        found_paths, message = processing.find_new_bundle_path(old_mod_path, resource_dir, logger.log)
+        if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
-        new_bundle_path = found_path
+        new_bundle_path = found_paths[0]
     
     if not new_bundle_path:
         logger.log("❌ Error: Must provide '--target' or '--resource-dir' to determine the target resource file.")
@@ -253,11 +253,11 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
             return
         
         # 使用与 update 命令相同的查找函数
-        found_path, message = processing.find_new_bundle_path(modified_path, game_dir, logger.log)
-        if not found_path:
+        found_paths, message = processing.find_new_bundle_path(modified_path, game_dir, logger.log)
+        if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
-        original_path = found_path
+        original_path = found_paths[0]
         # find_new_bundle_path 函数内部会打印成功找到的日志
 
     # --- 模式 1: 仅检查/计算 CRC ---

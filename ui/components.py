@@ -6,6 +6,7 @@ from tkinterdnd2 import DND_FILES
 from pathlib import Path
 from typing import Callable, Any
 
+from ui.utils import select_file, select_directory
 from i18n import t
 
 # --- 日志管理类 ---
@@ -648,7 +649,7 @@ class FileListbox:
         self.file_list: list[Path] = file_list
         self.placeholder_text = placeholder_text
         self.height = height
-        self.logger = logger
+        self.logger: Logger = logger
         self.display_formatter = display_formatter
         self.on_files_added = on_files_added
         
@@ -820,23 +821,19 @@ class FileListbox:
     
     def _browse_add_files(self):
         """浏览添加文件"""
-        from ui.utils import select_file
-        
         select_file(
             title=t("action.add_files"),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             multiple=True,
             callback=lambda paths: self.add_files(paths),
-            logger=self.logger.log if self.logger else None
+            log=self.logger.log if self.logger else None
         )
     
     def _browse_add_folder(self):
         """浏览添加文件夹"""
-        from ui.utils import select_directory
-        
         folder = select_directory(
             title = t("action.add_folder"),
-            logger = self.logger.log if self.logger else None
+            log = self.logger.log if self.logger else None
             )
 
         if folder:
