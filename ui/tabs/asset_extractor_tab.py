@@ -26,7 +26,7 @@ class AssetExtractorTab(TabFrame):
             file_list=self.bundle_paths,
             placeholder_text=t("ui.extractor.placeholder_bundle"),
             height=5,
-            logger=self.logger.log
+            logger=self.logger
         )
         self.bundle_listbox.get_frame().pack(fill=tk.X, pady=(0, 5))
         
@@ -76,7 +76,7 @@ class AssetExtractorTab(TabFrame):
         selected_dir = select_directory(
             var=None,
             title=t("ui.dialog.select", type=t("option.output_dir")),
-            logger=self.logger.log
+            log=self.logger.log
         )
         
         if selected_dir:

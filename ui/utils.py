@@ -184,14 +184,14 @@ def replace_file(source_path: Path,
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
         return False 
 
-def select_directory(var: tk.Variable = None, title="", logger=no_log):
+def select_directory(var: tk.Variable = None, title="", log=no_log):
     """
     选择目录并更新变量或返回路径
     
     Args:
         var: tkinter变量，用于存储选择的目录路径，如果为None则直接返回路径
         title: 目录选择对话框的标题
-        logger: 日志函数，用于记录操作
+        log: 日志函数，用于记录操作
         
     Returns:
         如果var为None，返回选择的目录路径字符串，否则返回None
@@ -207,10 +207,10 @@ def select_directory(var: tk.Variable = None, title="", logger=no_log):
         if selected_dir:
             if var is not None:
                 var.set(str(Path(selected_dir)))
-                logger(t("log.file.loaded", path=selected_dir))
+                log(t("log.file.loaded", path=selected_dir))
                 return None
             else:
-                logger(t("log.file.loaded", path=selected_dir))
+                log(t("log.file.loaded", path=selected_dir))
                 return selected_dir
         return None
     except Exception as e:
@@ -221,7 +221,7 @@ def select_file(title: str,
                 filetypes: list[tuple[str, str]] | None = None, 
                 multiple: bool = False,
                 callback: Callable[[Path | list[Path]], None] | None = None,
-                logger = no_log) -> Path | list[Path] | None:
+                log = no_log) -> Path | list[Path] | None:
     """
     统一的文件选择对话框函数
     
@@ -230,7 +230,7 @@ def select_file(title: str,
         filetypes: 文件类型过滤器，如 [("Bundle文件", "*.bundle"), ("所有文件", "*.*")]
         multiple: 是否支持多选
         callback: 选择文件后的回调函数，接收Path或Path列表作为参数
-        logger: 日志函数，用于记录操作
+        log: 日志函数，用于记录操作
         
     Returns:
         单选时返回Path或None，多选时返回Path列表或空列表
@@ -243,7 +243,7 @@ def select_file(title: str,
             filepaths = filedialog.askopenfilenames(title=title, filetypes=filetypes)
             if filepaths:
                 paths = [Path(p) for p in filepaths]
-                logger(t("log.file.loaded", path=f"{len(paths)} files"))
+                log(t("log.file.loaded", path=f"{len(paths)} files"))
                 if callback:
                     callback(paths)
                 return paths
@@ -252,7 +252,7 @@ def select_file(title: str,
             filepath = filedialog.askopenfilename(title=title, filetypes=filetypes)
             if filepath:
                 path = Path(filepath)
-                logger(t("log.file.loaded", path=path))
+                log(t("log.file.loaded", path=path))
                 if callback:
                     callback(path)
                 return path

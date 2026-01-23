@@ -68,7 +68,7 @@ class AssetPackerTab(TabFrame):
             title=t("ui.dialog.select", type=t("ui.label.target_bundle_file")),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=lambda path: self.set_file_path('bundle_path', self.bundle_label, path, t("ui.label.target_bundle_file")),
-            logger=self.logger.log
+            log=self.logger.log
         )
     
     def drop_folder(self, event):
@@ -84,7 +84,7 @@ class AssetPackerTab(TabFrame):
         folder_path = select_directory(
             var=None,
             title=t("ui.dialog.select", type=t("ui.label.assets_folder_to_pack")),
-            logger=self.logger.log
+            log=self.logger.log
         )
         if folder_path:
             self.set_folder_path('folder_path', self.folder_label, Path(folder_path), t("ui.label.assets_folder_to_pack"))

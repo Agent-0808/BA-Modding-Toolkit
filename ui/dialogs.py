@@ -268,7 +268,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
             ),
-            logger=self.app.logger.log
+            log=self.app.logger.log
         )
 
     def select_atlas_downgrade_path(self):
@@ -280,7 +280,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.atlas_downgrade_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.atlas_downgrade_set", path=path))
             ),
-            logger=self.app.logger.log
+            log=self.app.logger.log
         )
 
     def print_environment_info(self):

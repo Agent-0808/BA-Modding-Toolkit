@@ -93,7 +93,7 @@ class ModUpdateTab(TabFrame):
             title=t("ui.dialog.select", type=t("ui.label.mod_file")),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=lambda path: self.set_file_path('old_mod_path', self.old_mod_label, path, t("ui.label.mod_file"), callback=self.auto_find_new_bundle),
-            logger=self.logger.log
+            log=self.logger.log
         )
 
     def drop_new_mod(self, event):
@@ -104,7 +104,7 @@ class ModUpdateTab(TabFrame):
             title=t("ui.dialog.select", type=t("ui.label.target_resource_bundle")),
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             callback=self.set_new_mod_file,
-            logger=self.logger.log
+            log=self.logger.log
         )
             
     def set_new_mod_file(self, path: Path):

@@ -102,7 +102,7 @@ class JPGLConversionTab(TabFrame):
                 'global_bundle_path', self.global_label, path, t("ui.jp_conversion.global_bundle"), 
                 callback=lambda: self._auto_find_jp_files() if self.app.auto_search_var.get() else None
             ),
-            logger=self.logger.log
+            log=self.logger.log
         )
 
     # --- 自动搜索逻辑 ---
