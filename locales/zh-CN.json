@@ -420,7 +420,7 @@
 			"placeholder_bundle": "拖放目标 Bundle 文件\n或点击下方按钮选择"
 		},
 		"extractor": {
-			"placeholder_bundle": "拖放要提取资源的 Bundle 文件\n或点击下方按钮选择"
+			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处"
 		},
 		"jp_conversion": {
 			"mode_jp_to_gl": "JP → Global (合并)",
@@ -455,6 +455,7 @@
 			"game_resource_dir": "游戏资源目录",
 			"assets_folder_to_pack": "待打包资源文件夹",
 			"target_bundle_file": "目标 Bundle 文件",
+			"bundles_to_extract": "待提取资源的 Bundle 文件",
 			"original_file": "原始文件",
 			"modified_file": "待修正文件",
 			"environment": "运行环境",

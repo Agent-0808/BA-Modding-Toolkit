@@ -624,7 +624,7 @@ def process_asset_packing(
                 pass
 
 def process_asset_extraction(
-    bundle_path: Path,
+    bundle_path: Path | list[Path],
     output_dir: Path,
     asset_types_to_extract: set[str],
     downgrade_options: SpineDowngradeOptions | None = None,
@@ -636,7 +636,7 @@ def process_asset_extraction(
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
 
     Args:
-        bundle_path: 目标 Bundle 文件的路径。
+        bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
         asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
         downgrade_options: Spine资源降级的选项。
@@ -646,14 +646,21 @@ def process_asset_extraction(
         一个元组 (是否成功, 状态消息)。
     """
     try:
+        # 统一处理为列表
+        if isinstance(bundle_path, Path):
+            bundle_paths = [bundle_path]
+        else:
+            bundle_paths = bundle_path
+        
         log("\n" + "="*50)
-        log(t("log.extractor.starting_extraction", filename=bundle_path.name))
+        if len(bundle_paths) == 1:
+            log(t("log.extractor.starting_extraction", filename=bundle_paths[0].name))
+        else:
+            log(f"开始从 {len(bundle_paths)} 个 Bundle 文件中提取资源...")
+            for bp in bundle_paths:
+                log(f"  - {bp.name}")
         log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
         log(f"{t('option.output_dir')}: {output_dir}")
-
-        env = load_bundle(bundle_path, log)
-        if not env:
-            return False, t("message.load_failed")
 
         output_dir.mkdir(parents=True, exist_ok=True)
         downgrade_enabled = downgrade_options and downgrade_options.is_valid()
@@ -665,31 +672,38 @@ def process_asset_extraction(
             # --- 阶段 1: 统一提取所有相关资源到临时目录 ---
             log(f'\n--- {t("log.section.extract_to_temp")} ---')
             extraction_count = 0
-            for obj in env.objects:
-                if obj.type.name not in asset_types_to_extract:
+            
+            for bundle_file in bundle_paths:
+                env = load_bundle(bundle_file, log)
+                if not env:
+                    log(f"⚠️ 加载失败: {bundle_file.name}")
                     continue
-                # 确保类型在白名单中
-                if obj.type not in REPLACEABLE_ASSET_TYPES:
-                    continue
-                try:
-                    data = obj.read()
-                    resource_name = getattr(data, 'm_Name', None)
-                    if not resource_name:
-                        log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                
+                for obj in env.objects:
+                    if obj.type.name not in asset_types_to_extract:
                         continue
+                    # 确保类型在白名单中
+                    if obj.type not in REPLACEABLE_ASSET_TYPES:
+                        continue
+                    try:
+                        data = obj.read()
+                        resource_name = getattr(data, 'm_Name', None)
+                        if not resource_name:
+                            log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                            continue
 
-                    if obj.type == AssetType.TextAsset:
-                        dest_path = temp_extraction_dir / resource_name
-                        asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                        dest_path.write_bytes(asset_bytes)
-                    elif obj.type == AssetType.Texture2D:
-                        dest_path = temp_extraction_dir / f"{resource_name}.png"
-                        data.image.convert("RGBA").save(dest_path)
-                    
-                    log(f"  - {dest_path.name}")
-                    extraction_count += 1
-                except Exception as e:
-                    log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
+                        if obj.type == AssetType.TextAsset:
+                            dest_path = temp_extraction_dir / resource_name
+                            asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+                            dest_path.write_bytes(asset_bytes)
+                        elif obj.type == AssetType.Texture2D:
+                            dest_path = temp_extraction_dir / f"{resource_name}.png"
+                            data.image.convert("RGBA").save(dest_path)
+                        
+                        log(f"  - {dest_path.name}")
+                        extraction_count += 1
+                    except Exception as e:
+                        log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
 
             if extraction_count == 0:
                 msg = t("message.extractor.no_assets_found")
