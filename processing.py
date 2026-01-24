@@ -3,6 +3,7 @@
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.files import ObjectReader as Obj, SerializedFile
+from UnityPy.environment import Environment as Env
 import traceback
 from pathlib import Path
 from PIL import Image
@@ -89,7 +90,7 @@ class SpineOptions:
 
 # ====== 读取与保存相关 ======
 
-def get_unity_platform_info(input: Path | UnityPy.Environment) -> tuple[str, str]:
+def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
     """
     获取 Bundle 文件的平台信息和 Unity 版本。
     
@@ -99,7 +100,7 @@ def get_unity_platform_info(input: Path | UnityPy.Environment) -> tuple[str, str
     """
     if isinstance(input, Path):
         env = UnityPy.load(str(input))
-    elif isinstance(input, UnityPy.Environment):
+    elif isinstance(input, Env):
         env = input
     else:
         raise ValueError("input 必须是 Path 或 UnityPy.Environment 类型")
@@ -114,7 +115,7 @@ def get_unity_platform_info(input: Path | UnityPy.Environment) -> tuple[str, str
 def load_bundle(
     bundle_path: Path,
     log: LogFunc = no_log
-) -> UnityPy.Environment | None:
+) -> Env | None:
     """
     尝试加载一个 Unity bundle 文件。
     如果直接加载失败，会尝试移除末尾的几个字节后再次加载。
@@ -152,7 +153,7 @@ def load_bundle(
     return None
 
 def save_bundle(
-    env: UnityPy.Environment,
+    env: Env,
     output_path: Path,
     compression: CompressionType = "lzma",
     log: LogFunc = no_log,
@@ -171,7 +172,7 @@ def save_bundle(
         return False
 
 def compress_bundle(
-    env: UnityPy.Environment,
+    env: Env,
     compression: CompressionType = "none",
     log: LogFunc = no_log,
 ) -> bytes:
@@ -195,7 +196,7 @@ def compress_bundle(
     return env.file.save(**save_kwargs)
 
 def _save_and_crc(
-    env: UnityPy.Environment,
+    env: Env,
     output_path: Path,
     original_bundle_path: Path,
     save_options: SaveOptions,
@@ -392,7 +393,7 @@ def find_new_bundle_path(
 # ====== 资源处理相关 ======
 
 def _apply_replacements(
-    env: UnityPy.Environment,
+    env: Env,
     replacement_map: dict[AssetKey, AssetContent],
     key_func: KeyGeneratorFunc,
     log: LogFunc = no_log,
@@ -533,7 +534,7 @@ def process_asset_packing(
                         log=log
                     )
             else:
-                assert(False, f"Unsupported suffix: {suffix}")
+                raise TypeError(f"Unsupported suffix: {suffix}")
                 pass
             replacement_map[asset_key] = content
         
@@ -636,7 +637,7 @@ def process_asset_extraction(
         if len(bundle_paths) == 1:
             log(t("log.extractor.starting_extraction", filename=bundle_paths[0].name))
         else:
-            log(f"开始从 {len(bundle_paths)} 个 Bundle 文件中提取资源...")
+            log(t("log.extractor.starting_extraction_num", num=len(bundle_paths)))
             for bp in bundle_paths:
                 log(f"  - {bp.name}")
         log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
@@ -656,7 +657,6 @@ def process_asset_extraction(
             for bundle_file in bundle_paths:
                 env = load_bundle(bundle_file, log)
                 if not env:
-                    log(f"⚠️ 加载失败: {bundle_file.name}")
                     continue
                 
                 for obj in env.objects:
@@ -667,7 +667,7 @@ def process_asset_extraction(
                         continue
                     try:
                         data = obj.read()
-                        resource_name = getattr(data, 'm_Name', None)
+                        resource_name: str = getattr(data, 'm_Name', None)
                         if not resource_name:
                             log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
                             continue
@@ -746,7 +746,7 @@ def process_asset_extraction(
         return False, t("message.error_during_process", error=e)
 
 def _extract_assets_from_bundle(
-    env: UnityPy.Environment,
+    env: Env,
     asset_types_to_replace: set[str],
     key_func: KeyGeneratorFunc,
     spine_options: SpineOptions | None,
@@ -813,7 +813,7 @@ def _migrate_bundle_assets(
     asset_types_to_replace: set[str],
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[UnityPy.Environment | None, int]:
+) -> tuple[Env | None, int]:
     """
     执行asset迁移的核心替换逻辑。
     asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 的子集 或 {"ALL"}）

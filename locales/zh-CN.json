@@ -314,6 +314,7 @@
 		},
 		"extractor": {
 			"starting_extraction": "开始从 \"{filename}\" 提取资源...",
+			"starting_extraction_num": "开始从 {num} 个文件中提取资源...",
 			"extraction_types": "提取类型: {types}",
 			"using_temp_dir": "使用临时目录: {path}",
 			"skipping_unnamed": "跳过一个未命名的 {type} 资源",
