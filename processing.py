@@ -72,34 +72,17 @@ class SaveOptions:
 
 @dataclass
 class SpineOptions:
-    """封装了Spine版本更新相关的选项。"""
+    """封装了Spine版本转换相关的选项。"""
     enabled: bool = False
     converter_path: Path | None = None
     target_version: str | None = None
 
-    def is_enabled(self) -> bool:
-        """检查Spine升级功能是否已配置并可用。"""
+    def is_valid(self) -> bool:
+        """检查Spine转换功能是否已配置并可用。"""
         return (
             self.enabled
             and self.converter_path
             and self.converter_path.exists()
-            and self.target_version
-            and self.target_version.count(".") == 2
-        )
-
-@dataclass
-class SpineDowngradeOptions:
-    """封装了Spine版本降级相关的选项。"""
-    enabled: bool = False
-    skel_converter_path: Path | None = None
-    target_version: str = "3.8.75"
-
-    def is_valid(self) -> bool:
-        """检查Spine降级功能是否已配置并可用。"""
-        return (
-            self.enabled
-            and self.skel_converter_path is not None
-            and self.skel_converter_path.exists()
             and self.target_version
             and self.target_version.count(".") == 2
         )
@@ -624,7 +607,7 @@ def process_asset_extraction(
     bundle_path: Path | list[Path],
     output_dir: Path,
     asset_types_to_extract: set[str],
-    downgrade_options: SpineDowngradeOptions | None = None,
+    spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -636,7 +619,7 @@ def process_asset_extraction(
         bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
         asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
-        downgrade_options: Spine资源降级的选项。
+        spine_options: Spine资源转换的选项。
         log: 日志记录函数。
 
     Returns:
@@ -660,7 +643,7 @@ def process_asset_extraction(
         log(f"{t('option.output_dir')}: {output_dir}")
 
         output_dir.mkdir(parents=True, exist_ok=True)
-        downgrade_enabled = downgrade_options and downgrade_options.is_valid()
+        downgrade_enabled = spine_options and spine_options.is_valid()
 
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_extraction_dir = Path(temp_dir)
@@ -738,8 +721,8 @@ def process_asset_extraction(
                     # 调用辅助函数处理该资产组
                     SpineUtils.handle_group_downgrade(
                         skel_path, atlas_path, output_dir,
-                        downgrade_options.skel_converter_path,
-                        downgrade_options.target_version,
+                        spine_options.converter_path,
+                        spine_options.target_version,
                         log
                     )
                 

@@ -159,12 +159,12 @@ class AssetExtractorTab(TabFrame):
     def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None):
         self.logger.status(t("log.status.extracting"))
         
-        # 创建 SpineDowngradeOptions 对象（如果启用）
+        # 创建 SpineOptions 对象
         target_version = self.app.spine_downgrade_version_var.get().strip()
         
-        downgrade_options = processing.SpineDowngradeOptions(
+        spine_options = processing.SpineOptions(
             enabled=enable_atlas_downgrade,
-            skel_converter_path=Path(spine_converter_path),
+            converter_path=Path(spine_converter_path),
             target_version=target_version
         )
         
@@ -172,7 +172,7 @@ class AssetExtractorTab(TabFrame):
             bundle_path=bundle_paths,
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
-            downgrade_options=downgrade_options,
+            spine_options=spine_options,
             log=self.logger.log
         )
         
