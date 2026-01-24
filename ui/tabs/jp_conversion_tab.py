@@ -167,7 +167,7 @@ class JPGLConversionTab(TabFrame):
         if crc_setting == "auto":
             platform, unity_version = processing.get_unity_platform_info(self.global_bundle_path)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
-            perform_crc = platform == "StandaloneWindows64"
+            perform_crc = (platform == "StandaloneWindows64") and (self.mode_var.get() == "jp_to_global")
         elif crc_setting == "true":
             perform_crc = True
         

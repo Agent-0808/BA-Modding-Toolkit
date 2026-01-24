@@ -152,7 +152,7 @@ class AssetExtractorTab(TabFrame):
             
         # 传递 Spine 降级选项
         enable_atlas_downgrade = self.app.enable_atlas_downgrade_var.get()
-        spine_converter_path = self.app.spine_converter_path_var.get() if enable_atlas_downgrade else None
+        spine_converter_path = self.app.spine_converter_path_var.get()
             
         self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path)
 
