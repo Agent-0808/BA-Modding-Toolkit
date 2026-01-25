@@ -32,79 +32,90 @@ def get_default_language() -> str:
 
 class I18n:
     def __init__(self, lang: str | None = None, locales_dir: str = "locales"):
-        self.fallback_lang = "en-US"  # 翻译文件缺失时的回退语言
-        # 如果未指定语言，使用系统语言检测逻辑
+        self.fallback_lang = "en-US"
         self.lang = lang or get_default_language()
         self.locales_dir = Path(locales_dir)
         self.translations: dict[str, Any] = {}
-        
-        # 定义回退映射：当 key 对应的语言文件不存在时，尝试 value 对应的语言
-        self.fallback_map: dict[str, str] = {
-            "zh-TW": "zh-CN",
-            "zh-HK": "zh-CN",
-            "zh-MO": "zh-CN",
-        }
-        
+        self.fallback_translations: dict[str, Any] = {}
         
         self.load_translations()
 
     def load_translations(self) -> None:
         """
         加载翻译文件
-        支持 Debug 模式、自定义回退机制和默认英语回退
+        支持 Debug 模式和 key 级别回退：
+        - zh-* 语言：回退到 zh-CN → key
+        - 其他语言：回退到 en-US → key
         """
-        # Debug 模式：不加载任何文件，让 _get_template 直接返回 Key
         if self.lang == "debug":
             self.translations = {}
+            self.fallback_translations = {}
             self._get_template.cache_clear()
             print("I18n: Debug mode enabled.")
             return
 
-        # 构建查找候选列表：[当前语言, 自定义回退语言, 回退语言]
-        candidates = [self.lang]
-        if fallback := self.fallback_map.get(self.lang):
-            candidates.append(fallback)
-        if self.fallback_lang not in candidates:
-            candidates.append(self.fallback_lang)
+        if self.lang.startswith("zh-"):
+            fallback_code = "zh-CN"
+        else:
+            fallback_code = "en-US"
 
-        # 按顺序查找存在的语言文件
-        selected_path = None
-        for code in candidates:
-            path = self.locales_dir / f"{code}.json"
-            if path.exists():
-                selected_path = path
-                # 如果实际加载的不是首选语言，可以打印提示
-                if code != self.lang:
-                    print(f"I18n: '{self.lang}.json' not found, falling back to '{code}'")
-                break
-        
-        if not selected_path:
-            print(f"Warning: No translation files found for language '{self.lang}' or fallbacks.")
-            self.translations = {}
-            self._get_template.cache_clear()
-            return
+        main_path = self.locales_dir / f"{self.lang}.json"
+        fallback_path = self.locales_dir / f"{fallback_code}.json"
 
-        try:
-            self.translations = json.loads(selected_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as e:
-            print(f"Warning: Failed to load translations from {selected_path}: {e}")
-            self.translations = {}
-        
-        # 清除缓存，注意这里我们要清除的是内部查找方法的缓存
+        main_exists = main_path.exists()
+        fallback_exists = fallback_path.exists()
+
+        if not main_exists and not fallback_exists:
+            print(f"I18n Warning: Language '{self.lang}' not found, fallback '{fallback_code}' not found either.")
+        elif not main_exists and fallback_exists:
+            print(f"I18n: Language '{self.lang}' not found, using fallback '{fallback_code}'.")
+        elif main_exists:
+            print(f"I18n: Loaded language '{self.lang}'.")
+
+        self.translations = self._load_translation_file(main_path)
+        self.fallback_translations = self._load_translation_file(fallback_path)
+
+        if not self.translations and not self.fallback_translations:
+            print(f"Warning: No translation files found for '{self.lang}' or '{fallback_code}'.")
+
         self._get_template.cache_clear()
+
+    def _load_translation_file(self, path: Path) -> dict[str, Any]:
+        """加载单个翻译文件"""
+        if not path.exists():
+            return {}
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Warning: Failed to load translations from {path}: {e}")
+            return {}
 
     @lru_cache(maxsize=1024)
     def _get_template(self, key: str) -> str:
         """
-        内部方法：仅负责查找原始字符串并缓存结果
+        内部方法：查找翻译，支持 key 级别回退
         """
         keys = key.split(".")
+
+        # 在主语言中查找
+        main_value = self._get_nested_value(self.translations, keys)
+        if main_value is not None:
+            return str(main_value)
+
+        # 主语言没有这个 key，去回退语言查找
+        fallback_value = self._get_nested_value(self.fallback_translations, keys)
+        if fallback_value is not None:
+            return str(fallback_value)
+
+        # 都找不到，返回 key 本身
+        return key
+
+    def _get_nested_value(self, data: dict[str, Any], keys: list[str]) -> Any:
+        """从嵌套字典中获取值"""
         try:
-            value = reduce(lambda d, k: d[k], keys, self.translations)
-            return str(value)
+            return reduce(lambda d, k: d[k], keys, data)
         except (KeyError, TypeError):
-            # 找不到翻译时返回 key 本身
-            return key
+            return None
 
     def t(self, _key: str, **kwargs: Any) -> str:
         """

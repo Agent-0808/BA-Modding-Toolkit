@@ -237,7 +237,8 @@
 			"save_failed": "Failed to save configuration: {error}",
 			"load_failed": "Load failed",
 			"loaded": "Configuration loaded",
-			"language": "Current Language: {language}"
+			"language": "Current Language: {language}",
+			"language_missing": "Language file \"{language}\" not found"
 		},
 		"spine": {
 			"skel_converter_set": "Skel Converter set: {path}",

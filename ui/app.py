@@ -103,7 +103,7 @@ class App(tk.Frame):
         self.enable_bleed_var = tk.BooleanVar()
         
         # 语言设置
-        self.language_var = tk.StringVar(value="zh-CN")
+        self.language_var = tk.StringVar(value=i18n_manager.lang)
         self.available_languages = i18n_manager.get_available_languages()
         
         # 设置默认值
@@ -151,6 +151,12 @@ class App(tk.Frame):
         language = self.language_var.get()
         self.logger.log(t("log.config.loaded"))
         self.logger.log(t("log.config.language", language=language))
+        
+        # 检查语言文件是否存在
+        locales_dir = Path(__file__).parent.parent / "locales"
+        lang_path = locales_dir / f"{language}.json"
+        if not lang_path.exists():
+            self.logger.log(t("log.config.language_missing", language=language))
 
     def open_settings_dialog(self):
         """打开高级设置对话框"""
@@ -190,7 +196,7 @@ class App(tk.Frame):
             if system_lang and (system_lang.startswith("zh-")):
                 default_language = "zh-CN"
             else:
-                default_language = "debug"
+                default_language = "en-US"
             
             self.language_var.set(default_language)
             print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
