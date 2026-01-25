@@ -206,7 +206,8 @@ def get_environment_info():
     
     # --- Attempt to import libraries and get their versions ---
     # This approach prevents the script from crashing if a library is not installed.
-
+    import importlib.metadata
+    
     try:
         import UnityPy
         unitypy_version = UnityPy.__version__ or "Installed"
@@ -242,6 +243,23 @@ def get_environment_info():
         tb_version = "Not installed"
     except (AttributeError, importlib.metadata.PackageNotFoundError):
         tb_version = "Unknown"
+
+    try:
+        import toml
+        toml_version = toml.__version__ or "Installed"
+    except ImportError:
+        toml_version = "Not installed"
+
+    try:
+        import SpineAtlas
+        spineatlas_version = SpineAtlas.__version__ or "Installed"
+    except ImportError:
+        spineatlas_version = "Not installed"
+    except AttributeError:
+        try:
+            spineatlas_version = importlib.metadata.version('spineatlas')
+        except (ImportError, importlib.metadata.PackageNotFoundError):
+            spineatlas_version = "Unknown"
 
     # --- Locale and Encoding Information (crucial for file path/text bugs) ---
     try:
@@ -294,6 +312,8 @@ def get_environment_info():
     lines.append(f"Tkinter Version:     {tk_version}")
     lines.append(f"TkinterDnD2 Version: {tkinterdnd2_version}")
     lines.append(f"ttkbootstrap Version:{tb_version}")
+    lines.append(f"toml Version:        {toml_version}")
+    lines.append(f"SpineAtlas Version:  {spineatlas_version}")
     
     lines.append("")
 

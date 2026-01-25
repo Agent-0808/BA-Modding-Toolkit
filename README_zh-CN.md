@@ -16,7 +16,7 @@
 
 一个基于 UnityPy 的工具集，可用于自动化制作与更新 Blue Archive（碧蓝档案/蔚蓝档案/ブルーアーカイブ）游戏的 Mod 文件流程。
 
-支持Steam版（PC）与手机版（国际服/日服，Android/iOS）。
+支持Steam版（PC）与其他版本（国际服/日服，PC/Android/iOS）。
 
 ## 介绍
 
@@ -42,61 +42,25 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - **CRC 修正工具**：CRC 校验值修正功能
 - **资源打包**：将一个文件夹内的资源打包进对应的 Bundle ，替换 Bundle 中的同名资源
 - **资源提取**：从 Bundle 文件中提取指定类型的资源到本地文件
-- **JP/GB转换**：日服与国际服格式互相转换
+- **JP/GL转换**：日服与国际服格式互相转换
 
 
 ## 使用方法
 
 ### 设置
 - 点击主界面上方的**设置**按钮打开设置窗口，配置游戏根目录和输出目录。
-- 点击"Save"按钮保存配置，程序会将用户配置保存到 `config.ini` 文件，下次启动时会自动恢复之前的设置。
+- 点击"保存"按钮保存配置，程序会将用户配置保存到 `config.toml` 文件中，下次启动时会自动恢复之前的设置。
 
-<details>
-<summary>点击展开查看设置界面详细说明</summary>
-
-![Settings](assets/help/gui-help-settings-zhcn.png)
-
-#### 目录设置
-- **游戏根目录**：设置游戏安装目录。
-    - 程序能够自动检测以下路径的子目录：
-    ```
-    "BlueArchive_Data/StreamingAssetsPUB/Resource/GameData/Windows",
-    "BlueArchive_Data/StreamingAssetsPUB/Resource/Preload/Windows",
-    "GameData/Windows",
-    "Preload/Windows",
-    "GameData/Android",
-    "Preload/Android",
-    ```
-- **输出目录**：设置生成文件的保存位置
-
-#### 全局选项
-- **CRC 修正**：自动修正 Bundle 文件的 CRC 校验值，防止文件被修改后无法运行
-  - 当前仅 Steam 版本 Mod 需要此步骤，其他版本 Mod 可忽略
-- 添加私货: 在CRC修正之前添加`0x08080808`。~~确实是私货，不选也没有影响~~
-- **创建备份**：在覆盖原文件之前创建原文件的备份
-- **压缩方式**：选择 Bundle 文件的压缩方式（LZMA、LZ4、保持原始、不压缩）
-
-#### 资源类型选项
-- **Texture2D**：立绘、贴图、纹理资源
-- **TextAsset**：`.atlas`、`.skel`文件，Spine使用的骨骼文件
-- **Mesh**：3D 模型资源
-- **ALL**：所有类型的资源，也包括上面三者之外的类型（实验性，不推荐启用）
-
-#### Spine 转换器（实验性功能）
+#### Spine 转换器（可选扩展功能）
 （可选）使用第三方程序，将一些较老的 Mod 中使用的 Spine 3.8 格式`.skel`文件转换为当前游戏版本支持的 4.2 格式。
 - 请自行下载第三方 Spine 转换器程序，BAMT 仅提供调用程序转换功能，不包含该程序本体。
 - 下载地址：[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - 在设置界面配置`SpineSkeletonDataConverter.exe`程序的路径，并勾选"启用 Spine 转换"选项。
-- 配置 `SpineAtlasDowngrade.exe` 程序的路径，可以在**资源提取**时将`.atlas`文件转换为 Spine 3.8 格式。
 
 ##### 注意
 - 这是一个实验性功能，无法保证所有 mod 都能成功升级，仅适合高级用户尝试。
 - 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
   - 如果您想要更新的Mod制作于2025年及之后，则其已经使用了Spine 4.2格式，无需配置该选项也可正常更新。
-- `SpineAtlasDowngrade.exe` 程序用于在**资源提取**时，将`.atlas`文件转换为 Spine 3.8 格式，方便Mod制作者编辑。
-  - 如果您只是需要更新Mod，无需配置该选项。
-
-</details>
 
 ![How to update a mod with BAMT GUI](assets/help/gui-help-mod-update-zhcn.png)
 
@@ -131,7 +95,7 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 ### 资源提取
 1. 拖放或浏览选择需要提取资源的 Bundle 文件
 2. 选择输出子目录的文件夹名称
-3. （可选）在设置窗口配置 `SpineAtlasDowngrade.exe` 程序的路径，并开启"启用 Spine 降级"选项，调用第三方程序将提取出的 Spine 文件转换为 Spine 3.8 格式
+3. （可选）在设置窗口配置 `SpineSkeletonDataConverter.exe` 程序的路径，并开启"启用 Spine 降级"选项，调用第三方程序将提取出的 Spine 文件转换为 Spine 3.8 格式
 4. 点击"开始提取"按钮，程序会自动提取指定类型的资源
 
 此功能适用于从现有 Bundle 文件中提取资源进行修改或预览。
@@ -160,7 +124,7 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 这会使`texture`文件夹下的`*.png`、`*.skel`、`*.atlas`文件替换目标Bundle中的同名资源。
 
-### JP/GB转换
+### JP/GL转换
 日服（多个文件）与国际服（一个文件）格式之间的互相转换。
 
 1. 在页面上方选择转换方向（JP -> Global 或 Global -> JP）
@@ -269,7 +233,8 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 
 | 操作系统 (OS)           | Python 版本 | UnityPy 版本 | Pillow 版本 | 状态  | 备注   |
 |:------------------- |:--------- |:---------- |:--------- |:--- | ---- |
-| Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   | 开发环境 |
+| Windows 10          | 3.12.4    | 1.23.0     | 12.0.0    | ✅   | 开发环境 |
+| Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   |  |
 | Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
@@ -281,6 +246,7 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
 cd BA-Modding-Toolkit
 
+# 使用传统方式安装依赖
 python -m pip install -r requirements.txt
 python main.pyw
 # 或者使用 uv 管理依赖
@@ -313,7 +279,7 @@ BA-Modding-Toolkit/
 │   ├── crc_tool_tab.py         # CRC 修正工具标签页
 │   ├── asset_packer_tab.py     # 资源文件夹打包标签页
 │   ├── asset_extractor_tab.py  # 资源提取标签页
-│   └── jp_gb_conversion_tab.py # 日服/国际服转换标签页
+│   └── jp_conversion_tab.py    # 日服/国际服转换标签页
 ├── maincli.py       # 命令行接口主入口
 ├── processing.py    # 核心处理逻辑
 ├── utils.py         # 工具类和辅助函数
@@ -323,8 +289,8 @@ BA-Modding-Toolkit/
 │ 
 │ # ============= 杂项 =============
 │ 
-├── requirements.txt # Python依赖列表
-├── pyproject.toml   # Python项目配置文件
+├── requirements.txt # Python 依赖列表（供传统方式安装使用）
+├── pyproject.toml   # Python 项目配置文件
 ├── LICENSE          # 项目许可证文件
 ├── assets/          # 项目资源文件夹
 │ └── help/              # 帮助文档中的图片
@@ -345,12 +311,13 @@ BA-Modding-Toolkit/
 本项目使用了以下优秀的第三方库：
 
 - [UnityPy](https://github.com/K0lb3/UnityPy)（MIT License）: 用于解析和操作 Unity Bundle 文件的核心库
-- [Pillow](https://python-pillow.github.io/)（MIT License）: 游戏中的 Texture2D 类型资产的导出功能
+- [Pillow](https://python-pillow.github.io/)（MIT License）: 图像处理库
 - [tkinterdnd2](https://github.com/pmgagne/tkinterdnd2)（MIT License）: 为 Tkinter 添加拖放功能支持
 - [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap)（MIT License）: 现代化的 Tkinter 主题库
 - [toml](https://github.com/uiri/toml)（MIT License）: 用于解析和操作 TOML 配置文件的库
+- [SpineAtlas](https://github.com/Rin-Wood/SpineAtlas)（MIT License）: 用于操作 Spine 动画文件中的 .atlas 文件
 
-## 另见
+### 另见
 一些好用的相关仓库：
 - [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：查询角色名称与内部文件ID之间的对应关系
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：下载原版游戏资源
