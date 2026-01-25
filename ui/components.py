@@ -316,11 +316,11 @@ class UIComponents:
         entry = UIComponents.create_textbox_entry(frame, textvariable, placeholder_text=placeholder_text)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
-        select_btn = UIComponents.create_button(frame, t("action.select_short"), select_cmd, bootstyle="primary", style="compact")
+        select_btn = UIComponents.create_button(frame, t("action.select"), select_cmd, bootstyle="primary", style="compact")
         select_btn.pack(side=tk.LEFT, padx=(0, 5))
 
         if open_button and open_cmd is not None:
-            open_btn = UIComponents.create_button(frame, t("action.open_short"), open_cmd, bootstyle="info", style="compact")
+            open_btn = UIComponents.create_button(frame, t("action.open"), open_cmd, bootstyle="info", style="compact")
             open_btn.pack(side=tk.LEFT)
 
         return frame
@@ -462,10 +462,10 @@ class SettingRow:
         
         # 按钮在最右
         if open_cmd:
-            UIComponents.create_button(right_frame, t("action.open_short"), open_cmd, bootstyle="info", style="compact"
+            UIComponents.create_button(right_frame, t("action.open"), open_cmd, bootstyle="info", style="compact"
             ).pack(side=tk.RIGHT, padx=(5,0))
             
-        UIComponents.create_button(right_frame, t("action.select_short"), select_cmd, bootstyle="primary", style="compact"
+        UIComponents.create_button(right_frame, t("action.select"), select_cmd, bootstyle="primary", style="compact"
         ).pack(side=tk.RIGHT, padx=(5,0))
         
         # 输入框填充剩余中间区域

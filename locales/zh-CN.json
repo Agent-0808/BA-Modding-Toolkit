@@ -24,9 +24,7 @@
 		"browse_file": "浏览文件...",
 		"browse_folder": "浏览文件夹...",
 		"select": "选择",
-		"select_short": "选",
 		"open": "打开",
-		"open_short": "开",
 		"enable": "启用",
 		"disable": "禁用",
 		"add": "添加",
@@ -401,7 +399,7 @@
 		"mod_update": {
 			"mode_single": "单个更新",
 			"mode_batch": "批量更新",
-			"placeholder_old": "拖放待更新旧版 Mod 文件到此处\n或点击下方按钮选择",
+			"placeholder_old": "拖放待更新或移植的 Mod 文件到此处\n或点击下方按钮选择",
 			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_searching": "正在搜索对应资源...",
