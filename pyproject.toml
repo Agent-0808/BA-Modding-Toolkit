@@ -1,6 +1,6 @@
 [project]
 name = "BA-Modding-Toolkit"
-version = "1.0.0"
+version = "1.0.1"
 description = "更新、移植、修复碧蓝档案mod的工具集 | Updating&Porting&Fixing Mods for Blue Archive"
 readme = "README.md"
 requires-python = ">=3.12"

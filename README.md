@@ -321,3 +321,8 @@ Some useful related repositories:
 - [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：Search for character names and internal file IDs
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
 - [SpineViewer](https://github.com/ww-rm/SpineViewer)：Preview Spine animation files
+
+### Disclaimer
+<sub>
+BA Modding Toolkit is a personal project by Agent-0808 and is not affiliated with, endorsed by, or connected to NEXON Games Co., Ltd., NEXON Korea Corp., Yostar, Inc., or any of their subsidiaries. All game assets, characters, music, and related intellectual property are the trademarks or registered trademarks of their respective owners. They are used in this tool for educational and interoperability purposes only (fair use). Please respect the Terms of Service of the official game. Do not use this tool for cheating or malicious activities.
+</sub>

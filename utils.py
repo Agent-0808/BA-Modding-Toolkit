@@ -10,9 +10,24 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
 
 from i18n import i18n_manager, t
+
+def get_version() -> str:
+    """从 pyproject.toml 读取版本号"""
+    try:
+        from _version import __version__
+        print(__version__)
+    except ImportError:
+        # 如果在本地开发环境没有这个文件，回退到读取 pyproject.toml
+        try:
+            import toml
+            with open("pyproject.toml", 'r', encoding='utf-8') as f:
+                data = toml.load(f)
+                __version__ = data["project"]["version"] + "-dev"
+        except:
+            __version__ = "0.0.0-dev"
+    return __version__
 
 def no_log(message):
     """A dummy logger that does nothing."""
@@ -237,7 +252,6 @@ def get_environment_info():
         tkinterdnd2_version = "Unknown"
 
     try:
-        import importlib.metadata
         tb_version = importlib.metadata.version('ttkbootstrap')
     except ImportError:
         tb_version = "Not installed"
@@ -269,6 +283,11 @@ def get_environment_info():
     except (ValueError, TypeError):
         system_locale = "Could not determine"
 
+    try:
+        version = get_version()
+    except Exception as e:
+        print(e)
+        version = "Unknown"
 
     import platform
     import sys
@@ -287,6 +306,7 @@ def get_environment_info():
 
     # --- Available Languages ---
     lines.append("\n--- BA Modding Toolkit ---")
+    lines.append(f"Version:             {version}")
     lines.append(f"Current Language:    {i18n_manager.lang}")
     lines.append(f"Available Languages: {', '.join(i18n_manager.get_available_languages())}")
 
@@ -364,6 +384,7 @@ def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
 
 class SpineUtils:
     """Spine 资源转换工具类，支持版本升级和降级。"""
+    from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
 
     @staticmethod
     def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:

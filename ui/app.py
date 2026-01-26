@@ -92,11 +92,10 @@ class App(tk.Frame):
         # Spine 转换器选项
         self.spine_converter_path_var = tk.StringVar()
         self.enable_spine_conversion_var = tk.BooleanVar()
-        self.target_spine_version_var = tk.StringVar()  # 添加目标Spine版本变量
-        
+        self.target_spine_version_var = tk.StringVar()
         # Spine 降级选项
         self.enable_atlas_downgrade_var = tk.BooleanVar()
-        self.spine_downgrade_version_var = tk.StringVar()  # 添加Spine降级版本变量
+        self.spine_downgrade_version_var = tk.StringVar()
         
         # Asset Packer Bleed 选项
         self.enable_spine38_namefix_var = tk.BooleanVar()
@@ -153,7 +152,7 @@ class App(tk.Frame):
         self.logger.log(t("log.config.language", language=language))
         
         # 检查语言文件是否存在
-        locales_dir = Path(__file__).parent.parent / "locales"
+        locales_dir = Path("locales")
         lang_path = locales_dir / f"{language}.json"
         if not lang_path.exists():
             self.logger.log(t("log.config.language_missing", language=language))

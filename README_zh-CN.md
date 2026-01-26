@@ -322,3 +322,8 @@ BA-Modding-Toolkit/
 - [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：查询角色名称与内部文件ID之间的对应关系
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：下载原版游戏资源
 - [SpineViewer](https://github.com/ww-rm/SpineViewer)：预览Spine动画文件
+
+### 免责声明 / Disclaimer
+<sub>
+BA Modding Toolkit is a personal project by Agent-0808 and is not affiliated with, endorsed by, or connected to NEXON Games Co., Ltd., NEXON Korea Corp., Yostar, Inc., or any of their subsidiaries. All game assets, characters, music, and related intellectual property are the trademarks or registered trademarks of their respective owners. They are used in this tool for educational and interoperability purposes only (fair use). Please respect the Terms of Service of the official game. Do not use this tool for cheating or malicious activities.
+</sub>
