@@ -13,8 +13,8 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, Any, Literal, NamedTuple
 
-from i18n import t
-from utils import CRCUtils, SpineUtils, ImageUtils, no_log
+from .i18n import t
+from .utils import CRCUtils, SpineUtils, ImageUtils, no_log
 
 # -------- 类型别名 ---------
 

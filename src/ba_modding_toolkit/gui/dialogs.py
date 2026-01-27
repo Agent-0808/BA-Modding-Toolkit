@@ -7,10 +7,10 @@ from ttkbootstrap.widgets.scrolled import ScrolledFrame
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
 if TYPE_CHECKING:
-    from ui.app import App
+    from .app import App
 
-from i18n import t
-from utils import get_environment_info
+from ..i18n import t
+from ..utils import get_environment_info
 from .components import Theme, UIComponents, SettingRow
 from .utils import select_file
 

@@ -6,13 +6,13 @@ import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
-from utils import get_environment_info, get_BA_path
-from ui.components import Theme, Logger, UIComponents
-from ui.utils import ConfigManager, open_directory, select_directory
-from ui.dialogs import SettingsDialog
-from ui.base_tab import TabFrame
-from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
-from i18n import i18n_manager, t, get_system_language
+from ..utils import get_environment_info, get_BA_path
+from .components import Theme, Logger, UIComponents
+from .utils import ConfigManager, open_directory, select_directory
+from .dialogs import SettingsDialog
+from .base_tab import TabFrame
+from .tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
+from ..i18n import i18n_manager, t, get_system_language
 
 class App(tk.Frame):
     def __init__(self, master: tk.Tk):

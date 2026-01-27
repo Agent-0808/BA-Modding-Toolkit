@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from i18n import i18n_manager, t
+from .i18n import i18n_manager, t
 
 def _get_path_from_registry(key_path: str) -> str | None:
     """从 Windows 注册表获取 Steam 游戏的安装路径。"""

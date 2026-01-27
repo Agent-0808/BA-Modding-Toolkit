@@ -6,9 +6,9 @@ from pathlib import Path
 import threading
 from typing import Callable, TYPE_CHECKING
 if TYPE_CHECKING:
-    from ui.app import App
+    from .app import App
 
-from i18n import t
+from ..i18n import t
 from .components import Theme
 
 class TabFrame(tb.Frame):

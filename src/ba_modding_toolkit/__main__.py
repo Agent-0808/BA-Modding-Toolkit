@@ -2,7 +2,7 @@
 
 from tkinterdnd2 import TkinterDnD
 import ttkbootstrap as tb
-from ui import App
+from .gui import App
 
 if __name__ == "__main__":
     # 先创建 TkinterDnD 窗口

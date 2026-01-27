@@ -10,10 +10,10 @@ import shutil
 import toml
 from typing import Callable, TYPE_CHECKING
 if TYPE_CHECKING:
-    from ui.app import App
+    from .app import App
 
-from utils import no_log
-from i18n import t
+from .utils import no_log
+from ..i18n import t
 
 def is_multiple_drop(data: str) -> bool:
     """

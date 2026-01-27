@@ -5,13 +5,13 @@ import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
 
-from i18n import t
+from .i18n import t
 import processing
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
-from ui.dialogs import FileSelectionDialog
-from ui.utils import handle_drop, replace_file, select_file, select_directory
-from utils import get_search_resource_dirs
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents, FileListbox, ModeSwitcher
+from ..dialogs import FileSelectionDialog
+from ..utils import handle_drop, replace_file, select_file, select_directory
+from ...utils import get_search_resource_dirs
 
 class ModUpdateTab(TabFrame):
     """一个整合了单个更新和批量更新功能的标签页"""

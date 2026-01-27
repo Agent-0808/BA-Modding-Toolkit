@@ -6,8 +6,8 @@ from tkinterdnd2 import DND_FILES
 from pathlib import Path
 from typing import Callable, Any
 
-from ui.utils import select_file, select_directory
-from i18n import t
+from .utils import select_file, select_directory
+from ..i18n import t
 
 # --- 日志管理类 ---
 class Logger:

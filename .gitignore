@@ -9,6 +9,9 @@ old/
 locales/tmp/
 locales/backup/
 locales/*TMP.json
+src/ba_modding_toolkit/locales/tmp/
+src/ba_modding_toolkit/locales/backup/
+src/ba_modding_toolkit/locales/*TMP.json
 
 .vscode/
 .trae/
@@ -18,6 +21,7 @@ dist/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
 
 SpineConverter/
 *.pdn

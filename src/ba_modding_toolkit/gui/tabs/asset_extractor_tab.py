@@ -8,9 +8,9 @@ import os
 
 from i18n import t
 import processing
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, SettingRow, FileListbox
-from ui.utils import handle_drop, select_file, select_directory, open_directory
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents, SettingRow, FileListbox
+from ..utils import handle_drop, select_file, select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):

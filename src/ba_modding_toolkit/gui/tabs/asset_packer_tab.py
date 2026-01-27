@@ -7,9 +7,9 @@ from pathlib import Path
 from i18n import t
 
 import processing
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, SettingRow
-from ui.utils import handle_drop, replace_file, select_file, select_directory
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents, SettingRow
+from ..utils import handle_drop, replace_file, select_file, select_directory
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
