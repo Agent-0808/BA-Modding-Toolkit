@@ -12,7 +12,7 @@ from .utils import ConfigManager, open_directory, select_directory
 from .dialogs import SettingsDialog
 from .base_tab import TabFrame
 from .tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
-from ..i18n import i18n_manager, t, get_system_language
+from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 
 class App(tk.Frame):
     def __init__(self, master: tk.Tk):
@@ -156,7 +156,7 @@ class App(tk.Frame):
         self.logger.log(t("log.config.language", language=language))
         
         # 检查语言文件是否存在
-        locales_dir = Path("locales")
+        locales_dir = get_locale_dir()
         lang_path = locales_dir / f"{language}.json"
         if not lang_path.exists():
             self.logger.log(t("log.config.language_missing", language=language))
