@@ -6,7 +6,7 @@ import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
-from utils import get_environment_info
+from utils import get_environment_info, get_BA_path
 from ui.components import Theme, Logger, UIComponents
 from ui.utils import ConfigManager, open_directory, select_directory
 from ui.dialogs import SettingsDialog
@@ -37,8 +37,12 @@ class App(tk.Frame):
 
     def _set_default_values(self):
         """设置所有共享变量的默认值。"""
-        # 尝试定位游戏根目录
-        game_root_dir = Path(r"C:\Program Files (x86)\Steam\steamapps\common\BlueArchive")
+        # 尝试从注册表获取游戏根目录，如果没有则使用默认路径
+        ba_path = get_BA_path()
+        if ba_path:
+            game_root_dir = Path(ba_path)
+        else:
+            game_root_dir = Path(r"C:\Program Files (x86)\Steam\steamapps\common\BlueArchive")
         self.game_resource_dir_var.set(str(game_root_dir))
         self.auto_detect_subdirs_var.set(True)
         
@@ -199,6 +203,12 @@ class App(tk.Frame):
             
             self.language_var.set(default_language)
             print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
+            
+            # 尝试从注册表检测 Blue Archive 游戏路径
+            ba_path = get_BA_path()
+            if ba_path:
+                self.game_resource_dir_var.set(ba_path)
+                print(f"从注册表检测到 Blue Archive 安装路径: {ba_path}")
         
         # 设置语言
         language = self.language_var.get()

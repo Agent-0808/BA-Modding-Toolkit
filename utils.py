@@ -4,6 +4,7 @@ import binascii
 import os
 import re
 import shutil
+import winreg
 from PIL import Image
 import subprocess
 import tempfile
@@ -12,6 +13,34 @@ from pathlib import Path
 from typing import Callable
 
 from i18n import i18n_manager, t
+
+BA_STEAM_APPID = 3557620
+
+def _get_path_from_registry(key_path: str) -> str | None:
+    """从 Windows 注册表获取 Steam 游戏的安装路径。"""
+    
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path)
+        install_path, _ = winreg.QueryValueEx(key, "InstallLocation")
+        winreg.CloseKey(key)
+        
+        if install_path:
+            return install_path
+            
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"读取注册表出错: {e}")
+
+    return None
+
+def get_BA_path() -> str | None:
+    GL_path = _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
+
+    # TODO: JP_path
+    # JP_path = get_path_from_registry(fr"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
+
+    return GL_path
 
 def get_version() -> str:
     """从 pyproject.toml 读取版本号"""
