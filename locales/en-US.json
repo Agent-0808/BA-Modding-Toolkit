@@ -77,7 +77,7 @@
 		"spine_downgrade_target_version_info": "Format should be \"A.B.C\".",
 		"auto_search": "Auto Search for Corresponding Files",
 		"auto_search_info": "",
-		"game_root_dir": "Game Root Directory",
+		"game_root_dir": "Game Directory",
 		"game_root_dir_info": "Set the game installation directory to automatically locate original bundle files.\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssetsPUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssetsPUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
 		"language": "Language / 语言",
 		"language_info": "",
@@ -318,7 +318,8 @@
 			"skipping_unnamed": "Skipping an unnamed {type} asset",
 			"extraction_failed": "Error extracting asset {name}: {error}",
 			"processing_asset_group": "Processing asset group: {name}",
-			"copying_file": "Copying file: {name}"
+			"copying_file": "Copying file: {name}",
+			"starting_extraction_num": "Extracting resources from {num} fils..."
 		},
 		"migration": {
 			"extracting_from_old_bundle": "Extracting specified asset types from old bundle: {types}",
