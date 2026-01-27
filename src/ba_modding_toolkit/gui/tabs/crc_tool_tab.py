@@ -6,7 +6,7 @@ from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
 
-from ..i18n import t
+from ...i18n import t
 from ..base_tab import TabFrame
 from ..components import Theme, UIComponents
 from ..utils import handle_drop, replace_file, select_file

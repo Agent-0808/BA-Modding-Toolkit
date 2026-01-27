@@ -1,8 +1,9 @@
-# main.py
+# __main__.py
 
 from tkinterdnd2 import TkinterDnD
 import ttkbootstrap as tb
-from .gui import App
+
+from ba_modding_toolkit.gui import App
 
 if __name__ == "__main__":
     # 先创建 TkinterDnD 窗口

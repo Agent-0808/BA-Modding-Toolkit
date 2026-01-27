@@ -12,7 +12,7 @@ from typing import Callable, TYPE_CHECKING
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import no_log
+from ..utils import no_log
 from ..i18n import t
 
 def is_multiple_drop(data: str) -> bool:

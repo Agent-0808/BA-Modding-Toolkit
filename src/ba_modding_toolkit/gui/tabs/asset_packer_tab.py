@@ -4,9 +4,9 @@ import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
-from i18n import t
 
-import processing
+from ...i18n import t
+from ... import core
 from ..base_tab import TabFrame
 from ..components import Theme, UIComponents, SettingRow
 from ..utils import handle_drop, replace_file, select_file, select_directory
@@ -115,26 +115,26 @@ class AssetPackerTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            platform, unity_version = processing.get_unity_platform_info(self.bundle_path)
+            platform, unity_version = core.get_unity_platform_info(self.bundle_path)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = platform == "StandaloneWindows64"
         elif crc_setting == "true":
             perform_crc = True
         
         # 创建 SaveOptions 和 SpineOptions 对象
-        save_options = processing.SaveOptions(
+        save_options = core.SaveOptions(
             perform_crc=perform_crc,
             enable_padding=self.app.enable_padding_var.get(),
             compression=self.app.compression_method_var.get()
         )
         
-        spine_options = processing.SpineOptions(
+        spine_options = core.SpineOptions(
             enabled=self.app.enable_spine_conversion_var.get(),
             converter_path=Path(self.app.spine_converter_path_var.get()),
             target_version=self.app.target_spine_version_var.get()
         )
         
-        success, message = processing.process_asset_packing(
+        success, message = core.process_asset_packing(
             target_bundle_path = self.bundle_path,
             asset_folder = self.folder_path,
             output_dir = output_dir,

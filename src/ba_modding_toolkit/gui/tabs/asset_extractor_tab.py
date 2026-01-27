@@ -6,8 +6,8 @@ from tkinter import messagebox
 from pathlib import Path
 import os
 
-from i18n import t
-import processing
+from ...i18n import t
+from ... import core
 from ..base_tab import TabFrame
 from ..components import Theme, UIComponents, SettingRow, FileListbox
 from ..utils import handle_drop, select_file, select_directory, open_directory
@@ -162,13 +162,13 @@ class AssetExtractorTab(TabFrame):
         # 创建 SpineOptions 对象
         target_version = self.app.spine_downgrade_version_var.get().strip()
         
-        spine_options = processing.SpineOptions(
+        spine_options = core.SpineOptions(
             enabled=enable_atlas_downgrade,
             converter_path=Path(spine_converter_path),
             target_version=target_version
         )
         
-        success, message = processing.process_asset_extraction(
+        success, message = core.process_asset_extraction(
             bundle_path=bundle_paths,
             output_dir=output_dir,
             asset_types_to_extract=asset_types,

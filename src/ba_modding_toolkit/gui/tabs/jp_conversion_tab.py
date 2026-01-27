@@ -5,12 +5,12 @@ import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
 
-from i18n import t
-import processing
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher, SettingRow
-from ui.utils import handle_drop, select_file
-from utils import get_search_resource_dirs
+from ...i18n import t
+from ... import core
+from ...utils import get_search_resource_dirs
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents, FileListbox, ModeSwitcher, SettingRow
+from ..utils import handle_drop, select_file
 
 class JPGLConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
@@ -122,7 +122,7 @@ class JPGLConversionTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        jp_files = processing.find_all_jp_counterparts(
+        jp_files = core.find_all_jp_counterparts(
             self.global_bundle_path, game_search_dirs, self.logger.log
         )
         
@@ -165,13 +165,13 @@ class JPGLConversionTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            platform, unity_version = processing.get_unity_platform_info(self.global_bundle_path)
+            platform, unity_version = core.get_unity_platform_info(self.global_bundle_path)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = (platform == "StandaloneWindows64") and (self.mode_var.get() == "jp_to_global")
         elif crc_setting == "true":
             perform_crc = True
         
-        save_options = processing.SaveOptions(
+        save_options = core.SaveOptions(
             perform_crc=perform_crc,
             enable_padding=self.app.enable_padding_var.get(),
             compression=self.app.compression_method_var.get()
@@ -180,7 +180,7 @@ class JPGLConversionTab(TabFrame):
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))
         if self.mode_var.get() == "jp_to_global":
-            success, message = processing.process_jp_to_global_conversion(
+            success, message = core.process_jp_to_global_conversion(
                 global_bundle_path=self.global_bundle_path,
                 jp_bundle_paths=jp_files,
                 output_dir=output_dir,
@@ -188,7 +188,7 @@ class JPGLConversionTab(TabFrame):
                 log=self.logger.log
             )
         else:
-            success, message = processing.process_global_to_jp_conversion(
+            success, message = core.process_global_to_jp_conversion(
                 global_bundle_path=self.global_bundle_path,
                 jp_template_paths=jp_files,
                 output_dir=output_dir,
