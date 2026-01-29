@@ -48,7 +48,7 @@ jobs:
           print(f"Detected version: {version}")
 
           # 生成 _version.py 供 Python 代码引用
-          with open("_version.py", "w", encoding="utf-8") as f:
+          with open("src/ba_modding_toolkit/_version.py", "w") as f:
               f.write(f'__version__ = "{version}"\n')
           
           # 将版本号设置到 GitHub Action 的输出变量
@@ -60,11 +60,11 @@ jobs:
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
-          script-name: main.pyw
+          script-name: src/ba_modding_toolkit/__main__.py
           mode: onefile
 
           # 元数据
-          windows-icon-from-ico: assets/eligma.ico
+          windows-icon-from-ico: src/ba_modding_toolkit/assets/eligma.ico
           product-name: "BA Modding Toolkit"
           product-version: ${{ steps.get_version.outputs.version }}
           file-version: ${{ steps.get_version.outputs.version }}
@@ -79,29 +79,28 @@ jobs:
           enable-plugins: tk-inter
           # 包含代码依赖包
           include-package: |
+            ba_modding_toolkit
             UnityPy.resources
           # 包含依赖包的数据文件
           include-package-data: |
+            ba_modding_toolkit
             UnityPy
             archspec
-          include-data-dir: assets=assets
+          # 包含资源目录
+          include-data-dir: |
+            src/ba_modding_toolkit/assets=ba_modding_toolkit/assets
+            src/ba_modding_toolkit/locales=ba_modding_toolkit/locales
           windows-console-mode: disable
           output-dir: build
           output-file: "BA-Modding-Toolkit.exe"
           assume-yes-for-downloads: true
 
-      # 清理 Nuitka 生成的中间文件夹
-      - name: Cleanup Nuitka Intermediate Files
+      # 整理发布文件夹
+      - name: Prepare Release Directory
         run: |
-          Remove-Item -Path "build/main.build" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path "build/main.dist" -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item -Path "build/main.onefile-build" -Recurse -Force -ErrorAction SilentlyContinue
-        shell: powershell
-
-      # 复制外部资源文件夹到 build 目录
-      - name: Copy External Resources
-        run: |
-          Copy-Item -Path "locales" -Destination "build/locales" -Recurse
+          New-Item -ItemType Directory -Path "publish" -Force
+          Copy-Item -Path "build/BA-Modding-Toolkit.exe" -Destination "publish/"
+          Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
         shell: powershell
 
       # 上传 Artifact
@@ -109,14 +108,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BA-Modding-Toolkit-Windows-Build
-          path: build/
+          path: publish/
 
       # 打包成 Zip
       - name: Zip Release Asset (When Trigger With Tag)
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           $tag_name = "${{ github.ref_name }}"
-          cd build
+          cd publish
           Compress-Archive -Path * -DestinationPath "../BA-Modding-Toolkit-$tag_name.zip"
         shell: powershell
 
