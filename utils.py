@@ -410,7 +410,6 @@ def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
 
 class SpineUtils:
     """Spine 资源转换工具类，支持版本升级和降级。"""
-    from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
 
     @staticmethod
     def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
@@ -582,6 +581,8 @@ class SpineUtils:
         log: LogFunc = no_log,
     ) -> tuple[bool, list[str]]:
         """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
+        from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
+
         processed_pngs = []
         try:
             log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')

@@ -5,21 +5,24 @@ tools/
 test/
 testbundle/
 old/
+SpineConverter/
 
-locales/tmp/
-locales/backup/
-locales/*TMP.json
+locales/
+src/ba_modding_toolkit/locales/tmp/
+src/ba_modding_toolkit/locales/backup/
+src/ba_modding_toolkit/locales/*TMP.json
 
 .vscode/
 .trae/
 __pycache__/
+
 build/
 dist/
 *.pyc
 *.pyo
 *.pyd
+*.egg-info/
 
-SpineConverter/
 *.pdn
 *.exe
 *.lnk
