@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from i18n import i18n_manager, t
+from .i18n import i18n_manager, t
 
 def _get_path_from_registry(key_path: str) -> str | None:
     """从 Windows 注册表获取 Steam 游戏的安装路径。"""
@@ -582,7 +582,6 @@ class SpineUtils:
     ) -> tuple[bool, list[str]]:
         """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
         from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
-
         processed_pngs = []
         try:
             log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')

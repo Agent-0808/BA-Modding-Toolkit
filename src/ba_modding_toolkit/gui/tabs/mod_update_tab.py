@@ -5,13 +5,13 @@ import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
 
-from i18n import t
-import processing
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents, FileListbox, ModeSwitcher
-from ui.dialogs import FileSelectionDialog
-from ui.utils import handle_drop, replace_file, select_file, select_directory
-from utils import get_search_resource_dirs
+from ...i18n import t
+from ... import core
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents, FileListbox, ModeSwitcher
+from ..dialogs import FileSelectionDialog
+from ..utils import handle_drop, replace_file, select_file, select_directory
+from ...utils import get_search_resource_dirs
 
 class ModUpdateTab(TabFrame):
     """一个整合了单个更新和批量更新功能的标签页"""
@@ -123,7 +123,7 @@ class ModUpdateTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        found_paths, message = processing.find_new_bundle_path(
+        found_paths, message = core.find_new_bundle_path(
             self.old_mod_path,
             search_paths,
             self.logger.log
@@ -199,25 +199,25 @@ class ModUpdateTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            platform, unity_version = processing.get_unity_platform_info(self.new_mod_path)
+            platform, unity_version = core.get_unity_platform_info(self.new_mod_path)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = platform == "StandaloneWindows64"
         elif crc_setting == "true":
             perform_crc = True
         
-        save_options = processing.SaveOptions(
+        save_options = core.SaveOptions(
             perform_crc=perform_crc,
             enable_padding=self.app.enable_padding_var.get(),
             compression=self.app.compression_method_var.get()
         )
         
-        spine_options = processing.SpineOptions(
+        spine_options = core.SpineOptions(
             enabled=self.app.enable_spine_conversion_var.get(),
             converter_path=Path(self.app.spine_converter_path_var.get()),
             target_version=self.app.target_spine_version_var.get()
         )
         
-        success, message = processing.process_mod_update(
+        success, message = core.process_mod_update(
             old_mod_path = self.old_mod_path,
             new_bundle_path = self.new_mod_path,
             output_dir = output_dir,
@@ -333,13 +333,13 @@ class ModUpdateTab(TabFrame):
         elif crc_setting == "true":
             perform_crc = True
 
-        save_options = processing.SaveOptions(
+        save_options = core.SaveOptions(
             perform_crc=perform_crc,
             enable_padding=self.app.enable_padding_var.get(),
             compression=self.app.compression_method_var.get()
         )
         
-        spine_options = processing.SpineOptions(
+        spine_options = core.SpineOptions(
             enabled=self.app.enable_spine_conversion_var.get(),
             converter_path=Path(self.app.spine_converter_path_var.get()),
             target_version=self.app.target_spine_version_var.get()
@@ -350,7 +350,7 @@ class ModUpdateTab(TabFrame):
             self.logger.status(t("log.status.processing_batch", current=current, total=total, filename=filename))
 
         # 2. 调用核心处理函数
-        success_count, fail_count, failed_tasks = processing.process_batch_mod_update(
+        success_count, fail_count, failed_tasks = core.process_batch_mod_update(
             mod_file_list=self.mod_file_list,
             search_paths=search_paths,
             output_dir=output_dir,

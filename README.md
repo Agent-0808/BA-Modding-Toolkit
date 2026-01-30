@@ -22,7 +22,7 @@ Supports Steam version (PC) and other versions (Global/JP server, PC/Android/iOS
 
 ## Introduction
 
-![Abnormal Client](assets/help/abnormal-en.png)
+![Abnormal Client](docs/help/abnormal-en.png)
 
 - Downloaded a mod from the internet, replaced the corresponding file in the game directory, but the game shows "Abnormal Client" and cannot login?
 - Downloaded a mod released a long time ago, but the filename is different from the latest version? Even after replacement, the character image doesn't change/doesn't display at all/game freezes?
@@ -64,7 +64,7 @@ The program contains multiple functional tabs:
 - Even without configuring `SpineSkeletonDataConverter.exe`, you can still use this program normally to update mods that *use Spine files compatible with the current version (4.2.xx)*.
     - If the mod you want to update was created in 2025 or later, it already uses Spine 4.2 format and can be updated normally without configuring this option.
 
-![How to update a mod with BAMT GUI](assets/help/gui-help-mod-update-en.png)
+![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-en.png)
 
 ### Mod 更新 (Mod Update)
 #### 单个更新 (Single Update)

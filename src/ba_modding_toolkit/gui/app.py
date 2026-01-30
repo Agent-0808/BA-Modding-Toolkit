@@ -1,18 +1,19 @@
 # ui/app.py
 
+import sys
 import tkinter as tk
 from tkinter import messagebox
 import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
-from utils import get_environment_info, get_BA_path
-from ui.components import Theme, Logger, UIComponents
-from ui.utils import ConfigManager, open_directory, select_directory
-from ui.dialogs import SettingsDialog
-from ui.base_tab import TabFrame
-from ui.tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
-from i18n import i18n_manager, t, get_system_language
+from ..utils import get_environment_info, get_BA_path
+from .components import Theme, Logger, UIComponents
+from .utils import ConfigManager, open_directory, select_directory
+from .dialogs import SettingsDialog
+from .base_tab import TabFrame
+from .tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
+from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 
 class App(tk.Frame):
     def __init__(self, master: tk.Tk):
@@ -29,10 +30,22 @@ class App(tk.Frame):
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
         self.master.geometry("600x789")
-        self.root_path: Path = Path(__file__).parent.parent
+        
+        # 设置 root_path
+        if hasattr(sys, 'frozen'):
+            # 打包环境：使用 exe 同级目录
+            # 根据 build.yml 配置，资源文件被打包到 ba_modding_toolkit 子目录
+            self.root_path = Path(sys.executable).parent / "ba_modding_toolkit"
+        else:
+            # 开发环境：src/ba_modding_toolkit/gui/app.py -> src/ba_modding_toolkit/
+            self.root_path = Path(__file__).parents[1]
+
         # 设置窗口图标
+        print(f"root_path: {self.root_path}")
         icon_path = self.root_path / "assets" / "eligma.ico"
+        print(f"icon_path: {icon_path}")
         if icon_path.exists():
+            print(f"Setting icon to {icon_path}")
             self.master.iconbitmap(icon_path)
 
     def _set_default_values(self):
@@ -156,7 +169,7 @@ class App(tk.Frame):
         self.logger.log(t("log.config.language", language=language))
         
         # 检查语言文件是否存在
-        locales_dir = Path("locales")
+        locales_dir = get_locale_dir()
         lang_path = locales_dir / f"{language}.json"
         if not lang_path.exists():
             self.logger.log(t("log.config.language_missing", language=language))

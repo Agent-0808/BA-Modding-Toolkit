@@ -1,10 +1,11 @@
-# main.py
+# gui/main.py
 
 from tkinterdnd2 import TkinterDnD
 import ttkbootstrap as tb
-from ui import App
 
-if __name__ == "__main__":
+from . import App
+
+def main():
     # 先创建 TkinterDnD 窗口
     root = TkinterDnD.Tk()
     # 应用 ttkbootstrap 样式

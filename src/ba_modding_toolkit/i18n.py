@@ -1,9 +1,29 @@
 # i18n.py
 import json
 import locale
+import sys
 from functools import reduce, lru_cache
 from pathlib import Path
 from typing import Any
+
+def get_locale_dir() -> Path:
+    """
+    获取 locales 目录路径
+    优先级：
+    1. 打包环境：exe 同级目录下的 locales 文件夹
+    2. 开发环境：包内部的 locales 文件夹
+    """
+    # 检查是否运行在打包环境
+    # 如果是打包环境，优先查找 exe 同级目录下的 locales 文件夹
+    exe_dir = Path(sys.executable).parent
+    external_locales = exe_dir / "locales"
+    if external_locales.exists() and external_locales.is_dir():
+        return external_locales
+
+    # 2. 如果不是打包环境，或者是开发环境
+    # 查找代码包内部的 locales 文件夹
+    internal_locales = Path(__file__).parent / "locales"
+    return internal_locales
 
 def get_system_language() -> str | None:
     """
@@ -31,10 +51,10 @@ def get_default_language() -> str:
         return "debug"
 
 class I18n:
-    def __init__(self, lang: str | None = None, locales_dir: str = "locales"):
+    def __init__(self, lang: str | None = None, locales_dir: str | None = None):
         self.fallback_lang = "en-US"
         self.lang = lang or get_default_language()
-        self.locales_dir = Path(locales_dir)
+        self.locales_dir = Path(locales_dir) if locales_dir else get_locale_dir()
         self.translations: dict[str, Any] = {}
         self.fallback_translations: dict[str, Any] = {}
         
@@ -47,6 +67,8 @@ class I18n:
         - zh-* 语言：回退到 zh-CN → key
         - 其他语言：回退到 en-US → key
         """
+        print(f"Loading locales from: {self.locales_dir}")
+        
         if self.lang == "debug":
             self.translations = {}
             self.fallback_translations = {}

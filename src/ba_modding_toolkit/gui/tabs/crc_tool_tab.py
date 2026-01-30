@@ -6,11 +6,11 @@ from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
 
-from i18n import t
-from ui.base_tab import TabFrame
-from ui.components import Theme, UIComponents
-from ui.utils import handle_drop, replace_file, select_file
-from utils import CRCUtils, get_search_resource_dirs
+from ...i18n import t
+from ..base_tab import TabFrame
+from ..components import Theme, UIComponents
+from ..utils import handle_drop, replace_file, select_file
+from ...utils import CRCUtils, get_search_resource_dirs
 
 class CrcToolTab(TabFrame):
     def create_widgets(self):
