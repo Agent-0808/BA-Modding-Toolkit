@@ -182,14 +182,12 @@
 		},
 		"jp_convert": {
 			"load_global_failed": "无法加载国际服源文件",
-			"load_jp_asset_failed": "无法加载日服 {type} 文件",
 			"jp_to_global_success": "JP -> Global 转换成功！\n已替换 {asset_count} 个 资源",
 			"global_to_jp_success": "Global -> JP 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
 			"conversion_error": "转换过程中发生错误:\n{error}",
 			"load_global_source_failed": "无法加载国际服源文件",
 			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
-			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
-			"save_asset_bundle_failed": "保存 {type} Bundle 失败: {message}"
+			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。"
 		}
 	},
 	"log": {
@@ -254,11 +252,7 @@
 			"version_detected_downgrading": "检测到Spine版本: {version}，尝试降级...",
 			"atlas_downgrade_success": "Atlas 降级成功",
 			"atlas_downgrade_failed": "Atlas 降级失败",
-			"missing_matching_atlas": "找到 {skel} 但缺少匹配的 {atlas}，将作为独立文件处理。",
-			"skel_conversion_failed_using_original": "skel 转换失败，将使用原始 .skel 文件。",
-			"no_skel_found": "在bundle中未找到 .skel 文件。",
-			"edit_atlas": "编辑了 Atlas 文件: {filename}",
-			"rescaling_page": "正在缩放页面 {page} (scale: {scale})"
+			"edit_atlas": "编辑了 Atlas 文件: {filename}"
 		},
 		"packer": {
 			"start_packing": "开始从资源文件夹打包...",
@@ -296,7 +290,8 @@
 			"extracting_from_jp": "正在从日服文件提取资源",
 			"applying_to_global": "正在应用到国际服文件",
 			"migration_complete": "迁移完成: {text_count} 个 TextAsset, {tex_count} 个 Texture2D",
-			"conversion_complete": "转换完成"
+			"conversion_complete": "转换完成",
+			"copy_converted_files": "复制成功转换的文件"
 		},
 		"compression": {
 			"original_short": "原始",
@@ -318,8 +313,7 @@
 			"using_temp_dir": "使用临时目录: {path}",
 			"skipping_unnamed": "跳过一个未命名的 {type} 资源",
 			"extraction_failed": "提取资源 {name} 时发生错误: {error}",
-			"processing_asset_group": "正在处理资产组: {name}",
-			"copying_file": "复制文件: {name}"
+			"processing_file": "正在处理：{name}"
 		},
 		"migration": {
 			"extracting_from_old_bundle": "正在从旧版 bundle 中提取指定类型的资源: {types}",

@@ -1,12 +1,12 @@
 [project]
 name = "BA-Modding-Toolkit"
-version = "1.1.1"
+version = "1.1.2"
 description = "更新、移植、修复碧蓝档案mod的工具集 | Updating&Porting&Fixing Mods for Blue Archive"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pillow>=10.4.0",
-    "spineatlas>=1.0.12",
+    "spineatlas>=1.0.13",
     "tkinterdnd2>=0.4.3",
     "toml>=0.10.2",
     "ttkbootstrap>=1.10.1",

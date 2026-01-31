@@ -695,45 +695,49 @@ def process_asset_extraction(
                 log(f'\n--- {t("log.section.move_to_output")} ---')
                 for item in temp_extraction_dir.iterdir():
                     shutil.copy2(item, output_dir / item.name)
+                    log(f"  - {item.name}")
             else:
                 log(f'\n--- {t("log.section.process_spine_downgrade")} ---')
-                processed_files = set()
-                skel_files = list(temp_extraction_dir.glob("*.skel"))
-
-                if not skel_files:
-                    log(f'  > {t("log.spine.no_skel_found")}')
                 
-                for skel_path in skel_files:
-                    base_name = skel_path.stem
-                    atlas_path = skel_path.with_suffix(".atlas")
-                    log(f"\n  > {t('log.extractor.processing_asset_group', name=base_name)}")
-
-                    if not atlas_path.exists():
-                        log(f"    - {t('common.warning')}: {t('log.spine.missing_matching_atlas', skel=skel_path.name, atlas=atlas_path.name)}")
-                        continue
+                with tempfile.TemporaryDirectory() as temp_dir_b:
+                    temp_output_dir = Path(temp_dir_b)
                     
-                    # 标记此资产组中的所有文件为已处理
-                    png_paths = list(temp_extraction_dir.glob(f"{base_name}*.png"))
-                    processed_files.add(skel_path)
-                    processed_files.add(atlas_path)
-                    processed_files.update(png_paths)
-
-                    # 调用辅助函数处理该资产组
-                    SpineUtils.handle_group_downgrade(
-                        skel_path, atlas_path, output_dir,
-                        spine_options.converter_path,
-                        spine_options.target_version,
-                        log
-                    )
-                
-                # --- 阶段 3: 复制剩余的独立文件 ---
-                remaining_files = [item for item in temp_extraction_dir.iterdir() if item not in processed_files]
-                
-                if remaining_files:
-                    log(f'\n--- {t("log.section.copy_standalone_files")} ---')
-                    for item in remaining_files:
-                        log(f"  - {t('log.extractor.copying_file', name=item.name)}")
+                    # 处理所有 skel 文件
+                    skel_files = list(temp_extraction_dir.glob("*.skel"))
+                    for skel_path in skel_files:
+                        log(f"  > {t('log.extractor.processing_file', name=skel_path.name)}")
+                        SpineUtils.process_skel_downgrade(
+                            skel_path,
+                            temp_output_dir,
+                            spine_options.converter_path,
+                            spine_options.target_version,
+                            log
+                        )
+                    
+                    # 处理所有 atlas 文件
+                    atlas_files = list(temp_extraction_dir.glob("*.atlas"))
+                    for atlas_path in atlas_files:
+                        log(f"  > {t("log.extractor.processing_file", name=atlas_path.name)}")
+                        SpineUtils.process_atlas_downgrade(
+                            atlas_path,
+                            temp_output_dir,
+                            log
+                        )
+                    
+                    # 复制降级后的文件到最终输出目录
+                    log(f'\n--- {t("log.section.copy_converted_files")} ---')
+                    for item in temp_output_dir.iterdir():
                         shutil.copy2(item, output_dir / item.name)
+                        log(f"  - {item.name}")
+                
+                # --- 阶段 3: 复制剩余的独立文件（跳过已存在的） ---
+                log(f'\n--- {t("log.section.copy_standalone_files")} ---')
+                for item in temp_extraction_dir.iterdir():
+                    dest = output_dir / item.name
+                    if not dest.exists():
+                        shutil.copy2(item, dest)
+                        log(f"  - {item.name}")
+
 
         total_files_extracted = len(list(output_dir.iterdir()))
         success_msg = t("message.extractor.extraction_complete", count=total_files_extracted)

@@ -564,10 +564,10 @@ class SpineUtils:
                     log=log
                 )
                 if skel_success:
-                    log(f'  > {t("log.spine.skel_conversion_success", name=resource_name)}')
+                    log(f'  > {t("log.spine.skel_conversion_success")}')
                     return upgraded_content
                 else:
-                    log(f'  ❌ {t("log.spine.skel_conversion_failed_using_original", name=resource_name)}')
+                    log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
 
         except Exception as e:
             log(f'    ❌ {t("log.error_detail", error=e)}')
@@ -579,88 +579,64 @@ class SpineUtils:
         input_atlas: Path,
         output_dir: Path,
         log: LogFunc = no_log,
-    ) -> tuple[bool, list[str]]:
+    ) -> bool:
         """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
-        from SpineAtlas import Atlas, ReadAtlasFile, AtlasScale
-        processed_pngs = []
+        from SpineAtlas import Atlas, ReadAtlasFile
         try:
             log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')
             
             atlas: Atlas = ReadAtlasFile(str(input_atlas))
             atlas.version = False
             
-            for page in atlas.atlas:
-                if page.scale != 1.0:
-                    log(f'      > {t("log.spine.rescaling_page", page=page.png, scale=page.scale)}')
-                    
-                    reverse_scale = 1.0 / page.scale
-                    AtlasScale(page, reverse_scale, reverse_scale)
-                    page.scale = 1.0
-                    
-                    img_path = input_atlas.parent / page.png
-                    if img_path.exists():
-                        with Image.open(img_path) as img:
-                            w, h = img.size
-                            new_w = int(w * reverse_scale)
-                            new_h = int(h * reverse_scale)
-                            resized_img = img.resize((new_w, new_h), Image.BICUBIC)
-                            resized_img.save(output_dir / page.png)
-                            page.w = new_w
-                            page.h = new_h
-                            processed_pngs.append(page.png)
-            
-            output_path = output_dir / input_atlas.name
-            atlas.SaveAtlas(str(output_path))
-            return True, processed_pngs
+            atlas.ReScale()
+            atlas.SaveAtlas4_0Scale(outPath=output_dir)
+
+            return True
         except Exception as e:
             log(f'      ✗ {t("log.error_detail", error=e)}')
-            return False, processed_pngs
+            return False
 
     @staticmethod
-    def handle_group_downgrade(
+    def process_skel_downgrade(
         skel_path: Path,
-        atlas_path: Path,
         output_dir: Path,
-        skel_converter_path: Path,
+        converter_path: Path,
         target_version: str,
         log: LogFunc = no_log,
     ) -> None:
-        """
-        处理单个Spine资产组（skel, atlas, pngs）的降级。
-        始终尝试进行降级操作。
-        """
+        """处理单个 .skel 文件的降级。"""
         version = SpineUtils.get_skel_version(skel_path, log)
         log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
-        with tempfile.TemporaryDirectory() as conv_out_dir_str:
-            conv_output_dir = Path(conv_out_dir_str)
+        
+        output_skel_path = output_dir / skel_path.name
+        skel_success, _ = SpineUtils.run_skel_converter(
+            input_data=skel_path,
+            converter_path=converter_path,
+            target_version=target_version,
+            output_path=output_skel_path,
+            log=log
+        )
+        if skel_success:
+            log(f'    > {t("log.spine.skel_conversion_success", name=skel_path.name)}')
+        else:
+            log(f'    ✗ {t("log.spine.skel_conversion_failed")}')
 
-            atlas_success, processed_pngs = SpineUtils.run_atlas_downgrader(
-                atlas_path, conv_output_dir, log
-            )
+    @staticmethod
+    def process_atlas_downgrade(
+        atlas_path: Path,
+        output_dir: Path,
+        log: LogFunc = no_log,
+    ) -> None:
+        """处理单个 .atlas 文件的降级，自动处理相关的 png 文件。"""
+        atlas_success = SpineUtils.run_atlas_downgrader(
+            atlas_path, output_dir, log
+        )
 
-            if atlas_success:
-                log(f'    > {t("log.spine.atlas_downgrade_success")}')
-                
-                for png_file in atlas_path.parent.glob("*.png"):
-                    if png_file.name not in processed_pngs:
-                        shutil.copy2(png_file, conv_output_dir / png_file.name)
-                
-                for converted_file in conv_output_dir.iterdir():
-                    shutil.copy2(converted_file, output_dir / converted_file.name)
-                    log(f"      - {converted_file.name}")
-            else:
-                log(f'    ✗ {t("log.spine.atlas_downgrade_failed")}.')
+        if atlas_success:
+            log(f'    > {t("log.spine.atlas_downgrade_success")}')
+        else:
+            log(f'    ✗ {t("log.spine.atlas_downgrade_failed")}.')
 
-            output_skel_path = output_dir / skel_path.name
-            skel_success, _ = SpineUtils.run_skel_converter(
-                input_data=skel_path,
-                converter_path=skel_converter_path,
-                target_version=target_version,
-                output_path=output_skel_path,
-                log=log
-            )
-            if not skel_success:
-                log(f'    ✗ {t("log.spine.skel_conversion_failed_using_original")}')
 
     @staticmethod
     def normalize_legacy_spine_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:

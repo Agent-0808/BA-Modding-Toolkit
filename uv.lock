@@ -49,7 +49,7 @@ wheels = [
 
 [[package]]
 name = "ba-modding-toolkit"
-version = "1.1.1"
+version = "1.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "pillow" },
@@ -63,7 +63,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "pillow", specifier = ">=10.4.0" },
-    { name = "spineatlas", specifier = ">=1.0.12" },
+    { name = "spineatlas", specifier = ">=1.0.13" },
     { name = "tkinterdnd2", specifier = ">=0.4.3" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "ttkbootstrap", specifier = ">=1.10.1" },
@@ -263,15 +263,15 @@ wheels = [
 
 [[package]]
 name = "spineatlas"
-version = "1.0.12"
+version = "1.0.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "pillow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/52/3b/c135e11156b375b0be57253b2d292e689a6e3f19bce02845c50a50a9b621/spineatlas-1.0.12.tar.gz", hash = "sha256:91b7ec2c3f673e27e167cae77d411c068daef295686baa37aca926f9a394947d", size = 9781, upload-time = "2026-01-19T22:59:32.221Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/f0/d29e1cbc17deb5050ee5bab810943ad84894d49e5e2e87367b030729dae9/spineatlas-1.0.13.tar.gz", hash = "sha256:f672ad893e7ff8c339babcde516bc3b79961545d5ae3fc8123c481cd3ccbafbd", size = 10060, upload-time = "2026-01-25T17:59:04.495Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/ae/48570ae0996b339fc941c8967188018955d7df8d631477c8f04b26949c71/spineatlas-1.0.12-py3-none-any.whl", hash = "sha256:a4dc8efa1a009612ed44b143f04028aab8f4291ef43e5df8bf83993846b84ff2", size = 8924, upload-time = "2026-01-19T22:59:30.941Z" },
+    { url = "https://files.pythonhosted.org/packages/88/9c/b63642b0e268e532b87f219934625692842015b7972c5bf73c50670b85db/spineatlas-1.0.13-py3-none-any.whl", hash = "sha256:c5f105f7a546751d3789e0561cd7fd4b8abb4de426a3289758de4cc36366bf2a", size = 9155, upload-time = "2026-01-25T17:59:03.43Z" },
 ]
 
 [[package]]
