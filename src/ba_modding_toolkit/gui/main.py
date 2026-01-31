@@ -3,7 +3,7 @@
 from tkinterdnd2 import TkinterDnD
 import ttkbootstrap as tb
 
-from . import App
+from .app import App
 
 def main():
     # 先创建 TkinterDnD 窗口
