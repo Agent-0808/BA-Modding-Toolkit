@@ -303,7 +303,8 @@ class ConfigManager:
                 },
                 "SpineDowngrade": {
                     "enable_atlas_downgrade": app.enable_atlas_downgrade_var.get(),
-                    "spine_downgrade_version": app.spine_downgrade_version_var.get()
+                    "spine_downgrade_version": app.spine_downgrade_version_var.get(),
+                    "atlas_export_mode": app.atlas_export_mode_var.get()
                 },
                 "Tabs": {
                     "enable_spine38_namefix": app.enable_spine38_namefix_var.get(),
@@ -359,6 +360,7 @@ class ConfigManager:
             spine_downgrade = data.get("SpineDowngrade", {})
             app.enable_atlas_downgrade_var.set(spine_downgrade.get("enable_atlas_downgrade", False))
             app.spine_downgrade_version_var.set(spine_downgrade.get("spine_downgrade_version", ""))
+            app.atlas_export_mode_var.set(spine_downgrade.get("atlas_export_mode", "atlas"))
             
             tabs = data.get("Tabs", {})
             app.enable_spine38_namefix_var.set(tabs.get("enable_spine38_namefix", False))

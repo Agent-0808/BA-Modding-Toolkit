@@ -41,6 +41,15 @@ class AssetExtractorTab(TabFrame):
         options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(5,0))
         
+        # Atlas 导出模式
+        SettingRow.create_combobox_row(
+            options_frame,
+            label=t("option.atlas_export_mode"),
+            text_var=self.app.atlas_export_mode_var,
+            values=["atlas", "unpack", "both"],
+            tooltip=t("option.atlas_export_mode_info")
+        )
+        
         # Spine 降级选项
         SettingRow.create_switch(
             options_frame,
@@ -153,10 +162,11 @@ class AssetExtractorTab(TabFrame):
         # 传递 Spine 降级选项
         enable_atlas_downgrade = self.app.enable_atlas_downgrade_var.get()
         spine_converter_path = self.app.spine_converter_path_var.get()
+        atlas_export_mode = self.app.atlas_export_mode_var.get()
             
-        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path)
+        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path, atlas_export_mode)
 
-    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None, atlas_export_mode="atlas"):
         self.logger.status(t("log.status.extracting"))
         
         # 创建 SpineOptions 对象
@@ -173,6 +183,7 @@ class AssetExtractorTab(TabFrame):
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
             spine_options=spine_options,
+            atlas_export_mode=atlas_export_mode,
             log=self.logger.log
         )
         

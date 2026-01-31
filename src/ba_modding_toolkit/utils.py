@@ -637,6 +637,30 @@ class SpineUtils:
         else:
             log(f'    ✗ {t("log.spine.atlas_downgrade_failed")}.')
 
+    @staticmethod
+    def unpack_atlas_frames(
+        atlas_path: Path,
+        output_dir: Path,
+        log: LogFunc = no_log,
+    ) -> bool:
+        """将 atlas 文件解包为单独的 PNG 帧图片。"""
+        from SpineAtlas import ReadAtlasFile
+        try:
+            log(f'    > {t("log.spine.unpacking_atlas", name=atlas_path.name)}')
+            
+            atlas = ReadAtlasFile(str(atlas_path))
+            atlas.ReScale()
+            frames_output_dir = output_dir / "images"
+            frames_output_dir.mkdir(parents=True, exist_ok=True)
+            
+            atlas.SaveFrames(path=str(frames_output_dir), mode='Normal')
+            
+            log(f'    > {t("log.spine.atlas_unpack_success", path=frames_output_dir)}')
+            return True
+        except Exception as e:
+            log(f'    ✗ {t("log.spine.atlas_unpack_failed")}: {e}')
+            return False
+
 
     @staticmethod
     def normalize_legacy_spine_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
