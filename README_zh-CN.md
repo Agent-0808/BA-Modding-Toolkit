@@ -311,8 +311,8 @@ BA-Modding-Toolkit/
 │ │   ├── asset_extractor_tab.py  # 资源提取标签页
 │ │   └── jp_conversion_tab.py    # 日服/国际服转换标签页
 │ ├── assets/         # 资源文件
-│ ├── locales/        # 语言文件
-│ └── config.toml     # 本地配置文件（自动生成）
+│ └── locales/        # 语言文件
+├── config.toml       # 本地配置文件（自动生成）
 │ 
 │ # ============= 杂项 =============
 │ 

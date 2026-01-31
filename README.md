@@ -1,6 +1,6 @@
 <div align="center" style="text-align:center">
   <p>
-    <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/main/assets/title.png?raw=true/>
+    <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/99332127fc5478e227a37d60bad12074c9472992/docs/title.png?raw=true/>
   </p>
   <p>
     <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
@@ -38,36 +38,42 @@ You can download the latest version of the executable file from the [Releases](h
 ## Program Functionalities
 
 The program contains multiple functional tabs:
+
 - **Mod 更新** (Mod Update): Update or port Mod files between different platforms
-    - **单个更新** (Single Update): Update a single Mod file
-    - **批量更新** (Batch Update): Batch process multiple Mod files
+  - **单个更新** (Single Update): Update a single Mod file
+  - **批量更新** (Batch Update): Batch process multiple Mod files
 - **CRC 修正工具** (CRC Fix Tool): CRC checksum correction functionality
 - **资源打包** (Asset Packer): Pack asset files from a folder into a Bundle file, replacing the corresponding assets in the Bundle
 - **资源提取** (Asset Extractor): Extract specified types of assets from Bundle files
 - **JP/GL 转换** (JP/GL Conversion): Convert between JP server format and Global server format
 
-
 ## How to Use
 
 ### Settings
+
 - Click the **Settings** button at the top of the main interface to open the settings window, configure the game root directory and output directory.
 - Click the "Save" button to save the configuration, which will be automatically restored upon next startup.
 
 #### Spine Converter (Optional Extension Feature)
+
 (Optional) Uses a third-party program to convert Spine 3.8 format `.skel` files from some old mods to the currently supported 4.2 format.
+
 - You need to download the third-party Spine converter program yourself. BAMT only calls the program to convert Spine files, not provides the program itself.
 - Download URL: [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
 - Configure the path to `SpineSkeletonDataConverter.exe` in the settings interface, and check the "启用 Spine 转换" (Enable Spine Conversion) option.
 
 ##### Notes
+
 - This is an experimental feature that cannot guarantee all mods can be successfully upgraded, suitable only for advanced users.
 - Even without configuring `SpineSkeletonDataConverter.exe`, you can still use this program normally to update mods that *use Spine files compatible with the current version (4.2.xx)*.
-    - If the mod you want to update was created in 2025 or later, it already uses Spine 4.2 format and can be updated normally without configuring this option.
+  - If the mod you want to update was created in 2025 or later, it already uses Spine 4.2 format and can be updated normally without configuring this option.
 
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-en.png)
 
 ### Mod 更新 (Mod Update)
+
 #### 单个更新 (Single Update)
+
 1. Drag and drop or browse to select the old Mod Bundle file that needs to be updated
 2. The program will automatically find the corresponding target Bundle file in the resource directory
 3. Check the asset types that need to be replaced in the settings window
@@ -77,6 +83,7 @@ The program contains multiple functional tabs:
 This feature can also be used to port mods between different platforms, just select the Bundle file from the corresponding platform in step 2.
 
 #### 批量更新 (Batch Update)
+
 1. Drag and drop or browse to select a folder containing multiple Mod files, or directly drag and drop multiple Mod files
     - The 4 buttons below are: 添加文件 (Add a File), 添加文件夹 (Add a Folder), 移除选中 (Remove Selected), 清空列表 (Clear List).
 2. The program will automatically identify and list all processable Mod files
@@ -84,6 +91,7 @@ This feature can also be used to port mods between different platforms, just sel
 4. Click the "开始批量更新" (Start Batch Update) button, the program will process all selected Mod files in sequence
 
 ### CRC 修正工具 (CRC Fix Tool)
+
 1. Drag and drop or browse to select the target Bundle file that needs to be modified
 2. The program will automatically find the corresponding original Bundle file in the resource directory
 3. Click the "运行 CRC 修正" (Run CRC Fix) button: automatically corrects the Bundle file's CRC checksum
@@ -92,6 +100,7 @@ This feature can also be used to port mods between different platforms, just sel
 The "计算CRC值" (Calculate CRC Value) button can be used to manually view the CRC checksum of a single file or two files.
 
 ### 资源提取 (Asset Extractor)
+
 1. Drag and drop or browse to select the Bundle file to extract assets from
 2. Select an output directory, the program will automatically create a subdirectory named after the Bundle file
 3. (Optional) In the settings window, configure `SpineSkeletonDataConverter.exe` program path, and enable "启用 Spine 降级" (Enable Spine Downgrade) option. If enabled, the program will automatically call the third-party program to convert the Spine files to Spine 3.8 format in the extraction process.
@@ -102,6 +111,7 @@ This feature is for extracting assets from existing Bundle files for modificatio
 Supported asset types: `Texture2D` (`.png`), `TextAsset`(`.skel`、`.atlas`)
 
 ### 资源打包工具 (Asset Packer)
+
 1. Drag and drop or browse to select the folder containing assets to be packed
     - Supported file types: `.png` (textures), `.skel`, `.atlas` (Spine animation files)
     - Ensure asset filenames match the asset names in the target Bundle file
@@ -112,7 +122,9 @@ Supported asset types: `Texture2D` (`.png`), `TextAsset`(`.skel`、`.atlas`)
 This feature is for creating new Mods, such as quickly packaging modified assets into Bundle files.
 
 #### Example
+
 Assume you are creating a mod for character `CH0808`, and you have extracted the related illustration assets to a `texture` folder using the "Asset Extractor" feature. This directory should contain the following files:
+
 - CH0808_spr.png
 - CH0808_spr.atlas
 - CH0808_spr.skel
@@ -124,6 +136,7 @@ Drag the `texture` folder to the first input box of the interface, and drag the 
 This will replace the assets with the same name in the target Bundle with the `*.png`, `*.skel`, and `*.atlas` files from the `texture` folder.
 
 ### JP/GL 转换 (JP/GL Conversion)
+
 Conversion between JP server format (two separate Bundle files) and Global server format (one Bundle file) for a mod that modified the Spine assets.
 
 1. Select the conversion direction at the top of the page (JP -> Global or Global -> JP)
@@ -166,6 +179,7 @@ python maincli.py env
 Used to update or port Mods, migrating assets from an old Mod to new game files. This is the core function.
 
 **Main Arguments:**
+
 - `--old`: (Required) Path to the old Mod file.
 - `--resource-dir`: Game resource directory. The program will automatically search for matching new version files in this directory.
 - `--target`: Manually specify the path to the new game file. If `--resource-dir` is also provided, this option takes precedence.
@@ -174,6 +188,7 @@ Used to update or port Mods, migrating assets from an old Mod to new game files.
 - `--spine-converter-path`: (Optional) Full path to `SpineSkeletonDataConverter.exe`.
 
 **Examples:**
+
 ```bash
 # Example 1: Automatic search and update
 python maincli.py update --old "path/to/old_mod.bundle" --resource-dir "path/to/GameData/Windows"
@@ -187,11 +202,13 @@ python maincli.py update --old "old_mod.bundle" --target "new_game_file.bundle" 
 Pack assets (e.g., `.png`, `.skel`, `.atlas`) from a folder into a specified Bundle file, replacing assets with the same name.
 
 **Main Arguments:**
+
 - `--bundle`: (Required) Path to the target Bundle file to be modified.
 - `--folder`: (Required) Path to the folder containing new assets.
 - `--output-dir`: Output directory for generated files (default: `./output/`).
 
 **Examples:**
+
 ```bash
 # Pack all assets from asset_folder into target_game_file.bundle
 python maincli.py pack --bundle "target_game_file.bundle" --folder "./asset_folder" --output-dir "./packed_mods"
@@ -202,12 +219,14 @@ python maincli.py pack --bundle "target_game_file.bundle" --folder "./asset_fold
 Correct the CRC checksum for modified Bundle files to match the original files.
 
 **Main Arguments:**
+
 - `--modified`: (Required) Path to the modified Mod file.
 - `--resource-dir`: Game resource directory, used to automatically find the corresponding original file.
 - `--original`: Manually specify the original file path to extract the correct CRC value.
 - `--check-only`: (Optional) Only check and compare CRC values without performing any modifications.
 
 **Examples:**
+
 ```bash
 # Example 1: Automatically find original file and fix CRC
 python maincli.py crc --modified "my_mod.bundle" --resource-dir "path/to/GameData/Windows"
@@ -266,32 +285,40 @@ BA-Modding-Toolkit/
 │ 
 │ # ============= Code =============
 │ 
-├── main.pyw    # GUI program main entry point
-├── ui/         # GUI package
-│ ├── app.py        # Main application App class
-│ ├── base_tab.py   # TabFrame base class
-│ ├── components.py # UI components, themes, logging
-│ ├── dialogs.py    # Settings dialogs
-│ ├── utils.py      # UI related utility functions
-│ └── tabs/         # Feature tabs
-│   ├── mod_update_tab.py       # Mod Update tab
-│   ├── crc_tool_tab.py         # CRC Fix Tool tab
-│   ├── asset_packer_tab.py     # Asset Packer tab
-│   ├── asset_extractor_tab.py  # Asset Extractor tab
-│   └── jp_conversion_tab.py    # JP/GL Conversion tab
-├── maincli.py       # Command-line interface entry point
-├── processing.py    # Core processing logic
-├── utils.py         # Utility classes and helper functions
-├── i18n.py          # Internationalization functionality
-├── locales/         # Language files
-├── config.toml      # Local configuration file (automatically generated)
+├── src/ba_modding_toolkit/
+│ ├── __init__.py
+│ ├── __main__.py    # Entry point
+│ ├── core.py        # Core processing logic
+│ ├── i18n.py        # Internationalization functionality
+│ ├── utils.py       # Utility classes and helper functions
+│ ├── cli/           # CLI package
+│ │ ├── __init__.py
+│ │ └── main.py      # CLI entry point
+│ ├── gui/           # GUI package
+│ │ ├── __init__.py
+│ │ ├── main.py          # GUI program main entry point
+│ │ ├── app.py           # Main application App class
+│ │ ├── base_tab.py      # TabFrame base class
+│ │ ├── components.py    # UI components, themes, logging
+│ │ ├── dialogs.py       # Settings dialogs
+│ │ ├── utils.py         # UI related utility functions
+│ │ └── tabs/            # Feature tabs
+│ │   ├── __init__.py
+│ │   ├── mod_update_tab.py       # Mod Update tab
+│ │   ├── crc_tool_tab.py         # CRC Fix Tool tab
+│ │   ├── asset_packer_tab.py     # Asset Packer tab
+│ │   ├── asset_extractor_tab.py  # Asset Extractor tab
+│ │   └── jp_conversion_tab.py    # JP/GL Conversion tab
+│ ├── assets/         # Project assets
+│ └── locales/        # Language files
+├── config.toml       # Local configuration file (automatically generated)
 │ 
 │ # ============= Misc. =============
 │ 
 ├── requirements.txt # Python dependency list (for legacy installation)
 ├── pyproject.toml   # Python project configuration file
 ├── LICENSE          # Project license file
-├── assets/          # Project asset folder
+├── docs/            # Project documentation folder
 │ └── help/              # Images in help documentation
 ├── README_zh-CN.md  # Project documentation (Chinese)
 └── README.md        # Project documentation (this file)
@@ -304,9 +331,10 @@ BA-Modding-Toolkit/
 - [afiseleo](https://github.com/fiseleo): Helping with the CLI version.
 - [com55](https://github.com/com55): Assisting with Github workflow.
 - [wang606](https://github.com/wang606): Spine version conversion feature based on [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) project.
-    - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit. 
+  - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit.
 
 ### Third-Party Libraries
+
 This project uses the following excellent 3rd-party libraries:
 
 - [UnityPy](https://github.com/K0lb3/UnityPy)（MIT License）: Core library for parsing and manipulating Unity Bundle files
@@ -317,12 +345,15 @@ This project uses the following excellent 3rd-party libraries:
 - [SpineAtlas](https://github.com/Rin-Wood/SpineAtlas)（MIT License）: Spine animation file atlas parser and editor
 
 ### See Also
+
 Some useful related repositories:
+
 - [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：Search for character names and internal file IDs
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
 - [SpineViewer](https://github.com/ww-rm/SpineViewer)：Preview Spine animation files
 
 ### Disclaimer
+
 <sub>
 BA Modding Toolkit is a personal project by Agent-0808 and is not affiliated with, endorsed by, or connected to NEXON Games Co., Ltd., NEXON Korea Corp., Yostar, Inc., or any of their subsidiaries. All game assets, characters, music, and related intellectual property are the trademarks or registered trademarks of their respective owners. They are used in this tool for educational and interoperability purposes only (fair use). Please respect the Terms of Service of the official game. Do not use this tool for cheating or malicious activities.
 </sub>
