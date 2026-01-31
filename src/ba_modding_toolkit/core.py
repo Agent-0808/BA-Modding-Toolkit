@@ -694,95 +694,85 @@ def process_asset_extraction(
                 return True, msg
 
             # --- 阶段 2: 处理并移动文件 ---
-            if not downgrade_enabled and atlas_export_mode == "atlas":
-                log(f'\n--- {t("log.section.move_to_output")} ---')
-                for item in temp_extraction_dir.iterdir():
-                    shutil.copy2(item, output_dir / item.name)
-                    log(f"  - {item.name}")
-            else:
+            # 使用临时目录存储降级后的文件
+            with tempfile.TemporaryDirectory() as temp_dir_b:
+                temp_output_dir = Path(temp_dir_b)
+                
+                # 阶段 2a: 降级处理（如果需要）
                 if downgrade_enabled:
                     log(f'\n--- {t("log.section.process_spine_downgrade")} ---')
-                if atlas_export_mode in ("unpack", "both"):
-                    log(f'\n--- {t("log.section.process_atlas_unpack")} ---')
-                
-                with tempfile.TemporaryDirectory() as temp_dir_b:
-                    temp_output_dir = Path(temp_dir_b)
                     
                     # 处理所有 skel 文件
-                    if downgrade_enabled:
-                        skel_files = list(temp_extraction_dir.glob("*.skel"))
-                        for skel_path in skel_files:
-                            log(f"  > {t('log.extractor.processing_file', name=skel_path.name)}")
-                            SpineUtils.process_skel_downgrade(
-                                skel_path,
-                                temp_output_dir,
-                                spine_options.converter_path,
-                                spine_options.target_version,
-                                log
-                            )
+                    skel_files = list(temp_extraction_dir.glob("*.skel"))
+                    for skel_path in skel_files:
+                        log(f"  > {t('log.extractor.processing_file', name=skel_path.name)}")
+                        SpineUtils.process_skel_downgrade(
+                            skel_path,
+                            temp_output_dir,
+                            spine_options.converter_path,
+                            spine_options.target_version,
+                            log
+                        )
                     
                     # 处理所有 atlas 文件
                     atlas_files = list(temp_extraction_dir.glob("*.atlas"))
                     for atlas_path in atlas_files:
-                        log(f"  > {t("log.extractor.processing_file", name=atlas_path.name)}")
-                        
-                        if atlas_export_mode == "unpack":
-                            # 如果启用了降级，先降级再解包
-                            if downgrade_enabled:
-                                SpineUtils.process_atlas_downgrade(
-                                    atlas_path,
-                                    temp_output_dir,
-                                    log
-                                )
-                                # 使用降级后的 atlas 文件进行解包
-                                downgraded_atlas_path = temp_output_dir / atlas_path.name
-                                if downgraded_atlas_path.exists():
-                                    SpineUtils.unpack_atlas_frames(
-                                        downgraded_atlas_path,
-                                        output_dir,
-                                        log
-                                    )
-                            else:
-                                SpineUtils.unpack_atlas_frames(
-                                    atlas_path,
-                                    output_dir,
-                                    log
-                                )
-                        elif atlas_export_mode == "both":
-                            SpineUtils.process_atlas_downgrade(
-                                atlas_path,
-                                temp_output_dir,
-                                log
-                            )
-                            # 使用降级后的 atlas 文件进行解包
-                            downgraded_atlas_path = temp_output_dir / atlas_path.name
-                            if downgraded_atlas_path.exists():
-                                SpineUtils.unpack_atlas_frames(
-                                    downgraded_atlas_path,
-                                    output_dir,
-                                    log
-                                )
-                        else:
-                            SpineUtils.process_atlas_downgrade(
-                                atlas_path,
-                                temp_output_dir,
-                                log
-                            )
-                    
-                    # 复制降级后的文件到最终输出目录
-                    if downgrade_enabled or atlas_export_mode == "atlas":
-                        log(f'\n--- {t("log.section.copy_converted_files")} ---')
-                        for item in temp_output_dir.iterdir():
-                            shutil.copy2(item, output_dir / item.name)
-                            log(f"  - {item.name}")
+                        log(f"  > {t('log.extractor.processing_file', name=atlas_path.name)}")
+                        SpineUtils.process_atlas_downgrade(
+                            atlas_path,
+                            temp_output_dir,
+                            log
+                        )
                 
-                # --- 阶段 3: 复制剩余的独立文件（跳过已存在的） ---
-                log(f'\n--- {t("log.section.copy_standalone_files")} ---')
-                for item in temp_extraction_dir.iterdir():
-                    dest = output_dir / item.name
-                    if not dest.exists():
-                        shutil.copy2(item, dest)
+                # 阶段 2b: 解包处理（如果需要）
+                if atlas_export_mode in ("unpack", "both"):
+                    log(f'\n--- {t("log.section.process_atlas_unpack")} ---')
+                    
+                    atlas_files = list(temp_extraction_dir.glob("*.atlas"))
+                    for atlas_path in atlas_files:
+                        # 确定使用哪个文件进行解包
+                        if downgrade_enabled:
+                            # 使用降级后的文件
+                            source_atlas_path = temp_output_dir / atlas_path.name
+                        else:
+                            # 使用原始文件
+                            source_atlas_path = atlas_path
+                        
+                        if source_atlas_path.exists():
+                            SpineUtils.unpack_atlas_frames(
+                                source_atlas_path,
+                                output_dir,
+                                log
+                            )
+                
+                # 阶段 2c: 复制文件到输出目录
+                if downgrade_enabled:
+                    log(f'\n--- {t("log.section.copy_converted_files")} ---')
+                    for item in temp_output_dir.iterdir():
+                        # unpack 模式下跳过 atlas 和 png 文件
+                        if atlas_export_mode == "unpack" and item.suffix.lower() in ('.atlas', '.png'):
+                            continue
+                        shutil.copy2(item, output_dir / item.name)
                         log(f"  - {item.name}")
+                elif atlas_export_mode == "atlas":
+                    # 未启用降级且为 atlas 模式，直接复制原始文件
+                    log(f'\n--- {t("log.section.move_to_output")} ---')
+                    for item in temp_extraction_dir.iterdir():
+                        shutil.copy2(item, output_dir / item.name)
+                        log(f"  - {item.name}")
+                
+                # 阶段 3: 复制剩余的独立文件（跳过已存在的）
+                # 只在需要时执行
+                if downgrade_enabled or atlas_export_mode != "atlas":
+                    log(f'\n--- {t("log.section.copy_standalone_files")} ---')
+                    for item in temp_extraction_dir.iterdir():
+                        # unpack 模式下跳过 atlas 和 png 文件
+                        if atlas_export_mode == "unpack" and item.suffix.lower() in ('.atlas', '.png'):
+                            continue
+                        dest = output_dir / item.name
+                        if not dest.exists():
+                            shutil.copy2(item, dest)
+                            log(f"  - {item.name}")
 
 
         total_files_extracted = len(list(output_dir.iterdir()))

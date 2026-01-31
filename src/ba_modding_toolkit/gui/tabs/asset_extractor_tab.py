@@ -41,14 +41,6 @@ class AssetExtractorTab(TabFrame):
         options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(5,0))
         
-        # Atlas 导出模式
-        SettingRow.create_combobox_row(
-            options_frame,
-            label=t("option.atlas_export_mode"),
-            text_var=self.app.atlas_export_mode_var,
-            values=["atlas", "unpack", "both"],
-            tooltip=t("option.atlas_export_mode_info")
-        )
         
         # Spine 降级选项
         SettingRow.create_switch(
@@ -66,6 +58,15 @@ class AssetExtractorTab(TabFrame):
             tooltip=t("option.spine_downgrade_target_version_info")
         )
         
+        # Atlas 导出模式
+        SettingRow.create_radiobutton_row(
+            options_frame,
+            label=t("option.atlas_export_mode"),
+            text_var=self.app.atlas_export_mode_var,
+            values=["atlas", "unpack", "both"],
+            tooltip=t("option.atlas_export_mode_info")
+        )
+
         # 操作按钮
         action_frame = tb.Frame(self)
         action_frame.pack(fill=tk.X, pady=10)
