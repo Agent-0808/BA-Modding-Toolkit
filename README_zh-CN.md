@@ -52,20 +52,6 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 点击主界面上方的**设置**按钮打开设置窗口，配置游戏根目录和输出目录。
 - 点击"保存"按钮保存配置，程序会将用户配置保存到 `config.toml` 文件中，下次启动时会自动恢复之前的设置。
 
-#### Spine 转换器（可选扩展功能）
-
-（可选）使用第三方程序，将一些较老的 Mod 中使用的 Spine 3.8 格式`.skel`文件转换为当前游戏版本支持的 4.2 格式。
-
-- 请自行下载第三方 Spine 转换器程序，BAMT 仅提供调用程序转换功能，不包含该程序本体。
-- 下载地址：[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
-- 在设置界面配置`SpineSkeletonDataConverter.exe`程序的路径，并勾选"启用 Spine 转换"选项。
-
-##### 注意
-
-- 这是一个实验性功能，无法保证所有 mod 都能成功升级，仅适合高级用户尝试。
-- 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
-  - 如果您想要更新的Mod制作于2025年及之后，则其已经使用了Spine 4.2格式，无需配置该选项也可正常更新。
-
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-zhcn.png)
 
 ### Mod 更新
@@ -148,6 +134,27 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 4. 点击"开始转换"按钮
    - JP -> Global：程序会从日服的 Bundle 文件列表中提取资源并合并到国际服版本的文件中
    - Global -> JP：程序会将国际服格式的 Bundle 拆分到日服的 Bundle 文件列表中
+
+## 扩展功能
+
+本节中提到的扩展功能都是可选性质的，您可以根据需要选择是否启用。
+
+以下的扩展功能都是独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 仓库不会包含、分发这些程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
+
+### Spine 转换器
+
+**[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter)**
+
+本程序提供了调用Skel转换工具的接口。基于 SpineSkeletonDataConverter 项目，可以将一些较老的 Mod 中使用的 Spine 3 格式`.skel`文件转换为当前游戏版本支持的 Spine 4 格式。
+
+- 请自行下载对应程序，BAMT 仅提供调用程序转换功能，不包含该程序本体。
+- 在设置界面配置`SpineSkeletonDataConverter.exe`程序的路径，并勾选"启用 Spine 转换"选项。
+
+#### 提醒
+
+- 这是一个实验性功能，无法保证所有 mod 都能成功升级。转换前后可能并不完全一致。
+- 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
+- 如果您想要更新的Mod制作于 2025 年及之后，则其已经使用了 Spine 4 格式，无需配置该选项也可正常更新。
 
 ## 命令行接口 (CLI)
 
@@ -331,8 +338,6 @@ BA-Modding-Toolkit/
 - [kalina](https://github.com/kalinaowo): 创建了 `CRCUtils` 类的原型。
 - [afiseleo](https://github.com/fiseleo): 协助开发命令行版本。
 - [com55](https://github.com/com55): 指导了 Github 工作流文件编写。
-- [wang606](https://github.com/wang606): Spine 版本转换功能基于 [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) 项目。
-  - SpineSkeletonDataConverter 是一个独立的第三方程序，当下载并使用时请遵守其协议。BA Modding Toolkit 不会包含、分发该程序的任何代码或文件，也不负责其使用过程中可能出现的任何问题。
 
 ### 第三方库
 
