@@ -54,20 +54,6 @@ The program contains multiple functional tabs:
 - Click the **Settings** button at the top of the main interface to open the settings window, configure the game root directory and output directory.
 - Click the "Save" button to save the configuration, which will be automatically restored upon next startup.
 
-#### Spine Converter (Optional Extension Feature)
-
-(Optional) Uses a third-party program to convert Spine 3.8 format `.skel` files from some old mods to the currently supported 4.2 format.
-
-- You need to download the third-party Spine converter program yourself. BAMT only calls the program to convert Spine files, not provides the program itself.
-- Download URL: [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter/releases)
-- Configure the path to `SpineSkeletonDataConverter.exe` in the settings interface, and check the "启用 Spine 转换" (Enable Spine Conversion) option.
-
-##### Notes
-
-- This is an experimental feature that cannot guarantee all mods can be successfully upgraded, suitable only for advanced users.
-- Even without configuring `SpineSkeletonDataConverter.exe`, you can still use this program normally to update mods that *use Spine files compatible with the current version (4.2.xx)*.
-  - If the mod you want to update was created in 2025 or later, it already uses Spine 4.2 format and can be updated normally without configuring this option.
-
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-en.png)
 
 ### Mod 更新 (Mod Update)
@@ -147,6 +133,27 @@ Conversion between JP server format (two separate Bundle files) and Global serve
 4. Click the "开始转换" (Start Conversion) button
    - JP -> Global: The program will extract assets from the list of JP server Bundle files and merge them into the Global server version file
    - Global -> JP: The program will split the Global server format Bundle into the list of JP server Bundle files
+
+## Extended Features
+
+The extended features mentioned in this section are optional, and you can choose whether to enable them according to your needs.
+
+The following extended features are independent third-party programs. Please comply with their licenses when downloading and using them. The BA Modding Toolkit repository does not contain or distribute any code or files of these programs, nor is it responsible for any issues that may arise during their use.
+
+### Spine Converter
+
+**[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter)**
+
+This program provides an interface to call the Skel conversion tool. Based on the SpineSkeletonDataConverter project, it can convert Spine 3 format `.skel` files used in some older Mods to the Spine 4 format supported by the current game version.
+
+- Please download the corresponding program yourself. BAMT only provides the function to call the program for conversion and does not include the program itself.
+- Configure the path of the `SpineSkeletonDataConverter.exe` program in the settings interface and check the "Enable Spine Conversion" option.
+
+#### Reminder
+
+- This is an experimental feature and cannot guarantee that all mods can be successfully upgraded. There may be inconsistencies before and after conversion.
+- Even if `SpineSkeletonDataConverter.exe` is not configured, you can still use this program normally to update Mods that *use Spine files compatible with the current version (4.2.xx)*.
+- If the Mod you want to update was made in 2025 or later, it already uses the Spine 4 format, so you can update it normally without configuring this option.
 
 ## Command Line Interface (CLI)
 
@@ -330,8 +337,6 @@ BA-Modding-Toolkit/
 - [kalina](https://github.com/kalinaowo): Creating the prototype of the `CRCUtils` class, the starting point of BAMT.
 - [afiseleo](https://github.com/fiseleo): Helping with the CLI version.
 - [com55](https://github.com/com55): Assisting with Github workflow.
-- [wang606](https://github.com/wang606): Spine version conversion feature based on [SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter) project.
-  - SpineSkeletonDataConverter is a standalone third-party program, please follow its License when downloading and using it. SpineSkeletonDataConverter is NOT distributed with or included in BA Modding Toolkit.
 
 ### Third-Party Libraries
 
