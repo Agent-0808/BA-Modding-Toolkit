@@ -291,6 +291,61 @@ def get_filename_prefix(filename: str, log: LogFunc = no_log) -> tuple[str | Non
 
     return search_prefix, t("message.search.prefix_extracted")
 
+def extract_core_filename(filename: str) -> str:
+    """
+    文件名核心提取函数
+    """
+
+    REMOVE_SUFFIX = [
+        r"[-_]mxdependency",  # 匹配 -mxdependency 或 _mxdependency
+        r"[-_]mxload",        # 匹配 -mxload 或 _mxload
+        r"-\d{4}-\d{2}-\d{2}" # 匹配日期格式 (如 -2024-11-18)，作为最后的保底
+    ]
+
+    FIXED_PREFIX = [
+        "assets-_mx-",
+    ]
+
+    CATEGORY = {
+        'characters', 'spinecharacters', 'spinelobbies', 
+        'npcs', 'cafe', 'obstacles', 'scenes', 
+        'character', 'uis', 'minigame', 'field'
+    }
+
+    # 切除尾部
+    cut_index = len(filename)
+    found_marker = False
+    
+    for pattern in REMOVE_SUFFIX:
+        match = re.search(pattern, filename)
+        if match:
+            if match.start() < cut_index:
+                cut_index = match.start()
+                found_marker = True
+    
+    # 如果通过标记找到了切分点，直接切断；没找到则尝试去扩展名
+    if found_marker:
+        core = filename[:cut_index]
+    else:
+        core = filename.rsplit('.', 1)[0]
+
+    # 去除固定前缀 (如 assets-_mx-)
+    for prefix in FIXED_PREFIX:
+        if core.startswith(prefix):
+            core = core[len(prefix):] # 切片去除
+            break # 假设只有一个固定前缀匹配
+            
+    # 去除分类前缀 (如 characters-...)
+    parts = core.split('-', 1)
+    if len(parts) > 1:
+        category_part = parts[0]
+        # 检查 split 出来的第一部分是否在我们的分类白名单里
+        if category_part.lower() in CATEGORY:
+            core = parts[1] # 如果是分类词，取后面部分作为 core
+    
+    core = core.strip('-_')
+    return core
+
 def find_new_bundle_path(
     old_mod_path: Path,
     game_resource_dir: Path | list[Path],
