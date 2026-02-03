@@ -4,22 +4,17 @@ import sys
 from pathlib import Path
 import logging
 import shutil
-from utils import get_environment_info
 
-# 将项目根目录添加到 sys.path，以便可以导入 processing 和 utils
-sys.path.append(str(Path(__file__).parent.absolute()))
-
-try:
-    import processing
-    from utils import CRCUtils
-except ImportError as e:
-    print(f"Error: Unable to import necessary modules: {e}")
-    print("Please ensure 'processing.py' and 'utils.py' are in the same directory as this script.\n")
-
-    # 打印环境信息，帮助用户调试
-    print(get_environment_info())
-
-    sys.exit(1)
+# 从 core 模块导入核心函数和类
+from ..core import (
+    find_new_bundle_path,
+    SaveOptions,
+    SpineOptions,
+    process_mod_update,
+    process_asset_packing
+)
+# 从 utils 模块导入工具函数
+from ..utils import get_environment_info, CRCUtils
 
 # --- 日志设置 ---
 # 创建一个简单的控制台日志记录器，代替GUI中的Logger
@@ -64,7 +59,7 @@ def handle_update(args: argparse.Namespace, logger) -> None:
             logger.log(f"❌ Error: Game resource directory '{resource_dir}' does not exist or is not a directory.")
             return
         
-        found_paths, message = processing.find_new_bundle_path(old_mod_path, resource_dir, logger.log)
+        found_paths, message = find_new_bundle_path(old_mod_path, resource_dir, logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
@@ -77,20 +72,20 @@ def handle_update(args: argparse.Namespace, logger) -> None:
     asset_types = set(args.asset_types)
     logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
 
-    save_options = processing.SaveOptions(
+    save_options = SaveOptions(
         perform_crc=not args.no_crc,
         enable_padding=args.padding,
         compression=args.compression
     )
     
-    spine_options = processing.SpineOptions(
+    spine_options = SpineOptions(
         enabled=args.enable_spine_conversion or False,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
     # 调用核心处理函数
-    success, message = processing.process_mod_update(
+    success, message = process_mod_update(
         old_mod_path=old_mod_path,
         new_bundle_path=new_bundle_path,
         output_dir=output_dir,
@@ -181,14 +176,14 @@ def handle_asset_packing(args: argparse.Namespace, logger) -> None:
         return
 
     # 创建 SaveOptions 和 SpineOptions 对象
-    save_options = processing.SaveOptions(
+    save_options = SaveOptions(
         perform_crc=not args.no_crc,
         enable_padding=False,
         compression=args.compression
     )
 
     # 调用核心处理函数
-    success, message = processing.process_asset_packing(
+    success, message = process_asset_packing(
         target_bundle_path=bundle_path,
         asset_folder=asset_folder,
         output_dir=output_dir,
@@ -253,7 +248,7 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
             return
         
         # 使用与 update 命令相同的查找函数
-        found_paths, message = processing.find_new_bundle_path(modified_path, game_dir, logger.log)
+        found_paths, message = find_new_bundle_path(modified_path, game_dir, logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
