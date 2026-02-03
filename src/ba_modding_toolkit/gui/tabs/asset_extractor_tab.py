@@ -15,10 +15,18 @@ from ..utils import handle_drop, select_file, select_directory, open_directory
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
         self.bundle_paths: list[Path] = []
-        
+
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
-        
+
+        # 文件添加回调函数
+        def on_files_added(paths: list[Path]) -> None:
+            # 只有当列表之前为空，且这是第一个文件时，才提取核心文件名
+            if len(self.bundle_paths) == len(paths) and paths:
+                first_file = paths[0]
+                core_name = core.extract_core_filename(first_file.stem)
+                self.subdir_var.set(core_name)
+
         # 目标 Bundle 文件列表
         self.bundle_listbox = FileListbox(
             self,
@@ -26,7 +34,8 @@ class AssetExtractorTab(TabFrame):
             file_list=self.bundle_paths,
             placeholder_text=t("ui.extractor.placeholder_bundle"),
             height=5,
-            logger=self.logger
+            logger=self.logger,
+            on_files_added=on_files_added
         )
         self.bundle_listbox.get_frame().pack(fill=tk.X, pady=(0, 5))
         
