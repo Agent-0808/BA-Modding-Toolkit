@@ -1,4 +1,4 @@
-# __main__.py - CLI 模块入口点
+# cli/__main__.py - CLI 模块入口点
 
 try:
     from . import main

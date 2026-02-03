@@ -242,7 +242,7 @@ class CRCUtils:
     def _reverse_byte_bits(byte):
         return int('{:08b}'.format(byte)[::-1], 2)
 
-def get_environment_info():
+def get_environment_info(ignore_tk: bool = False):
     """Collects and formats key environment details."""
     
     # --- Attempt to import libraries and get their versions ---
@@ -262,23 +262,32 @@ def get_environment_info():
         pillow_version = "Not installed"
 
     try:
-        import tkinter
-        tk_version = tkinter.Tcl().eval('info patchlevel') or "Installed"
+        if not ignore_tk:
+            import tkinter
+            tk_version = tkinter.Tcl().eval('info patchlevel') or "Installed"
+        else:
+            tk_version = "Ignored"
     except ImportError:
         tk_version = "Not installed"
     except tkinter.TclError:
         tk_version = "Unknown"
 
     try:
-        import tkinterdnd2
-        tkinterdnd2_version = tkinterdnd2.TkinterDnD.TkdndVersion or "Installed"
+        if not ignore_tk:
+            import tkinterdnd2
+            tkinterdnd2_version = tkinterdnd2.TkinterDnD.TkdndVersion or "Installed"
+        else:
+            tkinterdnd2_version = "Ignored"
     except ImportError:
         tkinterdnd2_version = "Not installed"
     except AttributeError:
         tkinterdnd2_version = "Unknown"
 
     try:
-        tb_version = importlib.metadata.version('ttkbootstrap')
+        if not ignore_tk:
+            tb_version = importlib.metadata.version('ttkbootstrap')
+        else:
+            tb_version = "Ignored"
     except ImportError:
         tb_version = "Not installed"
     except (AttributeError, importlib.metadata.PackageNotFoundError):

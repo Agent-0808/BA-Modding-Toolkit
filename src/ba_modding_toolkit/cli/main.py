@@ -1,4 +1,4 @@
-# maincli.py
+# cli/main.py
 import argparse
 import sys
 from pathlib import Path
@@ -334,7 +334,7 @@ Examples:
 
 def handle_env(args: argparse.Namespace, logger) -> None:
     """处理 'env' 命令，打印环境信息。"""
-    logger.log(get_environment_info())
+    logger.log(get_environment_info(ignore_tk=True))
 
 def setup_env_parser(subparsers: argparse._SubParsersAction) -> None:
     """为 'env' 命令配置参数解析器。"""
