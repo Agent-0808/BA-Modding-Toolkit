@@ -92,7 +92,7 @@ jobs:
             src/ba_modding_toolkit/assets=ba_modding_toolkit/assets
             src/ba_modding_toolkit/locales=ba_modding_toolkit/locales
           # CLI 版本需要控制台模式
-          windows-console-mode: enable
+          windows-console-mode: force
           output-dir: build
           output-file: "BA-Modding-Toolkit-CLI.exe"
           assume-yes-for-downloads: true
