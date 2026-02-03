@@ -1,0 +1,129 @@
+name: build CLI executable file
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger when push tag start with v (etc. v0.1.0)
+  workflow_dispatch: # Manual
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-cli:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+          cache: 'pip'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Dependencies
+        run: uv export --no-hashes -o requirements.txt && pip install -r requirements.txt
+
+      # 从 pyproject.toml 提取版本号并生成 _version.py 文件
+      - name: Extract Version and Generate Meta
+        id: get_version
+        shell: python
+        run: |
+          import os
+          import tomllib
+
+          # 读取 pyproject.toml
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+              version = data["project"]["version"]
+
+          print(f"Detected version: {version}")
+
+          # 生成 _version.py 供 Python 代码引用
+          with open("src/ba_modding_toolkit/_version.py", "w") as f:
+              f.write(f'__version__ = "{version}"\n')
+          
+          # 将版本号设置到 GitHub Action 的输出变量
+          # 通过 ${{ steps.get_version.outputs.version }} 引用
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+              print(f"version={version}", file=fh)
+
+      - name: Build CLI Executable with Nuitka
+        uses: Nuitka/Nuitka-Action@main
+        with:
+          nuitka-version: main
+          script-name: src/ba_modding_toolkit/cli/__main__.py
+          mode: onefile
+
+          # 元数据
+          windows-icon-from-ico: src/ba_modding_toolkit/assets/eligma.ico
+          product-name: "BA Modding Toolkit CLI"
+          product-version: ${{ steps.get_version.outputs.version }}
+          file-version: ${{ steps.get_version.outputs.version }}
+          file-description: "BA Modding Toolkit - Command Line Interface"
+          company-name: "Agent-0808"
+          copyright: "Copyright ©2025-2026 Agent-0808. Licensed under GPLv3."
+          trademarks: "Blue Archive ©NEXON Games Co., Ltd. & Yostar, Inc. This tool is unofficial and not endorsed by them."
+
+          low-memory: true
+          # 经测试使用mingw64可以避免堆内存问题
+          mingw64: true
+          # CLI 版本不需要 tk-inter 插件
+          # enable-plugins: tk-inter
+          # 包含代码依赖包
+          include-package: |
+            ba_modding_toolkit
+            UnityPy.resources
+          # 包含依赖包的数据文件
+          include-package-data: |
+            ba_modding_toolkit
+            UnityPy
+            archspec
+          # 包含资源目录
+          include-data-dir: |
+            src/ba_modding_toolkit/assets=ba_modding_toolkit/assets
+            src/ba_modding_toolkit/locales=ba_modding_toolkit/locales
+          # CLI 版本需要控制台模式
+          windows-console-mode: enable
+          output-dir: build
+          output-file: "BA-Modding-Toolkit-CLI.exe"
+          assume-yes-for-downloads: true
+
+      # 整理发布文件夹
+      - name: Prepare Release Directory
+        run: |
+          New-Item -ItemType Directory -Path "publish-cli" -Force
+          Copy-Item -Path "build/BA-Modding-Toolkit-CLI.exe" -Destination "publish-cli/"
+          Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish-cli/locales" -Recurse
+        shell: powershell
+
+      # 上传 Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BA-Modding-Toolkit-CLI-Windows-Build
+          path: publish-cli/
+
+      # 打包成 Zip
+      - name: Zip Release Asset (When Trigger With Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag_name = "${{ github.ref_name }}"
+          cd publish-cli
+          Compress-Archive -Path * -DestinationPath "../BA-Modding-Toolkit-CLI-$tag_name.zip"
+        shell: powershell
+
+      # 上传 Zip
+      - name: Upload Release Asset (When Trigger With Tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: BA-Modding-Toolkit-CLI-${{ github.ref_name }}.zip
