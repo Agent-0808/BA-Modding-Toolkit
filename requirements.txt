@@ -194,9 +194,9 @@ pyfmodex==0.7.2 \
     --hash=sha256:1c42112b788e80ee7b4b57ae25bbbc0a98eb1e32a8e7c9e1246698cdf72efa9d \
     --hash=sha256:d9ad3d7841a1c4cf4733cbedc69389f84c58a640d23d0ffa083ad6080f35103c
     # via unitypy
-spineatlas==1.0.12 \
-    --hash=sha256:91b7ec2c3f673e27e167cae77d411c068daef295686baa37aca926f9a394947d \
-    --hash=sha256:a4dc8efa1a009612ed44b143f04028aab8f4291ef43e5df8bf83993846b84ff2
+spineatlas==1.0.13 \
+    --hash=sha256:c5f105f7a546751d3789e0561cd7fd4b8abb4de426a3289758de4cc36366bf2a \
+    --hash=sha256:f672ad893e7ff8c339babcde516bc3b79961545d5ae3fc8123c481cd3ccbafbd
     # via ba-modding-toolkit
 texture2ddecoder==1.0.5 \
     --hash=sha256:073128f915c5ed54d34230c33709b89a88e11b796e57f9d5c734c640b265551d \

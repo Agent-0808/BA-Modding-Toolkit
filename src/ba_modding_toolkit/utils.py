@@ -42,7 +42,7 @@ def get_BA_path() -> str | None:
 def get_version() -> str:
     """从 pyproject.toml 读取版本号"""
     try:
-        from _version import __version__
+        from ba_modding_toolkit._version import __version__
         print(__version__)
     except ImportError:
         # 如果在本地开发环境没有这个文件，回退到读取 pyproject.toml

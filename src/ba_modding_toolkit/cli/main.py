@@ -132,7 +132,7 @@ Examples:
     # --- 资源与保存参数 ---
     saving_group = update_parser.add_argument_group('Asset and Saving Options')
     saving_group.add_argument('--no-crc', action='store_true', help='Disable CRC fix function.')
-    saving_group.add_argument('--padding', action='store_true', help='Add padding (private goods).')
+    saving_group.add_argument('--padding', action='store_true', help='Add padding.')
     saving_group.add_argument(
         '--asset-types', 
         nargs='+', 
@@ -182,13 +182,19 @@ def handle_asset_packing(args: argparse.Namespace, logger) -> None:
         compression=args.compression
     )
 
+    spine_options = SpineOptions(
+        enabled=args.enable_spine_conversion or False,
+        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        target_version=args.target_spine_version or None,
+    )
+
     # 调用核心处理函数
     success, message = process_asset_packing(
         target_bundle_path=bundle_path,
         asset_folder=asset_folder,
         output_dir=output_dir,
         save_options=save_options,
-        spine_options=None,
+        spine_options=spine_options,
         log=logger.log
     )
 
@@ -219,6 +225,13 @@ Example:
         choices=['lzma', 'lz4', 'original', 'none'],
         help='Compression method for Bundle files (Default: lzma). Options: lzma, lz4, original (keep original), none (no compression).'
     )
+
+    # --- Spine 转换参数 ---
+    spine_group = pack_parser.add_argument_group('Spine Conversion Options')
+    spine_group.add_argument('--enable-spine-conversion', action='store_true', help='Enable Spine skeleton conversion.')
+    spine_group.add_argument('--spine-converter-path', help='Full path to SpineSkeletonDataConverter.exe.')
+    spine_group.add_argument('--target-spine-version', default='4.2.33', help='Target Spine version (e.g., "4.2.33"). (Default: %(default)s)')
+
     pack_parser.set_defaults(func=handle_asset_packing)
 
 # ====== CRC Tool ======
