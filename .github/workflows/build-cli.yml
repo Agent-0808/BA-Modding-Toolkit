@@ -94,22 +94,21 @@ jobs:
           # CLI 版本需要控制台模式
           windows-console-mode: force
           output-dir: build
-          output-file: "BA-Modding-Toolkit-CLI.exe"
+          output-file: "BAMT-CLI.exe"
           assume-yes-for-downloads: true
 
       # 整理发布文件夹
       - name: Prepare Release Directory
         run: |
           New-Item -ItemType Directory -Path "publish-cli" -Force
-          Copy-Item -Path "build/BA-Modding-Toolkit-CLI.exe" -Destination "publish-cli/"
-          Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish-cli/locales" -Recurse
+          Copy-Item -Path "build/BAMT-CLI.exe" -Destination "publish-cli/"-Recurse
         shell: powershell
 
       # 上传 Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BA-Modding-Toolkit-CLI-Windows-Build
+          name: BAMT-CLI-Windows-Build
           path: publish-cli/
 
       # 打包成 Zip
@@ -118,7 +117,7 @@ jobs:
         run: |
           $tag_name = "${{ github.ref_name }}"
           cd publish-cli
-          Compress-Archive -Path * -DestinationPath "../BA-Modding-Toolkit-CLI-$tag_name.zip"
+          Compress-Archive -Path * -DestinationPath "../BAMT-CLI-$tag_name.zip"
         shell: powershell
 
       # 上传 Zip
@@ -126,4 +125,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
         with:
-          files: BA-Modding-Toolkit-CLI-${{ github.ref_name }}.zip
+          files: BAMT-CLI-${{ github.ref_name }}.zip
