@@ -1,9 +1,12 @@
 # cli/main.py
-import argparse
 import sys
 from pathlib import Path
 import logging
 import shutil
+import argparse
+from typing import Literal
+
+from tap import Tap
 
 # 从 core 模块导入核心函数和类
 from ..core import (
@@ -16,8 +19,8 @@ from ..core import (
 # 从 utils 模块导入工具函数
 from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs
 
+
 # --- 日志设置 ---
-# 创建一个简单的控制台日志记录器，代替GUI中的Logger
 def setup_cli_logger():
     """配置一个简单的日志记录器，将日志输出到控制台。"""
     log = logging.getLogger('cli')
@@ -27,25 +30,146 @@ def setup_cli_logger():
         formatter = logging.Formatter('%(message)s')
         handler.setFormatter(formatter)
         log.addHandler(handler)
-    
+
     # 模拟GUI Logger的接口
     class CLILogger:
         def log(self, message):
             log.info(message)
-            
+
     return CLILogger()
+
+
+# --- Tap 参数类定义 ---
+class BaseTap(Tap):
+    """基础Tap类，提供共享配置。"""
+
+    def configure(self) -> None:
+        self.description = "BA Modding Toolkit - Command Line Interface."
+        self.formatter_class = argparse.RawTextHelpFormatter
+        self._underscores_to_dashes = True
+class UpdateTap(Tap):
+    """Update命令的参数解析器 - 用于更新或移植Mod。"""
+
+    # 基本参数
+    old: str  # Path to the old Mod bundle file.
+    output_dir: str = './output/'  # Directory to save the generated Mod file (Default: ./output/).
+
+    # 目标文件定位参数
+    target: str | None = None  # Path to the new game resource bundle file (Overrides --resource-dir if provided).
+    resource_dir: str | None = None  # Path to the game resource directory, used to automatically find the matching new bundle file.
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    padding: bool = False  # Add padding.
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+
+    # Spine转换参数
+    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
+    spine_converter_path: str | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
+
+    def configure(self) -> None:
+        self.description = '''Update or port a Mod, migrating assets from an old Mod to a specific Bundle.
+
+Examples:
+  # Automatically search for new file and update
+  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --resource-dir "C:\\path\\to\\GameData\\Windows"
+
+  # Manually specify new file and update
+  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
+
+  # Enable Spine skeleton conversion
+  python maincli.py update --old "old.bundle" --target "new.bundle" --output-dir "output" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.33"
+'''
+        self.formatter_class = argparse.RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+class PackTap(Tap):
+    """Pack命令的参数解析器 - 用于资源打包。"""
+
+    # 基本参数
+    bundle: str  # Path to the target bundle file to modify.
+    folder: str  # Path to the folder containing asset files.
+    output_dir: str = './output/'  # Directory to save the modified bundle file.
+
+    # 保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+
+    # Spine转换参数
+    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
+    spine_converter_path: str | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    target_spine_version: str = '4.2.33'  # Target Spine version.
+
+    def configure(self) -> None:
+        self.description = '''Pack contents from an asset folder into a target bundle file.
+
+Example:
+  python maincli.py pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
+'''
+        self.formatter_class = argparse.RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
+class CrcTap(Tap):
+    """CRC命令的参数解析器 - 用于CRC修正工具。"""
+
+    # 基本参数
+    modified: str  # Path to the modified file (to be fixed or calculated).
+
+    # 原始文件定位参数
+    original: str | None = None  # Path to the original file (provides target CRC value).
+    resource_dir: str | None = None  # Path to the game resource directory for auto-search.
+
+    # 操作选项
+    check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
+    no_backup: bool = False  # Do not create a backup (.bak) before fixing the file.
+
+    def configure(self) -> None:
+        self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
+
+Examples:
+  # Fix CRC of my_mod.bundle to match original.bundle (Manual)
+  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
+
+  # Automatically search original file in game directory and fix CRC
+  python maincli.py crc --modified "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
+
+  # Check if CRC matches only, do not modify file
+  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
+
+  # Calculate CRC for a single file
+  python maincli.py crc --modified "my_mod.bundle" --check-only
+'''
+        self.formatter_class = argparse.RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
+class EnvTap(Tap):
+    """Env命令的参数解析器 - 用于显示环境信息。"""
+
+    def configure(self) -> None:
+        self.description = 'Display system information and library versions of the current environment.'
+
+class MainTap(BaseTap):
+    """主Tap类，包含所有子命令。"""
+
+    def configure(self) -> None:
+        super().configure()
+        self.add_subparsers(dest='command', help='Available commands')
+        self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
+        self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
+        self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
+        self.add_subparser('env', EnvTap, help='Display system information and library versions.')
 
 # --- 命令处理函数 ---
 
-# ====== Mod Updating ======
-
-def handle_update(args: argparse.Namespace, logger) -> None:
+def handle_update(args: UpdateTap, logger) -> None:
     """处理 'update' 命令的逻辑。"""
     logger.log("--- Start Mod Update ---")
 
     old_mod_path = Path(args.old)
     output_dir = Path(args.output_dir)
-    
+
     # 确保输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -61,13 +185,13 @@ def handle_update(args: argparse.Namespace, logger) -> None:
         if not resource_path.is_dir():
             logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
             return
-        
+
         found_paths, message = find_new_bundle_path(old_mod_path, get_search_resource_dirs(resource_path), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
         new_bundle_path = found_paths[0]
-    
+
     if not new_bundle_path:
         logger.log("❌ Error: Must provide '--target' or '--resource-dir' to determine the target resource file.")
         return
@@ -80,9 +204,9 @@ def handle_update(args: argparse.Namespace, logger) -> None:
         enable_padding=args.padding,
         compression=args.compression
     )
-    
+
     spine_options = SpineOptions(
-        enabled=args.enable_spine_conversion or False,
+        enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
     )
@@ -104,66 +228,11 @@ def handle_update(args: argparse.Namespace, logger) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
-def setup_update_parser(subparsers: argparse._SubParsersAction) -> None:
-    """为 'update' 命令配置参数解析器。"""
-    update_parser = subparsers.add_parser(
-        'update', 
-        help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.',
-        formatter_class=argparse.RawTextHelpFormatter,
-        description='''
-Examples:
-  # Automatically search for new file and update
-  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --resource-dir "C:\\path\\to\\GameData\\Windows"
 
-  # Manually specify new file and update
-  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
-
-  # Enable Spine skeleton conversion
-  python maincli.py update --old "old.bundle" --target "new.bundle" --output-dir "output" \
---enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.33"
-'''
-    )
-    # --- 基本参数 ---
-    update_parser.add_argument('--old', required=True, help='Path to the old Mod bundle file.')
-    update_parser.add_argument('--output-dir', default='./output/', help='Directory to save the generated Mod file (Default: ./output/).')
-    
-    # --- 目标文件定位参数 ---
-    target_group = update_parser.add_argument_group('Target Bundle Options')
-    target_group.add_argument('--target', help='Path to the new game resource bundle file (Overrides --resource-dir if provided).')
-    target_group.add_argument('--resource-dir', default=get_BA_path(), help='Path to the game resource directory, used to automatically find the matching new bundle file.')
-
-    # --- 资源与保存参数 ---
-    saving_group = update_parser.add_argument_group('Asset and Saving Options')
-    saving_group.add_argument('--no-crc', action='store_true', help='Disable CRC fix function.')
-    saving_group.add_argument('--padding', action='store_true', help='Add padding.')
-    saving_group.add_argument(
-        '--asset-types', 
-        nargs='+', 
-        default=['Texture2D', 'TextAsset', 'Mesh'], 
-        choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'],
-        help='List of asset types to replace. Options: Texture2D, TextAsset, Mesh, ALL. (Default: %(default)s)'
-    )
-    saving_group.add_argument(
-        '--compression', 
-        default='lzma', 
-        choices=['lzma', 'lz4', 'original', 'none'],
-        help='Compression method for Bundle files (Default: lzma). Options: lzma, lz4, original (keep original), none (no compression).'
-    )
-
-    # --- Spine 转换参数 ---
-    spine_group = update_parser.add_argument_group('Spine Conversion Options')
-    spine_group.add_argument('--enable-spine-conversion', action='store_true', help='Enable Spine skeleton conversion.')
-    spine_group.add_argument('--spine-converter-path', help='Full path to SpineSkeletonDataConverter.exe.')
-    spine_group.add_argument('--target-spine-version', default='4.2.33', help='Target Spine version (e.g., "4.2.33"). (Default: %(default)s)')
-
-    update_parser.set_defaults(func=handle_update)
-
-# ====== Asset Packer ======
-
-def handle_asset_packing(args: argparse.Namespace, logger) -> None:
+def handle_asset_packing(args: PackTap, logger) -> None:
     """处理 'pack' 命令的逻辑。"""
     logger.log("--- Start Asset Packing ---")
-    
+
     bundle_path = Path(args.bundle)
     asset_folder = Path(args.folder)
     output_dir = Path(args.output_dir)
@@ -186,7 +255,7 @@ def handle_asset_packing(args: argparse.Namespace, logger) -> None:
     )
 
     spine_options = SpineOptions(
-        enabled=args.enable_spine_conversion or False,
+        enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
     )
@@ -207,39 +276,8 @@ def handle_asset_packing(args: argparse.Namespace, logger) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
-def setup_asset_packer_parser(subparsers: argparse._SubParsersAction) -> None:
-    """为 'pack' 命令配置参数解析器。"""
-    pack_parser = subparsers.add_parser(
-        'pack', 
-        help='Pack contents from an asset folder into a target bundle file.',
-        formatter_class=argparse.RawTextHelpFormatter,
-        description='''
-Example:
-  python maincli.py pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
-'''
-    )
-    pack_parser.add_argument('--bundle', required=True, help='Path to the target bundle file to modify.')
-    pack_parser.add_argument('--folder', required=True, help='Path to the folder containing asset files. Filenames (without extension) must match asset names in the bundle.')
-    pack_parser.add_argument('--output-dir', required=False, default='./output/', help='Directory to save the modified bundle file (Default: ./output/).')
-    pack_parser.add_argument('--no-crc', action='store_true', help='Disable CRC fix function.')
-    pack_parser.add_argument(
-        '--compression', 
-        default='lzma', 
-        choices=['lzma', 'lz4', 'original', 'none'],
-        help='Compression method for Bundle files (Default: lzma). Options: lzma, lz4, original (keep original), none (no compression).'
-    )
 
-    # --- Spine 转换参数 ---
-    spine_group = pack_parser.add_argument_group('Spine Conversion Options')
-    spine_group.add_argument('--enable-spine-conversion', action='store_true', help='Enable Spine skeleton conversion.')
-    spine_group.add_argument('--spine-converter-path', help='Full path to SpineSkeletonDataConverter.exe.')
-    spine_group.add_argument('--target-spine-version', default='4.2.33', help='Target Spine version (e.g., "4.2.33"). (Default: %(default)s)')
-
-    pack_parser.set_defaults(func=handle_asset_packing)
-
-# ====== CRC Tool ======
-
-def handle_crc(args: argparse.Namespace, logger) -> None:
+def handle_crc(args: CrcTap, logger) -> None:
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- Start CRC Tool ---")
 
@@ -264,24 +302,25 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
         if not game_dir.is_dir():
             logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
             return
-        
+
         # 使用与 update 命令相同的查找函数
         found_paths, message = find_new_bundle_path(modified_path, get_search_resource_dirs(game_dir), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
         original_path = found_paths[0]
-        # find_new_bundle_path 函数内部会打印成功找到的日志
 
     # --- 模式 1: 仅检查/计算 CRC ---
     if args.check_only:
         try:
-            with open(modified_path, "rb") as f: modified_data = f.read()
+            with open(modified_path, "rb") as f:
+                modified_data = f.read()
             modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
             logger.log(f"Modified File CRC32: {modified_crc_hex}  ({modified_path.name})")
 
             if original_path:
-                with open(original_path, "rb") as f: original_data = f.read()
+                with open(original_path, "rb") as f:
+                    original_data = f.read()
                 original_crc_hex = f"{CRCUtils.compute_crc32(original_data):08X}"
                 logger.log(f"Original File CRC32: {original_crc_hex}  ({original_path.name})")
                 if original_crc_hex == modified_crc_hex:
@@ -303,14 +342,14 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
             return
 
         logger.log("CRC mismatch. Starting CRC fix...")
-        
+
         if not args.no_backup:
             backup_path = modified_path.with_suffix(modified_path.suffix + '.bak')
             shutil.copy2(modified_path, backup_path)
             logger.log(f"  > Backup file created: {backup_path.name}")
 
         success = CRCUtils.manipulate_crc(original_path, modified_path)
-        
+
         if success:
             logger.log("✅ CRC Fix Successful! The modified file has been updated.")
         else:
@@ -319,76 +358,36 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
     except Exception as e:
         logger.log(f"❌ Error during CRC fix process: {e}")
 
-def setup_crc_parser(subparsers: argparse._SubParsersAction) -> None:
-    """为 'crc' 命令配置参数解析器。"""
-    crc_parser = subparsers.add_parser(
-        'crc',
-        help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.',
-        formatter_class=argparse.RawTextHelpFormatter,
-        description='''
-Examples:
-  # Fix CRC of my_mod.bundle to match original.bundle (Manual)
-  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
 
-  # Automatically search original file in game directory and fix CRC
-  python maincli.py crc --modified "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
-
-  # Check if CRC matches only, do not modify file (can combine with --resource-dir)
-  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
-
-  # Calculate CRC for a single file
-  python maincli.py crc --modified "my_mod.bundle" --check-only
-'''
-    )
-    crc_parser.add_argument('--modified', required=True, help='Path to the modified file (to be fixed or calculated).')
-    crc_parser.add_argument('--original', help='Path to the original file (provides target CRC value). Overrides --resource-dir if provided.')
-    crc_parser.add_argument('--resource-dir', default=get_BA_path(), help='Path to the game resource directory, used to automatically find the matching original bundle file.')
-    crc_parser.add_argument('--check-only', action='store_true', help='Only calculate and compare CRC, do not modify any files.')
-    crc_parser.add_argument('--no-backup', action='store_true', help='Do not create a backup (.bak) before fixing the file.')
-    crc_parser.set_defaults(func=handle_crc)
-
-
-# ====== Print Environment ======
-
-def handle_env(args: argparse.Namespace, logger) -> None:
+def handle_env(args: EnvTap, logger) -> None:
     """处理 'env' 命令，打印环境信息。"""
     logger.log(get_environment_info(ignore_tk=True))
 
-def setup_env_parser(subparsers: argparse._SubParsersAction) -> None:
-    """为 'env' 命令配置参数解析器。"""
-    env_parser = subparsers.add_parser(
-        'env', 
-        help='Display system information and library versions of the current environment.',
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    env_parser.set_defaults(func=handle_env)
+
+# --- 命令映射 ---
+
+COMMAND_HANDLERS = {
+    'update': handle_update,
+    'pack': handle_asset_packing,
+    'crc': handle_crc,
+    'env': handle_env,
+}
 
 def main() -> None:
     """主函数，用于解析命令行参数并分派任务。"""
-    parser = argparse.ArgumentParser(
-        description="BA Modding Toolkit - Command Line Interface.",
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    subparsers = parser.add_subparsers(dest='command', required=True, help='Available commands')
+    args = MainTap().parse_args()
 
-    # 配置各个子命令的解析器
-    setup_update_parser(subparsers)
-    setup_asset_packer_parser(subparsers)
-    setup_crc_parser(subparsers)
-    setup_env_parser(subparsers)
-
-    # ==============================================================
-
-    args = parser.parse_args()
-    
     # 初始化日志记录器
     logger = setup_cli_logger()
 
-    if hasattr(args, 'func'):
-        args.func(args, logger)
+    # 根据子命令调用对应的处理函数
+    # Tap使用 dest 参数指定的属性名存储子命令名称
+    command = getattr(args, 'command', None)
+    if command in COMMAND_HANDLERS:
+        COMMAND_HANDLERS[command](args, logger)
     else:
-        # 在没有提供子命令时，argparse 默认会显示帮助信息并退出
-        parser.print_help()
+        # 如果没有提供子命令，显示帮助信息
+        MainTap().print_help()
 
 if __name__ == "__main__":
     main()
