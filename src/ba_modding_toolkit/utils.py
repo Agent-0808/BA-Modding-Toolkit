@@ -387,7 +387,7 @@ def get_search_resource_dirs(base_game_dir: Path, auto_detect_subdirs: bool = Tr
             "GameData/Android",
             "Preload/Android",
             ]
-        return [base_game_dir / suffix for suffix in suffixes]
+        return [base_game_dir / suffix for suffix in suffixes if (base_game_dir / suffix).is_dir()]
     else:
         return [base_game_dir]
 

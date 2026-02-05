@@ -14,7 +14,7 @@ from ..core import (
     process_asset_packing
 )
 # 从 utils 模块导入工具函数
-from ..utils import get_environment_info, CRCUtils
+from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs
 
 # --- 日志设置 ---
 # 创建一个简单的控制台日志记录器，代替GUI中的Logger
@@ -49,17 +49,20 @@ def handle_update(args: argparse.Namespace, logger) -> None:
     # 确保输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # 确定资源目录：优先使用 --resource-dir，否则自动搜寻
+    resource_dir = args.resource_dir or get_BA_path()
+
     new_bundle_path: Path | None = None
     if args.target:
         new_bundle_path = Path(args.target)
-    elif args.resource_dir:
-        logger.log(f"No target bundle provided, searching automatically in '{args.resource_dir}'...")
-        resource_dir = Path(args.resource_dir)
-        if not resource_dir.is_dir():
-            logger.log(f"❌ Error: Game resource directory '{resource_dir}' does not exist or is not a directory.")
+    elif resource_dir:
+        logger.log(f"Searching target bundle in '{resource_dir}'...")
+        resource_path = Path(resource_dir)
+        if not resource_path.is_dir():
+            logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
             return
         
-        found_paths, message = find_new_bundle_path(old_mod_path, resource_dir, logger.log)
+        found_paths, message = find_new_bundle_path(old_mod_path, get_search_resource_dirs(resource_path), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
@@ -127,7 +130,7 @@ Examples:
     # --- 目标文件定位参数 ---
     target_group = update_parser.add_argument_group('Target Bundle Options')
     target_group.add_argument('--target', help='Path to the new game resource bundle file (Overrides --resource-dir if provided).')
-    target_group.add_argument('--resource-dir', help='Path to the game resource directory, used to automatically find the matching new bundle file.')
+    target_group.add_argument('--resource-dir', default=get_BA_path(), help='Path to the game resource directory, used to automatically find the matching new bundle file.')
 
     # --- 资源与保存参数 ---
     saving_group = update_parser.add_argument_group('Asset and Saving Options')
@@ -245,7 +248,9 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
         logger.log(f"❌ Error: Modified file '{modified_path}' does not exist.")
         return
 
-    # 确定原始文件路径：优先使用 --original，其次使用 --resource-dir 自动查找
+    resource_dir = args.resource_dir or get_BA_path()
+
+    # 确定原始文件路径：优先使用 --original，其次使用 resource_dir 自动查找
     original_path = None
     if args.original:
         original_path = Path(args.original)
@@ -253,15 +258,15 @@ def handle_crc(args: argparse.Namespace, logger) -> None:
             logger.log(f"❌ Error: Manually specified original file '{original_path}' does not exist.")
             return
         logger.log(f"Manually specified original file: {original_path.name}")
-    elif args.resource_dir:
-        logger.log(f"No original file provided, searching automatically in '{args.resource_dir}'...")
-        game_dir = Path(args.resource_dir)
+    elif resource_dir:
+        logger.log(f"No original file provided, searching automatically in '{resource_dir}'...")
+        game_dir = Path(resource_dir)
         if not game_dir.is_dir():
             logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
             return
         
         # 使用与 update 命令相同的查找函数
-        found_paths, message = find_new_bundle_path(modified_path, game_dir, logger.log)
+        found_paths, message = find_new_bundle_path(modified_path, get_search_resource_dirs(game_dir), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
@@ -337,7 +342,7 @@ Examples:
     )
     crc_parser.add_argument('--modified', required=True, help='Path to the modified file (to be fixed or calculated).')
     crc_parser.add_argument('--original', help='Path to the original file (provides target CRC value). Overrides --resource-dir if provided.')
-    crc_parser.add_argument('--resource-dir', help='Path to the game resource directory, used to automatically find the matching original bundle file.')
+    crc_parser.add_argument('--resource-dir', default=get_BA_path(), help='Path to the game resource directory, used to automatically find the matching original bundle file.')
     crc_parser.add_argument('--check-only', action='store_true', help='Only calculate and compare CRC, do not modify any files.')
     crc_parser.add_argument('--no-backup', action='store_true', help='Do not create a backup (.bak) before fixing the file.')
     crc_parser.set_defaults(func=handle_crc)
