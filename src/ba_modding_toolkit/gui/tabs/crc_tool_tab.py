@@ -169,7 +169,7 @@ class CrcToolTab(TabFrame):
             self.logger.log(t("log.file.saved", path=output_path))
             
             # 修正输出目录中的文件CRC
-            success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.enable_padding_var.get())
+            success = CRCUtils.manipulate_crc(self.original_path, output_path, self.app.get_extra_bytes())
             
             if success:
                 self.final_output_path = output_path

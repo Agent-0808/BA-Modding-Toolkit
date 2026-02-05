@@ -21,11 +21,11 @@ class UpdateTap(Tap):
 
     # 目标文件定位参数
     target: str | None = None  # Path to the new game resource bundle file (Overrides --resource-dir if provided).
-    resource_dir: str | None = None  # Path to the game resource directory, used to automatically find the matching new bundle file.
+    resource_dir: str | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
-    padding: bool = False  # Add padding.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
     asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
 
@@ -87,7 +87,7 @@ class CrcTap(Tap):
 
     # 原始文件定位参数
     original: str | None = None  # Path to the original file (provides target CRC value).
-    resource_dir: str | None = None  # Path to the game resource directory for auto-search.
+    resource_dir: str | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
 
     # 操作选项
     check_only: bool = False  # Only calculate and compare CRC, do not modify any files.

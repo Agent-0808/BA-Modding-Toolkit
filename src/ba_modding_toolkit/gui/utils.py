@@ -285,7 +285,7 @@ class ConfigManager:
                     "output_dir": app.output_dir_var.get()
                 },
                 "GlobalOptions": {
-                    "enable_padding": app.enable_padding_var.get(),
+                    "extra_bytes": app.extra_bytes_var.get(),
                     "enable_crc_correction": app.enable_crc_correction_var.get(),
                     "create_backup": app.create_backup_var.get(),
                     "compression_method": app.compression_method_var.get()
@@ -341,7 +341,7 @@ class ConfigManager:
             app.output_dir_var.set(app_settings.get("output_dir", ""))
             
             global_options = data.get("GlobalOptions", {})
-            app.enable_padding_var.set(global_options.get("enable_padding", False))
+            app.extra_bytes_var.set(global_options.get("extra_bytes", "0x08080808"))
             app.enable_crc_correction_var.set(global_options.get("enable_crc_correction", "auto"))
             app.create_backup_var.set(global_options.get("create_backup", False))
             app.compression_method_var.set(global_options.get("compression_method", ""))

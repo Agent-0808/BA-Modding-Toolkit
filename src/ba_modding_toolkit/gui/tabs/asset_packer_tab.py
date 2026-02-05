@@ -124,7 +124,7 @@ class AssetPackerTab(TabFrame):
         # 创建 SaveOptions 和 SpineOptions 对象
         save_options = core.SaveOptions(
             perform_crc=perform_crc,
-            enable_padding=self.app.enable_padding_var.get(),
+            extra_bytes=self.app.get_extra_bytes(),
             compression=self.app.compression_method_var.get()
         )
         

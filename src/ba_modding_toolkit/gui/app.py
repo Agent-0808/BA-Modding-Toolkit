@@ -7,7 +7,7 @@ import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
-from ..utils import get_environment_info, get_BA_path
+from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
 from .components import Theme, Logger, UIComponents
 from .utils import ConfigManager, open_directory, select_directory
 from .dialogs import SettingsDialog
@@ -61,7 +61,7 @@ class App(tk.Frame):
         
         # 共享变量
         self.output_dir_var.set(str(Path.cwd() / "output"))
-        self.enable_padding_var.set(False)
+        self.extra_bytes_var.set("0x08080808")
         self.enable_crc_correction_var.set("auto")
         self.create_backup_var.set(True)
         self.compression_method_var.set("lzma")
@@ -96,7 +96,7 @@ class App(tk.Frame):
         self.game_resource_dir_var = tk.StringVar()
         self.auto_detect_subdirs_var = tk.BooleanVar()
         self.output_dir_var = tk.StringVar()
-        self.enable_padding_var = tk.BooleanVar()
+        self.extra_bytes_var = tk.StringVar()
         self.enable_crc_correction_var = tk.StringVar()
         self.create_backup_var = tk.BooleanVar()
         self.compression_method_var = tk.StringVar()
@@ -186,6 +186,10 @@ class App(tk.Frame):
     def show_environment_info(self):
         """显示环境信息"""
         self.logger.log(get_environment_info())
+
+    def get_extra_bytes(self) -> bytes | None:
+        """获取用户输入的 extra_bytes 配置值"""
+        return parse_hex_bytes(self.extra_bytes_var.get())
 
     def select_game_resource_directory(self):
         # 根据复选框状态决定对话框标题

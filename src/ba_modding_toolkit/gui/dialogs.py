@@ -119,11 +119,11 @@ class SettingsDialog(tb.Toplevel):
             command=self._on_crc_changed
         )
 
-        self.padding_checkbox = SettingRow.create_switch(
+        self.extra_bytes_entry = SettingRow.create_entry_row(
             section,
-            label=t("option.padding"),
-            variable=self.app.enable_padding_var,
-            tooltip=t("option.padding_info")
+            label=t("option.extra_bytes"),
+            text_var=self.app.extra_bytes_var,
+            tooltip=t("option.extra_bytes_info")
         )
 
         SettingRow.create_switch(
@@ -224,10 +224,9 @@ class SettingsDialog(tb.Toplevel):
             return
         crc_value = self.app.enable_crc_correction_var.get()
         if crc_value in ["auto", "true"]:
-            self.padding_checkbox.config(state=tk.NORMAL)
+            self.extra_bytes_entry.config(state=tk.NORMAL)
         else:
-            self.app.enable_padding_var.set(False)
-            self.padding_checkbox.config(state=tk.DISABLED)
+            self.extra_bytes_entry.config(state=tk.DISABLED)
 
     def _on_language_changed(self, event):
         """语言选项变化时的处理"""

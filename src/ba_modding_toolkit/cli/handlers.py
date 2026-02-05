@@ -12,7 +12,7 @@ from ..core import (
     process_mod_update,
     process_asset_packing,
 )
-from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs
+from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
 
 def setup_cli_logger():
     """配置一个简单的日志记录器，将日志输出到控制台。"""
@@ -70,7 +70,7 @@ def handle_update(args: UpdateTap, logger) -> None:
 
     save_options = SaveOptions(
         perform_crc=not args.no_crc,
-        enable_padding=args.padding,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
         compression=args.compression
     )
 
@@ -119,7 +119,7 @@ def handle_asset_packing(args: PackTap, logger) -> None:
     # 创建 SaveOptions 和 SpineOptions 对象
     save_options = SaveOptions(
         perform_crc=not args.no_crc,
-        enable_padding=False,
+        extra_bytes=None,
         compression=args.compression
     )
 

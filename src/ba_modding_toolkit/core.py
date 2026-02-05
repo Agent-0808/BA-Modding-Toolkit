@@ -68,7 +68,7 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 class SaveOptions:
     """封装了保存、压缩和CRC修正相关的选项。"""
     perform_crc: bool = True
-    enable_padding: bool = False
+    extra_bytes: bytes | None = None
     compression: CompressionType = "lzma"
 
 @dataclass
@@ -231,10 +231,14 @@ def _save_and_crc(
             with open(original_bundle_path, "rb") as f:
                 original_data = f.read()
 
+            # 如有extra_bytes，先附加到modified_data
+            crc_input_data = modified_data
+            if save_options.extra_bytes:
+                crc_input_data = modified_data + save_options.extra_bytes
+
             corrected_data = CRCUtils.apply_crc_fix(
-                original_data, 
-                modified_data, 
-                save_options.enable_padding
+                original_data,
+                crc_input_data
             )
 
             if not corrected_data:
