@@ -41,13 +41,16 @@ class UpdateTap(Tap):
 
 Examples:
   # Automatically search for new file and update
-  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --resource-dir "C:\\path\\to\\GameData\\Windows"
+  bamt-cli update "C:\\path\\to\\old_mod.bundle"
+
+  # Disable CRC fixing
+  bamt-cli update "old_mod.bundle" --no-crc
 
   # Manually specify new file and update
-  python maincli.py update --old "C:\\path\\to\\old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
+  bamt-cli update "old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
 
   # Enable Spine skeleton conversion
-  python maincli.py update --old "old.bundle" --target "new.bundle" --output-dir "output" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.33"
+  bamt-cli update "old.bundle" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -76,7 +79,7 @@ class PackTap(Tap):
         self.description = '''Pack contents from an asset folder into a target bundle file.
 
 Example:
-  python maincli.py pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
+  bamt-cli pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -98,19 +101,20 @@ class CrcTap(Tap):
 
     def configure(self) -> None:
         self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
+It overwrites the input file.
 
 Examples:
-  # Fix CRC of my_mod.bundle to match original.bundle (Manual)
-  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
+  # Fix CRC of my_mod.bundle to match original bundle
+  bamt-cli crc "my_mod.bundle"
 
   # Automatically search original file in game directory and fix CRC
-  python maincli.py crc --modified "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
+  bamt-cli crc "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
 
   # Check if CRC matches only, do not modify file
-  python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
+  bamt-cli crc "my_mod.bundle" --original "original.bundle" --check-only
 
   # Calculate CRC for a single file
-  python maincli.py crc --modified "my_mod.bundle" --check-only
+  bamt-cli crc "my_mod.bundle" --check-only
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
