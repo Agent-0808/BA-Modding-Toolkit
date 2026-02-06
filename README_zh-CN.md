@@ -60,9 +60,8 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 1. 拖放或浏览选择需要更新的旧版 Mod Bundle 文件
 2. 程序会自动根据资源目录寻找对应目标 Bundle 文件
-3. 在设置窗口中勾选需要替换的资源类型
-4. 点击"开始更新"按钮，程序会自动处理并生成更新后的 Bundle 文件
-5. （可选）成功后点击"覆盖原文件"应用修改。请确保开启了"创建备份"选项以防止风险。
+3. 点击"开始更新"按钮，程序会自动处理并生成更新后的 Bundle 文件
+4. （可选）成功后点击"覆盖原文件"应用修改。请确保开启了"创建备份"选项以防止风险。
 
 如果是为Steam版更新或制作Mod，请勾选"CRC 修正"选项。
 
@@ -158,98 +157,26 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 ## 命令行接口 (CLI)
 
-除了图形界面，本项目还提供了一个命令行接口（CLI）版本的程序 `maincli.py`。
+除了图形界面，本项目还提供了一个命令行接口（CLI）版本的程序 `cli/`。
 
-目前的 GUI 界面暂未支持国际化（界面仅为中文），但CLI版本的帮助信息、参数说明为英文。如果您习惯使用英文界面或需要在非中文环境下使用，CLI 版本是一个很好的选择。
+可以从Release页面下载经过编译的可执行文件`BAMT-CLI`，也可以使用`uv run bamt-cli`命令运行源代码。
 
 ### CLI 使用方法
 
-所有操作都可以通过 `python maincli.py` 命令执行。您可以通过 `--help` 查看所有可用命令和参数。
+所有操作都可以通过 `bamt-cli` 命令执行。您可以通过 `--help` 查看所有可用命令和参数。
 
 ```bash
 # 查看所有可用命令
-python maincli.py -h
+bamt-cli -h
 
 # 查看特定命令的详细帮助和示例
-python maincli.py update -h
-python maincli.py pack -h
-python maincli.py crc -h
+bamt-cli update -h
+bamt-cli pack -h
+bamt-cli crc -h
 
 # 查看环境信息
-python maincli.py env
+bamt-cli env
 ```
-
-<details>
-<summary>点击展开查看CLI详细说明</summary>
-
-#### 更新 Mod (update)
-
-用于更新或移植Mod，将旧Mod中的资源迁移到新版的游戏文件中。这是最核心的功能。
-
-**主要参数:**
-
-- `--old`: (必需) 指定旧的 Mod 文件路径。
-- `--resource-dir`: 指定游戏资源目录，程序将在此目录中自动查找匹配的新版文件进行更新。
-- `--target`: 手动指定新版游戏文件的路径。如果同时提供了 `--resource-dir`，此选项优先。
-- `--output-dir`: (可选) 指定生成文件的输出目录 (默认为 `./output/`)。
-- `--enable-spine-conversion`: (可选) 启用Spine骨骼转换功能，用于升级旧版Mod。
-- `--spine-converter-path`: (可选) 指定 `SpineSkeletonDataConverter.exe` 的完整路径。
-
-**命令示例:**
-
-```bash
-# 示例 1: 自动搜索更新
-python maincli.py update --old "path/to/old_mod.bundle" --resource-dir "path/to/GameData/Windows"
-
-# 示例 2: 手动指定目标文件进行更新
-python maincli.py update --old "old_mod.bundle" --target "new_game_file.bundle" --output-dir "./updated_mods"
-```
-
-#### 资源打包 (pack)
-
-将一个文件夹内的资源（如 `.png`, `.skel`, `.atlas`）打包进一个指定的 Bundle 文件中，替换其中的同名资源。
-
-**主要参数:**
-
-- `--bundle`: (必需) 指定要修改的目标 Bundle 文件路径。
-- `--folder`: (必需) 指定包含新资源的文件夹路径。
-- `--output-dir`: 指定生成文件的输出目录 (默认为 `./output/`)。
-
-**命令示例:**
-
-```bash
-# 将 asset_folder 文件夹内的所有资源打包进 target_game_file.bundle
-python maincli.py pack --bundle "target_game_file.bundle" --folder "./asset_folder" --output-dir "./packed_mods"
-```
-
-#### CRC 修正 (crc)
-
-为修改过的 Bundle 文件修正 CRC 校验值，使其与原版文件一致。
-
-**主要参数:**
-
-- `--modified`: (必需) 指定被修改过的 Mod 文件路径。
-- `--resource-dir`: 指定游戏资源目录，用于自动查找对应的原版文件。
-- `--original`: 手动指定原版文件路径，用于提取正确的 CRC 值。
-- `--check-only`: (可选) 仅检查和对比 CRC 值，不执行任何修改操作。
-
-**命令示例:**
-
-```bash
-# 示例 1: 自动查找原版文件并修正 CRC
-python maincli.py crc --modified "my_mod.bundle" --resource-dir "path/to/GameData/Windows"
-
-# 示例 2: 手动指定原版文件进行修正
-python maincli.py crc --modified "my_mod.bundle" --original "original.bundle"
-
-# 示例 3: 仅检查 CRC 值，不修改文件
-# 比较两个文件的CRC
-python maincli.py crc --modified "my_mod.bundle" --original "original.bundle" --check-only
-# 查看单个文件的CRC
-python maincli.py crc --modified "my_mod.bundle" --check-only
-```
-
-</details>
 
 ## 技术细节
 
@@ -272,19 +199,20 @@ python maincli.py crc --modified "my_mod.bundle" --check-only
 git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
 cd BA-Modding-Toolkit
 
-# 使用传统方式安装依赖
-python -m pip install -r requirements.txt
-python main.pyw
-# 或者使用 uv 管理依赖
+# 使用 uv 管理依赖
+python -m pip install uv
 uv sync
-uv run main.pyw
+uv run bamt
+# 或者使用传统方式安装依赖
+python -m pip install .
+python -m ba_modding_toolkit
 ```
 
 作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
 
-您可以将 `BA-Modding-Toolkit` 的代码（主要是 `processing.py` 与 `utils.py`）加入您的项目中或是进行修改，以实现自定义的 Mod 制作和更新功能。
+您可以将 `BA-Modding-Toolkit` 的代码（主要是 `core.py` 与 `utils.py`）加入您的项目中或是进行修改，以实现自定义的 Mod 制作和更新功能。
 
-`maincli.py` 是一个命令行接口（CLI）版本的主程序，您可以参考其调用处理函数的方式。
+`cli/main.py` 是一个命令行接口（CLI）版本的主程序，您可以参考其调用处理函数的方式。
 
 ### 文件结构
 
@@ -299,18 +227,20 @@ BA-Modding-Toolkit/
 │ ├── core.py        # 核心处理逻辑
 │ ├── i18n.py        # 国际化功能相关
 │ ├── utils.py       # 工具类和辅助函数
-│ ├── cli/           # 命令行接口
-│ │ ├── __init__.py
-│ │ └── main.py      # CLI 主入口
+│ ├── cli/           # 命令行接口子程序
+│ │ ├── __main__.py     # CLI 主入口
+│ │ ├── main.py         # 命令行程序主流程
+│ │ ├── taps.py         # 命令行参数解析
+│ │ └── handlers.py     # 命令行参数处理
 │ ├── gui/           # 图形界面包
 │ │ ├── __init__.py
-│ │ ├── main.py          # GUI 程序主入口
-│ │ ├── app.py           # 主应用 App 类
-│ │ ├── base_tab.py      # TabFrame 基类
-│ │ ├── components.py    # UI 组件、主题、日志
-│ │ ├── dialogs.py       # 设置对话框
-│ │ ├── utils.py         # UI 相关工具函数
-│ │ └── tabs/            # 功能标签页
+│ │ ├── main.py         # GUI 程序主入口
+│ │ ├── app.py          # 主应用 App 类
+│ │ ├── base_tab.py     # TabFrame 基类
+│ │ ├── components.py   # UI 组件、主题、日志
+│ │ ├── dialogs.py      # 设置对话框
+│ │ ├── utils.py        # UI 相关工具函数
+│ │ └── tabs/           # 功能标签页
 │ │   ├── __init__.py
 │ │   ├── mod_update_tab.py       # Mod 更新标签页
 │ │   ├── crc_tool_tab.py         # CRC 修正工具标签页
@@ -349,6 +279,7 @@ BA-Modding-Toolkit/
 - [ttkbootstrap](https://github.com/israel-dryer/ttkbootstrap)（MIT License）: 现代化的 Tkinter 主题库
 - [toml](https://github.com/uiri/toml)（MIT License）: 用于解析和操作 TOML 配置文件的库
 - [SpineAtlas](https://github.com/Rin-Wood/SpineAtlas)（MIT License）: 用于操作 Spine 动画文件中的 .atlas 文件
+- [Tap](https://github.com/swansonk14/typed-argument-parser)（MIT License）: 解析命令行参数
 
 ### 另见
 
