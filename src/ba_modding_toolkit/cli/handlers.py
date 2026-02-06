@@ -162,9 +162,9 @@ def handle_crc(args: CrcTap, logger) -> None:
     if args.original:
         original_path = Path(args.original)
         if not original_path.is_file():
-            logger.log(f"❌ Error: Manually specified original file '{original_path}' does not exist.")
+            logger.log(f"❌ Error: Manually specified original file '{original_path.name}' does not exist.")
             return
-        logger.log(f"Manually specified original file: {original_path.name}")
+        logger.log(f"Manually specified original file: {original_path}")
     elif resource_dir:
         logger.log(f"No original file provided, searching automatically in '{resource_dir}'...")
         game_dir = Path(resource_dir)
@@ -172,12 +172,22 @@ def handle_crc(args: CrcTap, logger) -> None:
             logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
             return
 
-        # 使用与 update 命令相同的查找函数
-        found_paths, message = find_new_bundle_path(modified_path, get_search_resource_dirs(game_dir), logger.log)
-        if not found_paths:
-            logger.log(f"❌ Auto-search failed: {message}")
+        # 在搜索目录中查找同名文件（只取第一个找到的）
+        search_dirs = get_search_resource_dirs(game_dir)
+        target_name = modified_path.name
+        original_path: Path | None = None
+        for dir_path in search_dirs:
+            if not dir_path.exists():
+                continue
+            candidate = dir_path / target_name
+            if candidate.is_file():
+                original_path = candidate
+                break
+
+        if original_path is None:
+            logger.log(f"❌ Auto-search failed: File '{target_name}' not found in search directories")
             return
-        original_path = found_paths[0]
+        logger.log(f"  > Found original file: {original_path}")
 
     # --- 模式 1: 仅检查/计算 CRC ---
     if args.check_only:

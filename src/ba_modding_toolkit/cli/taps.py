@@ -2,6 +2,7 @@
 from argparse import RawTextHelpFormatter
 from typing import Literal
 from tap import Tap
+from pathlib import Path
 
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
@@ -16,12 +17,12 @@ class UpdateTap(Tap):
     """Update命令的参数解析器 - 用于更新或移植Mod。"""
 
     # 基本参数
-    old: str  # Path to the old Mod bundle file.
-    output_dir: str = './output/'  # Directory to save the generated Mod file (Default: ./output/).
+    old: Path  # Path to the old Mod bundle file.
+    output_dir: Path = Path('./output/')  # Directory to save the generated Mod file (Default: ./output/).
 
     # 目标文件定位参数
-    target: str | None = None  # Path to the new game resource bundle file (Overrides --resource-dir if provided).
-    resource_dir: str | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    target: Path | None = None  # Path to the new game resource bundle file (Overrides --resource-dir if provided).
+    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
@@ -31,11 +32,12 @@ class UpdateTap(Tap):
 
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: str | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
     target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
 
     def configure(self) -> None:
         self.description = '''Update or port a Mod, migrating assets from an old Mod to a specific Bundle.
+        
 
 Examples:
   # Automatically search for new file and update
@@ -50,23 +52,24 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('old') # 第一个参数，可以匿名
 
 
 class PackTap(Tap):
     """Pack命令的参数解析器 - 用于资源打包。"""
 
     # 基本参数
-    bundle: str  # Path to the target bundle file to modify.
-    folder: str  # Path to the folder containing asset files.
-    output_dir: str = './output/'  # Directory to save the modified bundle file.
+    bundle: Path  # Path to the target bundle file to modify.
+    folder: Path  # Path to the folder containing asset files.
+    output_dir: Path = Path('./output/')  # Directory to save the modified bundle file.
 
     # 保存参数
     no_crc: bool = False  # Disable CRC fix function.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
-
+    
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: str | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     def configure(self) -> None:
@@ -83,11 +86,11 @@ class CrcTap(Tap):
     """CRC命令的参数解析器 - 用于CRC修正工具。"""
 
     # 基本参数
-    modified: str  # Path to the modified file (to be fixed or calculated).
+    modified: Path  # Path to the modified file (to be fixed or calculated).
 
     # 原始文件定位参数
-    original: str | None = None  # Path to the original file (provides target CRC value).
-    resource_dir: str | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    original: Path | None = None  # Path to the original file (provides target CRC value).
+    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
 
     # 操作选项
     check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
@@ -111,6 +114,7 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
+        self.add_argument('modified') # 第一个参数，可以匿名
 
 
 class EnvTap(Tap):
