@@ -172,6 +172,7 @@ bamt-cli -h
 # 查看特定命令的详细帮助和示例
 bamt-cli update -h
 bamt-cli pack -h
+bamt-cli extract -h
 bamt-cli crc -h
 
 # 查看环境信息

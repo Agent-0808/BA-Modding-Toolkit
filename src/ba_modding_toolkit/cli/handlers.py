@@ -4,13 +4,15 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap
 from ..core import (
     find_new_bundle_path,
     SaveOptions,
     SpineOptions,
     process_mod_update,
     process_asset_packing,
+    process_asset_extraction,
+    extract_core_filename,
 )
 from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
 
@@ -119,7 +121,7 @@ def handle_asset_packing(args: PackTap, logger) -> None:
     # 创建 SaveOptions 和 SpineOptions 对象
     save_options = SaveOptions(
         perform_crc=not args.no_crc,
-        extra_bytes=None,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
         compression=args.compression
     )
 
@@ -227,7 +229,7 @@ def handle_crc(args: CrcTap, logger) -> None:
             shutil.copy2(modified_path, backup_path)
             logger.log(f"  > Backup file created: {backup_path.name}")
 
-        success = CRCUtils.manipulate_crc(original_path, modified_path)
+        success = CRCUtils.manipulate_crc(original_path, modified_path, parse_hex_bytes(args.extra_bytes))
 
         if success:
             logger.log("✅ CRC Fix Successful! The modified file has been updated.")
@@ -241,3 +243,84 @@ def handle_crc(args: CrcTap, logger) -> None:
 def handle_env(args: EnvTap, logger) -> None:
     """处理 'env' 命令，打印环境信息。"""
     logger.log(get_environment_info(ignore_tk=True))
+
+
+def handle_extract(args: ExtractTap, logger) -> None:
+    """处理 'extract' 命令的逻辑。"""
+    logger.log("--- Start Asset Extraction ---")
+
+    bundle_paths = [Path(b) for b in args.bundles]
+    output_dir = Path(args.output_dir)
+
+    # 验证bundle文件是否存在
+    valid_bundles = []
+    for bp in bundle_paths:
+        if bp.is_file():
+            valid_bundles.append(bp)
+        else:
+            logger.log(f"❌ Error: Bundle file '{bp}' does not exist.")
+
+    if not valid_bundles:
+        logger.log("❌ Error: No valid bundle files provided.")
+        return
+
+    # 确保基础输出目录存在
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 处理资源类型
+    asset_types = set(args.asset_types)
+    if 'ALL' in asset_types:
+        asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
+
+    logger.log(f"Specified asset extraction types: {', '.join(asset_types)}")
+    logger.log(f"Bundles to process: {len(valid_bundles)}")
+    for bp in valid_bundles:
+        logger.log(f"  - {bp.name}")
+
+    # 创建SpineOptions对象
+    spine_options = SpineOptions(
+        enabled=args.enable_spine_downgrade,
+        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        target_version=args.target_spine_version or None,
+    )
+
+    # 检查Spine降级配置
+    if args.enable_spine_downgrade:
+        if not spine_options.is_valid():
+            logger.log("❌ Error: Spine downgrade is enabled but configuration is invalid.")
+            logger.log("   Please provide a valid --spine-converter-path and --target-spine-version.")
+            return
+        logger.log(f"Spine downgrade enabled: target version {args.target_spine_version}")
+
+    # 确定子目录名
+    subdir_name = args.subdir.strip() if args.subdir else ""
+    if not subdir_name and len(valid_bundles) == 1:
+        # 单个bundle时，自动从文件名提取核心名作为子目录
+        subdir_name = extract_core_filename(valid_bundles[0].stem)
+
+    # 确定最终输出路径
+    if subdir_name:
+        final_output_dir = output_dir / subdir_name
+    else:
+        final_output_dir = output_dir
+
+    logger.log(f"Base output directory: {output_dir}")
+    if subdir_name:
+        logger.log(f"Subdirectory: {subdir_name}")
+    logger.log(f"Final output directory: {final_output_dir}")
+
+    # 调用核心处理函数
+    success, message = process_asset_extraction(
+        bundle_path=valid_bundles,
+        output_dir=final_output_dir,
+        asset_types_to_extract=asset_types,
+        spine_options=spine_options,
+        atlas_export_mode=args.atlas_export_mode,
+        log=logger.log
+    )
+
+    logger.log("\n" + "="*50)
+    if success:
+        logger.log(f"✅ Operation Successful: {message}")
+    else:
+        logger.log(f"❌ Operation Failed: {message}")

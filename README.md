@@ -67,10 +67,9 @@ The program contains multiple functional tabs:
 
 If the mod is for the Steam version, please check the "CRC Correction" option.
 
-
 This feature can also be used to port mods between different platforms, just select the Bundle file from the corresponding platform in step 2.
 
-#### 批量更新 (Batch Update)
+#### Batch Update
 
 1. Drag and drop or browse to select a folder containing multiple Mod files, or directly drag and drop multiple Mod files
 2. The program will automatically identify and list all processable Mod files
@@ -173,6 +172,7 @@ bamt-cli -h
 # View detailed help and examples for a specific command
 bamt-cli update -h
 bamt-cli pack -h
+bamt-cli extract -h
 bamt-cli crc -h
 
 # View environment information

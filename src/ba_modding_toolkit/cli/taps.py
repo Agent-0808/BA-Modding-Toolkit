@@ -68,8 +68,9 @@ class PackTap(Tap):
 
     # 保存参数
     no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
-    
+
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
     spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
@@ -98,10 +99,11 @@ class CrcTap(Tap):
     # 操作选项
     check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
     no_backup: bool = False  # Do not create a backup (.bak) before fixing the file.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
 
     def configure(self) -> None:
         self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
-It overwrites the input file.
+It OVERWRITES the input file and will NOT output at "output/" directory.
 
 Examples:
   # Fix CRC of my_mod.bundle to match original bundle
@@ -121,6 +123,51 @@ Examples:
         self.add_argument('modified') # 第一个参数，可以匿名
 
 
+class ExtractTap(Tap):
+    """Extract命令的参数解析器 - 用于从Bundle中提取资源。"""
+
+    # 基本参数
+    bundles: list[Path]  # Path(s) to the bundle file(s) to extract assets from.
+    output_dir: Path = Path('./output/')  # Base directory to save the extracted assets.
+    subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
+
+    # 资源类型参数
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
+
+    # Spine转换参数
+    enable_spine_downgrade: bool = False  # Enable Spine skeleton downgrade.
+    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    target_spine_version: str = '3.8.75'  # Target Spine version for downgrade (e.g., "3.8.75").
+
+    # Atlas导出参数
+    atlas_export_mode: str = 'atlas'  # Atlas export mode: "atlas", "unpack", or "both".
+
+    def configure(self) -> None:
+        self.description = '''Extract assets from Unity Bundle files.
+
+Examples:
+  # Extract all supported assets from a single bundle
+  bamt-cli extract "C:\\path\\to\\bundle.bundle"
+
+  # Extract with Spine downgrade
+  bamt-cli extract "bundle.bundle" --enable-spine-downgrade --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version 3.8.75
+
+  # Extract multiple bundles
+  bamt-cli extract "bundle1.bundle" "bundle2.bundle" --output-dir "C:\\output"
+
+  # Extract files at "output/CH0808/"
+  bamt-cli extract "CH0808_assets.bundle" --subdir "CH0808"
+
+  # Extract with unpack mode for atlas files
+  bamt-cli extract "bundle.bundle" --atlas-export-mode unpack
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('--atlas-export-mode', choices=['atlas', 'unpack', 'both'])
+        self.add_argument('bundles', nargs='+')  # 一个或多个bundle文件路径
+
+
 class EnvTap(Tap):
     """Env命令的参数解析器 - 用于显示环境信息。"""
 
@@ -136,5 +183,6 @@ class MainTap(BaseTap):
         self.add_subparsers(dest='command', help='Available commands')
         self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
+        self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')

@@ -6,6 +6,7 @@ from .handlers import (
     handle_asset_packing,
     handle_crc,
     handle_env,
+    handle_extract,
 )
 
 # --- 命令映射 ---
@@ -15,6 +16,7 @@ COMMAND_HANDLERS = {
     'pack': handle_asset_packing,
     'crc': handle_crc,
     'env': handle_env,
+    'extract': handle_extract,
 }
 
 def main() -> None:
