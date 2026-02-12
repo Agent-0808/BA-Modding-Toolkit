@@ -295,60 +295,100 @@ def get_filename_prefix(filename: str, log: LogFunc = no_log) -> tuple[str | Non
 
     return search_prefix, t("message.search.prefix_extracted")
 
+# -------- 文件名解析常量 --------
+
+REMOVE_SUFFIX = [
+    r"[-_]mxdependency",  # 匹配 -mxdependency 或 _mxdependency
+    r"[-_]mxload",        # 匹配 -mxload 或 _mxload
+    r"-\d{4}-\d{2}-\d{2}" # 匹配日期格式 (如 -2024-11-18)，作为最后的保底
+]
+
+FIXED_PREFIX = [
+    "assets-_mx-",
+]
+
 def extract_core_filename(filename: str) -> str:
     """
     文件名核心提取函数
+    复用 parse_filename 的逻辑，只返回 core 部分
     """
+    _, core, _, _, _ = parse_filename(filename)
+    return core
 
-    REMOVE_SUFFIX = [
-        r"[-_]mxdependency",  # 匹配 -mxdependency 或 _mxdependency
-        r"[-_]mxload",        # 匹配 -mxload 或 _mxload
-        r"-\d{4}-\d{2}-\d{2}" # 匹配日期格式 (如 -2024-11-18)，作为最后的保底
-    ]
+def parse_filename(filename: str) -> tuple[str | None, str, str | None, str, str]:
+    """
+    解析文件名，提取各个组成部分。
 
-    FIXED_PREFIX = [
-        "assets-_mx-",
-    ]
+    Args:
+        filename: 文件名字符串
 
-    CATEGORY = {
-        'characters', 'spinecharacters', 'spinelobbies', 
-        'npcs', 'cafe', 'obstacles', 'scenes', 
-        'character', 'uis', 'minigame', 'field'
-    }
+    Returns:
+        tuple: (category, core, type, date, crc32)
+        - category: 资源分类 (如 spinecharacters)，可能为 None
+        - core: 核心名称 (如 ch0296_spr)，必须有值
+        - type: 资源类型 (如 textassets)，可能为 None
+        - date: 日期字符串 (YYYY-MM-DD)
+        - crc32: CRC32 校验码
+    """
+    # 提取 CRC32
+    crc = ""
+    match_crc = re.search(r'_(\d+)\.[^.]+$', filename)
+    if match_crc:
+        crc = match_crc.group(1)
 
-    # 切除尾部
-    cut_index = len(filename)
-    found_marker = False
-    
-    for pattern in REMOVE_SUFFIX:
-        match = re.search(pattern, filename)
-        if match:
-            if match.start() < cut_index:
-                cut_index = match.start()
-                found_marker = True
-    
-    # 如果通过标记找到了切分点，直接切断；没找到则尝试去扩展名
-    if found_marker:
-        core = filename[:cut_index]
+    # 提取 Date
+    date = ""
+    match_date = re.search(r'(\d{4}-\d{2}-\d{2})', filename)
+    if match_date:
+        date = match_date.group(1)
+
+    # 提取 Type
+    res_type = None
+    # 匹配 -mxdependency-xxx 或 _mxload-xxx
+    match_type = re.search(r'[-_](?:mxdependency|mxload)-([a-zA-Z0-9]+)', filename)
+    if match_type:
+        res_type = match_type.group(1)
+        # 如果提取出的 type 是年份，说明实际上没有 type，而是直接接了日期
+        if re.match(r'^\d{4}$', res_type):
+            res_type = None
+
+    # 提取 Core（从后往前，找到 _mxdependency 或 _mxload 之前的部分）
+    core = ""
+
+    # 找到最早的 _mxdependency 或 _mxload 位置
+    mx_match = re.search(r'[-_](?:mxdependency|mxload)', filename)
+    if mx_match:
+        # Core 是这之前的部分
+        core_part = filename[:mx_match.start()]
     else:
-        core = filename.rsplit('.', 1)[0]
+        # 如果没找到，尝试用日期作为分隔
+        date_match = re.search(r'-\d{4}-\d{2}-\d{2}', filename)
+        if date_match:
+            core_part = filename[:date_match.start()]
+        else:
+            # 最后的保底：去除扩展名
+            core_part = filename.rsplit('.', 1)[0]
 
     # 去除固定前缀 (如 assets-_mx-)
     for prefix in FIXED_PREFIX:
-        if core.startswith(prefix):
-            core = core[len(prefix):] # 切片去除
-            break # 假设只有一个固定前缀匹配
-            
-    # 去除分类前缀 (如 characters-...)
-    parts = core.split('-', 1)
-    if len(parts) > 1:
-        category_part = parts[0]
-        # 检查 split 出来的第一部分是否在我们的分类白名单里
-        if category_part.lower() in CATEGORY:
-            core = parts[1] # 如果是分类词，取后面部分作为 core
-    
-    core = core.strip('-_')
-    return core
+        if core_part.startswith(prefix):
+            core_part = core_part[len(prefix):]
+            break
+
+    core = core_part.strip('-_')
+
+    # 提取 Category
+    category = None
+
+    if core:
+        # 尝试从 core 中分离 category
+        parts = core.split('-', 1)
+        if len(parts) > 1:
+            category = parts[0]
+            core = parts[1]
+
+    return (category, core, res_type, date, crc)
+
 
 def find_new_bundle_path(
     old_mod_path: Path,
