@@ -35,6 +35,7 @@
 		"clear": "Clear",
 		"clear_list": "Clear List",
 		"replace_original": "Overwrite",
+		"open_folder": "Open Folder",
 		"create_backup": "Create Backup",
 		"print": "Print",
 		"start": "Start",
@@ -128,6 +129,7 @@
 		"save_and_crc_success": "File saved and CRC corrected successfully.",
 		"save_or_crc_error": "Error saving or correcting file: {error}",
 		"same_file": "Both paths are identical!",
+		"not_bundle_file": "The selected file is not a valid Bundle file.",
 		"config": {
 			"saved": "Configuration saved.",
 			"loaded": "Configuration loaded.",
@@ -393,7 +395,8 @@
 			"crc_tool": "CRC Tool",
 			"asset_packer": "Asset Packer",
 			"asset_extractor": "Asset Extractor",
-			"jp_conversion": "JP/GL Conversion"
+			"jp_conversion": "JP/GL Conversion",
+			"info": "Info"
 		},
 		"settings": {
 			"title": "Settings",
@@ -434,6 +437,14 @@
 			"role_global_target": "Global Bundle (Target)",
 			"role_jp_target": "JP Bundle (Target)",
 			"placeholder_global_bundle": "Drag and drop Global Bundle file here\nOr click the button below to select"
+		},
+		"info": {
+			"drop_zone_title": "Input File",
+			"drop_hint": "Drag and drop file here\nOr click the button below to select",
+			"original_file": "Original File",
+			"not_found": "Not found",
+			"actions": "Actions",
+			"view_assets": "View Assets"
 		},
 		"dialog": {
 			"select": "Select {type}",

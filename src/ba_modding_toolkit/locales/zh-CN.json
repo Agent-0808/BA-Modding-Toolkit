@@ -35,6 +35,7 @@
 		"clear": "清除",
 		"clear_list": "清空列表",
 		"replace_original": "覆盖原文件",
+		"open_folder": "打开文件夹",
 		"create_backup": "创建备份",
 		"print": "打印",
 		"start": "开始",
@@ -128,6 +129,7 @@
 		"save_and_crc_success": "文件保存和CRC修正成功。",
 		"save_or_crc_error": "保存或修正文件时发生错误: {error}",
 		"same_file": "两个路径一致！",
+		"not_bundle_file": "所选文件不是有效的 Bundle 文件。",
 		"config": {
 			"saved": "配置已保存。",
 			"loaded": "配置已加载。",
@@ -387,7 +389,8 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"jp_conversion": "JP/GL 转换"
+			"jp_conversion": "JP/GL 转换",
+			"info": "信息"
 		},
 		"settings": {
 			"title": "设置",
@@ -428,6 +431,14 @@
 			"role_global_target": "国际服 Bundle (目标文件)",
 			"role_jp_target": "日服 Bundle (目标文件)",
 			"placeholder_global_bundle": "拖放国际服的Bundle文件\n或点击下方按钮选择"
+		},
+		"info": {
+			"drop_zone_title": "输入文件",
+			"drop_hint": "拖放文件到此处\n或点击下方按钮选择",
+			"original_file": "原文件",
+			"not_found": "未找到",
+			"actions": "可用操作",
+			"view_assets": "查看资源"
 		},
 		"dialog": {
 			"select": "选择{type}",
