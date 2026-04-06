@@ -7,14 +7,13 @@ from pathlib import Path
 from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap
 from ..core import (
     find_new_bundle_path,
-    SaveOptions,
-    SpineOptions,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
     extract_core_filename,
     parse_filename,
 )
+from ..models import SaveOptions, SpineOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
 
 def setup_cli_logger():

@@ -5,88 +5,21 @@ from pathlib import Path
 import shutil
 import re
 import tempfile
-from dataclasses import dataclass
-from typing import Callable, Any, Literal, NamedTuple
+from typing import Callable
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
-from UnityPy.files import ObjectReader as Obj, SerializedFile
+from UnityPy.files import SerializedFile
 from UnityPy.environment import Environment as Env
 from PIL import Image
 
 from .i18n import t
 from .utils import CRCUtils, SpineUtils, ImageUtils, no_log
-
-# -------- 类型别名 ---------
-
-"""
-AssetKey 表示资源的唯一标识符，在不同的流程中可以使用不同的键
-    str 类型 表示资源名称，在资源打包工具中使用
-    int 类型 表示 path_id
-    NameTypeKey 类型 表示 (名称, 类型) 的命名元组
-    ContNameTypeKey 类型 表示 (容器名, 名称, 类型) 的命名元组
-"""
-class NameTypeKey(NamedTuple):
-    name: str | None
-    type: str
-    def __str__(self) -> str:
-        return f"[{self.type}] {self.name}"
-
-class ContNameTypeKey(NamedTuple):
-    container: str | None
-    name: str
-    type: str
-    def __str__(self) -> str:
-        return f"[{self.type}] {self.name} @ {self.container}"
-
-AssetKey = str | int | NameTypeKey | ContNameTypeKey
-
-# 资源的具体内容，可以是字节数据、PIL图像或None
-AssetContent = bytes | Image.Image | None  
-
-# 从对象生成资源键的函数，接收UnityPy对象，返回该资源的键
-KeyGeneratorFunc = Callable[[Obj], AssetKey]
-
-# 资源匹配策略集合，用于在不同场景下生成资源键。
-MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
-    # path_id: 使用 Unity 对象的 path_id 作为键，适用于相同版本精确匹配，主要方式
-    'path_id': lambda obj: obj.path_id,
-    # container: 使用 Unity 对象的 container 作为键（弃用，因为发现同一个container下可以用重名资源）
-    'container': lambda obj: obj.container,
-    # name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配，在Asset Packing中使用
-    'name_type': lambda obj: NameTypeKey(obj.peek_name(), obj.type.name),
-    # cont_name_type: 使用 (容器名, 资源名, 资源类型) 作为键，适用于按容器、名称和类型匹配，用于跨版本移植
-    'cont_name_type': lambda obj: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name),
-}
-
-# 日志函数类型
-LogFunc = Callable[[str], None]  
-
-# 压缩类型
-CompressionType = Literal["lzma", "lz4", "original", "none"]  
-
-@dataclass
-class SaveOptions:
-    """封装了保存、压缩和CRC修正相关的选项。"""
-    perform_crc: bool = True
-    extra_bytes: bytes | None = None
-    compression: CompressionType = "lzma"
-
-@dataclass
-class SpineOptions:
-    """封装了Spine版本转换相关的选项。"""
-    enabled: bool = False
-    converter_path: Path | None = None
-    target_version: str | None = None
-
-    def is_valid(self) -> bool:
-        """检查Spine转换功能是否已配置并可用。"""
-        return (
-            self.enabled
-            and self.converter_path
-            and self.converter_path.exists()
-            and self.target_version
-            and self.target_version.count(".") == 2
-        )
+from .models import (
+    NameTypeKey, ContNameTypeKey, AssetKey, AssetContent,
+    KeyGeneratorFunc, LogFunc, CompressionType,
+    MATCH_STRATEGIES, SaveOptions, SpineOptions,
+    JP_FILENAME_TYPE_MAP, REPLACEABLE_ASSET_TYPES
+)
 
 # ====== 读取与保存相关 ======
 
@@ -1112,66 +1045,6 @@ def process_batch_mod_update(
     return success_count, fail_count, failed_tasks
 
 # ====== 日服处理相关 ======
-
-# 将日服文件名中的类型标识符映射到UnityPy的AssetType名称
-JP_FILENAME_TYPE_MAP = {
-    "textures": "Texture2D",
-    "textassets": "TextAsset",
-    "materials": "Material",
-    "meshes": "Mesh",
-    "animationclip": "AnimationClip",
-    "audio": "AudioClip",
-    "prefabs": "Prefab",
-}
-
-# 可替换的资源类型白名单
-# 这些是实际的资源类型，不应包括容器对象（如 AssetBundle）或元数据对象
-REPLACEABLE_ASSET_TYPES: set[AssetType] = {
-    # 纹理类
-    AssetType.Texture2D,
-    AssetType.Texture3D,
-    AssetType.Cubemap,
-    AssetType.RenderTexture,
-    AssetType.CustomRenderTexture,
-    AssetType.Sprite,
-    AssetType.SpriteAtlas,
-
-    # 文本和脚本类
-    AssetType.TextAsset,
-    AssetType.MonoBehaviour,
-    AssetType.MonoScript,
-
-    # 音频类
-    AssetType.AudioClip,
-
-    # 网格和材质类
-    AssetType.Mesh,
-    AssetType.Material,
-    AssetType.Shader,
-
-    # 动画类
-    AssetType.AnimationClip,
-    AssetType.Animator,
-    AssetType.AnimatorController,
-    AssetType.RuntimeAnimatorController,
-    AssetType.Avatar,
-    AssetType.AvatarMask,
-
-    # 字体类
-    AssetType.Font,
-
-    # 视频类
-    AssetType.VideoClip,
-
-    # 地形类
-    AssetType.TerrainData,
-
-    # 其他资源类
-    AssetType.PhysicMaterial,
-    AssetType.ComputeShader,
-    AssetType.Flare,
-    AssetType.LensFlare,
-}
 
 def _get_asset_types_from_jp_filenames(jp_paths: list[Path]) -> set[str]:
     """
