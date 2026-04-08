@@ -933,23 +933,23 @@ def _migrate_bundle_assets(
     asset_types_to_replace: set[str],
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[Env | None, int]:
+) -> tuple[Env | None, ReplacementResult]:
     """
     执行asset迁移的核心替换逻辑。
     asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 的子集 或 {"ALL"}）
-    按顺序尝试多种匹配策略（path_id, name_type），一旦有策略成功替换了至少一个资源，就停止并返回结果。
-    返回一个元组 (modified_env, replacement_count)，如果失败则 modified_env 为 None。
+    按顺序尝试多种匹配策略（path_id, name_type），一旦有策略成功匹配了至少一个资源，就停止并返回结果。
+    返回一个元组 (modified_env, result)，如果失败则 modified_env 为 None。
     """
     # 1. 加载 bundles
     log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
     old_env = load_bundle(old_bundle_path, log)
     if not old_env:
-        return None, 0
+        return None, ReplacementResult(0, 0, [], [])
     
     log(t("log.migration.loading_new_bundle"))
     new_env = load_bundle(new_bundle_path, log)
     if not new_env:
-        return None, 0
+        return None, ReplacementResult(0, 0, [], [])
 
     # 定义匹配策略
     strategies: list[tuple[str, KeyGeneratorFunc]] = [
@@ -985,13 +985,13 @@ def _migrate_bundle_assets(
             log(f"\n✅ {t('log.migration.strategy_success', name=name, count=result.replaced_count)}:")
             for item in result.replaced_logs:
                 log(f"  - {item}")
-            return new_env, result.replaced_count
+            return new_env, result
 
         log(f'  > {t("log.migration.strategy_no_match", name=name)}')
 
     # 5. 所有策略都失败了
     log(f"\n⚠️ {t('common.warning')}: {t('log.migration.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
-    return None, 0
+    return None, ReplacementResult(0, 0, [], [])
 
 def process_mod_update(
     old_mod_path: Path,
@@ -1033,7 +1033,7 @@ def process_mod_update(
 
         # 进行asset迁移
         log(f'\n--- {t("log.section.asset_migration")} ---')
-        modified_env, replacement_count = _migrate_bundle_assets(
+        modified_env, result = _migrate_bundle_assets(
             old_bundle_path=old_mod_path, 
             new_bundle_path=new_bundle_path, 
             asset_types_to_replace=asset_types_to_replace, 
@@ -1043,10 +1043,10 @@ def process_mod_update(
 
         if not modified_env:
             return False, t("message.mod_update.migration_failed")
-        if replacement_count == 0:
+        if not result.is_success:
             return False, t("message.mod_update.no_matching_assets_to_replace")
         
-        log(f'  > {t("log.mod_update.migration_complete", count=replacement_count)}')
+        log(f'  > {t("log.mod_update.migration_complete", count=result.replaced_count)}')
         
         # 保存和修正文件
         output_path = output_dir / new_bundle_path.name
