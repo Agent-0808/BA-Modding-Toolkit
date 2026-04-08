@@ -245,7 +245,7 @@ def replace_files(
 
     # 显示结果
     log(t("log.success_fail", success=success_count, fail=fail_count))
-    messagebox.showwarning(
+    messagebox.showinfo(
         t("common.tip"),
         t("message.replace_result", success=success_count, fail=fail_count)
     )

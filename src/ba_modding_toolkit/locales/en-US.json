@@ -188,7 +188,8 @@
 			"no_assets_matched": "No matching assets found. Cannot convert."
 		},
 		"save_error": "Error saving file: {error}",
-		"replace_result": "Replacement completed!\nSuccess: {success} files, Fail: {fail} files"
+		"replace_result": "Replacement completed!\nSuccess: {success} files, Failure: {fail} files",
+		"batch_success": "Batch processing completed!\nSuccess: {success}, Failure: {fail}"
 	},
 	"status": {
 		"ready": "Ready",
@@ -335,7 +336,7 @@
 			"using_old_mod": "Using old Mod: {name}",
 			"using_new_resource": "Using new resource: {name}",
 			"migration_complete": "Resource migration complete. Processed {count} assets.",
-			"batch_summary": "Batch processing complete!\n\nTotal: {total}\nSuccess: {success}\nFailed: {fail}",
+			"batch_summary": "Batch processing complete!\nTotal: {total}, Success: {success}, Failed: {fail}",
 			"all_processes_complete": "All processes completed!",
 			"batch_start": "Starting batch processing...",
 			"failed_items_cnt": "Total {count} files failed to process:",

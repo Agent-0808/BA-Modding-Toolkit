@@ -356,3 +356,4 @@ class ModUpdateTab(TabFrame):
             self.logger.log(failed_list)
 
         self.logger.status(t("status.done"))
+        messagebox.showinfo(t("common.success"), t("message.batch_success", success=success_count, fail=fail_count))

@@ -188,7 +188,8 @@
 			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。"
 		},
 		"save_error": "保存文件时发生错误: {error}",
-		"replace_result": "已完成替换！成功：{success}，失败：{fail}"
+		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
+		"batch_success": "批量处理完成！\n成功: {success}，失败: {fail}"
 	},
 	"status": {
 		"ready": "准备就绪",
@@ -335,7 +336,7 @@
 			"using_old_mod": "使用旧版 Mod: {name}",
 			"using_new_resource": "使用新版资源: {name}",
 			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
-			"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
+			"batch_summary": "批量处理完成！\n总计: {total}，成功: {success}，失败: {fail}",
 			"all_processes_complete": "全部流程处理完成！",
 			"batch_start": "开始批量处理...",
 			"failed_items_cnt": "共 {count} 个文件处理失败：",

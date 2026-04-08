@@ -44,23 +44,57 @@ class JPGLConversionTab(TabFrame):
             command=self._switch_view
         )
 
-        # --- 文件输入区域 ---
-        self.file_frame = tb.Frame(self)
-        self.file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
+        # --- 容器框架 ---
+        self.convert_frame = tb.Frame(self)  # JP_TO_GLOBAL 和 GLOBAL_TO_JP 模式
+        self.batch_frame = tb.Frame(self)    # LEGACY_BATCH 模式
+        
+        # 创建两种模式的UI
+        self._create_convert_mode_widgets(self.convert_frame)
+        self._create_batch_mode_widgets(self.batch_frame)
+        
+        # 初始化视图
+        self._switch_view()
+    
+    def _switch_view(self):
+        """根据选择的模式显示或隐藏对应的UI框架"""
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
+            self.convert_frame.pack_forget()
+            self.batch_frame.pack(fill=tk.BOTH, expand=True)
+        else:
+            self.batch_frame.pack_forget()
+            self.convert_frame.pack(fill=tk.BOTH, expand=True)
+            # 更新转换模式的UI文案
+            self._update_convert_mode_labels()
+
+    def _update_convert_mode_labels(self):
+        """根据当前转换模式更新标签文案"""
+        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
+            self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
+        else:  # GLOBAL_TO_JP
+            self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
+            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
+
+    # --- 转换模式UI (JP_TO_GLOBAL 和 GLOBAL_TO_JP) ---
+    def _create_convert_mode_widgets(self, parent):
+        # 文件输入区域
+        file_frame = tb.Frame(parent)
+        file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
         
         # 1. 国际服 Bundle 文件
         self.global_zone = DropZone(
-            self.file_frame,
+            file_frame,
             title=t("ui.jp_conversion.role_global_source"),
             placeholder_text=t("ui.jp_conversion.placeholder_global_bundle"),
             on_file_selected=self.on_global_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             logger=self.logger
         )
+        self.global_zone.pack(fill=tk.X, pady=(0, 3))
 
-        # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件，用于 jp_to_global 和 global_to_jp 模式)
+        # 2. 日服 Bundle 文件列表
         self.jp_files_listbox = FileListbox(
-            self.file_frame,
+            file_frame,
             title=t("ui.jp_conversion.role_jp_source"),
             placeholder_text=t("ui.jp_conversion.placeholder_jp_files"),
             height=3,
@@ -69,20 +103,8 @@ class JPGLConversionTab(TabFrame):
         )
         self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
-        # 3. 批量处理文件列表 (用于 legacy_batch 模式)
-        # 注意：FileListbox 会直接修改传入的列表，所以这里传入实例属性
-        self.batch_file_listbox = FileListbox(
-            self.file_frame,
-            title=t("ui.label.mod_file"),
-            file_list=self.legacy_file_list,
-            placeholder_text=t("ui.mod_update.placeholder_batch"),
-            height=10,
-            logger=self.logger,
-            display_formatter=lambda p: f"{p.parent.name} / {p.name}"
-        )
-        
         # --- 选项设置区域 ---
-        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
+        options_frame = tb.Labelframe(parent, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X)
         
         # 自动搜索开关
@@ -94,7 +116,7 @@ class JPGLConversionTab(TabFrame):
         )
         
         # --- 操作按钮 ---
-        action_button_frame = tb.Frame(self)
+        action_button_frame = tb.Frame(parent)
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
         
@@ -114,26 +136,46 @@ class JPGLConversionTab(TabFrame):
             style="large"
         )
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+
+    # --- 批量模式UI (LEGACY_BATCH) ---
+    def _create_batch_mode_widgets(self, parent):
+        # 批量处理文件列表
+        self.batch_file_listbox = FileListbox(
+            parent,
+            title=t("ui.label.mod_file"),
+            file_list=self.legacy_file_list,
+            placeholder_text=t("ui.mod_update.placeholder_batch"),
+            height=10,
+            logger=self.logger,
+            display_formatter=lambda p: f"{p.parent.name} / {p.name}"
+        )
+        self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
-        # 初始化视图标签
-        self._switch_view()
-    
-    def _switch_view(self):
-        """根据选择的模式更新UI文案和显示/隐藏组件"""
-        if self.mode_var.get() == Mode.LEGACY_BATCH:
-            self.global_zone.pack_forget()
-            self.jp_files_listbox.get_frame().pack_forget()
-            self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
-        else:
-            self.global_zone.pack(fill=tk.X, pady=(0, 3))
-            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
-            self.batch_file_listbox.get_frame().pack_forget()
-            if self.mode_var.get() == Mode.JP_TO_GLOBAL:
-                self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
-                self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
-            else:  # GLOBAL_TO_JP
-                self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
-                self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
+        # 操作按钮区域
+        action_button_frame = tb.Frame(parent)
+        action_button_frame.pack(fill=tk.X, pady=10)
+        action_button_frame.grid_columnconfigure((0, 1), weight=1)
+        
+        # 运行按钮
+        run_button = UIComponents.create_button(
+            action_button_frame, 
+            text=t("action.start"), 
+            command=self.run_conversion_thread,
+            bootstyle="success",
+            style="large"
+        )
+        run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        
+        # 替换原文件按钮
+        self.batch_replace_button = UIComponents.create_button(
+            action_button_frame,
+            text=t("action.replace_original"),
+            command=self.replace_original_thread,
+            bootstyle="danger",
+            state="disabled",
+            style="large"
+        )
+        self.batch_replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
     def on_global_selected(self, path: Path):
         """Global 文件选中后的处理"""
@@ -349,22 +391,22 @@ class JPGLConversionTab(TabFrame):
             self.logger.status(t("status.done"))
         
         # 覆盖完成后禁用按钮
-        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
+            self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
+        else:
+            self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
     
     def run_conversion(self):
+        # 根据模式分发到不同的处理函数
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
+            self._run_batch_conversion()
+        else:
+            self._run_single_conversion()
+
+    def _run_single_conversion(self):
+        """处理 JP_TO_GLOBAL 和 GLOBAL_TO_JP 模式"""
         # 1. 验证输入
         output_dir = Path(self.app.output_dir_var.get())
-        
-        # 根据模式获取文件列表
-        if self.mode_var.get() == Mode.LEGACY_BATCH:
-            # 批量处理模式
-            if not self.legacy_file_list:
-                messagebox.showerror(t("common.error"), t("message.list_empty"))
-                return
-            # 直接调用批量处理
-            self.run_batch_conversion()
-            return
-        
         jp_files = self.jp_files_listbox.file_list
         
         if not self.global_zone.path:
@@ -431,29 +473,7 @@ class JPGLConversionTab(TabFrame):
                     self.final_output_paths.append(output_path)
                     # 启用覆盖按钮
                     self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        elif self.mode_var.get() == Mode.GLOBAL_TO_JP:
-            success, message, replaced_files = core.process_global_to_jp_conversion(
-                global_bundle_path=self.global_zone.path,
-                jp_template_paths=jp_files,
-                output_dir=output_dir,
-                save_options=save_options,
-                asset_types_to_replace=asset_types_to_replace,
-                log=self.logger.log
-            )
-
-            # 记录输出文件路径和被替换的原始文件路径
-            if success:
-                self.replaced_source_files = replaced_files
-                for src_file in replaced_files:
-                    output_path = output_dir / src_file.name
-                    if output_path.exists():
-                        self.final_output_paths.append(output_path)
-
-                # 如果有输出文件，启用覆盖按钮
-                if self.final_output_paths:
-                    self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        else:  # LEGACY_BATCH
-            # 复用 process_global_to_jp_conversion 函数处理旧版到新版国际服的转换
+        else:  # GLOBAL_TO_JP
             success, message, replaced_files = core.process_global_to_jp_conversion(
                 global_bundle_path=self.global_zone.path,
                 jp_template_paths=jp_files,
@@ -483,9 +503,13 @@ class JPGLConversionTab(TabFrame):
             self.logger.status(t("status.failed"))
             messagebox.showerror(t("common.fail"), message)
     
-    def run_batch_conversion(self):
+    def _run_batch_conversion(self):
         """批量处理旧版到新版国际服的转换"""
         output_dir = Path(self.app.output_dir_var.get())
+        
+        if not self.legacy_file_list:
+            messagebox.showerror(t("common.error"), t("message.list_empty"))
+            return
         
         try:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -496,14 +520,17 @@ class JPGLConversionTab(TabFrame):
         # 重置输出文件路径列表和按钮状态
         self.final_output_paths = []
         self.replaced_source_files = []
-        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
         
         # 准备选项
         crc_setting = self.app.enable_crc_correction_var.get()
         perform_crc = False
         
         if crc_setting == "auto":
-            perform_crc = True
+            target_bundle = self.legacy_file_list[0]
+            platform, unity_version = core.get_unity_platform_info(target_bundle)
+            self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
+            perform_crc = (platform == "StandaloneWindows64")
         elif crc_setting == "true":
             perform_crc = True
         
@@ -554,6 +581,7 @@ class JPGLConversionTab(TabFrame):
         
         # 如果有成功处理的文件，启用覆盖按钮
         if self.final_output_paths:
-            self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
+            self.master.after(0, lambda: self.batch_replace_button.config(state=tk.NORMAL))
         
         self.logger.status(t("status.done"))
+        messagebox.showinfo(t("common.success"), t("message.batch_success", success=success_count, fail=fail_count))
