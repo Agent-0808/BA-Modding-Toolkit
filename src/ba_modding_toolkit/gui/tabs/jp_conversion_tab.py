@@ -17,9 +17,10 @@ class JPGLConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.final_output_paths: list[Path] = []
         self.replaced_source_files: list[Path] = []  # 记录被成功替换的原始文件路径
+        self.legacy_file_list: list[Path] = []  # 用于批量处理的旧版文件列表
+        super().__init__(*args, **kwargs)
 
     def create_widgets(self):
         # --- 转换模式选择 ---
@@ -30,7 +31,8 @@ class JPGLConversionTab(TabFrame):
             self.mode_var,
             [
                 ("jp_to_global", t("ui.jp_conversion.mode_jp_to_gl")),
-                ("global_to_jp", t("ui.jp_conversion.mode_gl_to_jp"))
+                ("global_to_jp", t("ui.jp_conversion.mode_gl_to_jp")),
+                ("legacy_batch", t("ui.jp_conversion.mode_legacy_batch"))
             ],
             command=self._switch_view
         )
@@ -49,7 +51,7 @@ class JPGLConversionTab(TabFrame):
             logger=self.logger
         )
 
-        # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件)
+        # 2. 日服 Bundle 文件列表 (FileListbox，支持多文件，用于 jp_to_global 和 global_to_jp 模式)
         self.jp_files_listbox = FileListbox(
             self.file_frame,
             title=t("ui.jp_conversion.role_jp_source"),
@@ -59,6 +61,18 @@ class JPGLConversionTab(TabFrame):
             on_files_added=self._on_jp_files_added
         )
         self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+        
+        # 3. 批量处理文件列表 (用于 legacy_batch 模式)
+        # 注意：FileListbox 会直接修改传入的列表，所以这里传入实例属性
+        self.batch_file_listbox = FileListbox(
+            self.file_frame,
+            title=t("ui.label.mod_file"),
+            file_list=self.legacy_file_list,
+            placeholder_text=t("ui.mod_update.placeholder_batch"),
+            height=10,
+            logger=self.logger,
+            display_formatter=lambda p: f"{p.parent.name} / {p.name}"
+        )
         
         # --- 选项设置区域 ---
         options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
@@ -98,13 +112,24 @@ class JPGLConversionTab(TabFrame):
         self._switch_view()
     
     def _switch_view(self):
-        """根据选择的模式更新UI文案"""
+        """根据选择的模式更新UI文案和显示/隐藏组件"""
         if self.mode_var.get() == "jp_to_global":
+            self.global_zone.pack(fill=tk.X, pady=(0, 3))
+            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+            self.batch_file_listbox.get_frame().pack_forget()
             self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
             self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
-        else:
+        elif self.mode_var.get() == "global_to_jp":
+            self.global_zone.pack(fill=tk.X, pady=(0, 3))
+            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+            self.batch_file_listbox.get_frame().pack_forget()
             self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
             self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
+        else:  # legacy_batch
+            # 隐藏单个文件处理UI，显示批量处理UI
+            self.global_zone.pack_forget()
+            self.jp_files_listbox.get_frame().pack_forget()
+            self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
 
     def on_global_selected(self, path: Path):
         """Global 文件选中后的处理"""
@@ -116,7 +141,7 @@ class JPGLConversionTab(TabFrame):
 
     # --- 自动搜索逻辑 ---
     def _auto_find_jp_files(self):
-        """当指定了 Global 文件后，自动在资源目录查找所有匹配的 JP 文件"""
+        """当指定了 Global 文件后，自动在资源目录查找所有匹配的文件"""
         if not self.app.game_resource_dir_var.get():
             self.logger.log(f'⚠️ {t("log.jp_convert.auto_search_no_game_dir")}')
             return
@@ -124,7 +149,7 @@ class JPGLConversionTab(TabFrame):
             self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.global_zone.path)}')
             return
         
-        # 清除旧的 JP 文件列表，准备重新搜索
+        # 清除旧的文件列表，准备重新搜索
         self.jp_files_listbox._clear_list()
         self.run_in_thread(self._find_worker)
 
@@ -133,16 +158,30 @@ class JPGLConversionTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        jp_files = core.find_all_jp_counterparts(
-            self.global_zone.path, game_search_dirs, self.logger.log
-        )
-        
-        if jp_files:
-            self.master.after(0, lambda: self._update_jp_listbox(jp_files))
-            self.logger.status(t("status.ready"))
+        if self.mode_var.get() == "legacy_batch":
+            # 搜索新版国际服文件
+            new_global_files = core.find_all_jp_counterparts(
+                self.global_zone.path, game_search_dirs, self.logger.log
+            )
+            
+            if new_global_files:
+                self.master.after(0, lambda: self._update_jp_listbox(new_global_files))
+                self.logger.status(t("status.ready"))
+            else:
+                self.logger.log(f'⚠️ {t("log.search.no_found")}')
+                self.logger.status(t("status.search_not_found"))
         else:
-            self.logger.log(f'⚠️ {t("log.search.no_found")}')
-            self.logger.status(t("status.search_not_found"))
+            # 搜索日服文件
+            jp_files = core.find_all_jp_counterparts(
+                self.global_zone.path, game_search_dirs, self.logger.log
+            )
+            
+            if jp_files:
+                self.master.after(0, lambda: self._update_jp_listbox(jp_files))
+                self.logger.status(t("status.ready"))
+            else:
+                self.logger.log(f'⚠️ {t("log.search.no_found")}')
+                self.logger.status(t("status.search_not_found"))
 
     def _update_jp_listbox(self, files: list[Path]):
         self.jp_files_listbox._clear_list()
@@ -151,7 +190,7 @@ class JPGLConversionTab(TabFrame):
 
     # --- 反向查找：JP文件添加后自动查找Global文件 ---
     def _on_jp_files_added(self, paths: list[Path]) -> None:
-        """当JP文件被添加时的回调，如果是第一个文件且开启了自动搜索，则查找对应的Global文件"""
+        """当文件被添加时的回调，如果是第一个文件且开启了自动搜索，则查找对应的Global文件"""
         if not self.app.auto_search_var.get():
             return
         if not paths:
@@ -159,19 +198,19 @@ class JPGLConversionTab(TabFrame):
         # 只有当Global文件未设置时才进行查找
         if self.global_zone.path is not None:
             return
-        # 使用第一个JP文件作为查找基础
-        first_jp_file = paths[0]
-        self._auto_find_global_file(first_jp_file)
+        # 使用第一个文件作为查找基础
+        first_file = paths[0]
+        self._auto_find_global_file(first_file)
 
-    def _auto_find_global_file(self, jp_file: Path):
-        """当指定了JP文件后，自动在资源目录查找对应的Global文件"""
+    def _auto_find_global_file(self, reference_file: Path):
+        """当指定了参考文件后，自动在资源目录查找对应的Global文件"""
         if not self.app.game_resource_dir_var.get():
             self.logger.log(f'⚠️ {t("log.jp_convert.auto_search_no_game_dir")}')
             return
 
-        self.run_in_thread(lambda: self._find_global_worker(jp_file))
+        self.run_in_thread(lambda: self._find_global_worker(reference_file))
 
-    def _find_global_worker(self, jp_file: Path):
+    def _find_global_worker(self, reference_file: Path):
         """后台线程：查找Global文件"""
         self.logger.status(t("status.searching"))
 
@@ -183,7 +222,7 @@ class JPGLConversionTab(TabFrame):
 
         # 使用find_new_bundle_path查找Global文件
         found_paths, message = core.find_new_bundle_path(
-            jp_file,
+            reference_file,
             search_paths,
             self.logger.log
         )
@@ -238,7 +277,7 @@ class JPGLConversionTab(TabFrame):
         if self.mode_var.get() == "jp_to_global":
             target_files = self.jp_files_listbox.file_list
         else:
-            # global_to_jp 模式：使用被替换的原始文件列表
+            # global_to_jp 和 legacy_batch 模式：使用被替换的原始文件列表
             target_files = self.replaced_source_files
 
         if not target_files:
@@ -271,7 +310,7 @@ class JPGLConversionTab(TabFrame):
         if self.mode_var.get() == "jp_to_global":
             target_files = self.jp_files_listbox.file_list
         else:
-            # global_to_jp 模式：使用被替换的原始文件列表
+            # global_to_jp 和 legacy_batch 模式：使用被替换的原始文件列表
             target_files = self.replaced_source_files
 
         # 只有一个文件时，使用 replace_file
@@ -311,6 +350,17 @@ class JPGLConversionTab(TabFrame):
     def run_conversion(self):
         # 1. 验证输入
         output_dir = Path(self.app.output_dir_var.get())
+        
+        # 根据模式获取文件列表
+        if self.mode_var.get() == "legacy_batch":
+            # 批量处理模式
+            if not self.legacy_file_list:
+                messagebox.showerror(t("common.error"), t("message.list_empty"))
+                return
+            # 直接调用批量处理
+            self.run_batch_conversion()
+            return
+        
         jp_files = self.jp_files_listbox.file_list
         
         if not self.global_zone.path:
@@ -377,7 +427,29 @@ class JPGLConversionTab(TabFrame):
                     self.final_output_paths.append(output_path)
                     # 启用覆盖按钮
                     self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        else:
+        elif self.mode_var.get() == "global_to_jp":
+            success, message, replaced_files = core.process_global_to_jp_conversion(
+                global_bundle_path=self.global_zone.path,
+                jp_template_paths=jp_files,
+                output_dir=output_dir,
+                save_options=save_options,
+                asset_types_to_replace=asset_types_to_replace,
+                log=self.logger.log
+            )
+
+            # 记录输出文件路径和被替换的原始文件路径
+            if success:
+                self.replaced_source_files = replaced_files
+                for src_file in replaced_files:
+                    output_path = output_dir / src_file.name
+                    if output_path.exists():
+                        self.final_output_paths.append(output_path)
+
+                # 如果有输出文件，启用覆盖按钮
+                if self.final_output_paths:
+                    self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
+        else:  # legacy_batch
+            # 复用 process_global_to_jp_conversion 函数处理旧版到新版国际服的转换
             success, message, replaced_files = core.process_global_to_jp_conversion(
                 global_bundle_path=self.global_zone.path,
                 jp_template_paths=jp_files,
@@ -406,3 +478,78 @@ class JPGLConversionTab(TabFrame):
         else:
             self.logger.status(t("status.failed"))
             messagebox.showerror(t("common.fail"), message)
+    
+    def run_batch_conversion(self):
+        """批量处理旧版到新版国际服的转换"""
+        output_dir = Path(self.app.output_dir_var.get())
+        
+        try:
+            output_dir.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            self.logger.log(f'❌ {t("message.create_dir_failed_detail",path=output_dir, error=e)}')
+            return
+        
+        # 重置输出文件路径列表和按钮状态
+        self.final_output_paths = []
+        self.replaced_source_files = []
+        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        
+        # 准备选项
+        crc_setting = self.app.enable_crc_correction_var.get()
+        perform_crc = False
+        
+        if crc_setting == "auto":
+            perform_crc = True
+        elif crc_setting == "true":
+            perform_crc = True
+        
+        save_options = core.SaveOptions(
+            perform_crc=perform_crc,
+            extra_bytes=self.app.get_extra_bytes(),
+            compression=self.app.compression_method_var.get()
+        )
+        
+        # 从设置页获取资源类型
+        asset_types_to_replace = set()
+        if self.app.replace_all_var.get():
+            asset_types_to_replace = {"ALL"}
+        else:
+            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
+            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
+            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
+        
+        base_game_dir = Path(self.app.game_resource_dir_var.get())
+        search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        
+        self.logger.status(t("common.processing"))
+        
+        # 调用批量处理函数
+        success_count, fail_count, failed_tasks, all_output_paths, all_replaced_files = core.process_batch_legacy_batch(
+            legacy_file_list=self.legacy_file_list,
+            search_paths=search_paths,
+            output_dir=output_dir,
+            asset_types_to_replace=asset_types_to_replace,
+            save_options=save_options,
+            log=self.logger.log,
+            progress_callback=lambda current, total, filename: self.logger.status(
+                t("status.processing_batch", current=current, total=total, filename=filename)
+            )
+        )
+        
+        # 记录输出文件路径和被替换的原始文件路径
+        self.final_output_paths = all_output_paths
+        self.replaced_source_files = all_replaced_files
+        
+        total_files = len(self.legacy_file_list)
+        self.logger.log(t("log.mod_update.batch_summary", total=total_files, success=success_count, fail=fail_count))
+        
+        if failed_tasks:
+            self.logger.log(t("log.mod_update.failed_items_cnt", count=fail_count))
+            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f) for f in failed_tasks])
+            self.logger.log(failed_list)
+        
+        # 如果有成功处理的文件，启用覆盖按钮
+        if self.final_output_paths:
+            self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
+        
+        self.logger.status(t("status.done"))

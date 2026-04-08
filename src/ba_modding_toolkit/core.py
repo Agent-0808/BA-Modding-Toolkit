@@ -1111,6 +1111,87 @@ def process_batch_mod_update(
 
     return success_count, fail_count, failed_tasks
 
+
+def process_batch_legacy_batch(
+    legacy_file_list: list[Path],
+    search_paths: list[Path],
+    output_dir: Path,
+    asset_types_to_replace: set[str],
+    save_options: SaveOptions,
+    log: LogFunc = no_log,
+    progress_callback: Callable[[int, int, str], None] | None = None,
+) -> tuple[int, int, list[str], list[Path], list[Path]]:
+    """
+    执行批量旧版国际服到新版国际服转换的核心逻辑。
+
+    Args:
+        legacy_file_list: 待转换的旧版国际服文件路径列表。
+        search_paths: 用于查找新版bundle文件的目录列表。
+        output_dir: 输出目录。
+        asset_types_to_replace: 需要替换的资源类型集合。
+        save_options: 保存和CRC修正的选项。
+        log: 日志记录函数。
+        progress_callback: 进度回调函数，用于更新UI。
+                           接收 (当前索引, 总数, 文件名)。
+
+    Returns:
+        tuple[int, int, list[str], list[Path], list[Path]]: (成功计数, 失败计数, 失败任务详情列表, 输出文件路径列表, 被替换的原始文件路径列表)
+    """
+    total_files = len(legacy_file_list)
+    success_count = 0
+    fail_count = 0
+    failed_tasks = []
+    all_output_paths: list[Path] = []
+    all_replaced_files: list[Path] = []
+
+    # 遍历每个旧版国际服文件
+    for i, legacy_file_path in enumerate(legacy_file_list):
+        current_progress = i + 1
+        filename = legacy_file_path.name
+        
+        if progress_callback:
+            progress_callback(current_progress, total_files, filename)
+
+        log("\n" + "=" * 50)
+        log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
+
+        # 查找对应的新版国际服文件
+        new_global_files = find_all_jp_counterparts(
+            legacy_file_path, search_paths, log
+        )
+
+        if not new_global_files:
+            log(f'❌ {t("log.search.no_found")}')
+            fail_count += 1
+            failed_tasks.append(f"{filename} - {t('log.search.no_found')}")
+            continue
+
+        # 执行转换处理
+        success, process_message, replaced_files = process_global_to_jp_conversion(
+            global_bundle_path=legacy_file_path,
+            jp_template_paths=new_global_files,
+            output_dir=output_dir,
+            save_options=save_options,
+            asset_types_to_replace=asset_types_to_replace,
+            log=log
+        )
+
+        if success:
+            log(f'✅ {t("log.mod_update.process_success", filename=filename)}')
+            success_count += 1
+            # 记录输出文件路径和被替换的原始文件路径
+            for src_file in replaced_files:
+                output_path = output_dir / src_file.name
+                if output_path.exists():
+                    all_output_paths.append(output_path)
+                all_replaced_files.append(src_file)
+        else:
+            log(f'❌ {t("log.mod_update.process_failed", filename=filename, message=process_message)}')
+            fail_count += 1
+            failed_tasks.append(f"{filename} - {process_message}")
+
+    return success_count, fail_count, failed_tasks, all_output_paths, all_replaced_files
+
 # ====== 日服处理相关 ======
 
 # 将日服文件名中的类型标识符映射到UnityPy的AssetType名称

@@ -415,8 +415,9 @@
 			"placeholder_bundle": "Drag and drop all Bundles to extract from here"
 		},
 		"jp_conversion": {
-			"mode_jp_to_gl": "JP → Global (Merge)",
-			"mode_gl_to_jp": "Global → JP (Split)",
+			"mode_jp_to_gl": "JP→GL (Merge)",
+			"mode_gl_to_jp": "GL→JP (Split)",
+			"mode_legacy_batch": "Batch Legacy",
 			"placeholder_jp_files": "Drag and drop all related JP files (textures, textassets...) here",
 			"role_jp_source": "JP Bundle (Source)",
 			"role_global_source": "Global Bundle (Source)",

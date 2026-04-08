@@ -417,6 +417,7 @@
 		"jp_conversion": {
 			"mode_jp_to_gl": "JP → Global (合并)",
 			"mode_gl_to_jp": "Global → JP (拆分)",
+			"mode_legacy_batch": "批量处理旧版",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
 			"role_jp_source": "日服 Bundle (源文件)",
 			"role_jp_target": "日服 Bundle (目标文件)",
