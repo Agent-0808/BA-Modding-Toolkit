@@ -339,7 +339,8 @@
 			"using_new_resource": "使用新版资源: {name}",
 			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
 			"all_processes_complete": "全部流程处理完成！",
-			"updating": "正在更新……"
+			"updating": "正在更新……",
+			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件"
 		},
 		"batch": {
 			"summary": "批量处理完成！\n总计: {total}，成功: {success}，失败: {fail}",
@@ -347,7 +348,8 @@
 			"failed_items_cnt": "共 {count} 个文件处理失败：",
 			"failed_item": "- {filename}",
 			"process_success": "处理成功: {filename}",
-			"process_failed": "处理失败: {filename} - {message}"
+			"process_failed": "处理失败: {filename} - {message}",
+			"process_unchanged": "内容未变化，跳过: {filename}"
 		},
 		"jp_convert": {
 			"error_jp_to_global": "在JP -> Global转换过程中发生错误: {error}",
@@ -364,7 +366,8 @@
 			"global_source_file": "国际服源文件: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
 			"global_to_jp_complete": "Global -> JP转换完成！",
-			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。"
+			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
+			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成"
 		},
 		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
 		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 \"{filename}\"。",

@@ -440,7 +440,8 @@ class ModUpdateTab(TabFrame):
             save_options=save_options,
             spine_options=spine_options,
             log=self.logger.log,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
+            skip_unchanged=True
         )
         
         # 记录输出文件路径和被替换的原始文件路径

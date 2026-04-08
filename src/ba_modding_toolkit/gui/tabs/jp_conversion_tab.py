@@ -480,7 +480,8 @@ class JPGLConversionTab(TabFrame):
                 output_dir=output_dir,
                 save_options=save_options,
                 asset_types_to_replace=asset_types_to_replace,
-                log=self.logger.log
+                log=self.logger.log,
+                skip_unchanged=True
             )
 
             # 记录输出文件路径和被替换的原始文件路径
@@ -564,7 +565,8 @@ class JPGLConversionTab(TabFrame):
             log=self.logger.log,
             progress_callback=lambda current, total, filename: self.logger.status(
                 t("status.processing_batch", current=current, total=total, filename=filename)
-            )
+            ),
+            skip_unchanged=True
         )
         
         # 记录输出文件路径和被替换的原始文件路径

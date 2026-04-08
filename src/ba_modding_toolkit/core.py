@@ -1001,6 +1001,7 @@ def process_mod_update(
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
+    skip_unchanged: bool = False,
 ) -> tuple[bool, str]:
     """
     自动化Mod更新流程。
@@ -1022,9 +1023,11 @@ def process_mod_update(
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
         log: 日志记录函数，默认为空函数
+        skip_unchanged: 是否跳过未变化的文件
     
     Returns:
         tuple[bool, str]: (是否成功, 状态消息) 的元组
+        如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged")
     """
     try:
         log("="*50)
@@ -1045,6 +1048,11 @@ def process_mod_update(
             return False, t("message.mod_update.migration_failed")
         if not result.is_success:
             return False, t("message.mod_update.no_matching_assets_to_replace")
+        
+        # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
+        if skip_unchanged and result.replaced_count == 0 and result.skipped_count > 0:
+            log(f'  > ⏭️ {t("log.mod_update.all_resources_unchanged", count=result.skipped_count)}')
+            return True, "unchanged"
         
         log(f'  > {t("log.mod_update.migration_complete", count=result.replaced_count)}')
         
@@ -1078,6 +1086,7 @@ def process_batch_mod_update(
     spine_options: SpineOptions | None,
     log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
+    skip_unchanged: bool = False,
 ) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
     """
     执行批量Mod更新的核心逻辑。
@@ -1092,6 +1101,7 @@ def process_batch_mod_update(
         log: 日志记录函数。
         progress_callback: 进度回调函数，用于更新UI。
                            接收 (当前索引, 总数, 文件名)。
+        skip_unchanged: 是否跳过未变化的文件
 
     Returns:
         tuple[int, int, list[str], list[tuple[Path, Path]]]: 
@@ -1136,16 +1146,21 @@ def process_batch_mod_update(
             asset_types_to_replace=asset_types_to_replace,
             save_options=save_options,
             spine_options=spine_options,
-            log=log
+            log=log,
+            skip_unchanged=skip_unchanged
         )
 
         if success:
-            log(f'✅ {t("log.batch.process_success", filename=filename)}')
-            success_count += 1
-            # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
-            output_path = output_dir / new_bundle_path.name
-            if output_path.exists():
-                file_pairs.append((output_path, new_bundle_path))
+            if process_message == "unchanged":
+                # 资源未变化，不生成输出文件
+                log(f'⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+            else:
+                log(f'✅ {t("log.batch.process_success", filename=filename)}')
+                success_count += 1
+                # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
+                output_path = output_dir / new_bundle_path.name
+                if output_path.exists():
+                    file_pairs.append((output_path, new_bundle_path))
         else:
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
@@ -1162,6 +1177,7 @@ def process_batch_legacy_batch(
     save_options: SaveOptions,
     log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
+    skip_unchanged: bool = False,
 ) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
     """
     执行批量旧版国际服到新版国际服转换的核心逻辑。
@@ -1175,6 +1191,7 @@ def process_batch_legacy_batch(
         log: 日志记录函数。
         progress_callback: 进度回调函数，用于更新UI。
                            接收 (当前索引, 总数, 文件名)。
+        skip_unchanged: 是否跳过未变化的文件
 
     Returns:
         tuple[int, int, list[str], list[tuple[Path, Path]]]: 
@@ -1215,17 +1232,22 @@ def process_batch_legacy_batch(
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace=asset_types_to_replace,
-            log=log
+            log=log,
+            skip_unchanged=skip_unchanged
         )
 
         if success:
-            log(f'✅ {t("log.batch.process_success", filename=filename)}')
-            success_count += 1
-            # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
-            for src_file in replaced_files:
-                output_path = output_dir / src_file.name
-                if output_path.exists():
-                    file_pairs.append((output_path, src_file))
+            if skip_unchanged and not replaced_files:
+                # 没有文件被实际替换（全部被跳过）
+                log(f'⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+            else:
+                log(f'✅ {t("log.batch.process_success", filename=filename)}')
+                success_count += 1
+                # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
+                for src_file in replaced_files:
+                    output_path = output_dir / src_file.name
+                    if output_path.exists():
+                        file_pairs.append((output_path, src_file))
         else:
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
@@ -1470,6 +1492,7 @@ def process_global_to_jp_conversion(
     save_options: SaveOptions,
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
+    skip_unchanged: bool = False,
 ) -> tuple[bool, str, list[Path]]:
     """
     处理国际服转日服的转换。
@@ -1485,6 +1508,7 @@ def process_global_to_jp_conversion(
         save_options: 保存选项。
         asset_types_to_replace: 要替换的资源类型集合。
         log: 日志记录函数。
+        skip_unchanged: 是否跳过未变化的文件
 
     Returns:
         tuple[bool, str, list[Path]]: (是否成功, 状态消息, 被替换的原始文件路径列表) 的元组
@@ -1545,26 +1569,30 @@ def process_global_to_jp_conversion(
                 result = _apply_replacements(template_env, source_replacement_map, key_func, log)
 
                 if result.is_success:
-                    log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}")
-                    for item in result.replaced_logs:
-                        log(f"  - {item}")
-
-                    output_path = output_dir / jp_template_path.name
-                    save_ok, save_msg = save_bundle(
-                        env=template_env,
-                        output_path=output_path,
-                        save_options=save_options,
-                        log=log
-                    )
-                    if save_ok:
-                        log(f"  ✅ {t('log.file.saved', path=output_path)}")
-                        success_count += 1
-                        total_changes += result.replaced_count
-                        strategy_success = True
-                        strategy_total_changes += result.replaced_count
-                        replaced_files.append(jp_template_path)  # 记录被替换的原始文件
+                    # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
+                    if skip_unchanged and result.replaced_count == 0 and result.skipped_count > 0:
+                        log(f"⏭️ {t('log.jp_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
                     else:
-                        log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
+                        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}")
+                        for item in result.replaced_logs:
+                            log(f"  - {item}")
+
+                        output_path = output_dir / jp_template_path.name
+                        save_ok, save_msg = save_bundle(
+                            env=template_env,
+                            output_path=output_path,
+                            save_options=save_options,
+                            log=log
+                        )
+                        if save_ok:
+                            log(f"  ✅ {t('log.file.saved', path=output_path)}")
+                            success_count += 1
+                            total_changes += result.replaced_count
+                            strategy_success = True
+                            strategy_total_changes += result.replaced_count
+                            replaced_files.append(jp_template_path)  # 记录被替换的原始文件
+                        else:
+                            log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
                 else:
                     log(f"  > {t('log.file.no_changes_made')}")
 
