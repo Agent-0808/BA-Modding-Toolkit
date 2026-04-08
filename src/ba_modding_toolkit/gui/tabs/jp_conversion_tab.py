@@ -555,7 +555,7 @@ class JPGLConversionTab(TabFrame):
         self.logger.status(t("common.processing"))
         
         # 调用批量处理函数
-        success_count, fail_count, failed_tasks, all_output_paths, all_replaced_files = core.process_batch_legacy_batch(
+        success_count, fail_count, failed_tasks, file_pairs = core.process_batch_legacy_batch(
             legacy_file_list=self.legacy_file_list,
             search_paths=search_paths,
             output_dir=output_dir,
@@ -568,8 +568,8 @@ class JPGLConversionTab(TabFrame):
         )
         
         # 记录输出文件路径和被替换的原始文件路径
-        self.final_output_paths = all_output_paths
-        self.replaced_source_files = all_replaced_files
+        self.final_output_paths = [pair[0] for pair in file_pairs]
+        self.replaced_source_files = [pair[1] for pair in file_pairs]
         
         total_files = len(self.legacy_file_list)
         self.logger.log(t("log.batch.summary", total=total_files, success=success_count, fail=fail_count))

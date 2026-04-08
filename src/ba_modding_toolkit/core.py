@@ -1078,7 +1078,7 @@ def process_batch_mod_update(
     spine_options: SpineOptions | None,
     log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
-) -> tuple[int, int, list[str]]:
+) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
     """
     执行批量Mod更新的核心逻辑。
 
@@ -1094,12 +1094,14 @@ def process_batch_mod_update(
                            接收 (当前索引, 总数, 文件名)。
 
     Returns:
-        tuple[int, int, list[str]]: (成功计数, 失败计数, 失败任务详情列表)
+        tuple[int, int, list[str], list[tuple[Path, Path]]]: 
+            (成功计数, 失败计数, 失败任务详情列表, (输出文件路径, 被替换的原始文件路径) 元组列表)
     """
     total_files = len(mod_file_list)
     success_count = 0
     fail_count = 0
     failed_tasks = []
+    file_pairs: list[tuple[Path, Path]] = []
 
     # 遍历每个旧Mod文件
     for i, old_mod_path in enumerate(mod_file_list):
@@ -1140,12 +1142,16 @@ def process_batch_mod_update(
         if success:
             log(f'✅ {t("log.batch.process_success", filename=filename)}')
             success_count += 1
+            # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
+            output_path = output_dir / new_bundle_path.name
+            if output_path.exists():
+                file_pairs.append((output_path, new_bundle_path))
         else:
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
-    return success_count, fail_count, failed_tasks
+    return success_count, fail_count, failed_tasks, file_pairs
 
 
 def process_batch_legacy_batch(
@@ -1156,7 +1162,7 @@ def process_batch_legacy_batch(
     save_options: SaveOptions,
     log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
-) -> tuple[int, int, list[str], list[Path], list[Path]]:
+) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
     """
     执行批量旧版国际服到新版国际服转换的核心逻辑。
 
@@ -1171,14 +1177,14 @@ def process_batch_legacy_batch(
                            接收 (当前索引, 总数, 文件名)。
 
     Returns:
-        tuple[int, int, list[str], list[Path], list[Path]]: (成功计数, 失败计数, 失败任务详情列表, 输出文件路径列表, 被替换的原始文件路径列表)
+        tuple[int, int, list[str], list[tuple[Path, Path]]]: 
+            (成功计数, 失败计数, 失败任务详情列表, (输出文件路径, 被替换的原始文件路径) 元组列表)
     """
     total_files = len(legacy_file_list)
     success_count = 0
     fail_count = 0
     failed_tasks = []
-    all_output_paths: list[Path] = []
-    all_replaced_files: list[Path] = []
+    file_pairs: list[tuple[Path, Path]] = []
 
     # 遍历每个旧版国际服文件
     for i, legacy_file_path in enumerate(legacy_file_list):
@@ -1215,18 +1221,17 @@ def process_batch_legacy_batch(
         if success:
             log(f'✅ {t("log.batch.process_success", filename=filename)}')
             success_count += 1
-            # 记录输出文件路径和被替换的原始文件路径
+            # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
             for src_file in replaced_files:
                 output_path = output_dir / src_file.name
                 if output_path.exists():
-                    all_output_paths.append(output_path)
-                all_replaced_files.append(src_file)
+                    file_pairs.append((output_path, src_file))
         else:
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
-    return success_count, fail_count, failed_tasks, all_output_paths, all_replaced_files
+    return success_count, fail_count, failed_tasks, file_pairs
 
 # ====== 日服处理相关 ======
 
