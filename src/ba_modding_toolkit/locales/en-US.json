@@ -333,7 +333,8 @@
 			"writing_to_new_bundle": "Writing assets to new bundle...",
 			"strategy_success": "Strategy \"{name}\" successfully replaced {count} assets",
 			"strategy_no_match": "Strategy \"{name}\" failed to match any assets.",
-			"all_strategies_failed": "All matching strategies failed to find replaceable assets ({types}) in the new bundle."
+			"all_strategies_failed": "All matching strategies failed to find replaceable assets ({types}) in the new bundle.",
+			"strategy_skipped_unchanged": "Strategy \"{name}\": All files unchanged, skipping generation"
 		},
 		"mod_update": {
 			"using_old_mod": "Using old Mod: {name}",

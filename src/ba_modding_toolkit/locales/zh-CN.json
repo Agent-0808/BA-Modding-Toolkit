@@ -333,7 +333,8 @@
 			"writing_to_new_bundle": "向新版 bundle 写入资源...",
 			"strategy_success": "策略 \"{name}\" 成功替换了 {count} 个资源",
 			"strategy_no_match": "策略 \"{name}\" 未能匹配到任何资源。",
-			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。"
+			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。",
+			"strategy_skipped_unchanged": "策略 \"{name}\"：所有文件内容未变化，跳过生成"
 		},
 		"mod_update": {
 			"using_old_mod": "使用旧版 Mod: {name}",

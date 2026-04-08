@@ -1584,6 +1584,8 @@ def process_global_to_jp_conversion(
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
                     if skip_unchanged and result.replaced_count == 0 and result.skipped_count > 0:
                         log(f"⏭️ {t('log.jp_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
+                        # 跳过也算作策略成功，避免继续尝试其他策略
+                        strategy_success = True
                     else:
                         log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}")
                         for item in result.replaced_logs:
@@ -1610,7 +1612,11 @@ def process_global_to_jp_conversion(
 
             # 如果当前策略成功替换了至少一个资源，就结束
             if strategy_success:
-                log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=strategy_total_changes)}")
+                if strategy_total_changes == 0:
+                    # 所有文件都被跳过
+                    log(f"\n⏭️ {t('log.migration.strategy_skipped_unchanged', name=strategy_name)}")
+                else:
+                    log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=strategy_total_changes)}")
                 break
 
         log(f'\n--- {t("log.section.conversion_complete")} ---')
