@@ -88,6 +88,25 @@ class SpineOptions:
             and self.target_version.count(".") == 2
         )
 
+@dataclass
+class ReplacementResult:
+    """封装资源替换操作的结果。"""
+    replaced_count: int          # 实际执行替换的数量
+    skipped_count: int           # 匹配但内容相同跳过的数量
+    replaced_logs: list[str]     # 替换成功的日志
+    unmatched_keys: list[AssetKey]  # 未匹配的资源键
+    
+    @property
+    def matched_count(self) -> int:
+        """总匹配数（包括替换和跳过的）"""
+        return self.replaced_count + self.skipped_count
+    
+    @property
+    def is_success(self) -> bool:
+        """是否有资源匹配成功（无论是否实际替换）"""
+        return self.matched_count > 0
+
+
 # ====== 读取与保存相关 ======
 
 def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
@@ -478,7 +497,7 @@ def _apply_replacements(
     replacement_map: dict[AssetKey, AssetContent],
     key_func: KeyGeneratorFunc,
     log: LogFunc = no_log,
-) -> tuple[int, list[str], list[AssetKey]]:
+) -> ReplacementResult:
     """
     将“替换清单”中的资源应用到目标环境中。
 
@@ -489,9 +508,10 @@ def _apply_replacements(
         log: 日志记录函数。
 
     Returns:
-        一个元组 (成功替换的数量, 成功替换的资源日志列表, 未能匹配的资源键集合)。
+        ReplacementResult: 包含替换结果的数据类，包括实际替换数量、跳过数量、日志和未匹配键。
     """
     replacement_count = 0
+    skipped_count = 0
     replaced_assets_log = []
     
     # 创建一个副本用于操作，因为我们会从中移除已处理的项
@@ -514,15 +534,27 @@ def _apply_replacements(
                 continue
 
             if asset_key in tasks:
-                content = tasks.pop(asset_key)
+                content: AssetContent = tasks.pop(asset_key)
                 resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
                 
                 if obj.type == AssetType.Texture2D:
-                    data.image = content
+                    content: Image.Image
+                    new_image = content
+                    if data.image.tobytes() == new_image.tobytes():
+                        log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
+                        skipped_count += 1
+                        continue
+                    data.image = new_image
                     data.save()
                 elif obj.type == AssetType.TextAsset:
-                    # content 是 bytes，需要解码成 str
-                    data.m_Script = content.decode("utf-8", "surrogateescape")
+                    content: bytes
+                    new_script = content.decode("utf-8", "surrogateescape")
+                    # 如果内容相同，跳过替换
+                    if data.m_Script == new_script:
+                        log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
+                        skipped_count += 1
+                        continue
+                    data.m_Script = new_script
                     data.save()
                 else:
                     # 其他类型直接设置原始数据
@@ -536,8 +568,14 @@ def _apply_replacements(
         except Exception as e:
             resource_name_for_error = obj.peek_name() or t("log.unnamed_resource", type=obj.type.name)
             log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
+            log(traceback.format_exc())
 
-    return replacement_count, replaced_assets_log, list(tasks.keys())
+    return ReplacementResult(
+        replaced_count=replacement_count,
+        skipped_count=skipped_count,
+        replaced_logs=replaced_assets_log,
+        unmatched_keys=list(tasks.keys())
+    )
 
 def process_asset_packing(
     target_bundle_path: Path,
@@ -616,7 +654,6 @@ def process_asset_packing(
                     )
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
-                pass
             replacement_map[asset_key] = content
         
         original_tasks_count = len(replacement_map)
@@ -627,22 +664,22 @@ def process_asset_packing(
         key_func = MATCH_STRATEGIES[strategy_name]
 
         # 3. 应用替换
-        replacement_count, replaced_assets_log, unmatched_keys = _apply_replacements(env, replacement_map, key_func, log)
+        result = _apply_replacements(env, replacement_map, key_func, log)
 
-        if replacement_count == 0:
+        if not result.is_success:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
             log(t("log.packer.check_files_and_bundle"))
             return False, t("message.packer.no_matching_assets_to_pack")
         
         # 报告替换结果
-        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}:")
-        for item in replaced_assets_log:
+        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}:")
+        for item in result.replaced_logs:
             log(f"  - {item}")
 
-        log(f'\n{t("log.packer.packing_complete", success=replacement_count, total=original_tasks_count)}')
+        log(f'\n{t("log.packer.packing_complete", success=result.replaced_count, total=original_tasks_count)}')
 
         # 报告未被打包的文件
-        if unmatched_keys:
+        if result.unmatched_keys:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             # 为了找到原始文件名，我们需要反向查找
             original_filenames = {
@@ -651,7 +688,7 @@ def process_asset_packing(
             original_filenames.update({
                 NameTypeKey(f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
             })
-            for key in sorted(unmatched_keys):
+            for key in sorted(result.unmatched_keys):
                 if isinstance(key, NameTypeKey):
                     key_display = f"[{key.type}] {key.name}"
                 else:
@@ -671,7 +708,7 @@ def process_asset_packing(
             return False, save_message
 
         log(t("log.file.saved", path=output_path))
-        return True, t("message.packer.process_complete", count=replacement_count, button=t("action.replace_original"))
+        return True, t("message.packer.process_complete", count=result.replaced_count, button=t("action.replace_original"))
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
@@ -941,15 +978,14 @@ def _migrate_bundle_assets(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
-        replacement_count, replaced_logs, unmatched_keys = _apply_replacements(
-            new_env, old_assets_map, key_func, log)
+        result = _apply_replacements(new_env, old_assets_map, key_func, log)
         
-        # 4. 如果当前策略成功替换了至少一个资源，就结束
-        if replacement_count > 0:
-            log(f"\n✅ {t('log.migration.strategy_success', name=name, count=replacement_count)}:")
-            for item in replaced_logs:
+        # 4. 如果当前策略成功匹配了至少一个资源，就结束
+        if result.is_success:
+            log(f"\n✅ {t('log.migration.strategy_success', name=name, count=result.replaced_count)}:")
+            for item in result.replaced_logs:
                 log(f"  - {item}")
-            return new_env, replacement_count
+            return new_env, result.replaced_count
 
         log(f'  > {t("log.migration.strategy_no_match", name=name)}')
 
@@ -1391,16 +1427,14 @@ def process_jp_to_global_conversion(
         if not global_env:
             return False, t("message.jp_convert.load_global_failed")
         
-        replacement_count, replaced_logs, _ = _apply_replacements(
-            global_env, replacement_map, key_func, log
-        )
+        result = _apply_replacements(global_env, replacement_map, key_func, log)
         
-        if replacement_count == 0:
+        if not result.is_success:
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}:")
-        for item in replaced_logs:
+        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}:")
+        for item in result.replaced_logs:
             log(f"  - {item}")
         
         # 3. 保存最终文件
@@ -1417,7 +1451,7 @@ def process_jp_to_global_conversion(
         
         log(f"  ✅ {t('log.file.saved', path=output_path)}")
         log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
-        return True, t("message.jp_convert.jp_to_global_success", asset_count=replacement_count)
+        return True, t("message.jp_convert.jp_to_global_success", asset_count=result.replaced_count)
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
@@ -1503,13 +1537,11 @@ def process_global_to_jp_conversion(
                     continue
 
                 # 应用替换，函数会自动匹配并替换存在于模板中的资源
-                replacement_count, replaced_logs, _ = _apply_replacements(
-                    template_env, source_replacement_map, key_func, log
-                )
+                result = _apply_replacements(template_env, source_replacement_map, key_func, log)
 
-                if replacement_count > 0:
-                    log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=replacement_count)}")
-                    for item in replaced_logs:
+                if result.is_success:
+                    log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}")
+                    for item in result.replaced_logs:
                         log(f"  - {item}")
 
                     output_path = output_dir / jp_template_path.name
@@ -1522,9 +1554,9 @@ def process_global_to_jp_conversion(
                     if save_ok:
                         log(f"  ✅ {t('log.file.saved', path=output_path)}")
                         success_count += 1
-                        total_changes += replacement_count
+                        total_changes += result.replaced_count
                         strategy_success = True
-                        strategy_total_changes += replacement_count
+                        strategy_total_changes += result.replaced_count
                         replaced_files.append(jp_template_path)  # 记录被替换的原始文件
                     else:
                         log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")

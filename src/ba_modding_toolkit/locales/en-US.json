@@ -377,6 +377,7 @@
 		"replace_original": "You can now press the \"{button}\" button to overwrite the original file",
 		"generated_file_not_found": "Operation reported success, but the generated file was not found in the output directory.",
 		"replace_resource_failed": "Error replacing resource [{type}] {name}: {error}",
+		"replace_skipped_same_content": "Skipped replacement for [{type}] {name}: content identical to original",
 		"platform_info": "Target Platform: {platform} (Unity {version})",
 		"unnamed_resource": "Unnamed {type} asset",
 		"success_fail": "Success: {success}, Fail: {fail}"

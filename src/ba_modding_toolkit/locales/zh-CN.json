@@ -378,6 +378,7 @@
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
+		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "未命名的 {type} 资源"
 	},
