@@ -6,7 +6,7 @@ import shutil
 import re
 import tempfile
 from dataclasses import dataclass
-from typing import Callable, Any, Literal, NamedTuple
+from typing import Callable, Literal, NamedTuple
 import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.files import ObjectReader as Obj, SerializedFile
@@ -1166,6 +1166,12 @@ def process_batch_mod_update(
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
+    # 打印输出文件列表（不包括跳过的）
+    if file_pairs:
+        log(f'\n{t("log.batch.output_files_list", count=len(file_pairs))}')
+        for output_path, _ in file_pairs:
+            log(f'  - {output_path.name}')
+
     return success_count, fail_count, failed_tasks, file_pairs
 
 
@@ -1252,6 +1258,12 @@ def process_batch_legacy_batch(
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
+
+    # 打印输出文件列表（不包括跳过的）
+    if file_pairs:
+        log(f'\n{t("log.batch.output_files_list", count=len(file_pairs))}')
+        for output_path, _ in file_pairs:
+            log(f'  - {output_path.name}')
 
     return success_count, fail_count, failed_tasks, file_pairs
 

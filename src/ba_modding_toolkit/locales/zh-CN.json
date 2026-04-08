@@ -349,7 +349,8 @@
 			"failed_item": "- {filename}",
 			"process_success": "处理成功: {filename}",
 			"process_failed": "处理失败: {filename} - {message}",
-			"process_unchanged": "内容未变化，跳过: {filename}"
+			"process_unchanged": "内容未变化，跳过: {filename}",
+			"output_files_list": "输出文件列表（共 {count} 个）："
 		},
 		"jp_convert": {
 			"error_jp_to_global": "在JP -> Global转换过程中发生错误: {error}",

@@ -339,7 +339,8 @@
 			"using_new_resource": "Using new resource: {name}",
 			"migration_complete": "Resource migration complete. Processed {count} assets.",
 			"all_processes_complete": "All processes completed!",
-			"updating": "Updating..."
+			"updating": "Updating...",
+			"all_resources_unchanged": "All resources unchanged ({count}), skipping output file generation"
 		},
 		"batch": {
 			"summary": "Batch processing complete!\nTotal: {total}, Success: {success}, Failed: {fail}",
@@ -347,7 +348,9 @@
 			"failed_items_cnt": "Total {count} files failed to process:",
 			"failed_item": "- {filename}",
 			"process_success": "Process success: {filename}",
-			"process_failed": "Process failed: {filename} - {message}"
+			"process_failed": "Process failed: {filename} - {message}",
+			"process_unchanged": "Content unchanged, skipping: {filename}",
+			"output_files_list": "Output files list ({count} total):"
 		},
 		"jp_convert": {
 			"error_jp_to_global": "Error during JP -> Global conversion: {error}",
@@ -364,7 +367,8 @@
 			"global_source_file": "Global source file: {name}",
 			"extracted_count": "Extracted {count} assets.",
 			"global_to_jp_complete": "Global -> JP conversion complete!",
-			"auto_search_no_game_dir": "Auto-search failed: Game resource directory not set."
+			"auto_search_no_game_dir": "Auto-search failed: Game resource directory not set.",
+			"file_unchanged": "File content unchanged: {name} ({count} assets), skipping generation"
 		},
 		"game_dir_not_set": "Game resource directory not set. Cannot automatically locate original files.",
 		"file_not_found_in_dirs": "Could not find corresponding original file \"{filename}\" in specified resource directories.",
