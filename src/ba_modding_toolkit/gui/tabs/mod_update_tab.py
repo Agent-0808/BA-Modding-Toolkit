@@ -289,7 +289,7 @@ class ModUpdateTab(TabFrame):
 
     def _batch_update_worker(self):
         self.logger.log("\n" + "#"*50)
-        self.logger.log(t("log.mod_update.batch_start"))
+        self.logger.log(t("log.batch.start"))
         self.logger.status(t("status.batch_starting"))
 
         output_dir = Path(self.app.output_dir_var.get())
@@ -348,12 +348,12 @@ class ModUpdateTab(TabFrame):
         
         total_files = len(self.mod_file_list)
         
-        self.logger.log(t("log.mod_update.batch_summary", total=total_files, success=success_count, fail=fail_count))
+        self.logger.log(t("log.batch.summary", total=total_files, success=success_count, fail=fail_count))
 
         if failed_tasks:
-            self.logger.log(t("log.mod_update.failed_items_cnt", count=fail_count))
-            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f) for f in failed_tasks])
+            self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
+            failed_list = "\n".join([t("log.batch.failed_item", filename=f) for f in failed_tasks])
             self.logger.log(failed_list)
 
         self.logger.status(t("status.done"))
-        messagebox.showinfo(t("common.success"), t("message.batch_success", success=success_count, fail=fail_count))
+        messagebox.showinfo(t("common.success"), t("message.batch.success", success=success_count, fail=fail_count))

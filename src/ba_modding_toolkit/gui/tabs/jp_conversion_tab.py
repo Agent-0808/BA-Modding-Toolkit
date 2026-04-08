@@ -572,11 +572,11 @@ class JPGLConversionTab(TabFrame):
         self.replaced_source_files = all_replaced_files
         
         total_files = len(self.legacy_file_list)
-        self.logger.log(t("log.mod_update.batch_summary", total=total_files, success=success_count, fail=fail_count))
+        self.logger.log(t("log.batch.summary", total=total_files, success=success_count, fail=fail_count))
         
         if failed_tasks:
-            self.logger.log(t("log.mod_update.failed_items_cnt", count=fail_count))
-            failed_list = "\n".join([t("log.mod_update.failed_item", filename=f) for f in failed_tasks])
+            self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
+            failed_list = "\n".join([t("log.batch.failed_item", filename=f) for f in failed_tasks])
             self.logger.log(failed_list)
         
         # 如果有成功处理的文件，启用覆盖按钮
@@ -584,4 +584,4 @@ class JPGLConversionTab(TabFrame):
             self.master.after(0, lambda: self.batch_replace_button.config(state=tk.NORMAL))
         
         self.logger.status(t("status.done"))
-        messagebox.showinfo(t("common.success"), t("message.batch_success", success=success_count, fail=fail_count))
+        messagebox.showinfo(t("common.success"), t("message.batch.success", success=success_count, fail=fail_count))

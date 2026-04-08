@@ -1102,10 +1102,10 @@ def process_batch_mod_update(
         )
 
         if success:
-            log(f'✅ {t("log.mod_update.process_success", filename=filename)}')
+            log(f'✅ {t("log.batch.process_success", filename=filename)}')
             success_count += 1
         else:
-            log(f'❌ {t("log.mod_update.process_failed", filename=filename, message=process_message)}')
+            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
@@ -1177,7 +1177,7 @@ def process_batch_legacy_batch(
         )
 
         if success:
-            log(f'✅ {t("log.mod_update.process_success", filename=filename)}')
+            log(f'✅ {t("log.batch.process_success", filename=filename)}')
             success_count += 1
             # 记录输出文件路径和被替换的原始文件路径
             for src_file in replaced_files:
@@ -1186,7 +1186,7 @@ def process_batch_legacy_batch(
                     all_output_paths.append(output_path)
                 all_replaced_files.append(src_file)
         else:
-            log(f'❌ {t("log.mod_update.process_failed", filename=filename, message=process_message)}')
+            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
