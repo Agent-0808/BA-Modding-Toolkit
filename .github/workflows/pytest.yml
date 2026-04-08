@@ -41,5 +41,23 @@ jobs:
       - name: Install Dependencies
         run: uv sync --dev
 
+      - name: Download Test Assets
+        env:
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+        run: |
+          try {
+            if ([string]::IsNullOrEmpty($env:ASSETS_URL)) {
+              throw "ASSETS_URL secret is not set"
+            }
+            Invoke-WebRequest -Uri $env:ASSETS_URL -OutFile "assets.zip" -ErrorAction Stop
+            Expand-Archive -Path "assets.zip" -DestinationPath "tests\assets" -Force
+            Remove-Item "assets.zip"
+            Write-Host "Test assets downloaded and extracted successfully"
+          } catch {
+            Write-Host "Failed to download test assets, skipping..."
+          }
+        shell: pwsh
+        continue-on-error: true
+
       - name: Run Tests
         run: uv run pytest -v
