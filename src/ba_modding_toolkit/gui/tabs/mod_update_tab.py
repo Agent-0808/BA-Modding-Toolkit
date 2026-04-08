@@ -4,6 +4,7 @@ import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
+from enum import IntEnum
 
 from ...i18n import t
 from ... import core
@@ -13,6 +14,12 @@ from ..dialogs import FileSelectionDialog
 from ..utils import replace_file
 from ...utils import get_search_resource_dirs
 
+class Mode(IntEnum):
+    """Mod更新模式"""
+    SINGLE = 0
+    BATCH = 1
+
+
 class ModUpdateTab(TabFrame):
     """一个整合了单个更新和批量更新功能的标签页"""
     def create_widgets(self):
@@ -21,14 +28,14 @@ class ModUpdateTab(TabFrame):
         self.mod_file_list: list[Path] = []
         
         # --- 模式切换 ---
-        self.mode_var = tk.StringVar(value="single")
-        
+        self.mode_var = tk.IntVar(value=Mode.SINGLE)
+
         self.mode_switcher = ModeSwitcher(
             self,
             self.mode_var,
             [
-                ("single", t("ui.mod_update.mode_single")),
-                ("batch", t("ui.mod_update.mode_batch"))
+                (Mode.SINGLE, t("ui.mod_update.mode_single")),
+                (Mode.BATCH, t("ui.mod_update.mode_batch"))
             ],
             command=self._switch_view
         )
@@ -46,7 +53,7 @@ class ModUpdateTab(TabFrame):
 
     def _switch_view(self):
         """根据选择的模式显示或隐藏对应的UI框架"""
-        if self.mode_var.get() == "single":
+        if self.mode_var.get() == Mode.SINGLE:
             self.batch_frame.pack_forget()
             self.single_frame.pack(fill=tk.BOTH, expand=True)
         else:

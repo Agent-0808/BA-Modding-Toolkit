@@ -4,6 +4,7 @@ import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
+from enum import IntEnum
 
 from ...i18n import t
 from ... import core
@@ -12,6 +13,12 @@ from ..base_tab import TabFrame
 from ..components import DropZone, FileListbox, ModeSwitcher, SettingRow, UIComponents
 from ..dialogs import FileSelectionDialog
 from ..utils import replace_file, replace_files
+
+class Mode(IntEnum):
+    """日服/国际服转换模式"""
+    JP_TO_GLOBAL = 0
+    GLOBAL_TO_JP = 1
+    LEGACY_BATCH = 2
 
 class JPGLConversionTab(TabFrame):
     """日服与国际服格式互相转换的标签页"""
@@ -24,15 +31,15 @@ class JPGLConversionTab(TabFrame):
 
     def create_widgets(self):
         # --- 转换模式选择 ---
-        self.mode_var = tk.StringVar(value="jp_to_global")
-        
+        self.mode_var = tk.IntVar(value=Mode.JP_TO_GLOBAL)
+
         self.mode_switcher = ModeSwitcher(
             self,
             self.mode_var,
             [
-                ("jp_to_global", t("ui.jp_conversion.mode_jp_to_gl")),
-                ("global_to_jp", t("ui.jp_conversion.mode_gl_to_jp")),
-                ("legacy_batch", t("ui.jp_conversion.mode_legacy_batch"))
+                (Mode.JP_TO_GLOBAL, t("ui.jp_conversion.mode_jp_to_gl")),
+                (Mode.GLOBAL_TO_JP, t("ui.jp_conversion.mode_gl_to_jp")),
+                (Mode.LEGACY_BATCH, t("ui.jp_conversion.mode_legacy_batch"))
             ],
             command=self._switch_view
         )
@@ -113,23 +120,20 @@ class JPGLConversionTab(TabFrame):
     
     def _switch_view(self):
         """根据选择的模式更新UI文案和显示/隐藏组件"""
-        if self.mode_var.get() == "jp_to_global":
-            self.global_zone.pack(fill=tk.X, pady=(0, 3))
-            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
-            self.batch_file_listbox.get_frame().pack_forget()
-            self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
-        elif self.mode_var.get() == "global_to_jp":
-            self.global_zone.pack(fill=tk.X, pady=(0, 3))
-            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
-            self.batch_file_listbox.get_frame().pack_forget()
-            self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
-        else:  # legacy_batch
-            # 隐藏单个文件处理UI，显示批量处理UI
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
             self.global_zone.pack_forget()
             self.jp_files_listbox.get_frame().pack_forget()
             self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+        else:
+            self.global_zone.pack(fill=tk.X, pady=(0, 3))
+            self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+            self.batch_file_listbox.get_frame().pack_forget()
+            if self.mode_var.get() == Mode.JP_TO_GLOBAL:
+                self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
+                self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
+            else:  # GLOBAL_TO_JP
+                self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
+                self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
 
     def on_global_selected(self, path: Path):
         """Global 文件选中后的处理"""
@@ -158,7 +162,7 @@ class JPGLConversionTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        if self.mode_var.get() == "legacy_batch":
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
             # 搜索新版国际服文件
             new_global_files = core.find_all_jp_counterparts(
                 self.global_zone.path, game_search_dirs, self.logger.log
@@ -274,10 +278,10 @@ class JPGLConversionTab(TabFrame):
             return
 
         # 根据模式确定要覆盖的目标文件
-        if self.mode_var.get() == "jp_to_global":
+        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
             target_files = self.jp_files_listbox.file_list
         else:
-            # global_to_jp 和 legacy_batch 模式：使用被替换的原始文件列表
+            # GLOBAL_TO_JP 和 LEGACY_BATCH 模式：使用被替换的原始文件列表
             target_files = self.replaced_source_files
 
         if not target_files:
@@ -307,10 +311,10 @@ class JPGLConversionTab(TabFrame):
 
     def replace_original(self):
         """实际的覆盖逻辑"""
-        if self.mode_var.get() == "jp_to_global":
+        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
             target_files = self.jp_files_listbox.file_list
         else:
-            # global_to_jp 和 legacy_batch 模式：使用被替换的原始文件列表
+            # GLOBAL_TO_JP 和 LEGACY_BATCH 模式：使用被替换的原始文件列表
             target_files = self.replaced_source_files
 
         # 只有一个文件时，使用 replace_file
@@ -352,7 +356,7 @@ class JPGLConversionTab(TabFrame):
         output_dir = Path(self.app.output_dir_var.get())
         
         # 根据模式获取文件列表
-        if self.mode_var.get() == "legacy_batch":
+        if self.mode_var.get() == Mode.LEGACY_BATCH:
             # 批量处理模式
             if not self.legacy_file_list:
                 messagebox.showerror(t("common.error"), t("message.list_empty"))
@@ -386,7 +390,7 @@ class JPGLConversionTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            target_bundle = self.global_zone.path if self.mode_var.get() == "jp_to_global" else jp_files[0]
+            target_bundle = self.global_zone.path if self.mode_var.get() == Mode.JP_TO_GLOBAL else jp_files[0]
             platform, unity_version = core.get_unity_platform_info(target_bundle)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = (platform == "StandaloneWindows64")
@@ -410,7 +414,7 @@ class JPGLConversionTab(TabFrame):
         
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))
-        if self.mode_var.get() == "jp_to_global":
+        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
             success, message = core.process_jp_to_global_conversion(
                 global_bundle_path=self.global_zone.path,
                 jp_bundle_paths=jp_files,
@@ -419,15 +423,15 @@ class JPGLConversionTab(TabFrame):
                 asset_types_to_replace=asset_types_to_replace,
                 log=self.logger.log
             )
-            
-            # 记录输出文件路径（jp_to_global 模式只输出一个文件）
+
+            # 记录输出文件路径（JP_TO_GLOBAL 模式只输出一个文件）
             if success:
                 output_path = output_dir / self.global_zone.path.name
                 if output_path.exists():
                     self.final_output_paths.append(output_path)
                     # 启用覆盖按钮
                     self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        elif self.mode_var.get() == "global_to_jp":
+        elif self.mode_var.get() == Mode.GLOBAL_TO_JP:
             success, message, replaced_files = core.process_global_to_jp_conversion(
                 global_bundle_path=self.global_zone.path,
                 jp_template_paths=jp_files,
@@ -448,7 +452,7 @@ class JPGLConversionTab(TabFrame):
                 # 如果有输出文件，启用覆盖按钮
                 if self.final_output_paths:
                     self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        else:  # legacy_batch
+        else:  # LEGACY_BATCH
             # 复用 process_global_to_jp_conversion 函数处理旧版到新版国际服的转换
             success, message, replaced_files = core.process_global_to_jp_conversion(
                 global_bundle_path=self.global_zone.path,
