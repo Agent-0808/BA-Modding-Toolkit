@@ -343,7 +343,14 @@ class JPGLConversionTab(TabFrame):
                 target_file = target_files[i]
                 files_to_replace.append(f"  {target_file.name}")
 
-        files_list = "\n".join(files_to_replace)
+        # 限制显示数量，最多显示10项
+        max_display = 10
+        if len(files_to_replace) > max_display:
+            displayed_files = files_to_replace[:max_display]
+            remaining_count = len(files_to_replace) - max_display
+            files_list = "\n".join(displayed_files) + f"\n{t('message.and_more_files', count=remaining_count)}"
+        else:
+            files_list = "\n".join(files_to_replace)
 
         confirm_message = t("message.confirm_replace_files", count=len(files_to_replace), files=files_list)
 

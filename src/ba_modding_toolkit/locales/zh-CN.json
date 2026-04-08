@@ -102,6 +102,7 @@
 	"message": {
 		"confirm_replace_file": "此操作将覆盖文件：{path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
 		"confirm_replace_files": "此操作将覆盖 {count} 个文件：\n\n{files}",
+		"and_more_files": "……以及其余 {count} 个",
 		"confirm_reset_settings": "确定要重置为默认设置吗？",
 		"file_not_found": "找不到文件: {path}",
 		"file_not_selected": "未选中文件",

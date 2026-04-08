@@ -102,6 +102,7 @@
 	"message": {
 		"confirm_replace_file": "This operation will overwrite the file: {path}\n\nIt is recommended to ensure that backups are enabled.\nAre you sure you want to continue?",
 		"confirm_replace_files": "This operation will overwrite {count} files:\n{files}",
+		"and_more_files": "...and {count} more",
 		"confirm_reset_settings": "Are you sure you want to reset to default settings?",
 		"file_not_found": "File not found: {path}",
 		"file_not_selected": "No file selected",
