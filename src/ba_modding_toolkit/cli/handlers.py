@@ -4,14 +4,17 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap
 from ..core import (
     find_new_bundle_path,
+    find_all_jp_counterparts,
     SaveOptions,
     SpineOptions,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
+    process_jp_to_global_conversion,
+    process_global_to_jp_conversion,
     extract_core_filename,
     parse_filename,
 )
@@ -91,6 +94,176 @@ def handle_update(args: UpdateTap, logger) -> None:
         asset_types_to_replace=asset_types,
         save_options=save_options,
         spine_options=spine_options,
+        log=logger.log
+    )
+
+    logger.log("\n" + "="*50)
+    if success:
+        logger.log(f"✅ Operation Successful: {message}")
+    else:
+        logger.log(f"❌ Operation Failed: {message}")
+
+
+def _get_modern_files(args: SplitTap | MergeTap, logger) -> list[Path] | None:
+    """获取modern files列表，优先使用直接指定的文件，其次使用智能搜索。
+
+    Args:
+        args: 命令参数
+        logger: 日志记录器
+
+    Returns:
+        modern文件路径列表，出错时返回None
+    """
+    # 优先使用直接指定的文件列表
+    if args.modern_files:
+        files = [Path(f) for f in args.modern_files]
+        valid_files = []
+        for f in files:
+            if f.is_file():
+                valid_files.append(f)
+            else:
+                logger.log(f"❌ Error: Modern file not found: {f}")
+        if not valid_files:
+            logger.log("❌ Error: No valid modern files provided.")
+            return None
+        logger.log(f"Using {len(valid_files)} specified modern file(s)")
+        for f in valid_files:
+            logger.log(f"  - {f.name}")
+        return valid_files
+
+    # 其次使用智能搜索（基于文件名前缀匹配）
+    if args.resource_dir:
+        dir_path = Path(args.resource_dir)
+        if not dir_path.is_dir():
+            logger.log(f"❌ Error: Resource directory not found: {dir_path}")
+            return None
+        # 使用 find_all_jp_counterparts 智能查找相关文件
+        files = find_all_jp_counterparts(
+            global_bundle_path=Path(args.legacy),
+            search_dirs=[dir_path],
+            log=logger.log
+        )
+        if not files:
+            logger.log(f"❌ Error: No matching modern files found in: {dir_path}")
+            return None
+        logger.log(f"Found {len(files)} matching modern file(s) in directory: {dir_path}")
+        for f in files:
+            logger.log(f"  - {f.name}")
+        return files
+
+    logger.log("❌ Error: Must provide either --modern-files or --resource-dir")
+    return None
+
+
+def handle_split(args: SplitTap, logger) -> None:
+    """处理 'split' 命令的逻辑。
+
+    将legacy bundle中的资源拆分到多个modern bundle中（一分多）。
+    对应core.process_global_to_jp_conversion。
+    """
+    logger.log("--- Start Split Operation ---")
+
+    legacy_path = Path(args.legacy)
+    output_dir = Path(args.output_dir)
+
+    # 验证legacy bundle存在
+    if not legacy_path.is_file():
+        logger.log(f"❌ Error: Legacy bundle file '{legacy_path}' does not exist.")
+        return
+
+    # 获取modern files
+    modern_files = _get_modern_files(args, logger)
+    if modern_files is None:
+        return
+
+    # 确保输出目录存在
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.log(f"❌ Error: Failed to create output directory: {e}")
+        return
+
+    # 处理资源类型
+    asset_types = set(args.asset_types)
+    if 'ALL' in asset_types:
+        asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
+    logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
+
+    # 创建SaveOptions
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    # 调用核心处理函数 (split = global_to_jp = 一分多)
+    logger.log(f"\nSplitting assets from '{legacy_path.name}' to {len(modern_files)} modern file(s)...")
+    success, message, replaced_files = process_global_to_jp_conversion(
+        global_bundle_path=legacy_path,
+        jp_template_paths=modern_files,
+        output_dir=output_dir,
+        save_options=save_options,
+        asset_types_to_replace=asset_types,
+        log=logger.log,
+        skip_unchanged=True
+    )
+
+    logger.log("\n" + "="*50)
+    if success:
+        logger.log(f"✅ Operation Successful: {message}")
+    else:
+        logger.log(f"❌ Operation Failed: {message}")
+
+
+def handle_merge(args: MergeTap, logger) -> None:
+    """处理 'merge' 命令的逻辑。
+
+    将多个modern bundle中的资源合并到legacy bundle中（多并一）。
+    对应core.process_jp_to_global_conversion。
+    """
+    logger.log("--- Start Merge Operation ---")
+
+    legacy_path = Path(args.legacy)
+    output_dir = Path(args.output_dir)
+
+    # 验证legacy bundle存在
+    if not legacy_path.is_file():
+        logger.log(f"❌ Error: Legacy bundle file '{legacy_path}' does not exist.")
+        return
+
+    # 获取modern files
+    modern_files = _get_modern_files(args, logger)
+    if modern_files is None:
+        return
+
+    # 确保输出目录存在
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.log(f"❌ Error: Failed to create output directory: {e}")
+        return
+
+    # 处理资源类型
+    asset_types = set(args.asset_types)
+    if 'ALL' in asset_types:
+        asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
+    logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
+
+    # 创建SaveOptions
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    # 调用核心处理函数 (merge = jp_to_global = 多并一)
+    logger.log(f"\nMerging assets from {len(modern_files)} modern file(s) into '{legacy_path.name}'...")
+    success, message = process_jp_to_global_conversion(
+        global_bundle_path=legacy_path,
+        jp_bundle_paths=modern_files,
+        output_dir=output_dir,
+        save_options=save_options,
+        asset_types_to_replace=asset_types,
         log=logger.log
     )
 

@@ -175,6 +175,98 @@ class EnvTap(Tap):
         self.description = 'Display system information and library versions of the current environment.'
 
 
+class SplitTap(Tap):
+    """Split命令的参数解析器 - 将legacy bundle资源拆分到多个modern bundle中。"""
+
+    # 基本参数
+    legacy: Path  # Path to the legacy bundle file (source of assets).
+    output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
+
+    # Modern files输入方式（二选一）
+    modern_files: list[Path] | None = None  # One or more modern bundle file paths.
+    resource_dir: Path | None = None  # Directory containing modern bundle files (auto-search by filename prefix).
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+
+    def configure(self) -> None:
+        self.description = '''Split assets from legacy bundle into multiple modern bundles.
+
+This command extracts assets from the legacy bundle and distributes them to matching
+assets in the modern bundle files (one-to-many conversion).
+
+Examples:
+  # Use directory auto-search for modern files
+  bamt-cli split "legacy.bundle" --resource-dir "C:\\path\\to\\modern_files\\"
+
+  # Specify multiple modern files directly
+  bamt-cli split "legacy.bundle" --modern-files "sep1.bundle" "sep2.bundle" "sep3.bundle"
+
+  # Specify output directory
+  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --output-dir "./output/"
+
+  # Disable CRC fixing
+  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --no-crc
+
+  # Specify asset types
+  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --asset-types Texture2D TextAsset
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
+        self.add_argument('legacy')  # 第一个位置参数
+
+
+class MergeTap(Tap):
+    """Merge命令的参数解析器 - 将多个modern bundle资源合并到legacy bundle中。"""
+
+    # 基本参数
+    legacy: Path  # Path to the legacy bundle file (to be modified).
+    output_dir: Path = Path('./output/')  # Directory to save the merged bundle file.
+
+    # Modern files输入方式（二选一）
+    modern_files: list[Path] | None = None  # One or more modern bundle file paths.
+    resource_dir: Path | None = None  # Directory containing modern bundle files (auto-search by filename prefix).
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+
+    def configure(self) -> None:
+        self.description = '''Merge assets from multiple modern bundles into legacy bundle.
+
+This command extracts assets from modern bundle files and merges them into
+the legacy bundle file (many-to-one conversion).
+
+Examples:
+  # Use directory auto-search for modern files
+  bamt-cli merge "legacy.bundle" --resource-dir "C:\\path\\to\\modern_files\\"
+
+  # Specify multiple modern files directly
+  bamt-cli merge "legacy.bundle" --modern-files "mod1.bundle" "mod2.bundle"
+
+  # Specify output directory
+  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --output-dir "./output/"
+
+  # Disable CRC fixing
+  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --no-crc
+
+  # Specify asset types
+  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --asset-types Texture2D TextAsset
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
+        self.add_argument('legacy')  # 第一个位置参数
+
+
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
@@ -186,3 +278,5 @@ class MainTap(BaseTap):
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
+        self.add_subparser('split', SplitTap, help='Split assets from base bundle into multiple reference bundles (one-to-many).')
+        self.add_subparser('merge', MergeTap, help='Merge assets from multiple reference bundles into base bundle (many-to-one).')
