@@ -143,3 +143,10 @@ def legacy_bundle_path() -> Path | None:
 @pytest.fixture
 def modern_dir_path() -> Path:
     return LEGACY_FORMAT_MODERN_DIR
+
+
+@pytest.fixture
+def modern_bundles_path() -> list[Path]:
+    if not LEGACY_FORMAT_MODERN_DIR.exists():
+        return []
+    return list(LEGACY_FORMAT_MODERN_DIR.glob("*.bundle"))

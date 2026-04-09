@@ -12,19 +12,42 @@ from conftest import has_legacy_format_samples
     reason="Legacy bundle AND modern bundles ARE REQUIRED"
 )
 class TestSplitCommand:
-    def test_split_basic(
+    def test_split_with_resource_dir(
         self,
         legacy_bundle_path: Path,
         modern_dir_path: Path,
         tmp_path: Path,
     ):
-        """测试基本的 split 功能"""
+        """测试使用 --resource-dir 参数的 split 功能"""
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
         args = SplitTap().parse_args([
             str(legacy_bundle_path),
             "--resource-dir", str(modern_dir_path),
+            "--output-dir", str(output_dir),
+            "--no-crc",
+            "--compression", "none",
+        ])
+
+        handle_split(args)
+
+        output_files = list(output_dir.glob("*.bundle"))
+        assert len(output_files) > 0, "No output files generated"
+
+    def test_split_with_modern_files(
+        self,
+        legacy_bundle_path: Path,
+        modern_bundles_path: list[Path],
+        tmp_path: Path,
+    ):
+        """测试使用 --modern-files 参数的 split 功能"""
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        args = SplitTap().parse_args([
+            str(legacy_bundle_path),
+            "--modern-files", *[str(p) for p in modern_bundles_path],
             "--output-dir", str(output_dir),
             "--no-crc",
             "--compression", "none",
@@ -68,13 +91,13 @@ class TestSplitCommand:
     reason="Legacy bundle AND modern bundles ARE REQUIRED"
 )
 class TestMergeCommand:
-    def test_merge_basic(
+    def test_merge_with_resource_dir(
         self,
         legacy_bundle_path: Path,
         modern_dir_path: Path,
         tmp_path: Path,
     ):
-        """测试基本的 merge 功能"""
+        """测试使用 --resource-dir 参数的 merge 功能"""
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
@@ -91,6 +114,28 @@ class TestMergeCommand:
         output_files = list(output_dir.glob("*.bundle"))
         assert len(output_files) > 0, "No output files generated"
 
+    def test_merge_with_modern_files(
+        self,
+        legacy_bundle_path: Path,
+        modern_bundles_path: list[Path],
+        tmp_path: Path,
+    ):
+        """测试使用 --modern-files 参数的 merge 功能"""
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        args = MergeTap().parse_args([
+            str(legacy_bundle_path),
+            "--modern-files", *[str(p) for p in modern_bundles_path],
+            "--output-dir", str(output_dir),
+            "--no-crc",
+            "--compression", "none",
+        ])
+
+        handle_merge(args)
+
+        output_files = list(output_dir.glob("*.bundle"))
+        assert len(output_files) > 0, "No output files generated"
 
     def test_merge_output_content(
         self,
