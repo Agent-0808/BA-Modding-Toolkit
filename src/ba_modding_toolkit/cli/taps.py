@@ -1,7 +1,7 @@
 # cli/taps.py
 from argparse import RawTextHelpFormatter
 from typing import Literal
-from tap import Tap
+from tap import Tap, Positional
 from pathlib import Path
 
 class BaseTap(Tap):
@@ -17,7 +17,7 @@ class UpdateTap(Tap):
     """Update命令的参数解析器 - 用于更新或移植Mod。"""
 
     # 基本参数
-    old: Path  # Path to the old Mod bundle file.
+    old: Positional[Path]  # Path to the old Mod bundle file.
     output_dir: Path = Path('./output/')  # Directory to save the generated Mod file (Default: ./output/).
 
     # 目标文件定位参数
@@ -55,7 +55,6 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('old') # 第一个参数，可以匿名
 
 
 class PackTap(Tap):
@@ -90,7 +89,7 @@ class CrcTap(Tap):
     """CRC命令的参数解析器 - 用于CRC修正工具。"""
 
     # 基本参数
-    modified: Path  # Path to the modified file (to be fixed or calculated).
+    modified: Positional[Path]  # Path to the modified file (to be fixed or calculated).
 
     # 原始文件定位参数
     original: Path | None = None  # Path to the original file (provides target CRC value).
@@ -120,14 +119,13 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('modified') # 第一个参数，可以匿名
 
 
 class ExtractTap(Tap):
     """Extract命令的参数解析器 - 用于从Bundle中提取资源。"""
 
     # 基本参数
-    bundles: list[Path]  # Path(s) to the bundle file(s) to extract assets from.
+    bundles: Positional[list[Path]]  # Path(s) to the bundle file(s) to extract assets from.
     output_dir: Path = Path('./output/')  # Base directory to save the extracted assets.
     subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
 
@@ -165,7 +163,6 @@ Examples:
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
         self.add_argument('--atlas-export-mode', choices=['atlas', 'unpack', 'both'])
-        self.add_argument('bundles', nargs='+')  # 一个或多个bundle文件路径
 
 
 class EnvTap(Tap):
@@ -179,7 +176,7 @@ class SplitTap(Tap):
     """Split命令的参数解析器 - 将legacy bundle资源拆分到多个modern bundle中。"""
 
     # 基本参数
-    legacy: Path  # Path to the legacy bundle file (source of assets).
+    legacy: Positional[Path]  # Path to the legacy bundle file (source of assets).
     output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
 
     # Modern files输入方式（二选一）
@@ -218,14 +215,13 @@ Examples:
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
         self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
-        self.add_argument('legacy')  # 第一个位置参数
 
 
 class MergeTap(Tap):
     """Merge命令的参数解析器 - 将多个modern bundle资源合并到legacy bundle中。"""
 
     # 基本参数
-    legacy: Path  # Path to the legacy bundle file (to be modified).
+    legacy: Positional[Path]  # Path to the legacy bundle file (to be modified).
     output_dir: Path = Path('./output/')  # Directory to save the merged bundle file.
 
     # Modern files输入方式（二选一）
@@ -264,14 +260,13 @@ Examples:
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
         self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
-        self.add_argument('legacy')  # 第一个位置参数
 
 
 class BatchUpdateTap(Tap):
     """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
 
     # 基本参数
-    input_dir: Path  # Directory containing old Mod bundle files to update.
+    input_dir: Positional[Path]  # Directory containing old Mod bundle files to update.
     output_dir: Path = Path('./output/')  # Directory to save the generated Mod files.
 
     # 搜索目录参数
@@ -310,14 +305,13 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('input_dir')  # 第一个位置参数
 
 
 class BatchLegacyTap(Tap):
     """Batch-legacy命令的参数解析器 - 用于批量将旧版国际服文件转换为新版。"""
 
     # 基本参数
-    input_dir: Path  # Directory containing legacy bundle files to convert.
+    input_dir: Positional[Path]  # Directory containing legacy bundle files to convert.
     output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
 
     # 搜索目录参数
@@ -348,7 +342,6 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('input_dir')  # 第一个位置参数
 
 
 class MainTap(BaseTap):
