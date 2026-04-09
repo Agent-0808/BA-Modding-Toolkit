@@ -20,25 +20,47 @@ from ..core import (
 )
 from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
 
-def setup_cli_logger():
+class Logger:
+    """日志记录器基类。"""
+
+    def log(self, message: str) -> None:
+        raise NotImplementedError
+
+
+class CLILogger(Logger):
+    """CLI 日志记录器，输出到控制台。"""
+
+    def __init__(self) -> None:
+        log = logging.getLogger('cli')
+        if not log.handlers:
+            log.setLevel(logging.INFO)
+            handler = logging.StreamHandler(sys.stdout)
+            formatter = logging.Formatter('%(message)s')
+            handler.setFormatter(formatter)
+            log.addHandler(handler)
+        self._log = log
+
+    def log(self, message: str) -> None:
+        self._log.info(message)
+
+
+class NullLogger(Logger):
+    """空日志记录器，什么都不做。"""
+
+    def log(self, message: str) -> None:
+        pass
+
+
+# 全局 NullLogger 实例，作为默认参数使用
+NULL_LOGGER = NullLogger()
+
+
+def setup_cli_logger() -> Logger:
     """配置一个简单的日志记录器，将日志输出到控制台。"""
-    log = logging.getLogger('cli')
-    if not log.handlers:
-        log.setLevel(logging.INFO)
-        handler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter('%(message)s')
-        handler.setFormatter(formatter)
-        log.addHandler(handler)
-
-    # 模拟GUI Logger的接口
-    class CLILogger:
-        def log(self, message):
-            log.info(message)
-
     return CLILogger()
 
 
-def handle_update(args: UpdateTap, logger) -> None:
+def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'update' 命令的逻辑。"""
     logger.log("--- Start Mod Update ---")
 
@@ -155,7 +177,7 @@ def _get_modern_files(args: SplitTap | MergeTap, logger) -> list[Path] | None:
     return None
 
 
-def handle_split(args: SplitTap, logger) -> None:
+def handle_split(args: SplitTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'split' 命令的逻辑。
 
     将legacy bundle中的资源拆分到多个modern bundle中（一分多）。
@@ -215,7 +237,7 @@ def handle_split(args: SplitTap, logger) -> None:
         logger.log(f"❌ Operation Failed: {message}")
 
 
-def handle_merge(args: MergeTap, logger) -> None:
+def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'merge' 命令的逻辑。
 
     将多个modern bundle中的资源合并到legacy bundle中（多并一）。
@@ -274,7 +296,7 @@ def handle_merge(args: MergeTap, logger) -> None:
         logger.log(f"❌ Operation Failed: {message}")
 
 
-def handle_asset_packing(args: PackTap, logger) -> None:
+def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'pack' 命令的逻辑。"""
     logger.log("--- Start Asset Packing ---")
 
@@ -322,7 +344,7 @@ def handle_asset_packing(args: PackTap, logger) -> None:
         logger.log(f"❌ Operation Failed: {message}")
 
 
-def handle_crc(args: CrcTap, logger) -> None:
+def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- Start CRC Tool ---")
 
@@ -427,12 +449,12 @@ def handle_crc(args: CrcTap, logger) -> None:
         logger.log(f"❌ Error during CRC fix process: {e}")
 
 
-def handle_env(args: EnvTap, logger) -> None:
+def handle_env(args: EnvTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'env' 命令，打印环境信息。"""
     logger.log(get_environment_info(ignore_tk=True))
 
 
-def handle_extract(args: ExtractTap, logger) -> None:
+def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'extract' 命令的逻辑。"""
     logger.log("--- Start Asset Extraction ---")
 
