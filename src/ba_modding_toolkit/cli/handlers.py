@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap
 from ..core import (
     find_new_bundle_path,
     find_all_jp_counterparts,
@@ -15,6 +15,8 @@ from ..core import (
     process_asset_extraction,
     process_jp_to_global_conversion,
     process_global_to_jp_conversion,
+    process_batch_mod_update,
+    process_batch_legacy_batch,
     extract_core_filename,
     parse_filename,
 )
@@ -124,6 +126,103 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"✅ Operation Successful: {message}")
     else:
         logger.log(f"❌ Operation Failed: {message}")
+
+
+def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'batch-update' 命令的逻辑。"""
+    logger.log("--- Start Batch Mod Update ---")
+
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+
+    # 验证输入目录
+    if not input_dir.is_dir():
+        logger.log(f"❌ Error: Input directory '{input_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 确定资源目录
+    resource_dir = args.resource_dir or get_BA_path()
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    resource_path = Path(resource_dir)
+    if not resource_path.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
+        return
+
+    # 获取搜索路径
+    search_paths = get_search_resource_dirs(resource_path)
+    logger.log(f"Searching for new bundles in '{resource_path}'...")
+
+    # 收集输入目录中的所有.bundle文件
+    mod_file_list = list(input_dir.glob("*.bundle"))
+    if not mod_file_list:
+        logger.log(f"❌ Error: No .bundle files found in input directory '{input_dir}'.")
+        return
+
+    logger.log(f"Found {len(mod_file_list)} bundle file(s) to process:")
+    for f in mod_file_list:
+        logger.log(f"  - {f.name}")
+
+    # 处理资源类型
+    asset_types = set(args.asset_types)
+    if 'ALL' in asset_types:
+        asset_types = {'ALL'}
+    logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
+
+    # 创建保存选项
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    # 创建Spine选项
+    spine_options = SpineOptions(
+        enabled=args.enable_spine_conversion,
+        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        target_version=args.target_spine_version or None,
+    )
+
+    callback_log = lambda current, total, filename: logger.log(
+            f"[{current}/{total}] Processing: {filename}"
+        )
+
+    # 调用批量处理函数
+    success_count, fail_count, failed_tasks, file_pairs = process_batch_mod_update(
+        mod_file_list=mod_file_list,
+        search_paths=search_paths,
+        output_dir=output_dir,
+        asset_types_to_replace=asset_types,
+        save_options=save_options,
+        spine_options=spine_options,
+        log=logger.log,
+        progress_callback=callback_log,
+        skip_unchanged=True
+    )
+
+    # 输出结果摘要
+    logger.log("\n" + "="*50)
+    logger.log(f"Batch Update Summary:")
+    logger.log(f"  Total files: {len(mod_file_list)}")
+    logger.log(f"  Successful: {success_count}")
+    logger.log(f"  Failed: {fail_count}")
+
+    if file_pairs:
+        logger.log(f"\n✅ Output files ({len(file_pairs)}):")
+        for output_path, _ in file_pairs:
+            logger.log(f"  - {output_path.name}")
+
+    if failed_tasks:
+        logger.log(f"\n❌ Failed tasks:")
+        for task in failed_tasks:
+            logger.log(f"  - {task}")
+
+    logger.log("="*50)
 
 
 def _get_modern_files(args: SplitTap | MergeTap, logger) -> list[Path] | None:
@@ -295,6 +394,92 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
+
+def handle_batch_legacy(args: BatchLegacyTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'batch-legacy' 命令的逻辑。"""
+    logger.log("--- Start Batch Legacy Conversion ---")
+
+    input_dir = Path(args.input_dir)
+    output_dir = Path(args.output_dir)
+
+    # 验证输入目录
+    if not input_dir.is_dir():
+        logger.log(f"❌ Error: Input directory '{input_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 确定资源目录
+    resource_dir = args.resource_dir or get_BA_path()
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    resource_path = Path(resource_dir)
+    if not resource_path.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
+        return
+
+    # 获取搜索路径
+    search_paths = get_search_resource_dirs(resource_path)
+    logger.log(f"Searching for modern bundles in '{resource_path}'...")
+
+    # 收集输入目录中的所有.bundle文件
+    legacy_file_list = list(input_dir.glob("*.bundle"))
+    if not legacy_file_list:
+        logger.log(f"❌ Error: No .bundle files found in input directory '{input_dir}'.")
+        return
+
+    logger.log(f"Found {len(legacy_file_list)} legacy bundle file(s) to convert:")
+    for f in legacy_file_list:
+        logger.log(f"  - {f.name}")
+
+    # 处理资源类型
+    asset_types = set(args.asset_types)
+    logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
+
+    # 创建保存选项
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    callback_log = lambda current, total, filename: logger.log(
+            f"[{current}/{total}] Processing: {filename}"
+        )
+
+    # 调用批量处理函数
+    success_count, fail_count, failed_tasks, file_pairs = process_batch_legacy_batch(
+        legacy_file_list=legacy_file_list,
+        search_paths=search_paths,
+        output_dir=output_dir,
+        asset_types_to_replace=asset_types,
+        save_options=save_options,
+        log=logger.log,
+        progress_callback=callback_log,
+        skip_unchanged=True
+    )
+
+    # 输出结果摘要
+    logger.log("\n" + "="*50)
+    logger.log(f"Batch Legacy Conversion Summary:")
+    logger.log(f"  Total files: {len(legacy_file_list)}")
+    logger.log(f"  Successful: {success_count}")
+    logger.log(f"  Failed: {fail_count}")
+
+    if file_pairs:
+        logger.log(f"\n✅ Output files ({len(file_pairs)}):")
+        for output_path, _ in file_pairs:
+            logger.log(f"  - {output_path.name}")
+
+    if failed_tasks:
+        logger.log(f"\n❌ Failed tasks:")
+        for task in failed_tasks:
+            logger.log(f"  - {task}")
+
+    logger.log("="*50)
 
 def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'pack' 命令的逻辑。"""

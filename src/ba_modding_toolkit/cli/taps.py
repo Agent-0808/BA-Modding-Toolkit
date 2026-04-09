@@ -267,6 +267,90 @@ Examples:
         self.add_argument('legacy')  # 第一个位置参数
 
 
+class BatchUpdateTap(Tap):
+    """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
+
+    # 基本参数
+    input_dir: Path  # Directory containing old Mod bundle files to update.
+    output_dir: Path = Path('./output/')  # Directory to save the generated Mod files.
+
+    # 搜索目录参数
+    resource_dir: Path | None = None  # Path to the game resource directory for searching new bundles.
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+
+    # Spine转换参数
+    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
+    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    target_spine_version: str = '4.2.33'  # Target Spine version.
+
+    def configure(self) -> None:
+        self.description = '''Batch update multiple Mod files, migrating assets from old Mods to new game bundles.
+
+This command scans the input directory for .bundle files, automatically finds corresponding
+new game bundles in the resource directory, and updates them all in batch.
+
+Examples:
+  # Batch update all bundles in a directory
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\"
+
+  # Specify resource directory for auto-search
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --resource-dir "C:\\game\\resources"
+
+  # Disable CRC fixing
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --no-crc
+
+  # Enable Spine conversion
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --enable-spine-conversion --spine-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe"
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('input_dir')  # 第一个位置参数
+
+
+class BatchLegacyTap(Tap):
+    """Batch-legacy命令的参数解析器 - 用于批量将旧版国际服文件转换为新版。"""
+
+    # 基本参数
+    input_dir: Path  # Directory containing legacy bundle files to convert.
+    output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
+
+    # 搜索目录参数
+    resource_dir: Path | None = None  # Path to the game resource directory for searching modern bundles.
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
+    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+
+    def configure(self) -> None:
+        self.description = '''Batch convert legacy (old) Global server bundles to modern format.
+
+This command scans the input directory for .bundle files, automatically finds corresponding
+modern Global server bundles in the resource directory, and converts them all in batch.
+
+Examples:
+  # Batch convert all legacy bundles in a directory
+  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\"
+
+  # Specify resource directory for auto-search
+  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\" --resource-dir "C:\\game\\resources"
+
+  # Disable CRC fixing
+  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\" --no-crc
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
+        self.add_argument('input_dir')  # 第一个位置参数
+
+
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
@@ -274,9 +358,11 @@ class MainTap(BaseTap):
         super().configure()
         self.add_subparsers(dest='command', help='Available commands')
         self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
+        self.add_subparser('batch-update', BatchUpdateTap, help='Batch update multiple Mod files from an input directory.')
+        self.add_subparser('merge', MergeTap, help='Merge assets from multiple reference bundles into base bundle (many-to-one).')
+        self.add_subparser('split', SplitTap, help='Split assets from base bundle into multiple reference bundles (one-to-many).')
+        self.add_subparser('batch-legacy', BatchLegacyTap, help='Batch convert legacy Global bundles to modern format (batch process for split).')
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
-        self.add_subparser('split', SplitTap, help='Split assets from base bundle into multiple reference bundles (one-to-many).')
-        self.add_subparser('merge', MergeTap, help='Merge assets from multiple reference bundles into base bundle (many-to-one).')
