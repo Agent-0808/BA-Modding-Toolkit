@@ -6,9 +6,7 @@ import shutil
 import re
 import tempfile
 from typing import Callable
-import UnityPy
 from UnityPy.enums import ClassIDType as AssetType
-from UnityPy.files import SerializedFile
 from UnityPy.environment import Environment as Env
 from PIL import Image
 
@@ -20,6 +18,7 @@ from .models import (
     MATCH_STRATEGIES, SaveOptions, SpineOptions,
     JP_FILENAME_TYPE_MAP, REPLACEABLE_ASSET_TYPES
 )
+from .bundle import Bundle
 
 # ====== 读取与保存相关 ======
 
@@ -32,18 +31,13 @@ def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
                          如果找不到则返回 ("UnknownPlatform", "Unknown")
     """
     if isinstance(input, Path):
-        env = load_bundle(str(input))
+        bundle = Bundle.load(input)
+        return bundle.platform_info if bundle else ("UnknownPlatform", "Unknown")
     elif isinstance(input, Env):
-        env = input
+        temp_bundle = Bundle(Path("temp"), input)
+        return temp_bundle.platform_info
     else:
         raise ValueError("input 必须是 Path 或 UnityPy.Environment 类型")
-    
-    for file_obj in env.files.values():
-        for inner_obj in file_obj.files.values():
-            if isinstance(inner_obj, SerializedFile) and hasattr(inner_obj, 'target_platform'):
-                return inner_obj.target_platform.name, inner_obj.unity_version
-    
-    return "UnknownPlatform", "Unknown"
 
 def load_bundle(
     bundle_path: Path,
@@ -53,37 +47,8 @@ def load_bundle(
     尝试加载一个 Unity bundle 文件。
     如果直接加载失败，会尝试移除末尾的几个字节后再次加载。
     """
-
-    # 1. 尝试直接加载
-    try:
-        env = UnityPy.load(str(bundle_path))
-        return env
-    except Exception as e:
-        pass
-
-    # 如果直接加载失败，读取文件内容到内存
-    try:
-        with open(bundle_path, "rb") as f:
-            data = f.read()
-    except Exception as e:
-        log(f'  ❌ {t("log.file.read_in_memory_failed", name=bundle_path.name, error=e)}')
-        return None
-
-    # 定义加载策略：字节移除数量
-    bytes_to_remove = [4, 8, 12]
-
-    # 2. 依次尝试不同的加载策略
-    for bytes_num in bytes_to_remove:
-        if len(data) > bytes_num:
-            try:
-                trimmed_data = data[:-bytes_num]
-                env = UnityPy.load(trimmed_data)
-                return env
-            except Exception as e:
-                pass
-
-    log(f'❌ {t("log.file.load_failed", path=bundle_path)}')
-    return None
+    bundle = Bundle.load(bundle_path, log)
+    return bundle.env if bundle else None
 
 def compress_bundle(
     env: Env,
@@ -98,16 +63,8 @@ def compress_bundle(
                  - "original": 保留原始压缩方式。
                  - "none": 不进行压缩。
     """
-    save_kwargs = {}
-    if compression == "original":
-        # Not passing the 'packer' argument preserves the original compression.
-        pass
-    elif compression == "none":
-        save_kwargs['packer'] = ""  # An empty string typically means no compression.
-    else:
-        save_kwargs['packer'] = compression
-    
-    return env.file.save(**save_kwargs)
+    temp_bundle = Bundle(Path("temp"), env, log)
+    return temp_bundle.compress(compression)
 
 def save_bundle(
     env: Env,
@@ -123,55 +80,8 @@ def save_bundle(
     Returns:
         tuple(bool, str): (是否成功, 状态消息) 的元组。
     """
-    try:
-        # 准备保存信息并记录日志
-        compression_map = {
-            "lzma": t("log.compression.lzma"),
-            "lz4": t("log.compression.lz4"),
-            "none": t("log.compression.none"),
-            "original": t("log.compression.original")
-        }
-        compression_str = compression_map.get(save_options.compression, save_options.compression.upper())
-        crc_status_str = t("common.on") if save_options.perform_crc else t("common.off")
-        log(f"  > {t('log.file.saving_bundle_prefix')} [{t('log.file.compression_method', compression=compression_str)}] [{t('log.file.crc_correction', crc_status=crc_status_str)}]")
-
-        # 从 env 生成修改后的压缩 bundle 数据
-        compressed_data = compress_bundle(env, save_options.compression, log)
-
-        final_data = compressed_data
-        success_message = t("message.save_success")
-
-        if save_options.perform_crc:
-            # 从输出文件名提取目标 CRC
-            _, _, _, _, crc_str = parse_filename(output_path.name)
-            if not crc_str or not crc_str.isdigit():
-                return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
-            target_crc = int(crc_str)
-
-            # 如有extra_bytes，先附加到modified_data
-            if save_options.extra_bytes:
-                compressed_data += save_options.extra_bytes
-
-            corrected_data = CRCUtils.apply_crc_fix(
-                compressed_data, target_crc
-            )
-
-            if not corrected_data:
-                return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
-            
-            final_data = corrected_data
-
-        # 写入文件
-        with open(output_path, "wb") as f:
-            f.write(final_data)
-        success_message = t("message.save_success")
-
-        return True, success_message
-
-    except Exception as e:
-        log(f'❌ {t("log.file.save_failed", path=output_path, error=e)}')
-        log(traceback.format_exc())
-        return False, t("message.save_error", error=e)
+    temp_bundle = Bundle(Path("temp"), env, log)
+    return temp_bundle.save(output_path, save_options)
 
 
 # ====== 寻找对应文件 ======
@@ -350,7 +260,8 @@ def find_new_bundle_path(
     # 定义用于识别的资源类型
     comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh}
     
-    if not (old_env := load_bundle(old_mod_path, log)):
+    old_bundle = Bundle.load(old_mod_path, log)
+    if not old_bundle:
         msg = t("message.search.load_old_mod_failed")
         log(f'  > {t("common.fail")}: {msg}')
         return [], msg
@@ -362,7 +273,7 @@ def find_new_bundle_path(
     # 使用 set 推导式构建指纹
     old_assets_fingerprint = {
         key_func(obj)
-        for obj in old_env.objects
+        for obj in old_bundle.env.objects
         if obj.type in comparable_types
     }
 
@@ -378,12 +289,13 @@ def find_new_bundle_path(
     for candidate_path in candidates:
         log(f"  - {t('log.search.checking_candidate', name=candidate_path.name)}")
         
-        if not (env := load_bundle(candidate_path, log)):
+        candidate_bundle = Bundle.load(candidate_path, log)
+        if not candidate_bundle:
             continue
         
         # 检查新包中是否有匹配的资源
         has_match = False
-        for obj in env.objects:
+        for obj in candidate_bundle.env.objects:
             if obj.type in comparable_types:
                 candidate_key = key_func(obj)
                 if candidate_key in old_assets_fingerprint:
@@ -405,91 +317,6 @@ def find_new_bundle_path(
     return matched_paths, msg
 
 # ====== 资源处理相关 ======
-
-def _apply_replacements(
-    env: Env,
-    replacement_map: dict[AssetKey, AssetContent],
-    key_func: KeyGeneratorFunc,
-    log: LogFunc = no_log,
-) -> ReplacementResult:
-    """
-    将“替换清单”中的资源应用到目标环境中。
-
-    Args:
-        env: 目标 UnityPy 环境。
-        replacement_map: 资源替换清单，格式为 { asset_key: content }。
-        key_func: 用于从目标环境中的对象生成 asset_key 的函数。
-        log: 日志记录函数。
-
-    Returns:
-        ReplacementResult: 包含替换结果的数据类，包括实际替换数量、跳过数量、日志和未匹配键。
-    """
-    replacement_count = 0
-    skipped_count = 0
-    replaced_assets_log = []
-    
-    # 创建一个副本用于操作，因为我们会从中移除已处理的项
-    tasks = replacement_map.copy()
-
-    for obj in env.objects:
-        if not tasks:  # 如果清单空了，就提前退出
-            break
-        
-        try:
-            data = obj.read()
-            asset_key = key_func(obj)
-            
-            # 跳过 asset_key 为 None 的对象（如 GameObject、Transform 等）
-            if asset_key is None:
-                continue
-            
-            # 额外检查：确保类型在白名单中
-            if obj.type not in REPLACEABLE_ASSET_TYPES:
-                continue
-
-            if asset_key in tasks:
-                content: AssetContent = tasks.pop(asset_key)
-                resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
-                
-                if obj.type == AssetType.Texture2D:
-                    content: Image.Image
-                    new_image = content
-                    if data.image.tobytes() == new_image.tobytes():
-                        log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
-                        skipped_count += 1
-                        continue
-                    data.image = new_image
-                    data.save()
-                elif obj.type == AssetType.TextAsset:
-                    content: bytes
-                    new_script = content.decode("utf-8", "surrogateescape")
-                    # 如果内容相同，跳过替换
-                    if data.m_Script == new_script:
-                        log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
-                        skipped_count += 1
-                        continue
-                    data.m_Script = new_script
-                    data.save()
-                else:
-                    # 其他类型直接设置原始数据
-                    obj.set_raw_data(content)
-
-                replacement_count += 1
-                key_display = str(asset_key)
-                log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
-                replaced_assets_log.append(log_message)
-
-        except Exception as e:
-            resource_name_for_error = obj.peek_name() or t("log.unnamed_resource", type=obj.type.name)
-            log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
-            log(traceback.format_exc())
-
-    return ReplacementResult(
-        replaced_count=replacement_count,
-        skipped_count=skipped_count,
-        replaced_logs=replaced_assets_log,
-        unmatched_keys=list(tasks.keys())
-    )
 
 def process_asset_packing(
     target_bundle_path: Path,
@@ -528,8 +355,8 @@ def process_asset_packing(
             temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(asset_folder, log)
             asset_folder = temp_asset_folder
 
-        env = load_bundle(target_bundle_path, log)
-        if not env:
+        target_bundle = Bundle.load(target_bundle_path, log)
+        if not target_bundle:
             return False, t("message.packer.load_target_bundle_failed")
         
         # 1. 从文件夹构建"替换清单"
@@ -573,19 +400,16 @@ def process_asset_packing(
         original_tasks_count = len(replacement_map)
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
-        # 2. 定义用于在 bundle 中查找资源的 key 生成函数
+        # 2. 应用替换
         strategy_name = 'name_type'
         key_func = MATCH_STRATEGIES[strategy_name]
-
-        # 3. 应用替换
-        result = _apply_replacements(env, replacement_map, key_func, log)
+        result = target_bundle.apply_replacements(replacement_map, key_func)
 
         if not result.is_success:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
             log(t("log.packer.check_files_and_bundle"))
             return False, t("message.packer.no_matching_assets_to_pack")
         
-        # 报告替换结果
         log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}:")
         for item in result.replaced_logs:
             log(f"  - {item}")
@@ -609,14 +433,9 @@ def process_asset_packing(
                     key_display = str(key)
                 log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
 
-        # 4. 保存和修正
+        # 3. 保存
         output_path = output_dir / target_bundle_path.name
-        save_ok, save_message = save_bundle(
-            env=env,
-            output_path=output_path,
-            save_options=save_options,
-            log=log
-        )
+        save_ok, save_message = target_bundle.save(output_path, save_options)
 
         if not save_ok:
             return False, save_message
@@ -686,11 +505,11 @@ def process_asset_extraction(
             extraction_count = 0
             
             for bundle_file in bundle_paths:
-                env = load_bundle(bundle_file, log)
-                if not env:
+                bundle = Bundle.load(bundle_file, log)
+                if not bundle:
                     continue
                 
-                for obj in env.objects:
+                for obj in bundle.env.objects:
                     if obj.type.name not in asset_types_to_extract:
                         continue
                     # 确保类型在白名单中
@@ -731,21 +550,14 @@ def process_asset_extraction(
                 for skel_path in work_dir.glob("*.skel"):
                     log(f"  > {t('log.extractor.processing_file', name=skel_path.name)}")
                     SpineUtils.process_skel_downgrade(
-                        skel_path,
-                        work_dir,
-                        spine_options.converter_path,
-                        spine_options.target_version,
-                        log
+                        skel_path, work_dir,
+                        spine_options.converter_path, spine_options.target_version, log
                     )
 
                 # 降级所有 atlas 文件（直接覆盖到工作目录）
                 for atlas_path in work_dir.glob("*.atlas"):
                     log(f"  > {t('log.extractor.processing_file', name=atlas_path.name)}")
-                    SpineUtils.process_atlas_downgrade(
-                        atlas_path,
-                        work_dir,
-                        log
-                    )
+                    SpineUtils.process_atlas_downgrade(atlas_path, work_dir, log)
 
             # 2.2 Atlas解包处理
             if atlas_export_mode in ("unpack", "both"):
@@ -779,90 +591,26 @@ def process_asset_extraction(
         log(traceback.format_exc())
         return False, t("message.error_during_process", error=e)
 
-def _extract_assets_from_bundle(
-    env: Env,
-    asset_types_to_replace: set[str],
-    key_func: KeyGeneratorFunc,
-    spine_options: SpineOptions | None,
-    log: LogFunc = no_log,
-) -> dict[AssetKey, AssetContent]:
-    """
-    从源 bundle 的 env 构建替换清单
-    即其他函数中使用的replacement_map
-    """
-    replacement_map: dict[AssetKey, AssetContent] = {}
-    replace_all = "ALL" in asset_types_to_replace
-
-    for obj in env.objects:
-        try:
-            data = obj.read()
-            
-            # 统一过滤：只提取可替换的资源类型
-            if obj.type not in REPLACEABLE_ASSET_TYPES:
-                continue
-            
-            # 如果不是"ALL"模式，则只处理在指定集合中的类型
-            if not replace_all and obj.type.name not in asset_types_to_replace:
-                continue
-
-            asset_key = key_func(obj)
-            if asset_key is None or not getattr(data, 'm_Name', None):
-                continue
-            
-            content: AssetContent | None = None
-            resource_name: str = data.m_Name
-
-            if obj.type == AssetType.Texture2D:
-                content: Image.Image = data.image
-            elif obj.type == AssetType.TextAsset:
-                asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                if resource_name.lower().endswith('.skel'):
-                    content: bytes = SpineUtils.handle_skel_upgrade(
-                        skel_bytes=asset_bytes,
-                        resource_name=resource_name,
-                        enabled=spine_options.enabled if spine_options else False,
-                        converter_path=spine_options.converter_path if spine_options else None,
-                        target_version=spine_options.target_version if spine_options else None,
-                        log=log
-                    )
-                else:
-                    content: bytes = asset_bytes
-            # 对于其他类型，如果处于“ALL”模式或该类型被明确请求，则复制原始数据
-            elif replace_all or obj.type.name in asset_types_to_replace:
-                content: bytes = obj.get_raw_data()
-
-            if content is not None:
-                replacement_map[asset_key] = content
-        except Exception as e:
-            log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
-
-    if replace_all:
-        replacement_map["__mode__"] = {"ALL"}
-
-    return replacement_map
-
 def _migrate_bundle_assets(
     old_bundle_path: Path,
     new_bundle_path: Path,
     asset_types_to_replace: set[str],
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[Env | None, ReplacementResult]:
+) -> tuple[Bundle | None, ReplacementResult]:
     """
     执行asset迁移的核心替换逻辑。
-    asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 的子集 或 {"ALL"}）
-    按顺序尝试多种匹配策略（path_id, name_type），一旦有策略成功匹配了至少一个资源，就停止并返回结果。
-    返回一个元组 (modified_env, result)，如果失败则 modified_env 为 None。
+    返回一个元组 (modified_bundle, result)，如果失败则 modified_bundle 为 None。
     """
     # 1. 加载 bundles
     log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
-    old_env = load_bundle(old_bundle_path, log)
-    if not old_env:
+    old_bundle = Bundle.load(old_bundle_path, log)
+    if not old_bundle:
         return None, ReplacementResult(0, 0, [], [])
     
     log(t("log.migration.loading_new_bundle"))
-    new_env = load_bundle(new_bundle_path, log)
-    if not new_env:
+    new_bundle = Bundle.load(new_bundle_path, log)
+    if not new_bundle:
         return None, ReplacementResult(0, 0, [], [])
 
     # 定义匹配策略
@@ -877,10 +625,10 @@ def _migrate_bundle_assets(
     for name, key_func in strategies:
         log(f'\n{t("log.migration.trying_strategy", name=name)}')
         
-        # 2. 根据当前策略从旧版 bundle 构建“替换清单”
+        # 2. 根据当前策略从旧版 bundle 构建"替换清单"
         log(f'  > {t("log.migration.extracting_from_old_bundle_simple")}')
-        old_assets_map = _extract_assets_from_bundle(
-            old_env, asset_types_to_replace, key_func, spine_options, log
+        old_assets_map = old_bundle.extract_assets_for_migration(
+            asset_types_to_replace, key_func, spine_options
         )
         
         if not old_assets_map:
@@ -892,14 +640,14 @@ def _migrate_bundle_assets(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
-        result = _apply_replacements(new_env, old_assets_map, key_func, log)
+        result = new_bundle.apply_replacements(old_assets_map, key_func)
         
         # 4. 如果当前策略成功匹配了至少一个资源，就结束
         if result.is_success:
             log(f"\n✅ {t('log.migration.strategy_success', name=name, count=result.replaced_count)}:")
             for item in result.replaced_logs:
                 log(f"  - {item}")
-            return new_env, result
+            return new_bundle, result
 
         log(f'  > {t("log.migration.strategy_no_match", name=name)}')
 
@@ -950,7 +698,7 @@ def process_mod_update(
 
         # 进行asset迁移
         log(f'\n--- {t("log.section.asset_migration")} ---')
-        modified_env, result = _migrate_bundle_assets(
+        modified_bundle, result = _migrate_bundle_assets(
             old_bundle_path=old_mod_path, 
             new_bundle_path=new_bundle_path, 
             asset_types_to_replace=asset_types_to_replace, 
@@ -958,7 +706,7 @@ def process_mod_update(
             log = log
         )
 
-        if not modified_env:
+        if not modified_bundle:
             return False, t("message.mod_update.migration_failed")
         if not result.is_success:
             return False, t("message.mod_update.no_matching_assets_to_replace")
@@ -972,12 +720,7 @@ def process_mod_update(
         
         # 保存和修正文件
         output_path = output_dir / new_bundle_path.name
-        save_ok, save_message = save_bundle(
-            env=modified_env,
-            output_path=output_path,
-            save_options=save_options,
-            log=log
-        )
+        save_ok, save_message = modified_bundle.save(output_path, save_options)
 
         if not save_ok:
             return False, save_message
@@ -1038,10 +781,7 @@ def process_batch_mod_update(
         log("\n" + "=" * 50)
         log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-        # 查找对应的新资源文件
-        new_bundle_paths, find_message = find_new_bundle_path(
-            old_mod_path, search_paths, log
-        )
+        new_bundle_paths, find_message = find_new_bundle_path(old_mod_path, search_paths, log)
 
         if not new_bundle_paths:
             log(f'❌ {t("log.search.find_failed", message=find_message)}')
@@ -1134,10 +874,7 @@ def process_batch_legacy_batch(
         log("\n" + "=" * 50)
         log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-        # 查找对应的新版国际服文件
-        new_global_files = find_all_jp_counterparts(
-            legacy_file_path, search_paths, log
-        )
+        new_global_files = find_all_jp_counterparts(legacy_file_path, search_paths, log)
 
         if not new_global_files:
             log(f'❌ {t("log.search.no_found")}')
@@ -1296,14 +1033,13 @@ def process_jp_to_global_conversion(
         total_files = len(jp_bundle_paths)
         for i, jp_path in enumerate(jp_bundle_paths, 1):
             log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_path.name))
-            jp_env = load_bundle(jp_path, log)
-            if not jp_env:
+            jp_bundle = Bundle.load(jp_path, log)
+            if not jp_bundle:
                 log(f"    > ⚠️ {t('message.load_failed')}: {jp_path.name}")
                 continue
             
-            # 提取资源并合并到主清单
-            jp_assets = _extract_assets_from_bundle(
-                jp_env, asset_types_to_replace, key_func, None, log
+            jp_assets = jp_bundle.extract_assets_for_migration(
+                asset_types_to_replace, key_func, None
             )
             replacement_map.update(jp_assets)
 
@@ -1316,11 +1052,11 @@ def process_jp_to_global_conversion(
 
         # 2. 加载国际服 base 并应用替换
         log(f'\n--- {t("log.section.applying_to_global")} ---')
-        global_env = load_bundle(global_bundle_path, log)
-        if not global_env:
+        global_bundle = Bundle.load(global_bundle_path, log)
+        if not global_bundle:
             return False, t("message.jp_convert.load_global_failed")
         
-        result = _apply_replacements(global_env, replacement_map, key_func, log)
+        result = global_bundle.apply_replacements(replacement_map, key_func)
         
         if not result.is_success:
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
@@ -1332,12 +1068,7 @@ def process_jp_to_global_conversion(
         
         # 3. 保存最终文件
         output_path = output_dir / global_bundle_path.name
-        save_ok, save_message = save_bundle(
-            env=global_env,
-            output_path=output_path,
-            save_options=save_options,
-            log=log
-        )
+        save_ok, save_message = global_bundle.save(output_path, save_options)
         
         if not save_ok:
             return False, save_message
@@ -1385,9 +1116,8 @@ def process_global_to_jp_conversion(
         log(f'  > {t("log.jp_convert.global_source_file", name=global_bundle_path.name)}')
         log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_template_paths))}')
         
-        # 1. 加载国际服源文件并构建源资源清单
-        global_env = load_bundle(global_bundle_path, log)
-        if not global_env:
+        global_bundle = Bundle.load(global_bundle_path, log)
+        if not global_bundle:
             return False, t("message.jp_convert.load_global_source_failed")
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
@@ -1408,9 +1138,8 @@ def process_global_to_jp_conversion(
         for strategy_name, key_func in strategies:
             log(f'\n{t("log.migration.trying_strategy", name=strategy_name)}')
 
-            # 根据当前策略从国际服 bundle 构建替换清单
-            source_replacement_map = _extract_assets_from_bundle(
-                global_env, asset_types_to_replace, key_func, None, log
+            source_replacement_map = global_bundle.extract_assets_for_migration(
+                asset_types_to_replace, key_func, None
             )
 
             if not source_replacement_map:
@@ -1426,13 +1155,12 @@ def process_global_to_jp_conversion(
             for i, jp_template_path in enumerate(jp_template_paths, 1):
                 log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_template_path.name))
 
-                template_env = load_bundle(jp_template_path, log)
-                if not template_env:
+                template_bundle = Bundle.load(jp_template_path, log)
+                if not template_bundle:
                     log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
                     continue
 
-                # 应用替换，函数会自动匹配并替换存在于模板中的资源
-                result = _apply_replacements(template_env, source_replacement_map, key_func, log)
+                result = template_bundle.apply_replacements(source_replacement_map, key_func)
 
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
@@ -1446,12 +1174,7 @@ def process_global_to_jp_conversion(
                             log(f"  - {item}")
 
                         output_path = output_dir / jp_template_path.name
-                        save_ok, save_msg = save_bundle(
-                            env=template_env,
-                            output_path=output_path,
-                            save_options=save_options,
-                            log=log
-                        )
+                        save_ok, save_msg = template_bundle.save(output_path, save_options)
                         if save_ok:
                             log(f"  ✅ {t('log.file.saved', path=output_path)}")
                             success_count += 1
