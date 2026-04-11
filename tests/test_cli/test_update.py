@@ -1,10 +1,8 @@
 import pytest
 from pathlib import Path
 
-from ba_modding_toolkit.core import (
-    load_bundle,
-    get_unity_platform_info,
-)
+from ba_modding_toolkit.bundle import Bundle
+from ba_modding_toolkit.core import get_unity_platform_info
 from ba_modding_toolkit.cli.taps import UpdateTap
 from ba_modding_toolkit.cli.handlers import handle_update
 from conftest import has_mod_update_samples
@@ -36,7 +34,11 @@ class TestUpdateCommand:
         handle_update(args)
 
         output_files = list(output_dir.glob("*.bundle"))
-        assert len(output_files) > 0, "No output files generated"
+        assert len(output_files) > 0
+
+        for output_file in output_files:
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
 
     def test_update_with_asset_types(
         self,
@@ -86,8 +88,8 @@ class TestUpdateCommand:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
 
     def test_update_metadata_consistency(
         self,
@@ -115,6 +117,8 @@ class TestUpdateCommand:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            updated_platform, updated_version = get_unity_platform_info(output_file)
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
+            updated_platform, updated_version = bundle.platform_info
             assert updated_platform == original_platform
             assert updated_version == original_version

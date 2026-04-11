@@ -1,7 +1,8 @@
 import pytest
+import shutil
 from pathlib import Path
 
-from ba_modding_toolkit.core import load_bundle
+from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.cli.taps import SplitTap, MergeTap
 from ba_modding_toolkit.cli.handlers import handle_split, handle_merge
 from conftest import has_legacy_format_samples
@@ -34,6 +35,8 @@ class TestSplitCommand:
 
         output_files = list(output_dir.glob("*.bundle"))
         assert len(output_files) > 0, "No output files generated"
+        b1 = Bundle.load(output_files[0])
+        assert not b1.is_empty()
 
     def test_split_with_modern_files(
         self,
@@ -82,8 +85,8 @@ class TestSplitCommand:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
 
 
 @pytest.mark.skipif(
@@ -161,6 +164,5 @@ class TestMergeCommand:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
-            
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"

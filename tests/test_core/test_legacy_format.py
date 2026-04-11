@@ -4,9 +4,9 @@ from pathlib import Path
 from ba_modding_toolkit.core import (
     process_jp_to_global_conversion,
     process_global_to_jp_conversion,
-    load_bundle,
     SaveOptions,
 )
+from ba_modding_toolkit.bundle import Bundle
 from conftest import has_legacy_format_samples
 
 
@@ -72,8 +72,8 @@ class TestJpToGlobalConversion:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
 
 
 @pytest.mark.skipif(
@@ -138,8 +138,8 @@ class TestGlobalToJpConversion:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
 
     def test_global_to_jp_replaced_files(
         self,

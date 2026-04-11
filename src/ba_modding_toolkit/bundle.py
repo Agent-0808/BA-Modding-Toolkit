@@ -4,7 +4,6 @@ import traceback
 from pathlib import Path
 
 import UnityPy
-from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.files import SerializedFile
 from UnityPy.environment import Environment as Env
 from PIL import Image
@@ -12,7 +11,7 @@ from PIL import Image
 from .i18n import t
 from .utils import CRCUtils, SpineUtils, no_log
 from .models import (
-    AssetKey, AssetContent,
+    AssetKey, AssetContent, AssetType,
     KeyGeneratorFunc, LogFunc, CompressionType, ReplacementResult,
     SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
@@ -34,6 +33,10 @@ class Bundle:
     def name(self) -> str:
         """快捷获取文件名"""
         return self.path.name
+    
+    def is_empty(self) -> bool:
+        """检查 Bundle 是否为空（不包含任何文件）"""
+        return len(self.env.files) == 0
     
     @property
     def platform_info(self) -> tuple[str, str]:

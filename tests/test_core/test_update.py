@@ -3,11 +3,11 @@ from pathlib import Path
 
 from ba_modding_toolkit.core import (
     process_mod_update,
-    load_bundle,
     get_unity_platform_info,
     process_asset_extraction,
     SaveOptions,
 )
+from ba_modding_toolkit.bundle import Bundle
 from conftest import has_mod_update_samples, compare_directory_assets
 
 MSE_THRESHOLD = 20.0
@@ -43,8 +43,8 @@ class TestModUpdate:
         
         updated_bundle = output_dir / new_original_bundle_path.name
         
-        env = load_bundle(updated_bundle)
-        assert env is not None
+        bundle = Bundle.load(updated_bundle)
+        assert not bundle.is_empty()
 
     def test_mod_update_metadata_consistency(
         self,

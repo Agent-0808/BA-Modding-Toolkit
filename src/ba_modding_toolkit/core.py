@@ -6,17 +6,17 @@ import shutil
 import re
 import tempfile
 from typing import Callable
-from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.environment import Environment as Env
 from PIL import Image
 
 from .i18n import t
-from .utils import CRCUtils, SpineUtils, ImageUtils, no_log
+from .utils import SpineUtils, ImageUtils, no_log
 from .models import (
-    NameTypeKey, ContNameTypeKey, AssetKey, AssetContent,
-    KeyGeneratorFunc, LogFunc, CompressionType, ReplacementResult,
+    NameTypeKey, ContNameTypeKey, 
+    AssetKey, AssetContent, AssetType,
+    KeyGeneratorFunc, LogFunc, ReplacementResult,
     MATCH_STRATEGIES, SaveOptions, SpineOptions,
-    JP_FILENAME_TYPE_MAP, REPLACEABLE_ASSET_TYPES
+    REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
 
@@ -38,51 +38,6 @@ def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
         return temp_bundle.platform_info
     else:
         raise ValueError("input 必须是 Path 或 UnityPy.Environment 类型")
-
-def load_bundle(
-    bundle_path: Path,
-    log: LogFunc = no_log
-) -> Env | None:
-    """
-    尝试加载一个 Unity bundle 文件。
-    如果直接加载失败，会尝试移除末尾的几个字节后再次加载。
-    """
-    bundle = Bundle.load(bundle_path, log)
-    return bundle.env if bundle else None
-
-def compress_bundle(
-    env: Env,
-    compression: CompressionType = "none",
-    log: LogFunc = no_log,
-) -> bytes:
-    """
-    从 UnityPy.Environment 对象生成 bundle 文件的字节数据。
-    compression: 用于控制压缩方式。
-                 - "lzma": 使用 LZMA 压缩。
-                 - "lz4": 使用 LZ4 压缩。
-                 - "original": 保留原始压缩方式。
-                 - "none": 不进行压缩。
-    """
-    temp_bundle = Bundle(Path("temp"), env, log)
-    return temp_bundle.compress(compression)
-
-def save_bundle(
-    env: Env,
-    output_path: Path,
-    save_options: SaveOptions,
-    log: LogFunc = no_log,
-) -> tuple[bool, str]:
-    """
-    一个辅助函数，用于生成压缩bundle数据，根据需要执行CRC修正，并最终保存到文件。
-    封装了保存、CRC修正的逻辑。
-    CRC修正使用输出文件名中提取的目标CRC值。
-
-    Returns:
-        tuple(bool, str): (是否成功, 状态消息) 的元组。
-    """
-    temp_bundle = Bundle(Path("temp"), env, log)
-    return temp_bundle.save(output_path, save_options)
-
 
 # ====== 寻找对应文件 ======
 
@@ -919,31 +874,6 @@ def process_batch_legacy_batch(
     return success_count, fail_count, failed_tasks, file_pairs
 
 # ====== 日服处理相关 ======
-
-def _get_asset_types_from_jp_filenames(jp_paths: list[Path]) -> set[str]:
-    """
-    分析日服bundle文件名列表，以确定它们包含的资源类型。
-    只返回可替换的资源类型。
-    """
-    asset_types = set()
-    # 用于查找类型部分的正则表达式，例如 "-textures-"
-    type_pattern = re.compile(r'-(' + '|'.join(JP_FILENAME_TYPE_MAP.keys()) + r')-')
-
-    for path in jp_paths:
-        match = type_pattern.search(path.name)
-        if match:
-            type_key = match.group(1)
-            asset_type_name = JP_FILENAME_TYPE_MAP.get(type_key)
-            if asset_type_name:
-                # 只添加在白名单中的类型
-                try:
-                    asset_type = AssetType[asset_type_name]
-                    if asset_type in REPLACEABLE_ASSET_TYPES:
-                        asset_types.add(asset_type_name)
-                except KeyError:
-                    pass
-
-    return asset_types
 
 def find_all_jp_counterparts(
     global_bundle_path: Path,

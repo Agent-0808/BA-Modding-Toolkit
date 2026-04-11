@@ -1,16 +1,16 @@
 import pytest
-from pathlib import Path
 import shutil
+from pathlib import Path
 
-from ba_modding_toolkit.core import load_bundle
+from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.cli.taps import PackTap
 from ba_modding_toolkit.cli.handlers import handle_asset_packing
-from conftest import has_sample_bundle, has_sample_image
+from conftest import has_sample_bundle
 
 
 @pytest.mark.skipif(
-    not has_sample_bundle() or not has_sample_image(),
-    reason="Sample bundle AND image files ARE REQUIRED"
+    not has_sample_bundle(),
+    reason="sample.bundle IS REQUIRED"
 )
 class TestPackCommand:
     def test_pack_basic(
@@ -68,5 +68,5 @@ class TestPackCommand:
         assert len(output_files) > 0
 
         for output_file in output_files:
-            env = load_bundle(output_file)
-            assert env is not None, f"Failed to load output bundle: {output_file}"
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty(), f"Failed to load output bundle: {output_file}"
