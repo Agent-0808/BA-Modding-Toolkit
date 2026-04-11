@@ -45,7 +45,9 @@ The program contains multiple functional tabs:
 - **CRC Tool**: CRC checksum correction functionality
 - **Asset Packer**: Pack asset files from a folder into a Bundle file, replacing the corresponding assets in the Bundle
 - **Asset Extractor**: Extract specified types of assets from Bundle files
-- **JP/GL Conversion**: Convert between JP server format and Global server format
+- **JP/GL Conversion**: Convert between JP server format and Legacy Global server format
+  - Convert between a single file and multiple files
+  - Batch convert legacy Global server format to new format
 
 Check the [Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/Usage) Page for detailed instructions.
 
@@ -88,6 +90,10 @@ bamt-cli -h
 
 # View detailed help and examples for a specific command
 bamt-cli update -h
+bamt-cli batch-update -h
+bamt-cli merge -h
+bamt-cli split -h
+bamt-cli batch-legacy -h
 bamt-cli pack -h
 bamt-cli extract -h
 bamt-cli crc -h
@@ -95,6 +101,8 @@ bamt-cli crc -h
 # View environment information
 bamt-cli env
 ```
+
+> Note: Due to the technical limitation of the `Tap` library, the compiled binary file cannot display parameter variable annotations. When running the source code, the parameter variable annotations will be displayed in the help information.
 
 ## Technical Details
 
@@ -167,6 +175,9 @@ BA-Modding-Toolkit/
 │ │   └── jp_conversion_tab.py    # JP/GL Conversion tab
 │ ├── assets/         # Project assets
 │ └── locales/        # Language files
+├── tests/            # Pytest test cases folder
+│ ├── assets/         # Test assets
+│ └── test_*.py       # Test cases
 ├── config.toml       # Local configuration file (automatically generated)
 │ 
 │ # ============= Misc. =============
@@ -200,6 +211,7 @@ This project uses the following excellent 3rd-party libraries:
 - [toml](https://github.com/uiri/toml) (MIT License): Parse and dump TOML configuration file
 - [SpineAtlas](https://github.com/Rin-Wood/SpineAtlas) (MIT License): Spine animation file atlas parser and editor
 - [Tap](https://github.com/swansonk14/typed-argument-parser) (MIT License): Parsing command line arguments
+- [pytest](https://pytest.org/en/stable/) (MIT License): Test framework
 
 ### See Also
 

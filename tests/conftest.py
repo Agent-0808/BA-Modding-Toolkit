@@ -10,6 +10,10 @@ MOD_UPDATE_DIR = ASSETS_DIR / "mod_update"
 MOD_UPDATE_OLD_DIR = MOD_UPDATE_DIR / "old"
 MOD_UPDATE_NEW_DIR = MOD_UPDATE_DIR / "new"
 
+LEGACY_FORMAT_DIR = ASSETS_DIR / "legacy_format"
+LEGACY_FORMAT_LEGACY_DIR = LEGACY_FORMAT_DIR / "legacy"
+LEGACY_FORMAT_MODERN_DIR = LEGACY_FORMAT_DIR / "modern"
+
 
 def compare_images_mse(img1: Image.Image, img2: Image.Image) -> float:
     if img1.size != img2.size:
@@ -97,6 +101,10 @@ def has_mod_update_samples() -> bool:
     return has_file(MOD_UPDATE_OLD_DIR, ".bundle") and has_file(MOD_UPDATE_NEW_DIR, ".bundle")
 
 
+def has_legacy_format_samples() -> bool:
+    return has_file(LEGACY_FORMAT_LEGACY_DIR, ".bundle") and has_file(LEGACY_FORMAT_MODERN_DIR, ".bundle")
+
+
 @pytest.fixture
 def sample_bundle_path() -> Path | None:
     return find_first_file(PACKER_DIR, ".bundle")
@@ -125,3 +133,20 @@ def old_mod_bundle_path() -> Path | None:
 @pytest.fixture
 def new_original_bundle_path() -> Path | None:
     return find_first_file(MOD_UPDATE_NEW_DIR, ".bundle")
+
+
+@pytest.fixture
+def legacy_bundle_path() -> Path | None:
+    return find_first_file(LEGACY_FORMAT_LEGACY_DIR, ".bundle")
+
+
+@pytest.fixture
+def modern_dir_path() -> Path:
+    return LEGACY_FORMAT_MODERN_DIR
+
+
+@pytest.fixture
+def modern_bundles_path() -> list[Path]:
+    if not LEGACY_FORMAT_MODERN_DIR.exists():
+        return []
+    return list(LEGACY_FORMAT_MODERN_DIR.glob("*.bundle"))

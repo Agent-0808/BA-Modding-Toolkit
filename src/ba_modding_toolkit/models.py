@@ -82,6 +82,24 @@ class SpineOptions:
             and self.target_version.count(".") == 2
         )
 
+@dataclass
+class ReplacementResult:
+    """封装资源替换操作的结果。"""
+    replaced_count: int          # 实际执行替换的数量
+    skipped_count: int           # 匹配但内容相同跳过的数量
+    replaced_logs: list[str]     # 替换成功的日志
+    unmatched_keys: list[AssetKey]  # 未匹配的资源键
+    
+    @property
+    def matched_count(self) -> int:
+        """总匹配数（包括替换和跳过的）"""
+        return self.replaced_count + self.skipped_count
+    
+    @property
+    def is_success(self) -> bool:
+        """是否有资源匹配成功（无论是否实际替换）"""
+        return self.matched_count > 0
+
 
 # -------- 全局游戏业务映射常量 ---------
 

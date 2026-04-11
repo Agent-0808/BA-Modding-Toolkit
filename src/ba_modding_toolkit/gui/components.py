@@ -595,7 +595,7 @@ class SettingRow:
 class ModeSwitcher:
     """可复用的模式切换组件，使用Radiobutton实现"""
 
-    def __init__(self, parent, mode_var: tk.StringVar, options: list[tuple[str, str]], command: Callable[[], None] | None = None):
+    def __init__(self, parent, mode_var: tk.Variable, options: list[tuple[str | int, str]], command: Callable[[], None] | None = None):
         """
         初始化模式切换组件
 

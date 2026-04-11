@@ -101,6 +101,8 @@
 	},
 	"message": {
 		"confirm_replace_file": "This operation will overwrite the file: {path}\n\nIt is recommended to ensure that backups are enabled.\nAre you sure you want to continue?",
+		"confirm_replace_files": "This operation will overwrite {count} files:\n{files}",
+		"and_more_files": "...and {count} more",
 		"confirm_reset_settings": "Are you sure you want to reset to default settings?",
 		"file_not_found": "File not found: {path}",
 		"file_not_selected": "No file selected",
@@ -186,7 +188,11 @@
 			"no_assets_in_source": "No extractable assets found in the source file. Cannot convert.",
 			"no_assets_matched": "No matching assets found. Cannot convert."
 		},
-		"save_error": "Error saving file: {error}"
+		"save_error": "Error saving file: {error}",
+		"replace_result": "Replacement completed!\nSuccess: {success} files, Failure: {fail} files",
+		"batch": {
+			"success": "Batch processing completed!\nSuccess: {success}, Failure: {fail}"
+		}
 	},
 	"status": {
 		"ready": "Ready",
@@ -327,20 +333,26 @@
 			"writing_to_new_bundle": "Writing assets to new bundle...",
 			"strategy_success": "Strategy \"{name}\" successfully replaced {count} assets",
 			"strategy_no_match": "Strategy \"{name}\" failed to match any assets.",
-			"all_strategies_failed": "All matching strategies failed to find replaceable assets ({types}) in the new bundle."
+			"all_strategies_failed": "All matching strategies failed to find replaceable assets ({types}) in the new bundle.",
+			"strategy_skipped_unchanged": "Strategy \"{name}\": All files unchanged, skipping generation"
 		},
 		"mod_update": {
 			"using_old_mod": "Using old Mod: {name}",
 			"using_new_resource": "Using new resource: {name}",
 			"migration_complete": "Resource migration complete. Processed {count} assets.",
-			"batch_summary": "Batch processing complete!\n\nTotal: {total}\nSuccess: {success}\nFailed: {fail}",
 			"all_processes_complete": "All processes completed!",
-			"batch_start": "Starting batch processing...",
+			"updating": "Updating...",
+			"all_resources_unchanged": "All resources unchanged ({count}), skipping output file generation"
+		},
+		"batch": {
+			"summary": "Batch processing complete!\nTotal: {total}, Success: {success}, Failed: {fail}",
+			"start": "Starting batch processing...",
 			"failed_items_cnt": "Total {count} files failed to process:",
 			"failed_item": "- {filename}",
 			"process_success": "Process success: {filename}",
 			"process_failed": "Process failed: {filename} - {message}",
-			"updating": "Updating..."
+			"process_unchanged": "Content unchanged, skipping: {filename}",
+			"output_files_list": "Output files list ({count} total):"
 		},
 		"jp_convert": {
 			"error_jp_to_global": "Error during JP -> Global conversion: {error}",
@@ -357,7 +369,8 @@
 			"global_source_file": "Global source file: {name}",
 			"extracted_count": "Extracted {count} assets.",
 			"global_to_jp_complete": "Global -> JP conversion complete!",
-			"auto_search_no_game_dir": "Auto-search failed: Game resource directory not set."
+			"auto_search_no_game_dir": "Auto-search failed: Game resource directory not set.",
+			"file_unchanged": "File content unchanged: {name} ({count} assets), skipping generation"
 		},
 		"game_dir_not_set": "Game resource directory not set. Cannot automatically locate original files.",
 		"file_not_found_in_dirs": "Could not find corresponding original file \"{filename}\" in specified resource directories.",
@@ -370,8 +383,10 @@
 		"replace_original": "You can now press the \"{button}\" button to overwrite the original file",
 		"generated_file_not_found": "Operation reported success, but the generated file was not found in the output directory.",
 		"replace_resource_failed": "Error replacing resource [{type}] {name}: {error}",
+		"replace_skipped_same_content": "Skipped replacement for [{type}] {name}: content identical to original",
 		"platform_info": "Target Platform: {platform} (Unity {version})",
-		"unnamed_resource": "Unnamed {type} asset"
+		"unnamed_resource": "Unnamed {type} asset",
+		"success_fail": "Success: {success}, Fail: {fail}"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",
@@ -412,8 +427,9 @@
 			"placeholder_bundle": "Drag and drop all Bundles to extract from here"
 		},
 		"jp_conversion": {
-			"mode_jp_to_gl": "JP → Global (Merge)",
-			"mode_gl_to_jp": "Global → JP (Split)",
+			"mode_jp_to_gl": "JP→GL (Merge)",
+			"mode_gl_to_jp": "GL→JP (Split)",
+			"mode_legacy_batch": "Batch Legacy",
 			"placeholder_jp_files": "Drag and drop all related JP files (textures, textassets...) here",
 			"role_jp_source": "JP Bundle (Source)",
 			"role_global_source": "Global Bundle (Source)",

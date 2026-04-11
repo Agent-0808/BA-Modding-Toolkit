@@ -100,7 +100,9 @@
 		"skel_converter": "SpineSkeletonConverter.exe"
 	},
 	"message": {
-		"confirm_replace_file": "此操作将覆盖文件: {path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
+		"confirm_replace_file": "此操作将覆盖文件：{path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
+		"confirm_replace_files": "此操作将覆盖 {count} 个文件：\n\n{files}",
+		"and_more_files": "……以及其余 {count} 个",
 		"confirm_reset_settings": "确定要重置为默认设置吗？",
 		"file_not_found": "找不到文件: {path}",
 		"file_not_selected": "未选中文件",
@@ -186,7 +188,11 @@
 			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
 			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。"
 		},
-		"save_error": "保存文件时发生错误: {error}"
+		"save_error": "保存文件时发生错误: {error}",
+		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
+		"batch": {
+			"success": "批量处理完成！\n成功: {success}，失败: {fail}"
+		}
 	},
 	"status": {
 		"ready": "准备就绪",
@@ -327,20 +333,26 @@
 			"writing_to_new_bundle": "向新版 bundle 写入资源...",
 			"strategy_success": "策略 \"{name}\" 成功替换了 {count} 个资源",
 			"strategy_no_match": "策略 \"{name}\" 未能匹配到任何资源。",
-			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。"
+			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。",
+			"strategy_skipped_unchanged": "策略 \"{name}\"：所有文件内容未变化，跳过生成"
 		},
 		"mod_update": {
 			"using_old_mod": "使用旧版 Mod: {name}",
 			"using_new_resource": "使用新版资源: {name}",
 			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
-			"batch_summary": "批量处理完成！\n\n总计: {total}\n成功: {success}\n失败: {fail}",
 			"all_processes_complete": "全部流程处理完成！",
-			"batch_start": "开始批量处理...",
+			"updating": "正在更新……",
+			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件"
+		},
+		"batch": {
+			"summary": "批量处理完成！\n总计: {total}，成功: {success}，失败: {fail}",
+			"start": "开始批量处理...",
 			"failed_items_cnt": "共 {count} 个文件处理失败：",
 			"failed_item": "- {filename}",
 			"process_success": "处理成功: {filename}",
 			"process_failed": "处理失败: {filename} - {message}",
-			"updating": "正在更新……"
+			"process_unchanged": "内容未变化，跳过: {filename}",
+			"output_files_list": "输出文件列表（共 {count} 个）："
 		},
 		"jp_convert": {
 			"error_jp_to_global": "在JP -> Global转换过程中发生错误: {error}",
@@ -357,12 +369,14 @@
 			"global_source_file": "国际服源文件: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
 			"global_to_jp_complete": "Global -> JP转换完成！",
-			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。"
+			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
+			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成"
 		},
 		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
 		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 \"{filename}\"。",
 		"file_found_in_subdir": "已在 \"{subdir}\" 中自动找到并加载原始文件: {filename}",
 		"output_dir_not_set": "未设置输出目录",
+		"success_fail": "成功：{success}，失败：{fail}",
 		"error_detail": "发生错误：{error}",
 		"error_processing": "处理过程中发生错误：{error}",
 		"processing_filename_with_progress": "({current}/{total}) 正在处理文件: {name}",
@@ -370,6 +384,7 @@
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
+		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "未命名的 {type} 资源"
 	},
@@ -414,6 +429,7 @@
 		"jp_conversion": {
 			"mode_jp_to_gl": "JP → Global (合并)",
 			"mode_gl_to_jp": "Global → JP (拆分)",
+			"mode_legacy_batch": "批量处理旧版",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
 			"role_jp_source": "日服 Bundle (源文件)",
 			"role_jp_target": "日服 Bundle (目标文件)",

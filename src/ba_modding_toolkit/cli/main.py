@@ -7,16 +7,24 @@ from .handlers import (
     handle_crc,
     handle_env,
     handle_extract,
+    handle_split,
+    handle_merge,
+    handle_batch_update,
+    handle_batch_legacy,
 )
 
 # --- 命令映射 ---
 
 COMMAND_HANDLERS = {
     'update': handle_update,
+    'batch-update': handle_batch_update,
     'pack': handle_asset_packing,
     'crc': handle_crc,
     'env': handle_env,
     'extract': handle_extract,
+    'merge': handle_merge,
+    'split': handle_split,
+    'batch-legacy': handle_batch_legacy,
 }
 
 def main() -> None:

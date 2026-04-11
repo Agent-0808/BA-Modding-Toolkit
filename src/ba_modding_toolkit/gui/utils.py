@@ -135,54 +135,122 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
     except Exception as e:
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
 
-def replace_file(source_path: Path, 
-                    dest_path: Path, 
-                    create_backup: bool = True, 
-                    ask_confirm: bool = True,
-                    confirm_message: str = "",
-                    log = no_log, 
-                ) -> bool: 
-    """ 
-    安全地替换文件，包含确认、备份和日志记录功能。 
-    返回操作是否成功。 
-    """ 
-    if not source_path or not source_path.exists(): 
-        messagebox.showerror(t("common.error"), t("message.file_not_found", path=source_path)) 
-        return False 
-    if not dest_path or not dest_path.exists(): 
-        messagebox.showerror(t("common.error"), t("message.file_not_found", path=dest_path)) 
-        return False 
-    if source_path == dest_path: 
-        messagebox.showerror(t("common.error"), t("message.same_file")) 
+def _perform_file_replace(
+    source_path: Path,
+    dest_path: Path,
+    create_backup: bool = True,
+    log = no_log
+) -> bool:
+    """
+    执行实际的文件替换操作（纯替换/备份逻辑，无UI交互）
+    """
+    if not source_path or not source_path.exists():
+        return False
+    if not dest_path or not dest_path.exists():
+        return False
+    if source_path == dest_path:
         return False
 
-    if ask_confirm and not messagebox.askyesno(t("common.warning"), confirm_message): 
-        return False 
-
-    try: 
-        if create_backup: 
-            backup_path = dest_path.with_suffix(dest_path.suffix + '.backup') 
-            
+    try:
+        if create_backup:
+            backup_path = dest_path.with_suffix(dest_path.suffix + '.backup')
             try:
-                shutil.copy2(dest_path, backup_path) 
+                shutil.copy2(dest_path, backup_path)
             except Exception as e:
-                log(t("log.file.backup_failed", error=e)) 
-                messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
+                log(t("log.file.backup_failed", error=e))
                 return False
-            log(t("log.file.backed_up", path=backup_path)) 
-        
-        log(t("log.file.overwritten", path=dest_path)) 
-        shutil.copy2(source_path, dest_path) 
-        
-        log(t("status.done")) 
-        messagebox.showinfo(t("common.success"), t("message.process_success")) 
-        return True 
+            log(t("log.file.backed_up", path=backup_path))
 
-    except Exception as e: 
-        log(t("log.process_failed", error=e)) 
+        log(t("log.file.overwritten", path=dest_path))
+        shutil.copy2(source_path, dest_path)
+        return True
 
-        messagebox.showerror(t("common.error"), t("message.process_failed", error=e)) 
-        return False 
+    except Exception as e:
+        log(t("log.process_failed", error=e))
+        return False
+
+
+def replace_file(
+    source_path: Path,
+    dest_path: Path,
+    create_backup: bool = True,
+    ask_confirm: bool = True,
+    confirm_message: str = "",
+    log = no_log,
+) -> bool:
+    """
+    安全地替换文件，包含确认、备份和日志记录功能。
+    返回操作是否成功。
+    """
+    if not source_path or not source_path.exists():
+        messagebox.showerror(t("common.error"), t("message.file_not_found", path=source_path))
+        return False
+    if not dest_path or not dest_path.exists():
+        messagebox.showerror(t("common.error"), t("message.file_not_found", path=dest_path))
+        return False
+    if source_path == dest_path:
+        messagebox.showerror(t("common.error"), t("message.same_file"))
+        return False
+
+    if ask_confirm and not messagebox.askyesno(t("common.warning"), confirm_message):
+        return False
+
+    success = _perform_file_replace(source_path, dest_path, create_backup, log)
+
+    if success:
+        log(t("status.done"))
+        messagebox.showinfo(t("common.success"), t("message.process_success"))
+        return True
+    else:
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=""))
+        return False
+
+
+def replace_files(
+    file_pairs: list[tuple[Path, Path]],
+    create_backup: bool = True,
+    ask_confirm: bool = True,
+    confirm_message: str = "",
+    log = no_log,
+) -> tuple[int, int]:
+    """
+    批量替换文件，包含确认、备份和日志记录功能。
+
+    Args:
+        file_pairs: 文件对列表，每个元素为 (源文件路径, 目标文件路径) 的元组
+        create_backup: 是否创建备份
+        ask_confirm: 是否显示确认对话框
+        confirm_message: 确认对话框的消息
+        log: 日志函数
+
+    Returns:
+        tuple[int, int]: (成功数量, 失败数量) 的元组
+    """
+
+    # 显示确认对话框
+    if ask_confirm and confirm_message:
+        if not messagebox.askyesno(t("common.warning"), confirm_message):
+            return -1, -1
+
+    # 执行批量替换
+    success_count = 0
+    fail_count = 0
+
+    for source_path, dest_path in file_pairs:
+        success = _perform_file_replace(source_path, dest_path, create_backup, log)
+        if success:
+            success_count += 1
+        else:
+            fail_count += 1
+
+    # 显示结果
+    log(t("log.success_fail", success=success_count, fail=fail_count))
+    messagebox.showinfo(
+        t("common.tip"),
+        t("message.replace_result", success=success_count, fail=fail_count)
+    )
+
+    return success_count, fail_count 
 
 def select_directory(var: tk.Variable = None, title="", log=no_log):
     """

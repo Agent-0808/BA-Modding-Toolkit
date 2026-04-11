@@ -1,0 +1,63 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: 'x64'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install Dependencies
+        run: uv sync --dev
+
+      - name: Download Test Assets
+        env:
+          ASSETS_URL: ${{ secrets.ASSETS_URL }}
+        run: |
+          try {
+            if ([string]::IsNullOrEmpty($env:ASSETS_URL)) {
+              throw "ASSETS_URL secret is not set"
+            }
+            Invoke-WebRequest -Uri $env:ASSETS_URL -OutFile "assets.zip" -ErrorAction Stop
+            Expand-Archive -Path "assets.zip" -DestinationPath "tests\assets" -Force
+            Remove-Item "assets.zip"
+            Write-Host "Test assets downloaded and extracted successfully"
+          } catch {
+            Write-Host "Failed to download test assets, skipping..."
+          }
+        shell: pwsh
+        continue-on-error: true
+
+      - name: Run Tests
+        run: uv run pytest -v
