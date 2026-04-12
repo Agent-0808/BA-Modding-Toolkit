@@ -14,7 +14,7 @@ from .naming import parse_filename
 from .models import (
     NameTypeKey, ContNameTypeKey, ParsedFilename,
     AssetKey, AssetContent, AssetType,
-    KeyGeneratorFunc, LogFunc, ReplacementResult,
+    KeyGeneratorFunc, LogFunc, PatchResult,
     MATCH_STRATEGIES, SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
 )
@@ -232,18 +232,18 @@ def process_asset_packing(
         # 2. 应用替换
         strategy_name = 'name_type'
         key_func = MATCH_STRATEGIES[strategy_name]
-        result = target_bundle.apply_replacements(replacement_map, key_func)
+        result = target_bundle.apply_patch(replacement_map, key_func)
 
         if not result.is_success:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
             log(t("log.packer.check_files_and_bundle"))
             return False, t("message.packer.no_matching_assets_to_pack")
         
-        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}:")
-        for item in result.replaced_logs:
+        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
+        for item in result.applied_logs:
             log(f"  - {item}")
 
-        log(f'\n{t("log.packer.packing_complete", success=result.replaced_count, total=original_tasks_count)}')
+        log(f'\n{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
 
         # 报告未被打包的文件
         if result.unmatched_keys:
@@ -270,7 +270,7 @@ def process_asset_packing(
             return False, save_message
 
         log(t("log.file.saved", path=output_path))
-        return True, t("message.packer.process_complete", count=result.replaced_count, button=t("action.replace_original"))
+        return True, t("message.packer.process_complete", count=result.applied_count, button=t("action.replace_original"))
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
@@ -426,7 +426,7 @@ def _migrate_bundle_assets(
     asset_types_to_replace: set[str],
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[Bundle | None, ReplacementResult]:
+) -> tuple[Bundle | None, PatchResult]:
     """
     执行asset迁移的核心替换逻辑。
     返回一个元组 (modified_bundle, result)，如果失败则 modified_bundle 为 None。
@@ -435,12 +435,12 @@ def _migrate_bundle_assets(
     log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
     old_bundle = Bundle.load(old_bundle_path, log)
     if not old_bundle:
-        return None, ReplacementResult(0, 0, [], [])
+        return None, PatchResult(0, 0, [], [])
     
     log(t("log.migration.loading_new_bundle"))
     new_bundle = Bundle.load(new_bundle_path, log)
     if not new_bundle:
-        return None, ReplacementResult(0, 0, [], [])
+        return None, PatchResult(0, 0, [], [])
 
     # 定义匹配策略
     strategies: list[tuple[str, KeyGeneratorFunc]] = [
@@ -456,7 +456,7 @@ def _migrate_bundle_assets(
         
         # 2. 根据当前策略从旧版 bundle 构建"替换清单"
         log(f'  > {t("log.migration.extracting_from_old_bundle_simple")}')
-        old_assets_map = old_bundle.extract_assets_for_migration(
+        old_assets_map = old_bundle.extract_patch(
             asset_types_to_replace, key_func, spine_options
         )
         
@@ -469,12 +469,12 @@ def _migrate_bundle_assets(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
-        result = new_bundle.apply_replacements(old_assets_map, key_func)
+        result = new_bundle.apply_patch(old_assets_map, key_func)
         
         # 4. 如果当前策略成功匹配了至少一个资源，就结束
         if result.is_success:
-            log(f"\n✅ {t('log.migration.strategy_success', name=name, count=result.replaced_count)}:")
-            for item in result.replaced_logs:
+            log(f"\n✅ {t('log.migration.strategy_success', name=name, count=result.applied_count)}:")
+            for item in result.applied_logs:
                 log(f"  - {item}")
             return new_bundle, result
 
@@ -482,7 +482,7 @@ def _migrate_bundle_assets(
 
     # 5. 所有策略都失败了
     log(f"\n⚠️ {t('common.warning')}: {t('log.migration.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
-    return None, ReplacementResult(0, 0, [], [])
+    return None, PatchResult(0, 0, [], [])
 
 def process_mod_update(
     old_mod_path: Path,
@@ -541,11 +541,11 @@ def process_mod_update(
             return False, t("message.mod_update.no_matching_assets_to_replace")
         
         # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
-        if skip_unchanged and result.replaced_count == 0 and result.skipped_count > 0:
+        if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
             log(f'  > ⏭️ {t("log.mod_update.all_resources_unchanged", count=result.skipped_count)}')
             return True, "unchanged"
         
-        log(f'  > {t("log.mod_update.migration_complete", count=result.replaced_count)}')
+        log(f'  > {t("log.mod_update.migration_complete", count=result.applied_count)}')
         
         # 保存和修正文件
         output_path = output_dir / new_bundle_path.name
@@ -842,7 +842,7 @@ def process_jp_to_global_conversion(
                 log(f"    > ⚠️ {t('message.load_failed')}: {jp_path.name}")
                 continue
             
-            jp_assets = jp_bundle.extract_assets_for_migration(
+            jp_assets = jp_bundle.extract_patch(
                 asset_types_to_replace, key_func, None
             )
             replacement_map.update(jp_assets)
@@ -860,14 +860,14 @@ def process_jp_to_global_conversion(
         if not global_bundle:
             return False, t("message.jp_convert.load_global_failed")
         
-        result = global_bundle.apply_replacements(replacement_map, key_func)
+        result = global_bundle.apply_patch(replacement_map, key_func)
         
         if not result.is_success:
             log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
             return False, t("message.jp_convert.no_assets_matched")
             
-        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}:")
-        for item in result.replaced_logs:
+        log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
+        for item in result.applied_logs:
             log(f"  - {item}")
         
         # 3. 保存最终文件
@@ -879,7 +879,7 @@ def process_jp_to_global_conversion(
         
         log(f"  ✅ {t('log.file.saved', path=output_path)}")
         log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
-        return True, t("message.jp_convert.jp_to_global_success", asset_count=result.replaced_count)
+        return True, t("message.jp_convert.jp_to_global_success", asset_count=result.applied_count)
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
@@ -942,7 +942,7 @@ def process_global_to_jp_conversion(
         for strategy_name, key_func in strategies:
             log(f'\n{t("log.migration.trying_strategy", name=strategy_name)}')
 
-            source_replacement_map = global_bundle.extract_assets_for_migration(
+            source_replacement_map = global_bundle.extract_patch(
                 asset_types_to_replace, key_func, None
             )
 
@@ -964,17 +964,17 @@ def process_global_to_jp_conversion(
                     log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
                     continue
 
-                result = template_bundle.apply_replacements(source_replacement_map, key_func)
+                result = template_bundle.apply_patch(source_replacement_map, key_func)
 
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
-                    if skip_unchanged and result.replaced_count == 0 and result.skipped_count > 0:
+                    if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
                         log(f"⏭️ {t('log.jp_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
                         # 跳过也算作策略成功，避免继续尝试其他策略
                         strategy_success = True
                     else:
-                        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.replaced_count)}")
-                        for item in result.replaced_logs:
+                        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}")
+                        for item in result.applied_logs:
                             log(f"  - {item}")
 
                         output_path = output_dir / jp_template_path.name
@@ -982,9 +982,9 @@ def process_global_to_jp_conversion(
                         if save_ok:
                             log(f"  ✅ {t('log.file.saved', path=output_path)}")
                             success_count += 1
-                            total_changes += result.replaced_count
+                            total_changes += result.applied_count
                             strategy_success = True
-                            strategy_total_changes += result.replaced_count
+                            strategy_total_changes += result.applied_count
                             replaced_files.append(jp_template_path)  # 记录被替换的原始文件
                         else:
                             log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")

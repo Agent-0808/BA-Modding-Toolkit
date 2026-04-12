@@ -12,8 +12,8 @@ from .i18n import t
 from .utils import CRCUtils, SpineUtils, no_log
 from .naming import parse_filename
 from .models import (
-    AssetKey, AssetContent, AssetType,
-    KeyGeneratorFunc, LogFunc, CompressionType, ReplacementResult,
+    AssetKey, AssetContent, AssetType, Patch,
+    KeyGeneratorFunc, LogFunc, CompressionType, PatchResult,
     SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
 )
@@ -165,26 +165,26 @@ class Bundle:
             self.log(traceback.format_exc())
             return False, t("message.save_error", error=e)
     
-    def apply_replacements(
+    def apply_patch(
         self,
-        replacement_map: dict[AssetKey, AssetContent],
+        patch: Patch,
         key_func: KeyGeneratorFunc
-    ) -> ReplacementResult:
+    ) -> PatchResult:
         """
-        将"替换清单"中的资源应用到当前的 bundle。
+        将补丁中的资源应用到当前的 bundle。
 
         Args:
-            replacement_map: 资源替换清单，格式为 { asset_key: content }。
+            patch: 资源补丁，格式为 { asset_key: content }。
             key_func: 用于从目标环境中的对象生成 asset_key 的函数。
 
         Returns:
-            ReplacementResult: 包含替换结果的数据类，包括实际替换数量、跳过数量、日志和未匹配键。
+            PatchResult: 包含修改结果的数据类，包括实际修改数量、跳过数量、日志和未匹配键。
         """
-        replacement_count = 0
+        applied_count = 0
         skipped_count = 0
-        replaced_assets_log = []
+        applied_assets_log = []
         
-        tasks = replacement_map.copy()
+        tasks = patch.copy()
         
         for obj in self.env.objects:
             if not tasks:
@@ -225,31 +225,31 @@ class Bundle:
                     else:
                         obj.set_raw_data(content)
                     
-                    replacement_count += 1
+                    applied_count += 1
                     key_display = str(asset_key)
                     log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
-                    replaced_assets_log.append(log_message)
+                    applied_assets_log.append(log_message)
             
             except Exception as e:
                 resource_name_for_error = obj.peek_name() or t("log.unnamed_resource", type=obj.type.name)
                 self.log(f'  ❌ {t("common.error")}: {t("log.replace_resource_failed", name=resource_name_for_error, type=obj.type.name, error=e)}')
                 self.log(traceback.format_exc())
         
-        return ReplacementResult(
-            replaced_count=replacement_count,
+        return PatchResult(
+            applied_count=applied_count,
             skipped_count=skipped_count,
-            replaced_logs=replaced_assets_log,
+            applied_logs=applied_assets_log,
             unmatched_keys=list(tasks.keys())
         )
     
-    def extract_assets_for_migration(
+    def extract_patch(
         self,
         asset_types_to_replace: set[str],
         key_func: KeyGeneratorFunc,
         spine_options: SpineOptions | None = None
-    ) -> dict[AssetKey, AssetContent]:
+    ) -> Patch:
         """
-        从当前 Bundle 提取资源，生成 replacement_map。
+        从当前 Bundle 提取资源，生成补丁。
         
         Args:
             asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 或 {"ALL"}）
@@ -257,9 +257,9 @@ class Bundle:
             spine_options: Spine 资源升级选项
             
         Returns:
-            资源替换清单 { asset_key: content }
+            资源补丁 { asset_key: content }
         """
-        replacement_map: dict[AssetKey, AssetContent] = {}
+        patch: Patch = {}
         replace_all = "ALL" in asset_types_to_replace
         
         for obj in self.env.objects:
@@ -298,11 +298,11 @@ class Bundle:
                     content: bytes = obj.get_raw_data()
                 
                 if content is not None:
-                    replacement_map[asset_key] = content
+                    patch[asset_key] = content
             except Exception as e:
                 self.log(f"  > ⚠️ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
         
         if replace_all:
-            replacement_map["__mode__"] = {"ALL"}
+            patch["__mode__"] = {"ALL"}
         
-        return replacement_map
+        return patch

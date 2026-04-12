@@ -36,6 +36,9 @@ AssetContent = bytes | Image.Image | None
 # 从对象生成资源键的函数，接收UnityPy对象，返回该资源的键
 KeyGeneratorFunc = Callable[[Obj], AssetKey]
 
+# 补丁，用于描述向Bundle文件进行的资源替换操作
+Patch = dict[AssetKey, AssetContent]
+
 # 日志函数类型
 LogFunc = Callable[[str], None]  
 
@@ -82,21 +85,21 @@ class SpineOptions:
             and self.target_version.count(".") == 2
         )
 
-class ReplacementResult(NamedTuple):
-    """封装资源替换操作的结果。"""
-    replaced_count: int          # 实际执行替换的数量
-    skipped_count: int           # 匹配但内容相同跳过的数量
-    replaced_logs: list[str]     # 替换成功的日志
+class PatchResult(NamedTuple):
+    """封装资源修改操作的结果。"""
+    applied_count: int              # 实际执行修改的数量
+    skipped_count: int              # 匹配但内容相同跳过的数量
+    applied_logs: list[str]         # 修改成功的日志
     unmatched_keys: list[AssetKey]  # 未匹配的资源键
     
     @property
     def matched_count(self) -> int:
-        """总匹配数（包括替换和跳过的）"""
-        return self.replaced_count + self.skipped_count
+        """总匹配数（包括修改和跳过的）"""
+        return self.applied_count + self.skipped_count
     
     @property
     def is_success(self) -> bool:
-        """是否有资源匹配成功（无论是否实际替换）"""
+        """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
 
 class ParsedFilename(NamedTuple):
