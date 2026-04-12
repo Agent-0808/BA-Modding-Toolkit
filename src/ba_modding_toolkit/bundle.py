@@ -10,6 +10,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import CRCUtils, SpineUtils, no_log
+from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType,
     KeyGeneratorFunc, LogFunc, CompressionType, ReplacementResult,
@@ -119,8 +120,6 @@ class Bundle:
         Returns:
             tuple(bool, str): (是否成功, 状态消息) 的元组。
         """
-        from .core import parse_filename  # 延迟导入避免循环依赖
-        
         try:
             compression_map = {
                 "lzma": t("log.compression.lzma"),
@@ -138,7 +137,7 @@ class Bundle:
             success_message = t("message.save_success")
             
             if save_options.perform_crc:
-                _, _, _, _, crc_str = parse_filename(output_path.name)
+                crc_str = parse_filename(output_path.name).crc
                 if not crc_str or not crc_str.isdigit():
                     return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
                 target_crc = int(crc_str)

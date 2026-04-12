@@ -82,8 +82,7 @@ class SpineOptions:
             and self.target_version.count(".") == 2
         )
 
-@dataclass
-class ReplacementResult:
+class ReplacementResult(NamedTuple):
     """封装资源替换操作的结果。"""
     replaced_count: int          # 实际执行替换的数量
     skipped_count: int           # 匹配但内容相同跳过的数量
@@ -100,6 +99,24 @@ class ReplacementResult:
         """是否有资源匹配成功（无论是否实际替换）"""
         return self.matched_count > 0
 
+class ParsedFilename(NamedTuple):
+    """
+    解析后的文件名结构。
+
+    Attributes:
+        category: 资源分类 (如 spinecharacters)，可能为 None
+        core: 核心名称 (如 ch0808_spr)，必须有值
+        res_type: 资源类型 (如 textassets)，可能为 None
+        date: 日期字符串 (YYYY-MM-DD)
+        crc: CRC32 校验码
+        prefix: 用于搜索新版文件的前缀
+    """
+    category: str | None
+    core: str
+    res_type: str | None
+    date: str
+    crc: str
+    prefix: str
 
 # -------- 全局游戏业务映射常量 ---------
 

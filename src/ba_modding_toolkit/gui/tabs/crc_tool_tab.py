@@ -11,7 +11,7 @@ from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import replace_file
 from ...utils import CRCUtils, get_search_resource_dirs
-from ...core import parse_filename
+from ...naming import parse_filename
 
 class CrcToolTab(TabFrame):
     def create_widgets(self):
@@ -66,9 +66,9 @@ class CrcToolTab(TabFrame):
         self.logger.log(t("log.crc.loaded_modified", file=path))
         
         # 从文件名提取目标 CRC
-        _, _, _, _, crc_str = parse_filename(path.name)
-        if crc_str:
-            target_crc = int(crc_str)
+        parsed_crc = parse_filename(path.name).crc
+        if parsed_crc:
+            target_crc = int(parsed_crc)
             self.target_crc_var.set(f"{target_crc:08X}")
         
         # 清除旧的 original_file，准备重新搜索

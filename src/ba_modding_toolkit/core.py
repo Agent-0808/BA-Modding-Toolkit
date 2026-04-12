@@ -3,7 +3,6 @@
 import traceback
 from pathlib import Path
 import shutil
-import re
 import tempfile
 from typing import Callable
 from UnityPy.environment import Environment as Env
@@ -11,8 +10,9 @@ from PIL import Image
 
 from .i18n import t
 from .utils import SpineUtils, ImageUtils, no_log
+from .naming import parse_filename
 from .models import (
-    NameTypeKey, ContNameTypeKey, 
+    NameTypeKey, ContNameTypeKey, ParsedFilename,
     AssetKey, AssetContent, AssetType,
     KeyGeneratorFunc, LogFunc, ReplacementResult,
     MATCH_STRATEGIES, SaveOptions, SpineOptions,
@@ -41,135 +41,6 @@ def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
 
 # ====== 寻找对应文件 ======
 
-def get_filename_prefix(filename: str, log: LogFunc = no_log) -> tuple[str | None, str]:
-    """
-    从旧版Mod文件名中提取用于搜索新版文件的前缀。
-    返回 (前缀字符串, 状态消息) 的元组。
-    """
-    # 1. 通过日期模式确定文件名位置
-    date_match = re.search(r'\d{4}-\d{2}-\d{2}', filename)
-    if not date_match:
-        msg = t("message.search.date_pattern_not_found", filename=filename)
-        log(f'  > {t("common.fail")}: {msg}')
-        return None, msg
-
-    # 2. 向前查找可能的日服额外文件名部分
-    prefix_end_index = date_match.start()
-    before_date = filename[:prefix_end_index].removesuffix('-')
-    # 例如在 "...-textures-YYYY-MM-DD..." 中的 "textures"
-
-    parts = before_date.split('-')
-    last_part = parts[-1] if parts else ''
-    
-    # 检查最后一个部分是否是日服版额外的资源类型
-    resource_types = {
-        'textures', 'assets', 'textassets', 'materials',
-        "animationclip", "audio", "meshes", "prefabs", "timelines"
-    }
-    
-    if last_part.lower() in resource_types:
-        # 如果找到了资源类型，则前缀不应该包含这个部分
-        search_prefix = before_date.removesuffix(f'-{last_part}') + '-'
-    else:
-        search_prefix = filename[:prefix_end_index]
-
-    return search_prefix, t("message.search.prefix_extracted")
-
-# -------- 文件名解析常量 --------
-
-REMOVE_SUFFIX = [
-    r"[-_]mxdependency",  # 匹配 -mxdependency 或 _mxdependency
-    r"[-_]mxload",        # 匹配 -mxload 或 _mxload
-    r"-\d{4}-\d{2}-\d{2}" # 匹配日期格式 (如 -2024-11-18)，作为最后的保底
-]
-
-FIXED_PREFIX = [
-    "assets-_mx-",
-]
-
-def extract_core_filename(filename: str) -> str:
-    """
-    文件名核心提取函数
-    复用 parse_filename 的逻辑，只返回 core 部分
-    """
-    _, core, _, _, _ = parse_filename(filename)
-    return core
-
-def parse_filename(filename: str) -> tuple[str | None, str, str | None, str, str]:
-    """
-    解析文件名，提取各个组成部分。
-
-    Args:
-        filename: 文件名字符串
-
-    Returns:
-        tuple: (category, core, type, date, crc32)
-        - category: 资源分类 (如 spinecharacters)，可能为 None
-        - core: 核心名称 (如 ch0296_spr)，必须有值
-        - type: 资源类型 (如 textassets)，可能为 None
-        - date: 日期字符串 (YYYY-MM-DD)
-        - crc32: CRC32 校验码
-    """
-    # 提取 CRC32
-    crc = ""
-    match_crc = re.search(r'_(\d+)\.[^.]+$', filename)
-    if match_crc:
-        crc = match_crc.group(1)
-
-    # 提取 Date
-    date = ""
-    match_date = re.search(r'(\d{4}-\d{2}-\d{2})', filename)
-    if match_date:
-        date = match_date.group(1)
-
-    # 提取 Type
-    res_type = None
-    # 匹配 -mxdependency-xxx 或 _mxload-xxx
-    match_type = re.search(r'[-_](?:mxdependency|mxload)-([a-zA-Z0-9]+)', filename)
-    if match_type:
-        res_type = match_type.group(1)
-        # 如果提取出的 type 是年份，说明实际上没有 type，而是直接接了日期
-        if re.match(r'^\d{4}$', res_type):
-            res_type = None
-
-    # 提取 Core（从后往前，找到 _mxdependency 或 _mxload 之前的部分）
-    core = ""
-
-    # 找到最早的 _mxdependency 或 _mxload 位置
-    mx_match = re.search(r'[-_](?:mxdependency|mxload)', filename)
-    if mx_match:
-        # Core 是这之前的部分
-        core_part = filename[:mx_match.start()]
-    else:
-        # 如果没找到，尝试用日期作为分隔
-        date_match = re.search(r'-\d{4}-\d{2}-\d{2}', filename)
-        if date_match:
-            core_part = filename[:date_match.start()]
-        else:
-            # 最后的保底：去除扩展名
-            core_part = filename.rsplit('.', 1)[0]
-
-    # 去除固定前缀 (如 assets-_mx-)
-    for prefix in FIXED_PREFIX:
-        if core_part.startswith(prefix):
-            core_part = core_part[len(prefix):]
-            break
-
-    core = core_part.strip('-_')
-
-    # 提取 Category
-    category = None
-
-    if core:
-        # 尝试从 core 中分离 category
-        parts = core.split('-', 1)
-        if len(parts) > 1:
-            category = parts[0]
-            core = parts[1]
-
-    return (category, core, res_type, date, crc)
-
-
 def find_new_bundle_path(
     old_mod_path: Path,
     game_resource_dir: Path | list[Path],
@@ -186,11 +57,14 @@ def find_new_bundle_path(
 
     log(t("log.search.searching_for_file", name=old_mod_path.name))
 
-    # 1. 提取文件名前缀
-    if not (prefix_info := get_filename_prefix(str(old_mod_path.name), log))[0]:
-        return None, prefix_info[1]
+    # 1. 解析文件名，提取前缀
+    prefix = parse_filename(str(old_mod_path.name)).prefix
     
-    prefix, _ = prefix_info
+    if not prefix:
+        msg = t("message.search.date_pattern_not_found", filename=old_mod_path.name)
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+    
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
     extension = '.bundle'
     extension_backup = '.backup'
@@ -895,9 +769,9 @@ def find_all_jp_counterparts(
     log(t("log.jp_convert.searching_jp_counterparts", name=global_bundle_path.name))
 
     # 1. 从国际服文件名提取前缀
-    prefix, prefix_message = get_filename_prefix(global_bundle_path.name, log)
+    prefix = parse_filename(global_bundle_path.name).prefix
     if not prefix:
-        log(f'  > ❌ {t("log.search.find_failed")}: {prefix_message}')
+        log(f'  > ❌ {t("log.search.find_failed")}: {t("message.search.date_pattern_not_found", filename=global_bundle_path.name)}')
         return []
     
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")

@@ -17,11 +17,10 @@ from ..core import (
     process_global_to_jp_conversion,
     process_batch_mod_update,
     process_batch_legacy_batch,
-    extract_core_filename,
-    parse_filename,
 )
 from ..models import SaveOptions, SpineOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
+from ..naming import parse_filename
 
 class Logger:
     """日志记录器基类。"""
@@ -691,7 +690,7 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     subdir_name = args.subdir.strip() if args.subdir else ""
     if not subdir_name and len(valid_bundles) == 1:
         # 单个bundle时，自动从文件名提取核心名作为子目录
-        subdir_name = extract_core_filename(valid_bundles[0].stem)
+        subdir_name = parse_filename(valid_bundles[0].stem).core
 
     # 确定最终输出路径
     if subdir_name:

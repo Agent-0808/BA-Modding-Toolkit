@@ -8,9 +8,7 @@ from ba_modding_toolkit.utils import (
     parse_hex_bytes,
 )
 from ba_modding_toolkit.core import (
-    parse_filename,
-    extract_core_filename,
-    get_filename_prefix,
+    parse_filename
 )
 from conftest import has_sample_skel
 
@@ -87,45 +85,38 @@ class TestImageUtils:
 
 class TestParseFilename:
     def test_parse_filename_basic(self):
-        filename = "spinecharacters-ch0808_spr-mxdependency-textures-2077-08-08_12345678.bundle"
-        category, core, res_type, date, crc = parse_filename(filename)
+        filename = "assets-_mx-spinecharacters-ch0808_spr-mxdependency-textures-2077-08-08_12345678.bundle"
+        parsed_filename = parse_filename(filename)
         
-        assert category == "spinecharacters"
-        assert core == "ch0808_spr"
-        assert res_type == "textures"
-        assert date == "2077-08-08"
-        assert crc == "12345678"
+        assert parsed_filename.category == "spinecharacters"
+        assert parsed_filename.core == "ch0808_spr"
+        assert parsed_filename.res_type == "textures"
+        assert parsed_filename.date == "2077-08-08"
+        assert parsed_filename.crc == "12345678"
+        assert parsed_filename.prefix == "assets-_mx-spinecharacters-ch0808_spr-mxdependency-"
 
     def test_parse_filename_with_mxload(self):
         filename = "uis-09_common-99_minigame-cardgame-_mxload-2088-07-07_assets_all_87654321.bundle"
-        category, core, res_type, date, crc = parse_filename(filename)
+        parsed_filename = parse_filename(filename)
         
-        assert "cardgame" in core
-        assert res_type is None
-        assert date == "2088-07-07"
-        assert crc == "87654321"
+        assert "cardgame" in parsed_filename.core
+        assert parsed_filename.res_type is None
+        assert parsed_filename.date == "2088-07-07"
+        assert parsed_filename.crc == "87654321"
 
     def test_parse_filename_no_type(self):
-        filename = "category-corename-2024-01-01_11111111.bundle"
-        category, core, res_type, date, crc = parse_filename(filename)
+        filename = "assets-_mx-category-corename-2024-01-01_11111111.bundle"
+        parsed_filename = parse_filename(filename)
         
-        assert category == "category"
-        assert core == "corename"
-        assert res_type is None
-        assert date == "2024-01-01"
-        assert crc == "11111111"
+        assert parsed_filename.category == "category"
+        assert parsed_filename.core == "corename"
+        assert parsed_filename.res_type is None
+        assert parsed_filename.date == "2024-01-01"
+        assert parsed_filename.crc == "11111111"
 
-    def test_extract_core_filename(self):
-        filename = "spinelobbies-ch9876_home-mxdependency-textures-2020-11-11_123456789.bundle"
-        core = extract_core_filename(filename)
-        
-        assert core == "ch9876_home"
-
-
-class TestGetFilenamePrefix:
     def test_get_filename_prefix_with_date(self):
-        filename = "spinecharacters-ch0808_home-mxdependency-textures-2077-08-08_1234567.bundle"
-        prefix, msg = get_filename_prefix(filename)
+        filename = "assets-_mx-spinecharacters-ch0808_home-mxdependency-textures-2077-08-08_1234567.bundle"
+        prefix = parse_filename(filename).prefix
         
         assert prefix is not None
-        assert "spinecharacters-ch0808_home" in prefix
+        assert "assets-_mx-spinecharacters-ch0808_home" in prefix

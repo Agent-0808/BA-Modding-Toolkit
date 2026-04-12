@@ -6,7 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ... import core
+from ...naming import parse_filename
 from ..base_tab import TabFrame
 from ..components import UIComponents, SettingRow, FileListbox
 from ..utils import select_directory, open_directory
@@ -23,7 +23,7 @@ class AssetExtractorTab(TabFrame):
             # 只有当列表之前为空，且这是第一个文件时，才提取核心文件名
             if len(self.bundle_paths) == len(paths) and paths:
                 first_file = paths[0]
-                core_name = core.extract_core_filename(first_file.stem)
+                core_name = parse_filename(first_file.stem).core
                 self.subdir_var.set(core_name)
 
         # 目标 Bundle 文件列表
