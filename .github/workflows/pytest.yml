@@ -2,17 +2,11 @@ name: Run Tests
 
 on:
   push:
-    branches:
-      - main
-      - master
     paths:
       - 'src/**'
       - 'tests/**'
       - 'pyproject.toml'
   pull_request:
-    branches:
-      - main
-      - master
     paths:
       - 'src/**'
       - 'tests/**'
