@@ -39,6 +39,9 @@ KeyGeneratorFunc = Callable[[Obj], AssetKey]
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]
 
+# 补丁生成器函数类型：给定一个匹配策略，返回一个补丁包
+PatchProviderFunc = Callable[[KeyGeneratorFunc], Patch]
+
 # 日志函数类型
 LogFunc = Callable[[str], None]  
 
