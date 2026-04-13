@@ -172,7 +172,10 @@ def apply_patch_pipeline(
         # 1. 获取补丁数据
         current_patch = patch_provider(key_func)
         if not current_patch:
+            log(f"  > ⚠️ {t('log.migration.strategy_no_assets_found', name=name)}")
             continue
+        
+        log(f"  > {t('log.migration.extraction_complete', name=name, count=len(current_patch))}")
             
         # 2. 应用补丁
         result = target_bundle.apply_patch(current_patch, key_func)
@@ -181,16 +184,19 @@ def apply_patch_pipeline(
             final_result = result
             match_strategy_name = name
             break
+        
+        log(f'  > {t("log.migration.strategy_no_match", name=name)}')
             
     if not final_result:
-        return False, "no_match", None
+        log(f"\n⚠️ {t('common.warning')}: {t('log.migration.all_strategies_failed', types='')}")
+        return True, "no_match", None
 
     # 处理跳过逻辑
     if skip_unchanged and final_result.applied_count == 0:
         return True, "unchanged", final_result
 
     # 打印成功日志
-    log(f"✅ {t('log.migration.strategy_success', name=match_strategy_name, count=final_result.applied_count)}")
+    log(f"\n✅ {t('log.migration.strategy_success', name=match_strategy_name, count=final_result.applied_count)}:")
     for item in final_result.applied_logs:
         log(f"  - {item}")
 
@@ -295,7 +301,7 @@ def process_asset_packing(
         if msg == "no_match":
             log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
             log(t("log.packer.check_files_and_bundle"))
-            return False, t("message.packer.no_matching_assets_to_pack")
+            return True, t("message.packer.process_complete", count=0, button=t("action.replace_original"))
             
         count = result.applied_count if result else 0
         log(f'\n{t("log.packer.packing_complete", success=count, total=original_tasks_count)}')
@@ -500,10 +506,17 @@ def process_mod_update(
         tuple[bool, str]: (是否成功, 状态消息) 的元组
         如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged")
     """
+    log("="*50)
+    log(f'  > {t("log.mod_update.using_old_mod", name=old_mod_path.name)}')
+    log(f'  > {t("log.mod_update.using_new_resource", name=new_bundle_path.name)}')
+    log(f'\n--- {t("log.section.asset_migration")} ---')
+    
     old_bundle = Bundle.load(old_mod_path, log)
-    if not old_bundle: return False, t("message.mod_update.migration_failed")
+    if not old_bundle: 
+        return False, t("message.mod_update.migration_failed")
 
     def mod_patch_provider(key_func: KeyGeneratorFunc):
+        log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
         return old_bundle.extract_patch(asset_types_to_replace, key_func, spine_options)
 
     strategies = [
@@ -518,10 +531,19 @@ def process_mod_update(
     )
     
     if not success:
-        if msg == "no_match":
-            return False, t("message.mod_update.no_matching_assets_to_replace")
         return False, msg
-    return success, msg
+    
+    if msg == "no_match":
+        log(f"\n🎉 {t('log.mod_update.all_processes_complete')}")
+        return True, t("message.mod_update.success")
+    
+    if msg == "unchanged":
+        log(f'  > ⏭️ {t("log.mod_update.all_resources_unchanged", count=result.skipped_count if result else 0)}')
+        return True, "unchanged"
+    
+    log(f'  > {t("log.mod_update.migration_complete", count=result.applied_count if result else 0)}')
+    log(f"\n🎉 {t('log.mod_update.all_processes_complete')}")
+    return True, t("message.mod_update.success")
 
 def process_batch_mod_update(
     mod_file_list: list[Path],
@@ -816,13 +838,15 @@ def process_jp_to_global_conversion(
         )
         
         if not success:
-            if msg == "no_match":
-                return False, t("message.jp_convert.no_assets_matched")
             return False, msg
+        
+        if msg == "no_match":
+            log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
+            return True, t("message.jp_convert.jp_to_global_success", asset_count=0)
             
         count = result.applied_count if result else 0
         log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
-        return success, t("message.jp_convert.jp_to_global_success", asset_count=count)
+        return True, t("message.jp_convert.jp_to_global_success", asset_count=count)
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
@@ -868,13 +892,20 @@ def process_global_to_jp_conversion(
         if not global_bundle:
             return False, t("message.jp_convert.load_global_source_failed"), []
 
+        log(f'\n--- {t("log.section.extracting_from_global")} ---')
+
         # 2. 定义带缓存的补丁提供者
         # 这样即便有多个日服文件，同一种策略下的国际服 Patch 只会提取一次
         patch_cache: dict[KeyGeneratorFunc, Patch] = {}
 
         def global_patch_provider(key_func: KeyGeneratorFunc) -> Patch:
             if key_func not in patch_cache:
-                patch_cache[key_func] = global_bundle.extract_patch(asset_types_to_replace, key_func, None)
+                patch = global_bundle.extract_patch(asset_types_to_replace, key_func, None)
+                patch_cache[key_func] = patch
+                if patch:
+                    log(f"  > {t('log.jp_convert.extracted_count', count=len(patch))}")
+                else:
+                    log(f"  > ⚠️ {t('log.migration.strategy_no_assets_found', name='')}")
             return patch_cache[key_func]
 
         # 3. 准备匹配策略
@@ -916,11 +947,9 @@ def process_global_to_jp_conversion(
 
         # 5. 汇总结果
         log(f'\n--- {t("log.section.conversion_complete")} ---')
-        if success_count > 0:
-            status_msg = t("message.jp_convert.global_to_jp_success", bundle_count=success_count, asset_count=total_assets_changed)
-            return True, status_msg, replaced_files
-        else:
-            return False, t("message.jp_convert.no_assets_matched"), []
+        log(f"{t('log.jp_convert.global_to_jp_complete')}")
+        status_msg = t("message.jp_convert.global_to_jp_success", bundle_count=success_count, asset_count=total_assets_changed)
+        return True, status_msg, replaced_files
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_global_to_jp', error=e)}")
