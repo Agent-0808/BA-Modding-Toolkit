@@ -6,6 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
+from ... import core
 from ...naming import parse_filename
 from ..base_tab import TabFrame
 from ..components import UIComponents, SettingRow, FileListbox

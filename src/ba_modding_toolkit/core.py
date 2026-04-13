@@ -162,6 +162,7 @@ def process_asset_packing(
     支持 .png, .skel, .atlas 文件。
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
+    - .mesh.bytes 文件将替换同名的 Mesh 资源 (文件名格式为 {name}.mesh.bytes)。
     可选地升级 Spine 动画的 Skel 资源版本。
     可选地对 PNG 文件进行 Bleed 处理。
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
@@ -190,7 +191,7 @@ def process_asset_packing(
         
         # 1. 从文件夹构建"替换清单"
         replacement_map: dict[AssetKey, AssetContent] = {}
-        supported_extensions = {".png", ".skel", ".atlas"}
+        supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
         input_files = [f for f in asset_folder.iterdir() if f.is_file() and f.suffix.lower() in supported_extensions]
 
         if not input_files:
@@ -222,6 +223,11 @@ def process_asset_packing(
                         target_version=spine_options.target_version if spine_options else None,
                         log=log
                     )
+            elif suffix == ".bytes" and file_path.name.endswith(".mesh.bytes"):
+                resource_name = file_path.name.removesuffix(".mesh.bytes")
+                asset_key = NameTypeKey(resource_name, AssetType.Mesh.name)
+                with open(file_path, "rb") as f:
+                    content = f.read()
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             replacement_map[asset_key] = content
@@ -254,6 +260,9 @@ def process_asset_packing(
             }
             original_filenames.update({
                 NameTypeKey(f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
+            })
+            original_filenames.update({
+                NameTypeKey(f.name, AssetType.Mesh.name): f.name for f in input_files if f.suffix.lower() == '.mesh.bytes'
             })
             for key in sorted(result.unmatched_keys):
                 if isinstance(key, NameTypeKey):
@@ -358,6 +367,10 @@ def process_asset_extraction(
                         elif obj.type == AssetType.Texture2D:
                             dest_path = work_dir / f"{resource_name}.png"
                             data.image.convert("RGBA").save(dest_path)
+                        elif obj.type == AssetType.Mesh:
+                            dest_path = work_dir / f"{resource_name}.mesh.bytes"
+                            mesh_bytes = obj.get_raw_data()
+                            dest_path.write_bytes(mesh_bytes)
                         
                         log(f"  - {dest_path.name}")
                         extraction_count += 1
