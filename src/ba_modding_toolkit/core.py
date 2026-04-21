@@ -13,7 +13,7 @@ from .utils import SpineUtils, ImageUtils, no_log
 from .naming import parse_filename
 from .models import (
     NameTypeKey, ContNameTypeKey, ParsedFilename,
-    AssetKey, AssetContent, AssetType,
+    AssetKey, AssetContent, AssetType, Patch,
     KeyGeneratorFunc, LogFunc, PatchResult,
     MATCH_STRATEGIES, SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
@@ -41,27 +41,27 @@ def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
 
 # ====== 寻找对应文件 ======
 
-def find_new_bundle_path(
-    old_mod_path: Path,
+def find_target_bundles(
+    source_paths: list[Path],
     game_resource_dir: Path | list[Path],
     log: LogFunc = no_log,
 ) -> tuple[list[Path], str]:
     """
-    根据旧版Mod文件，在游戏资源目录中智能查找对应的新版文件。
+    根据源文件组，在游戏资源目录中智能查找对应的目标文件组。
     
     Returns:
-        tuple[list[Path], str]: (找到的路径列表, 状态消息)
+        tuple[list[Path], str]: (找到的目标路径列表, 状态消息)
     """
-    if not old_mod_path.exists():
-        return [], t("message.search.check_file_exists", path=old_mod_path)
+    if not source_paths:
+        return [], t("message.search.check_file_exists", path="[]")
 
-    log(t("log.search.searching_for_file", name=old_mod_path.name))
+    log(t("log.search.searching_for_file_group", count=len(source_paths)))
 
-    # 1. 解析文件名，提取前缀
-    prefix = parse_filename(str(old_mod_path.name)).prefix
+    # 1. 解析第一个源文件，提取前缀
+    prefix = parse_filename(str(source_paths[0].name)).prefix
     
     if not prefix:
-        msg = t("message.search.date_pattern_not_found", filename=old_mod_path.name)
+        msg = t("message.search.date_pattern_not_found", filename=source_paths[0].name)
         log(f'  > {t("common.fail")}: {msg}')
         return [], msg
     
@@ -85,33 +85,27 @@ def find_new_bundle_path(
         return [], msg
     log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
 
-    # 3. 分析旧Mod的关键资源特征
-    # 定义用于识别的资源类型
+    # 3. 分析源文件的关键资源特征
     comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh}
     
-    old_bundle = Bundle.load(old_mod_path, log)
-    if not old_bundle:
-        msg = t("message.search.load_old_mod_failed")
-        log(f'  > {t("common.fail")}: {msg}')
-        return [], msg
-
-    # 使用标准策略生成 Key，保持一致性
+    # 构建源文件组的指纹集合
+    source_fingerprint: set[AssetKey] = set()
     key_func = MATCH_STRATEGIES['name_type']
     
-    # 仅提取 Key，不读取数据
-    # 使用 set 推导式构建指纹
-    old_assets_fingerprint = {
-        key_func(obj)
-        for obj in old_bundle.env.objects
-        if obj.type in comparable_types
-    }
+    for src_path in source_paths:
+        src_bundle = Bundle.load(src_path, log)
+        if not src_bundle:
+            continue
+        for obj in src_bundle.env.objects:
+            if obj.type in comparable_types:
+                source_fingerprint.add(key_func(obj))
 
-    if not old_assets_fingerprint:
+    if not source_fingerprint:
         msg = t("message.search.no_comparable_assets")
         log(f'  > {t("common.fail")}: {msg}')
         return [], msg
 
-    log(f"  > {t('log.search.old_mod_asset_count', count=len(old_assets_fingerprint))}")
+    log(f"  > {t('log.search.source_mod_asset_count', count=len(source_fingerprint))}")
 
     # 4. 遍历候选文件进行指纹比对，收集所有匹配的文件
     matched_paths = []
@@ -122,12 +116,12 @@ def find_new_bundle_path(
         if not candidate_bundle:
             continue
         
-        # 检查新包中是否有匹配的资源
+        # 检查候选包中是否有匹配的资源
         has_match = False
         for obj in candidate_bundle.env.objects:
             if obj.type in comparable_types:
                 candidate_key = key_func(obj)
-                if candidate_key in old_assets_fingerprint:
+                if candidate_key in source_fingerprint:
                     has_match = True
                     break
         
@@ -146,6 +140,9 @@ def find_new_bundle_path(
     return matched_paths, msg
 
 # ====== 资源处理相关 ======
+
+# 向后兼容别名
+find_new_bundle_path = find_target_bundles
 
 def process_asset_packing(
     target_bundle_path: Path,
@@ -498,30 +495,26 @@ def _migrate_bundle_assets(
     return None, PatchResult(0, 0, [], [])
 
 def process_mod_update(
-    old_mod_path: Path,
-    new_bundle_path: Path,
+    source_paths: list[Path],
+    target_paths: list[Path],
     output_dir: Path,
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
     log: LogFunc = no_log,
     skip_unchanged: bool = False,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[tuple[Path, Path]]]:
     """
-    自动化Mod更新流程。
-    
-    该函数是Mod更新工具的核心处理函数，负责将旧版Mod中的资源替换到新版游戏资源中，
-    并可选地进行CRC校验修正以确保文件兼容性。
+    自动化Mod更新流程 (N-to-N)。
     
     处理流程的主要阶段：
-    - asset迁移：将旧版Mod中的指定类型资源替换到新版资源文件中
-        - 支持替换Texture2D、TextAsset、Mesh等资源类型
-        - 可选地升级Spine动画资源的Skel版本
+    - 资源池化提取：从所有源文件中提取资源到统一字典
+    - 按需注入注入：遍历所有目标文件，各自从资源池中提取匹配资源进行替换
     - CRC修正：根据选项决定是否对新生成的文件进行CRC校验修正
     
     Args:
-        old_mod_path: 旧版Mod文件的路径
-        new_bundle_path: 新版游戏资源文件的路径
+        source_paths: 源文件路径列表（旧Mod或待移植文件组）
+        target_paths: 目标文件路径列表（新版游戏资源文件组）
         output_dir: 输出目录，用于保存生成的更新后文件
         asset_types_to_replace: 需要替换的资源类型集合（如 {"Texture2D", "TextAsset"}）
         save_options: 保存和CRC修正的选项
@@ -530,51 +523,81 @@ def process_mod_update(
         skip_unchanged: 是否跳过未变化的文件
     
     Returns:
-        tuple[bool, str]: (是否成功, 状态消息) 的元组
-        如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged")
+        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, 文件对列表) 的元组
+        文件对列表为 (输出文件路径, 原始目标文件路径) 的元组
+        如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged", [])
     """
     try:
         log("="*50)
-        log(f'  > {t("log.mod_update.using_old_mod", name=old_mod_path.name)}')
-        log(f'  > {t("log.mod_update.using_new_resource", name=new_bundle_path.name)}')
+        log(f'  > {t("log.mod_update.source_files", count=len(source_paths))}')
+        for src in source_paths:
+            log(f"    - {src.name}")
+        log(f'  > {t("log.mod_update.target_files", count=len(target_paths))}')
+        for tgt in target_paths:
+            log(f"    - {tgt.name}")
 
-        # 进行asset迁移
-        log(f'\n--- {t("log.section.asset_migration")} ---')
-        modified_bundle, result = _migrate_bundle_assets(
-            old_bundle_path=old_mod_path, 
-            new_bundle_path=new_bundle_path, 
-            asset_types_to_replace=asset_types_to_replace, 
-            spine_options=spine_options,
-            log = log
-        )
-
-        if not modified_bundle:
-            return False, t("message.mod_update.migration_failed")
-        if not result.is_success:
-            return False, t("message.mod_update.no_matching_assets_to_replace")
+        # 1. 提取资源 (Extraction)
+        log(f'\n--- {t("log.section.extracting_patches")} ---')
+        patches: Patch = {}
+        key_func = MATCH_STRATEGIES['path_id']
         
-        # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
-        if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
-            log(f'  > ⏭️ {t("log.mod_update.all_resources_unchanged", count=result.skipped_count)}')
-            return True, "unchanged"
+        for src in source_paths:
+            src_bundle = Bundle.load(src, log)
+            if not src_bundle:
+                continue
+            patch = src_bundle.extract_patch(asset_types_to_replace, key_func, spine_options)
+            patches.update(patch)
         
-        log(f'  > {t("log.mod_update.migration_complete", count=result.applied_count)}')
+        if not patches:
+            return False, t("message.mod_update.no_assets_extracted"), []
+
+        log(f"  > {t('log.mod_update.pool_built', count=len(patches))}")
+
+        # 2. 按需注入 (Application)
+        log(f'\n--- {t("log.section.applying_to_targets")} ---')
+        file_pairs: list[tuple[Path, Path]] = []
+        success_count = 0
+        total_applied = 0
+        total_matched = 0  # 总匹配数（包括跳过的）
         
-        # 保存和修正文件
-        output_path = output_dir / new_bundle_path.name
-        save_ok, save_message = modified_bundle.save(output_path, save_options)
+        for tgt in target_paths:
+            tgt_bundle = Bundle.load(tgt, log)
+            if not tgt_bundle:
+                continue
+            
+            result = tgt_bundle.apply_patch(patches, key_func)
+            total_matched += result.matched_count
+            
+            if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
+                log(f"  ⏭️ {t('log.mod_update.target_unchanged', name=tgt.name, count=result.skipped_count)}")
+                continue
+            
+            if result.is_success:
+                output_path = output_dir / tgt.name
+                save_ok, save_message = tgt_bundle.save(output_path, save_options)
+                if save_ok:
+                    success_count += 1
+                    total_applied += result.applied_count
+                    file_pairs.append((output_path, tgt))
+                    log(f"  ✅ {t('log.mod_update.target_processed', name=tgt.name, applied=result.applied_count)}")
+                else:
+                    log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_message)}")
+            else:
+                log(f"  > {t('log.file.no_changes_made')} ({tgt.name})")
+        
+        if success_count == 0:
+            # 区分：完全没有匹配 vs 匹配了但都被跳过
+            if total_matched > 0 and skip_unchanged:
+                return True, "all_targets_unchanged", []
+            return False, t("message.mod_update.no_targets_processed"), []
 
-        if not save_ok:
-            return False, save_message
-
-        log(t("log.file.saved", path=output_path))
-        log(f"\n🎉 {t('log.mod_update.all_processes_complete')}")
-        return True, t("message.mod_update.success")
+        log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=total_applied)}')
+        return True, t("message.mod_update.success"), file_pairs
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_processing', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.error_during_process", error=e)
+        return False, t("message.error_during_process", error=e), []
 
 def process_batch_mod_update(
     mod_file_list: list[Path],
@@ -623,7 +646,7 @@ def process_batch_mod_update(
         log("\n" + "=" * 50)
         log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-        new_bundle_paths, find_message = find_new_bundle_path(old_mod_path, search_paths, log)
+        new_bundle_paths, find_message = find_target_bundles([old_mod_path], search_paths, log)
 
         if not new_bundle_paths:
             log(f'❌ {t("log.search.find_failed", message=find_message)}')
@@ -631,13 +654,10 @@ def process_batch_mod_update(
             failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
             continue
 
-        # 使用第一个匹配的文件
-        new_bundle_path = new_bundle_paths[0]
-
-        # 执行Mod更新处理
-        success, process_message = process_mod_update(
-            old_mod_path=old_mod_path,
-            new_bundle_path=new_bundle_path,
+        # 执行Mod更新处理（将单路径包装为列表传入）
+        success, process_message, update_file_pairs = process_mod_update(
+            source_paths=[old_mod_path],
+            target_paths=new_bundle_paths,
             output_dir=output_dir,
             asset_types_to_replace=asset_types_to_replace,
             save_options=save_options,
@@ -653,10 +673,8 @@ def process_batch_mod_update(
             else:
                 log(f'✅ {t("log.batch.process_success", filename=filename)}')
                 success_count += 1
-                # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
-                output_path = output_dir / new_bundle_path.name
-                if output_path.exists():
-                    file_pairs.append((output_path, new_bundle_path))
+                # 记录输出文件路径和被替换的原始文件路径
+                file_pairs.extend(update_file_pairs)
         else:
             log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1

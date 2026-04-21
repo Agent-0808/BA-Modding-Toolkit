@@ -51,10 +51,16 @@ def parse_filename(filename: str) -> ParsedFilename:
     # 匹配 -mxdependency-xxx 或 _mxload-xxx
     match_type = re.search(r'[-_](?:mxdependency|mxload)-([a-zA-Z0-9]+)', filename)
     if match_type:
-        res_type = match_type.group(1)
+        extracted = match_type.group(1)
         # 如果提取出的 type 是年份，说明实际上没有 type，而是直接接了日期
-        if re.match(r'^\d{4}$', res_type):
+        if re.match(r'^\d{4}$', extracted):
             res_type = None
+            # 国际服 Modern 版：res_type 在日期之后（如 -2024-11-18_002_assets）
+            match_modern = re.search(r'\d{4}-\d{2}-\d{2}_([0-9]{3})_', filename)
+            if match_modern:
+                res_type = match_modern.group(1)
+        else:
+            res_type = extracted
 
     # 找到最早的 _mxdependency 或 _mxload 位置
     mx_match = re.search(r'[-_](?:mxdependency|mxload)', filename)

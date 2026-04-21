@@ -177,7 +177,10 @@
 		"mod_update": {
 			"no_matching_assets_to_replace": "No assets with matching names found for replacement. Cannot continue update.",
 			"success": "One-click update successful!",
-			"migration_failed": "Asset migration process failed. Please check the log for details."
+			"migration_failed": "Asset migration process failed. Please check the log for details.",
+			"no_assets_extracted": "No assets were extracted from source files",
+			"no_targets_processed": "No target files were successfully processed",
+			"all_targets_unchanged": "All target files are unchanged, no update needed"
 		},
 		"jp_convert": {
 			"load_global_failed": "Failed to load Global server source file",
@@ -296,7 +299,9 @@
 			"extracting_from_jp": "Extracting resources from JP file",
 			"applying_to_global": "Applying to Global file",
 			"conversion_complete": "Conversion complete",
-			"copy_converted_files": "Copying converted files"
+			"copy_converted_files": "Copying converted files",
+			"applying_to_targets": "Applying to target group",
+			"extracting_patches": "Extracting Patches"
 		},
 		"compression": {
 			"original": "Orig",
@@ -306,9 +311,11 @@
 		},
 		"search": {
 			"searching_for_file": "Searching for corresponding file for \"{name}\"...",
+			"searching_for_file_group": "Searching target files for {count} source files...",
 			"file_prefix": "File prefix: \"{prefix}\"",
 			"found_candidates": "Found {count} candidate files. Verifying content...",
 			"old_mod_asset_count": "Old Mod contains {count} assets.",
+			"source_mod_asset_count": "Source group contains {count} assets.",
 			"checking_candidate": "Checking: {name}",
 			"find_failed": "Search failed: {message}",
 			"found_count": "Successfully found {count} matching files.",
@@ -342,7 +349,13 @@
 			"migration_complete": "Resource migration complete. Processed {count} assets.",
 			"all_processes_complete": "All processes completed!",
 			"updating": "Updating...",
-			"all_resources_unchanged": "All resources unchanged ({count}), skipping output file generation"
+			"all_resources_unchanged": "All resources unchanged ({count}), skipping output file generation",
+			"source_files": "Source group ({count} files)",
+			"target_files": "Target group ({count} files)",
+			"pool_built": "Replacement pool built with {count} assets",
+			"target_unchanged": "Target unchanged: {name} ({count} assets), skipping",
+			"target_processed": "Target processed: {name} ({applied} assets replaced)",
+			"all_targets_unchanged": "All target files are unchanged, no update needed"
 		},
 		"batch": {
 			"summary": "Batch processing complete!\nTotal: {total}, Success: {success}, Failed: {fail}",
@@ -448,6 +461,9 @@
 			"file_hint": "Drag and drop files here\nOr click the button below to select",
 			"folder_hint": "Drag and drop folder here\nOr click the button below to select",
 			"searching": "Searching......"
+		},
+		"group_drop_zone": {
+			"contains": "Contains {count} files: {types}"
 		},
 		"label": {
 			"custom_resource_dir": "Custom Resource Dir",

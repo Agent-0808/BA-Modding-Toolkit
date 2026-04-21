@@ -177,7 +177,10 @@
 		"mod_update": {
 			"no_matching_assets_to_replace": "没有找到任何名称匹配的资源进行替换，无法继续更新。",
 			"success": "一键更新成功！",
-			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。"
+			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。",
+			"no_assets_extracted": "没有资源被提取",
+			"no_targets_processed": "没有目标文件被成功处理",
+			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
 		"jp_convert": {
 			"load_global_failed": "无法加载国际服源文件",
@@ -296,7 +299,9 @@
 			"extracting_from_jp": "正在从日服文件提取资源",
 			"applying_to_global": "正在应用到国际服文件",
 			"conversion_complete": "转换完成",
-			"copy_converted_files": "复制成功转换的文件"
+			"copy_converted_files": "复制成功转换的文件",
+			"applying_to_targets": "应用到目标文件组",
+			"extracting_patches": "正在提取补丁"
 		},
 		"compression": {
 			"original": "原始",
@@ -306,9 +311,11 @@
 		},
 		"search": {
 			"searching_for_file": "正在为 \"{name}\" 搜索对应文件...",
+			"searching_for_file_group": "正在为 {count} 个源文件搜索对应目标文件...",
 			"file_prefix": "文件前缀: \"{prefix}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
 			"old_mod_asset_count": "旧 Mod 包含 {count} 个资源。",
+			"source_mod_asset_count": "源文件组包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
 			"found_count": "成功查找到 {count} 个匹配文件。",
@@ -340,9 +347,19 @@
 			"using_old_mod": "使用旧版 Mod: {name}",
 			"using_new_resource": "使用新版资源: {name}",
 			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
-			"all_processes_complete": "全部流程处理完成！",
+			"all_processes_complete": "全部流程处理完成！共处理 {count} 个资源。",
 			"updating": "正在更新……",
-			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件"
+			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件",
+			"source_files": "源文件组 ({count} 个文件)",
+			"target_files": "目标文件组 ({count} 个文件)",
+			"pool_built": "资源池构建完成，共 {count} 个资源",
+			"target_unchanged": "目标文件内容未变化: {name}（{count} 个资源），跳过",
+			"target_processed": "目标文件处理完成: {name}（替换 {applied} 个资源）",
+			"no_assets_extracted": "无法从源文件中提取任何资源",
+			"no_targets_processed": "没有目标文件被成功处理",
+			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新",
+			"no_matching_assets_to_replace": "没有找到任何名称匹配的资源进行替换，无法继续更新。",
+			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。"
 		},
 		"batch": {
 			"summary": "批量处理完成！\n总计: {total}，成功: {success}，失败: {fail}",
@@ -448,6 +465,9 @@
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",
 			"folder_hint": "将文件夹拖放到此处\n或点击下方按钮选择",
 			"searching": "正在查找……"
+		},
+		"group_drop_zone": {
+			"contains": "包含 {count} 个文件: {types}"
 		},
 		"label": {
 			"custom_resource_dir": "自定义资源目录",
