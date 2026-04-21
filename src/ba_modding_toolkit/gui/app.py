@@ -13,7 +13,7 @@ from .components import Theme, Logger, UIComponents
 from .utils import ConfigManager, open_directory, select_directory
 from .dialogs import SettingsDialog
 from .base_tab import TabFrame
-from .tabs import ModUpdateTab, CrcToolTab, AssetPackerTab, AssetExtractorTab, JPGLConversionTab
+from .tabs import *
 
 class App(tk.Frame):
     def __init__(self, master: tk.Tk):
@@ -277,10 +277,10 @@ class App(tk.Frame):
     def populate_tabs(self):
         """创建并添加所有的Tab页面到内容区域。"""
         self.tabs: list[tuple[TabFrame, str]] = []
-        self.tab_buttons: list[tuple[tb.Button, TabFrame]] = []
-        
+
         # 创建Tab页面
         mod_update_tab = ModUpdateTab(self.content_frame, self)
+        batch_update_tab = BatchUpdateTab(self.content_frame, self)
         crc_tool_tab = CrcToolTab(self.content_frame, self)
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
@@ -288,6 +288,7 @@ class App(tk.Frame):
         
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
+            (batch_update_tab, t("ui.tabs.batch_update")),
             (crc_tool_tab, t("ui.tabs.crc_tool")),
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
@@ -300,6 +301,7 @@ class App(tk.Frame):
     
     def create_sidebar_buttons(self):
         """创建侧边栏导航按钮"""
+        self.tab_buttons: list[tuple[tb.Button, TabFrame]] = []
         for tab, title in self.tabs:
             btn = UIComponents.create_button(
                 self.sidebar_frame,

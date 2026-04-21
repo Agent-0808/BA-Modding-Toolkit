@@ -409,10 +409,12 @@
 		"app_title": "BA Modding Toolkit",
 		"tabs": {
 			"mod_update": "Mod 更新",
+			"batch_update": "批量更新",
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"jp_conversion": "JP/GL 转换"
+			"jp_conversion": "JP/GL 转换",
+			"batch_legacy": "批量处理旧版"
 		},
 		"settings": {
 			"title": "设置",
