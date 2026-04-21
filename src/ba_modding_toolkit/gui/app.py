@@ -281,6 +281,7 @@ class App(tk.Frame):
         # 创建Tab页面
         mod_update_tab = ModUpdateTab(self.content_frame, self)
         batch_update_tab = BatchUpdateTab(self.content_frame, self)
+        batch_legacy_tab = BatchLegacyTab(self.content_frame, self)
         crc_tool_tab = CrcToolTab(self.content_frame, self)
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
@@ -293,6 +294,7 @@ class App(tk.Frame):
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
             (jp_gl_conversion_tab, t("ui.tabs.jp_conversion"))
+            (batch_legacy_tab, t("ui.tabs.batch_legacy")),
         ])
         
         # 将所有Tab放置在content_frame的同一位置
