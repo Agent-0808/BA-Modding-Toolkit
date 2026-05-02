@@ -31,9 +31,9 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg = process_mod_update(
-            old_mod_path=old_mod_bundle_path,
-            new_bundle_path=new_original_bundle_path,
+        success, msg, _ = process_mod_update(
+            source_paths=[old_mod_bundle_path],
+            target_paths=[new_original_bundle_path],
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D", "TextAsset"},
             save_options=save_options,
@@ -62,9 +62,9 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg = process_mod_update(
-            old_mod_path=old_mod_bundle_path,
-            new_bundle_path=new_original_bundle_path,
+        success, msg, _ = process_mod_update(
+            source_paths=[old_mod_bundle_path],
+            target_paths=[new_original_bundle_path],
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D", "TextAsset"},
             save_options=save_options,
@@ -101,9 +101,9 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg = process_mod_update(
-            old_mod_path=old_mod_bundle_path,
-            new_bundle_path=new_original_bundle_path,
+        success, msg, _ = process_mod_update(
+            source_paths=[old_mod_bundle_path],
+            target_paths=[new_original_bundle_path],
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D"},
             save_options=save_options,

@@ -111,9 +111,9 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 调用核心处理函数
-    success, message = process_mod_update(
-        old_mod_path=old_mod_path,
-        new_bundle_path=new_bundle_path,
+    success, message, _ = process_mod_update(
+        source_paths=[old_mod_path],
+        target_paths=[new_bundle_path],
         output_dir=output_dir,
         asset_types_to_replace=asset_types,
         save_options=save_options,
