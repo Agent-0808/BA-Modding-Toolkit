@@ -525,35 +525,8 @@ class GroupDropZone(tb.Labelframe):
             if path.is_file() and path.suffix == '.bundle':
                 paths_to_add.append(path)
         
-        if not paths_to_add:
-            return
-        
-        if len(paths_to_add) == 1:
-            self._auto_collect_group(paths_to_add[0])
-        else:
+        if paths_to_add:
             self._set_files(paths_to_add)
-
-    def _auto_collect_group(self, single_path: Path) -> None:
-        """同组智能补全：根据单个文件自动收集同组所有 bundle"""
-        parsed = parse_filename(single_path.name)
-        if not parsed.prefix:
-            self._set_files([single_path])
-            return
-        
-        parent_dir = single_path.parent
-        if not parent_dir.exists():
-            self._set_files([single_path])
-            return
-        
-        group_paths = sorted([
-            f for f in parent_dir.iterdir()
-            if f.is_file() and f.name.startswith(parsed.prefix) and f.suffix == '.bundle'
-        ])
-        
-        if not group_paths:
-            group_paths = [single_path]
-        
-        self._set_files(group_paths)
 
     def _handle_browse(self) -> None:
         """内部处理浏览按钮，支持多文件选择"""
@@ -578,12 +551,7 @@ class GroupDropZone(tb.Labelframe):
 
     def _handle_browse_callback(self, paths: list[Path]) -> None:
         """浏览选择后的回调处理"""
-        if not paths:
-            return
-        
-        if len(paths) == 1:
-            self._auto_collect_group(paths[0])
-        else:
+        if paths:
             self._set_files(paths)
 
     def _set_files(self, paths: list[Path]) -> None:

@@ -293,7 +293,7 @@ class App(tk.Frame):
             (crc_tool_tab, t("ui.tabs.crc_tool")),
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
-            (jp_gl_conversion_tab, t("ui.tabs.jp_conversion"))
+            (jp_gl_conversion_tab, t("ui.tabs.jp_conversion")),
             (batch_legacy_tab, t("ui.tabs.batch_legacy")),
         ])
         
