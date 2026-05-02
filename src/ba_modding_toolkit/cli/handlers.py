@@ -13,8 +13,8 @@ from ..core import (
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
-    process_jp_to_global_conversion,
-    process_global_to_jp_conversion,
+    process_modern_to_legacy_conversion,
+    process_legacy_to_modern_conversion,
     process_batch_mod_update,
     process_batch_legacy_batch,
 )
@@ -319,9 +319,9 @@ def handle_split(args: SplitTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数 (split = global_to_jp = 一分多)
     logger.log(f"\nSplitting assets from '{legacy_path.name}' to {len(modern_files)} modern file(s)...")
-    success, message, replaced_files = process_global_to_jp_conversion(
-        global_bundle_path=legacy_path,
-        jp_template_paths=modern_files,
+    success, message, replaced_files = process_legacy_to_modern_conversion(
+        legacy_bundle_path=legacy_path,
+        modern_bundle_paths=modern_files,
         output_dir=output_dir,
         save_options=save_options,
         asset_types_to_replace=asset_types,
@@ -379,9 +379,9 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数 (merge = jp_to_global = 多并一)
     logger.log(f"\nMerging assets from {len(modern_files)} modern file(s) into '{legacy_path.name}'...")
-    success, message = process_jp_to_global_conversion(
-        global_bundle_path=legacy_path,
-        jp_bundle_paths=modern_files,
+    success, message = process_modern_to_legacy_conversion(
+        legacy_bundle_path=legacy_path,
+        modern_bundle_paths=modern_files,
         output_dir=output_dir,
         save_options=save_options,
         asset_types_to_replace=asset_types,

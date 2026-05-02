@@ -285,7 +285,7 @@ class App(tk.Frame):
         crc_tool_tab = CrcToolTab(self.content_frame, self)
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
-        jp_gl_conversion_tab = JPGLConversionTab(self.content_frame, self)
+        legacy_conversion_tab = LegacyConversionTab(self.content_frame, self)
         
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
@@ -293,7 +293,7 @@ class App(tk.Frame):
             (crc_tool_tab, t("ui.tabs.crc_tool")),
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
-            (jp_gl_conversion_tab, t("ui.tabs.jp_conversion")),
+            (legacy_conversion_tab, t("ui.tabs.jp_conversion")),
             (batch_legacy_tab, t("ui.tabs.batch_legacy")),
         ])
         

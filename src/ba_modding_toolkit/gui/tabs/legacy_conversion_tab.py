@@ -16,12 +16,12 @@ from ..utils import replace_file, replace_files
 
 class Mode(IntEnum):
     """日服/国际服转换模式"""
-    JP_TO_GLOBAL = 0
-    GLOBAL_TO_JP = 1
+    MODERN_TO_LEGACY = 0
+    LEGACY_TO_MODERN = 1
 
 
-class JPGLConversionTab(TabFrame):
-    """日服与国际服格式互相转换的标签页"""
+class LegacyConversionTab(TabFrame):
+    """旧版与新版格式互相转换的标签页"""
 
     def __init__(self, *args, **kwargs):
         self.final_output_paths: list[Path] = []
@@ -30,14 +30,14 @@ class JPGLConversionTab(TabFrame):
 
     def create_widgets(self):
         # --- 转换模式选择 ---
-        self.mode_var = tk.IntVar(value=Mode.JP_TO_GLOBAL)
+        self.mode_var = tk.IntVar(value=Mode.LEGACY_TO_MODERN)
 
         self.mode_switcher = ModeSwitcher(
             self,
             self.mode_var,
             [
-                (Mode.JP_TO_GLOBAL, t("ui.jp_conversion.mode_jp_to_gl")),
-                (Mode.GLOBAL_TO_JP, t("ui.jp_conversion.mode_gl_to_jp"))
+                (Mode.LEGACY_TO_MODERN, t("ui.legacy_conversion.mode_legacy_to_modern")),
+                (Mode.MODERN_TO_LEGACY, t("ui.legacy_conversion.mode_modern_to_legacy")),
             ],
             command=self._switch_view
         )
@@ -59,40 +59,40 @@ class JPGLConversionTab(TabFrame):
 
     def _update_convert_mode_labels(self):
         """根据当前转换模式更新标签文案"""
-        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
-            self.global_zone.config(text=t("ui.jp_conversion.role_global_target"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_source"))
-        else:  # GLOBAL_TO_JP
-            self.global_zone.config(text=t("ui.jp_conversion.role_global_source"))
-            self.jp_files_listbox.get_frame().config(text=t("ui.jp_conversion.role_jp_target"))
+        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
+            self.legacy_zone.config(text=t("ui.legacy_conversion.role_global_target"))
+            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_jp_source"))
+        else:
+            self.legacy_zone.config(text=t("ui.legacy_conversion.role_global_source"))
+            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_jp_target"))
 
-    # --- 转换模式UI (JP_TO_GLOBAL 和 GLOBAL_TO_JP) ---
+    # --- 转换模式UI ---
     def _create_convert_mode_widgets(self, parent):
         # 文件输入区域
         file_frame = tb.Frame(parent)
         file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
         
         # 1. 国际服 Bundle 文件
-        self.global_zone = DropZone(
+        self.legacy_zone = DropZone(
             file_frame,
-            title=t("ui.jp_conversion.role_global_source"),
-            placeholder_text=t("ui.jp_conversion.placeholder_global_bundle"),
+            title=t("ui.legacy_conversion.role_global_source"),
+            placeholder_text=t("ui.legacy_conversion.placeholder_global_bundle"),
             on_file_selected=self.on_global_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             logger=self.logger
         )
-        self.global_zone.pack(fill=tk.X, pady=(0, 3))
+        self.legacy_zone.pack(fill=tk.X, pady=(0, 3))
 
         # 2. 日服 Bundle 文件列表
-        self.jp_files_listbox = FileListbox(
+        self.modern_files_listbox = FileListbox(
             file_frame,
-            title=t("ui.jp_conversion.role_jp_source"),
-            placeholder_text=t("ui.jp_conversion.placeholder_jp_files"),
+            title=t("ui.legacy_conversion.role_jp_source"),
+            placeholder_text=t("ui.legacy_conversion.placeholder_jp_files"),
             height=3,
             logger=self.logger,
             on_files_added=self._on_jp_files_added
         )
-        self.jp_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
+        self.modern_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
         # --- 选项设置区域 ---
         options_frame = tb.Labelframe(parent, text=t("ui.label.options"), padding=10)
@@ -140,14 +140,14 @@ class JPGLConversionTab(TabFrame):
     def _auto_find_jp_files(self):
         """当指定了 Global 文件后，自动在资源目录查找所有匹配的文件"""
         if not self.app.game_resource_dir_var.get():
-            self.logger.log(f'⚠️ {t("log.jp_convert.auto_search_no_game_dir")}')
+            self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
             return
-        if not self.global_zone.path:
-            self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.global_zone.path)}')
+        if not self.legacy_zone.path:
+            self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.legacy_zone.path)}')
             return
         
         # 清除旧的文件列表，准备重新搜索
-        self.jp_files_listbox._clear_list()
+        self.modern_files_listbox._clear_list()
         self.run_in_thread(self._find_worker)
 
     def _find_worker(self):
@@ -157,7 +157,7 @@ class JPGLConversionTab(TabFrame):
 
         # 搜索日服文件
         jp_files = core.find_all_jp_counterparts(
-            self.global_zone.path, game_search_dirs, self.logger.log
+            self.legacy_zone.path, game_search_dirs, self.logger.log
         )
 
         if jp_files:
@@ -168,8 +168,8 @@ class JPGLConversionTab(TabFrame):
             self.logger.status(t("status.search_not_found"))
 
     def _update_jp_listbox(self, files: list[Path]):
-        self.jp_files_listbox._clear_list()
-        self.jp_files_listbox.add_files(files)
+        self.modern_files_listbox._clear_list()
+        self.modern_files_listbox.add_files(files)
         self.logger.log(t("log.search.found_count", count=len(files)))
 
     # --- 反向查找：JP文件添加后自动查找Global文件 ---
@@ -180,7 +180,7 @@ class JPGLConversionTab(TabFrame):
         if not paths:
             return
         # 只有当Global文件未设置时才进行查找
-        if self.global_zone.path is not None:
+        if self.legacy_zone.path is not None:
             return
         # 使用第一个文件作为查找基础
         first_file = paths[0]
@@ -189,7 +189,7 @@ class JPGLConversionTab(TabFrame):
     def _auto_find_global_file(self, reference_file: Path):
         """当指定了参考文件后，自动在资源目录查找对应的Global文件"""
         if not self.app.game_resource_dir_var.get():
-            self.logger.log(f'⚠️ {t("log.jp_convert.auto_search_no_game_dir")}')
+            self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
             return
 
         self.run_in_thread(lambda: self._find_global_worker(reference_file))
@@ -199,7 +199,7 @@ class JPGLConversionTab(TabFrame):
         self.logger.status(t("status.searching"))
 
         # 更新UI为搜索中状态
-        self.master.after(0, lambda: self.global_zone.set_searching())
+        self.master.after(0, lambda: self.legacy_zone.set_searching())
 
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
@@ -219,10 +219,10 @@ class JPGLConversionTab(TabFrame):
         if not found_paths:
             # 没有找到匹配文件
             ui_message = t("ui.mod_update.status_not_found", message=message)
-            self.global_zone.set_error(ui_message)
+            self.legacy_zone.set_error(ui_message)
             self.logger.status(t("status.search_not_found"))
         elif len(found_paths) == 1:
-            self.global_zone.set_path(found_paths[0])
+            self.legacy_zone.set_path(found_paths[0])
             self.logger.log(t("log.file.loaded", path=found_paths[0]))
             self.logger.status(t("status.ready"))
         else:
@@ -237,13 +237,13 @@ class JPGLConversionTab(TabFrame):
 
             selected_path = dialog.get_selected_path()
             if selected_path:
-                self.global_zone.set_path(selected_path)
+                self.legacy_zone.set_path(selected_path)
                 self.logger.log(t("log.file.loaded", path=selected_path))
                 self.logger.status(t("status.ready"))
             else:
                 # 用户取消了选择
                 ui_message = t("ui.mod_update.status_not_found", message=t("ui.dialog.selection_cancelled"))
-                self.global_zone.set_warning(ui_message)
+                self.legacy_zone.set_warning(ui_message)
                 self.logger.status(t("status.search_not_found"))
 
     # --- 核心转换流程 ---
@@ -258,8 +258,8 @@ class JPGLConversionTab(TabFrame):
             return
 
         # 根据模式确定要覆盖的目标文件
-        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
-            target_files = self.jp_files_listbox.file_list
+        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
+            target_files = self.modern_files_listbox.file_list
         else:
             # GLOBAL_TO_JP 使用被替换的原始文件列表
             target_files = self.replaced_source_files
@@ -298,8 +298,8 @@ class JPGLConversionTab(TabFrame):
 
     def replace_original(self):
         """实际的覆盖逻辑"""
-        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
-            target_files = self.jp_files_listbox.file_list
+        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
+            target_files = self.modern_files_listbox.file_list
         else:
             # GLOBAL_TO_JP 使用被替换的原始文件列表
             target_files = self.replaced_source_files
@@ -342,12 +342,12 @@ class JPGLConversionTab(TabFrame):
         """处理 JP_TO_GLOBAL 和 GLOBAL_TO_JP 模式"""
         # 1. 验证输入
         output_dir = Path(self.app.output_dir_var.get())
-        jp_files = self.jp_files_listbox.file_list
+        modern_files = self.modern_files_listbox.file_list
         
-        if not self.global_zone.path:
+        if not self.legacy_zone.path:
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
-        if not jp_files:
+        if not modern_files:
             messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
 
@@ -367,7 +367,7 @@ class JPGLConversionTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            target_bundle = self.global_zone.path if self.mode_var.get() == Mode.JP_TO_GLOBAL else jp_files[0]
+            target_bundle = self.legacy_zone.path if self.mode_var.get() == Mode.MODERN_TO_LEGACY else modern_files[0]
             platform, unity_version = core.get_unity_platform_info(target_bundle)
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = (platform == "StandaloneWindows64")
@@ -391,27 +391,27 @@ class JPGLConversionTab(TabFrame):
         
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))
-        if self.mode_var.get() == Mode.JP_TO_GLOBAL:
-            success, message = core.process_jp_to_global_conversion(
-                global_bundle_path=self.global_zone.path,
-                jp_bundle_paths=jp_files,
+        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
+            success, message = core.process_modern_to_legacy_conversion(
+                legacy_bundle_path=self.legacy_zone.path,
+                modern_bundle_paths=modern_files,
                 output_dir=output_dir,
                 save_options=save_options,
                 asset_types_to_replace=asset_types_to_replace,
                 log=self.logger.log
             )
 
-            # 记录输出文件路径（JP_TO_GLOBAL 模式只输出一个文件）
+            # 记录输出文件路径（MODERN_TO_LEGACY 模式只输出一个文件）
             if success:
-                output_path = output_dir / self.global_zone.path.name
+                output_path = output_dir / self.legacy_zone.path.name
                 if output_path.exists():
                     self.final_output_paths.append(output_path)
                     # 启用覆盖按钮
                     self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-        else:  # GLOBAL_TO_JP
-            success, message, replaced_files = core.process_global_to_jp_conversion(
-                global_bundle_path=self.global_zone.path,
-                jp_template_paths=jp_files,
+        else:  # LEGACY_TO_MODERN
+            success, message, replaced_files = core.process_legacy_to_modern_conversion(
+                legacy_bundle_path=self.legacy_zone.path,
+                modern_bundle_paths=modern_files,
                 output_dir=output_dir,
                 save_options=save_options,
                 asset_types_to_replace=asset_types_to_replace,

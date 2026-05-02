@@ -743,9 +743,9 @@ def process_batch_legacy_batch(
             continue
 
         # 执行转换处理
-        success, process_message, replaced_files = process_global_to_jp_conversion(
-            global_bundle_path=legacy_file_path,
-            jp_template_paths=new_global_files,
+        success, process_message, replaced_files = process_legacy_to_modern_conversion(
+            legacy_bundle_path=legacy_file_path,
+            modern_bundle_paths=new_global_files,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace=asset_types_to_replace,
@@ -797,7 +797,7 @@ def find_all_jp_counterparts(
     Returns:
         找到的日服文件路径列表。
     """
-    log(t("log.jp_convert.searching_jp_counterparts", name=global_bundle_path.name))
+    log(t("log.legacy_convert.searching_jp_counterparts", name=global_bundle_path.name))
 
     # 1. 从国际服文件名提取前缀
     prefix = parse_filename(global_bundle_path.name).prefix
@@ -825,27 +825,25 @@ def find_all_jp_counterparts(
                 if file_path.name not in seen_names:
                     jp_files.append(file_path)
                     seen_names.add(file_path.name)
-                    log(f"  > {t('log.jp_convert.found_match', path=file_path.name)}")
+                    log(f"  > {t('log.legacy_convert.found_match', path=file_path.name)}")
 
     return jp_files
 
-def process_jp_to_global_conversion(
-    global_bundle_path: Path,
-    jp_bundle_paths: list[Path],
+def process_modern_to_legacy_conversion(
+    legacy_bundle_path: Path,
+    modern_bundle_paths: list[Path],
     output_dir: Path,
     save_options: SaveOptions,
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
-    处理日服转国际服的转换。
-    
-    将日服多个资源bundle中的资源，替换到国际服的基础bundle文件中对应的部分。
-    此过程只替换同名同类型的现有资源，不添加新资源。
+    处理新版到旧版的转换。
+    将新版多个资源bundle中的资源，替换到旧版的bundle文件中对应的部分。
     
     Args:
-        global_bundle_path: 国际服bundle文件路径（作为基础）
-        jp_bundle_paths: 日服bundle文件路径列表
+        legacy_bundle_path: 旧版bundle文件路径（作为基础）
+        modern_bundle_paths: 新版资源bundle文件路径列表
         output_dir: 输出目录
         save_options: 保存和CRC修正的选项
         log: 日志记录函数
@@ -855,71 +853,71 @@ def process_jp_to_global_conversion(
     """
     try:
         log("="*50)
-        log(t("log.jp_convert.starting_jp_to_global"))
-        log(f'  > {t("log.jp_convert.global_base_file", name=global_bundle_path.name)}')
-        log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_bundle_paths))}')
+        log(t("log.legacy_convert.starting_conversion"))
+        log(f'  > {t("log.legacy_convert.global_base_file", name=legacy_bundle_path.name)}')
+        log(f'  > {t("log.legacy_convert.jp_files_count", count=len(modern_bundle_paths))}')
         
         # 1. 从所有日服包中构建一个完整的"替换清单"
         log(f'\n--- {t("log.section.extracting_from_jp")} ---')
-        replacement_map: dict[AssetKey, AssetContent] = {}
+        patch: Patch = {}
         strategy_name = 'cont_name_type'
         key_func = MATCH_STRATEGIES[strategy_name]
 
-        total_files = len(jp_bundle_paths)
-        for i, jp_path in enumerate(jp_bundle_paths, 1):
+        total_files = len(modern_bundle_paths)
+        for i, jp_path in enumerate(modern_bundle_paths, 1):
             log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_path.name))
-            jp_bundle = Bundle.load(jp_path, log)
-            if not jp_bundle:
+            modern_bundle = Bundle.load(jp_path, log)
+            if not modern_bundle:
                 log(f"    > ⚠️ {t('message.load_failed')}: {jp_path.name}")
                 continue
             
-            jp_assets = jp_bundle.extract_patch(
+            assets = modern_bundle.extract_patch(
                 asset_types_to_replace, key_func, None
             )
-            replacement_map.update(jp_assets)
+            patch.update(assets)
 
-        if not replacement_map:
-            msg = t("message.jp_convert.no_assets_in_source")
+        if not patch:
+            msg = t("message.legacy_convert.no_assets_in_source")
             log(f"  > ⚠️ {msg}")
             return False, msg
         
-        log(f"  > {t('log.jp_convert.extracted_count_from_jp', count=len(replacement_map))}")
+        log(f"  > {t('log.legacy_convert.extracted_count_from_jp', count=len(patch))}")
 
         # 2. 加载国际服 base 并应用替换
         log(f'\n--- {t("log.section.applying_to_global")} ---')
-        global_bundle = Bundle.load(global_bundle_path, log)
+        global_bundle = Bundle.load(legacy_bundle_path, log)
         if not global_bundle:
-            return False, t("message.jp_convert.load_global_failed")
+            return False, t("message.legacy_convert.load_global_failed")
         
-        result = global_bundle.apply_patch(replacement_map, key_func)
+        result = global_bundle.apply_patch(patch, key_func)
         
         if not result.is_success:
-            log(f"  > ⚠️ {t('log.jp_convert.no_assets_replaced')}")
-            return False, t("message.jp_convert.no_assets_matched")
+            log(f"  > ⚠️ {t('log.legacy_convert.no_assets_replaced')}")
+            return False, t("message.legacy_convert.no_assets_matched")
             
         log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
         for item in result.applied_logs:
             log(f"  - {item}")
         
         # 3. 保存最终文件
-        output_path = output_dir / global_bundle_path.name
+        output_path = output_dir / legacy_bundle_path.name
         save_ok, save_message = global_bundle.save(output_path, save_options)
         
         if not save_ok:
             return False, save_message
         
         log(f"  ✅ {t('log.file.saved', path=output_path)}")
-        log(f"\n🎉 {t('log.jp_convert.jp_to_global_complete')}")
-        return True, t("message.jp_convert.jp_to_global_success", asset_count=result.applied_count)
+        log(f"\n🎉 {t('log.legacy_convert.conversion_complete')}")
+        return True, t("message.legacy_convert.jp_to_global_success", asset_count=result.applied_count)
         
     except Exception as e:
-        log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_jp_to_global', error=e)}")
+        log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.jp_convert.conversion_error", error=e)
+        return False, t("message.legacy_convert.conversion_error", error=e)
         
-def process_global_to_jp_conversion(
-    global_bundle_path: Path,
-    jp_template_paths: list[Path],
+def process_legacy_to_modern_conversion(
+    legacy_bundle_path: Path,
+    modern_bundle_paths: list[Path],
     output_dir: Path,
     save_options: SaveOptions,
     asset_types_to_replace: set[str],
@@ -927,15 +925,15 @@ def process_global_to_jp_conversion(
     skip_unchanged: bool = False,
 ) -> tuple[bool, str, list[Path]]:
     """
-    处理国际服转日服的转换。
+    处理旧版转新版的转换。
 
-    将一个国际服格式的bundle文件，使用多个日服bundle作为模板，
-    将国际服的资源分发替换到对应的日服文件中。
+    将一个旧版bundle文件，使用多个新版bundle作为模板，
+    将旧版bundle的资源分发替换到对应的新版文件中。
     只替换模板中已存在的同名同类型资源。
 
     Args:
-        global_bundle_path: 待转换的国际服bundle文件路径。
-        jp_template_paths: 日服bundle文件路径列表（用作模板）。
+        legacy_bundle_path: 待转换的旧bundle文件路径。
+        modern_bundle_paths: 新版bundle文件路径列表（用作模板）。
         output_dir: 输出目录。
         save_options: 保存选项。
         asset_types_to_replace: 要替换的资源类型集合。
@@ -947,13 +945,13 @@ def process_global_to_jp_conversion(
     """
     try:
         log("="*50)
-        log(t("log.jp_convert.starting_global_to_jp"))
-        log(f'  > {t("log.jp_convert.global_source_file", name=global_bundle_path.name)}')
-        log(f'  > {t("log.jp_convert.jp_files_count", count=len(jp_template_paths))}')
+        log(t("log.legacy_convert.starting_conversion"))
+        log(f'  > {t("log.legacy_convert.global_source_file", name=legacy_bundle_path.name)}')
+        log(f'  > {t("log.legacy_convert.jp_files_count", count=len(modern_bundle_paths))}')
         
-        global_bundle = Bundle.load(global_bundle_path, log)
-        if not global_bundle:
-            return False, t("message.jp_convert.load_global_source_failed")
+        legacy_bundle = Bundle.load(legacy_bundle_path, log)
+        if not legacy_bundle:
+            return False, t("message.legacy_convert.load_global_source_failed")
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
 
@@ -966,28 +964,28 @@ def process_global_to_jp_conversion(
 
         success_count = 0
         total_changes = 0
-        total_files = len(jp_template_paths)
+        total_files = len(modern_bundle_paths)
         replaced_files: list[Path] = []  # 记录被成功替换的原始文件路径
 
         # 2. 按顺序尝试每种策略
         for strategy_name, key_func in strategies:
             log(f'\n{t("log.migration.trying_strategy", name=strategy_name)}')
 
-            source_replacement_map = global_bundle.extract_patch(
+            patch: Patch = legacy_bundle.extract_patch(
                 asset_types_to_replace, key_func, None
             )
 
-            if not source_replacement_map:
+            if not patch:
                 log(f"  > ⚠️ {t('common.warning')}: {t('log.migration.strategy_no_assets_found', name=strategy_name)}")
                 continue
 
-            log(f"  > {t('log.jp_convert.extracted_count', count=len(source_replacement_map))}")
+            log(f"  > {t('log.legacy_convert.extracted_count', count=len(patch))}")
 
             strategy_success = False
             strategy_total_changes = 0
 
             # 3. 遍历每个日服模板文件进行处理
-            for i, jp_template_path in enumerate(jp_template_paths, 1):
+            for i, jp_template_path in enumerate(modern_bundle_paths, 1):
                 log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_template_path.name))
 
                 template_bundle = Bundle.load(jp_template_path, log)
@@ -995,12 +993,12 @@ def process_global_to_jp_conversion(
                     log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
                     continue
 
-                result = template_bundle.apply_patch(source_replacement_map, key_func)
+                result = template_bundle.apply_patch(patch, key_func)
 
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
                     if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
-                        log(f"⏭️ {t('log.jp_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
+                        log(f"⏭️ {t('log.legacy_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
                         # 跳过也算作策略成功，避免继续尝试其他策略
                         strategy_success = True
                     else:
@@ -1032,10 +1030,10 @@ def process_global_to_jp_conversion(
                 break
 
         log(f'\n--- {t("log.section.conversion_complete")} ---')
-        log(f"{t('log.jp_convert.global_to_jp_complete')}")
-        return True, t("message.jp_convert.global_to_jp_success",bundle_count=success_count, asset_count=total_changes), replaced_files
+        log(f"{t('log.legacy_convert.conversion_complete')}")
+        return True, t("message.legacy_convert.global_to_jp_success",bundle_count=success_count, asset_count=total_changes), replaced_files
 
     except Exception as e:
-        log(f"\n❌ {t('common.error')}: {t('log.jp_convert.error_global_to_jp', error=e)}")
+        log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.jp_convert.conversion_error", error=e), []
+        return False, t("message.legacy_convert.conversion_error", error=e), []

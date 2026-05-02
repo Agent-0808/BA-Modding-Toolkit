@@ -2,8 +2,8 @@ import pytest
 from pathlib import Path
 
 from ba_modding_toolkit.core import (
-    process_jp_to_global_conversion,
-    process_global_to_jp_conversion,
+    process_modern_to_legacy_conversion,
+    process_legacy_to_modern_conversion,
     SaveOptions,
 )
 from ba_modding_toolkit.bundle import Bundle
@@ -30,9 +30,9 @@ class TestJpToGlobalConversion:
             compression="none",
         )
 
-        success, msg = process_jp_to_global_conversion(
-            global_bundle_path=legacy_bundle_path,
-            jp_bundle_paths=modern_bundles_path,
+        success, msg = process_modern_to_legacy_conversion(
+            legacy_bundle_path=legacy_bundle_path,
+            modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace={"Texture2D", "TextAsset"},
@@ -58,9 +58,9 @@ class TestJpToGlobalConversion:
             compression="none",
         )
 
-        success, msg = process_jp_to_global_conversion(
-            global_bundle_path=legacy_bundle_path,
-            jp_bundle_paths=modern_bundles_path,
+        success, msg = process_modern_to_legacy_conversion(
+            legacy_bundle_path=legacy_bundle_path,
+            modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace={"Texture2D", "TextAsset"},
@@ -96,9 +96,9 @@ class TestGlobalToJpConversion:
             compression="none",
         )
 
-        success, msg, replaced_files = process_global_to_jp_conversion(
-            global_bundle_path=legacy_bundle_path,
-            jp_template_paths=modern_bundles_path,
+        success, msg, replaced_files = process_legacy_to_modern_conversion(
+            legacy_bundle_path=legacy_bundle_path,
+            modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace={"Texture2D", "TextAsset"},
@@ -124,9 +124,9 @@ class TestGlobalToJpConversion:
             compression="none",
         )
 
-        success, msg, replaced_files = process_global_to_jp_conversion(
-            global_bundle_path=legacy_bundle_path,
-            jp_template_paths=modern_bundles_path,
+        success, msg, replaced_files = process_legacy_to_modern_conversion(
+            legacy_bundle_path=legacy_bundle_path,
+            modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace={"Texture2D", "TextAsset"},
@@ -156,9 +156,9 @@ class TestGlobalToJpConversion:
             compression="none",
         )
 
-        success, msg, replaced_files = process_global_to_jp_conversion(
-            global_bundle_path=legacy_bundle_path,
-            jp_template_paths=modern_bundles_path,
+        success, msg, replaced_files = process_legacy_to_modern_conversion(
+            legacy_bundle_path=legacy_bundle_path,
+            modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
             save_options=save_options,
             asset_types_to_replace={"Texture2D", "TextAsset"},

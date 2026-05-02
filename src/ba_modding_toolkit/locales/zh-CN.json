@@ -182,7 +182,7 @@
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
-		"jp_convert": {
+		"legacy_convert": {
 			"load_global_failed": "无法加载国际服源文件",
 			"jp_to_global_success": "JP -> Global 转换成功！\n已替换 {asset_count} 个 资源",
 			"global_to_jp_success": "Global -> JP 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
@@ -371,21 +371,17 @@
 			"process_unchanged": "内容未变化，跳过: {filename}",
 			"output_files_list": "输出文件列表（共 {count} 个）："
 		},
-		"jp_convert": {
-			"error_jp_to_global": "在JP -> Global转换过程中发生错误: {error}",
-			"error_global_to_jp": "在Global -> JP转换过程中发生错误: {error}",
+		"legacy_convert": {
 			"found_match": "成功找到: {path}",
 			"searching_jp_counterparts": "正在为 \"{name}\" 搜索对应的JP文件...",
-			"starting_jp_to_global": "开始JP -> Global转换...",
 			"global_base_file": "国际服源文件: {name}",
 			"jp_files_count": "选中的日服文件数量: {count}",
 			"extracted_count_from_jp": "从日服文件提取了 {count} 个资源",
 			"no_assets_replaced": "未替换任何资源",
-			"jp_to_global_complete": "JP -> Global转换完成！",
-			"starting_global_to_jp": "开始Global -> JP转换...",
+			"starting_conversion": "开始转换...",
 			"global_source_file": "国际服源文件: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
-			"global_to_jp_complete": "Global -> JP转换完成！",
+			"conversion_complete": "转换完成！",
 			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
 			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成"
 		},
@@ -445,9 +441,9 @@
 		"extractor": {
 			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处"
 		},
-		"jp_conversion": {
-			"mode_jp_to_gl": "JP → Global (合并)",
-			"mode_gl_to_jp": "Global → JP (拆分)",
+		"legacy_conversion": {
+			"mode_modern_to_legacy": "新版 → 旧版 (合并)",
+			"mode_legacy_to_modern": "旧版 → 新版 (拆分)",
 			"mode_legacy_batch": "批量处理旧版",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
 			"role_jp_source": "日服 Bundle (源文件)",
