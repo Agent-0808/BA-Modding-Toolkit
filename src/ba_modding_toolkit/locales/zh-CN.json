@@ -352,7 +352,7 @@
 			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件",
 			"source_files": "源文件组 ({count} 个文件)",
 			"target_files": "目标文件组 ({count} 个文件)",
-			"pool_built": "资源池构建完成，共 {count} 个资源",
+			"pool_built": "共有 {count} 个匹配资源",
 			"target_unchanged": "目标文件内容未变化: {name}（{count} 个资源），跳过",
 			"target_processed": "目标文件处理完成: {name}（替换 {applied} 个资源）",
 			"no_assets_extracted": "无法从源文件中提取任何资源",
@@ -362,7 +362,7 @@
 			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。"
 		},
 		"batch": {
-			"summary": "批量处理完成！\n总计: {total}，成功: {success}，失败: {fail}",
+			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
 			"start": "开始批量处理...",
 			"failed_items_cnt": "共 {count} 个文件处理失败：",
 			"failed_item": "- {filename}",
@@ -384,6 +384,18 @@
 			"conversion_complete": "转换完成！",
 			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
 			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成"
+		},
+		"summary": {
+			"title": "处理总结",
+			"total_files": "总计: {count} 个文件",
+			"output_files": "已输出: {count} 个",
+			"skipped_files": "已跳过: {count} 个",
+			"failed_files": "失败: {count} 个",
+			"replaced_assets": "替换 {count} 个资源",
+			"no_changes": "内容未变化",
+			"output_item": "  - {name} ({detail})",
+			"skipped_item": "  - {name}",
+			"failed_item": "  - {name}: {reason}"
 		},
 		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
 		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 \"{filename}\"。",

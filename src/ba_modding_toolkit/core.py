@@ -527,6 +527,11 @@ def process_mod_update(
         文件对列表为 (输出文件路径, 原始目标文件路径) 的元组
         如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged", [])
     """
+    # 结果收集器
+    output_files: list[tuple[str, int]] = []  # (文件名, 替换资源数)
+    skipped_files: list[str] = []  # 文件名列表
+    failed_files: list[tuple[str, str]] = []  # (文件名, 原因)
+
     try:
         log("="*50)
         log(f'  > {t("log.mod_update.source_files", count=len(source_paths))}')
@@ -556,13 +561,14 @@ def process_mod_update(
         # 2. 按需注入 (Application)
         log(f'\n--- {t("log.section.applying_to_targets")} ---')
         file_pairs: list[tuple[Path, Path]] = []
-        success_count = 0
         total_applied = 0
         total_matched = 0  # 总匹配数（包括跳过的）
-        
+        total_targets = len(target_paths)
+
         for tgt in target_paths:
             tgt_bundle = Bundle.load(tgt, log)
             if not tgt_bundle:
+                failed_files.append((tgt.name, t('message.load_failed')))
                 continue
             
             result = tgt_bundle.apply_patch(patches, key_func)
@@ -570,26 +576,51 @@ def process_mod_update(
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
                 log(f"  ⏭️ {t('log.mod_update.target_unchanged', name=tgt.name, count=result.skipped_count)}")
+                skipped_files.append(tgt.name)
                 continue
             
             if result.is_success:
                 output_path = output_dir / tgt.name
                 save_ok, save_message = tgt_bundle.save(output_path, save_options)
                 if save_ok:
-                    success_count += 1
                     total_applied += result.applied_count
                     file_pairs.append((output_path, tgt))
+                    output_files.append((tgt.name, result.applied_count))
                     log(f"  ✅ {t('log.mod_update.target_processed', name=tgt.name, applied=result.applied_count)}")
                 else:
+                    failed_files.append((tgt.name, save_message))
                     log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_message)}")
             else:
+                skipped_files.append(tgt.name)
                 log(f"  > {t('log.file.no_changes_made')} ({tgt.name})")
         
-        if success_count == 0:
+        if not output_files:
             # 区分：完全没有匹配 vs 匹配了但都被跳过
             if total_matched > 0 and skip_unchanged:
                 return True, "all_targets_unchanged", []
             return False, t("message.mod_update.no_targets_processed"), []
+
+        # 输出处理总结
+        log(f'\n--- {t("log.summary.title")} ---')
+        log(f"📊 {t('log.summary.total_files', count=total_targets)}")
+        log(f"  > {t('log.mod_update.pool_built', count=len(patches))}")
+
+        if output_files:
+            log(f"✅ {t('log.summary.output_files', count=len(output_files))}")
+            for name, count in output_files:
+                detail = t('log.summary.replaced_assets', count=count)
+                log(t('log.summary.output_item', name=name, detail=detail))
+
+        if skipped_files:
+            skip_reason = t('log.summary.no_changes')
+            log(f"⏭️ {t('log.summary.skipped_files', count=len(skipped_files))} ({skip_reason})")
+            for name in skipped_files:
+                log(t('log.summary.skipped_item', name=name))
+
+        if failed_files:
+            log(f"❌ {t('log.summary.failed_files', count=len(failed_files))}")
+            for name, reason in failed_files:
+                log(t('log.summary.failed_item', name=name, reason=reason))
 
         log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=total_applied)}')
         return True, t("message.mod_update.success"), file_pairs
@@ -632,8 +663,13 @@ def process_batch_mod_update(
     total_files = len(mod_file_list)
     success_count = 0
     fail_count = 0
+    unchanged_count = 0
     failed_tasks = []
     file_pairs: list[tuple[Path, Path]] = []
+
+    log("\n" + "=" * 50)
+    log(f"📦 {t('log.batch.start')}")
+    log(f"  > {t('log.summary.total_files', count=total_files)}")
 
     # 遍历每个旧Mod文件
     for i, old_mod_path in enumerate(mod_file_list):
@@ -649,7 +685,7 @@ def process_batch_mod_update(
         new_bundle_paths, find_message = find_target_bundles([old_mod_path], search_paths, log)
 
         if not new_bundle_paths:
-            log(f'❌ {t("log.search.find_failed", message=find_message)}')
+            log(f'  ❌ {t("log.search.find_failed", message=find_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
             continue
@@ -667,24 +703,36 @@ def process_batch_mod_update(
         )
 
         if success:
-            if process_message == "unchanged":
+            if process_message == "unchanged" or process_message == "all_targets_unchanged":
                 # 资源未变化，不生成输出文件
-                log(f'⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+                log(f'  ⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+                unchanged_count += 1
             else:
-                log(f'✅ {t("log.batch.process_success", filename=filename)}')
+                log(f'  ✅ {t("log.batch.process_success", filename=filename)}')
                 success_count += 1
                 # 记录输出文件路径和被替换的原始文件路径
                 file_pairs.extend(update_file_pairs)
         else:
-            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
+            log(f'  ❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
-    # 打印输出文件列表（不包括跳过的）
+    # 批量处理总结
+    log("\n" + "=" * 50)
+    log(f"📊 {t('log.batch.summary', total=total_files, success=success_count, fail=fail_count)}")
+
+    if unchanged_count > 0:
+        log(f"⏭️ {t('log.summary.skipped_files', count=unchanged_count)} ({t('log.summary.no_changes')})")
+
     if file_pairs:
         log(f'\n{t("log.batch.output_files_list", count=len(file_pairs))}')
         for output_path, _ in file_pairs:
             log(f'  - {output_path.name}')
+
+    if failed_tasks:
+        log(f'\n❌ {t("log.batch.failed_items_cnt", count=len(failed_tasks))}')
+        for task in failed_tasks:
+            log(f'  - {task}')
 
     return success_count, fail_count, failed_tasks, file_pairs
 
@@ -720,8 +768,13 @@ def process_batch_legacy_batch(
     total_files = len(legacy_file_list)
     success_count = 0
     fail_count = 0
+    unchanged_count = 0
     failed_tasks = []
     file_pairs: list[tuple[Path, Path]] = []
+
+    log("\n" + "=" * 50)
+    log(f"📦 {t('log.batch.start')}")
+    log(f"  > {t('log.summary.total_files', count=total_files)}")
 
     # 遍历每个旧版国际服文件
     for i, legacy_file_path in enumerate(legacy_file_list):
@@ -737,7 +790,7 @@ def process_batch_legacy_batch(
         new_global_files = find_all_jp_counterparts(legacy_file_path, search_paths, log)
 
         if not new_global_files:
-            log(f'❌ {t("log.search.no_found")}')
+            log(f'  ❌ {t("log.search.no_found")}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {t('log.search.no_found')}")
             continue
@@ -756,9 +809,10 @@ def process_batch_legacy_batch(
         if success:
             if skip_unchanged and not replaced_files:
                 # 没有文件被实际替换（全部被跳过）
-                log(f'⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+                log(f'  ⏭️ {t("log.batch.process_unchanged", filename=filename)}')
+                unchanged_count += 1
             else:
-                log(f'✅ {t("log.batch.process_success", filename=filename)}')
+                log(f'  ✅ {t("log.batch.process_success", filename=filename)}')
                 success_count += 1
                 # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
                 for src_file in replaced_files:
@@ -766,15 +820,26 @@ def process_batch_legacy_batch(
                     if output_path.exists():
                         file_pairs.append((output_path, src_file))
         else:
-            log(f'❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
+            log(f'  ❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
             failed_tasks.append(f"{filename} - {process_message}")
 
-    # 打印输出文件列表（不包括跳过的）
+    # 批量处理总结
+    log("\n" + "=" * 50)
+    log(f"📊 {t('log.batch.summary', total=total_files, success=success_count, fail=fail_count)}")
+
+    if unchanged_count > 0:
+        log(f"⏭️ {t('log.summary.skipped_files', count=unchanged_count)} ({t('log.summary.no_changes')})")
+
     if file_pairs:
         log(f'\n{t("log.batch.output_files_list", count=len(file_pairs))}')
         for output_path, _ in file_pairs:
             log(f'  - {output_path.name}')
+
+    if failed_tasks:
+        log(f'\n❌ {t("log.batch.failed_items_cnt", count=len(failed_tasks))}')
+        for task in failed_tasks:
+            log(f'  - {task}')
 
     return success_count, fail_count, failed_tasks, file_pairs
 
@@ -943,6 +1008,11 @@ def process_legacy_to_modern_conversion(
     Returns:
         tuple[bool, str, list[Path]]: (是否成功, 状态消息, 被替换的原始文件路径列表) 的元组
     """
+    # 结果收集器
+    output_files: list[tuple[str, int]] = []  # (文件名, 替换资源数)
+    skipped_files: list[str] = []  # 文件名列表
+    failed_files: list[tuple[str, str]] = []  # (文件名, 原因)
+
     try:
         log("="*50)
         log(t("log.legacy_convert.starting_conversion"))
@@ -962,7 +1032,6 @@ def process_legacy_to_modern_conversion(
             ('name_type', MATCH_STRATEGIES['name_type']),
         ]
 
-        success_count = 0
         total_changes = 0
         total_files = len(modern_bundle_paths)
         replaced_files: list[Path] = []  # 记录被成功替换的原始文件路径
@@ -983,6 +1052,9 @@ def process_legacy_to_modern_conversion(
 
             strategy_success = False
             strategy_total_changes = 0
+            current_output: list[tuple[str, int]] = []
+            current_skipped: list[str] = []
+            current_failed: list[tuple[str, str]] = []
 
             # 3. 遍历每个日服模板文件进行处理
             for i, jp_template_path in enumerate(modern_bundle_paths, 1):
@@ -991,6 +1063,7 @@ def process_legacy_to_modern_conversion(
                 template_bundle = Bundle.load(jp_template_path, log)
                 if not template_bundle:
                     log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
+                    current_failed.append((jp_template_path.name, t('message.load_failed')))
                     continue
 
                 result = template_bundle.apply_patch(patch, key_func)
@@ -998,27 +1071,30 @@ def process_legacy_to_modern_conversion(
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
                     if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
-                        log(f"⏭️ {t('log.legacy_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
+                        log(f"  > ⏭️ {t('log.legacy_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
+                        current_skipped.append(jp_template_path.name)
                         # 跳过也算作策略成功，避免继续尝试其他策略
                         strategy_success = True
                     else:
-                        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}")
+                        log(f"  > ✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}")
                         for item in result.applied_logs:
-                            log(f"  - {item}")
+                            log(f"    - {item}")
 
                         output_path = output_dir / jp_template_path.name
                         save_ok, save_msg = template_bundle.save(output_path, save_options)
                         if save_ok:
-                            log(f"  ✅ {t('log.file.saved', path=output_path)}")
-                            success_count += 1
+                            log(f"    ✅ {t('log.file.saved', path=output_path)}")
                             total_changes += result.applied_count
                             strategy_success = True
                             strategy_total_changes += result.applied_count
-                            replaced_files.append(jp_template_path)  # 记录被替换的原始文件
+                            replaced_files.append(jp_template_path)
+                            current_output.append((jp_template_path.name, result.applied_count))
                         else:
-                            log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
+                            log(f"    ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
+                            current_failed.append((jp_template_path.name, save_msg))
                 else:
                     log(f"  > {t('log.file.no_changes_made')}")
+                    current_skipped.append(jp_template_path.name)
 
             # 如果当前策略成功替换了至少一个资源，就结束
             if strategy_success:
@@ -1027,11 +1103,34 @@ def process_legacy_to_modern_conversion(
                     log(f"\n⏭️ {t('log.migration.strategy_skipped_unchanged', name=strategy_name)}")
                 else:
                     log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=strategy_total_changes)}")
+                # 保存当前策略的结果
+                output_files = current_output
+                skipped_files = current_skipped
+                failed_files = current_failed
                 break
 
-        log(f'\n--- {t("log.section.conversion_complete")} ---')
-        log(f"{t('log.legacy_convert.conversion_complete')}")
-        return True, t("message.legacy_convert.global_to_jp_success",bundle_count=success_count, asset_count=total_changes), replaced_files
+        # 输出处理总结
+        log(f'\n--- {t("log.summary.title")} ---')
+        log(f"📊 {t('log.summary.total_files', count=total_files)}")
+
+        if output_files:
+            log(f"✅ {t('log.summary.output_files', count=len(output_files))}")
+            for name, count in output_files:
+                detail = t('log.summary.replaced_assets', count=count)
+                log(t('log.summary.output_item', name=name, detail=detail))
+
+        if skipped_files:
+            skip_reason = t('log.summary.no_changes')
+            log(f"⏭️ {t('log.summary.skipped_files', count=len(skipped_files))} ({skip_reason})")
+            for name in skipped_files:
+                log(t('log.summary.skipped_item', name=name))
+
+        if failed_files:
+            log(f"❌ {t('log.summary.failed_files', count=len(failed_files))}")
+            for name, reason in failed_files:
+                log(t('log.summary.failed_item', name=name, reason=reason))
+
+        return True, t("message.legacy_convert.global_to_jp_success", bundle_count=len(output_files), asset_count=total_changes), replaced_files
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
