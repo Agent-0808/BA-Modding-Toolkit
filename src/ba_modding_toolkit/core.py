@@ -145,7 +145,7 @@ def find_target_bundles(
 find_new_bundle_path = find_target_bundles
 
 def process_asset_packing(
-    target_bundle_path: Path,
+    target_bundle_path: Path | list[Path],
     asset_folder: Path,
     output_dir: Path,
     save_options: SaveOptions,
@@ -153,9 +153,9 @@ def process_asset_packing(
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
     log: LogFunc = no_log,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[tuple[Path, Path]]]:
     """
-    从指定文件夹中，将同名的资源打包到指定的 Bundle 中。
+    从指定文件夹中，将同名的资源打包到一个或多个目标 Bundle 中。
     支持 .png, .skel, .atlas 文件。
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
@@ -164,10 +164,10 @@ def process_asset_packing(
     可选地对 PNG 文件进行 Bleed 处理。
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
     因为打包资源的操作在原理上是替换目标Bundle内的资源，因此里面可能有混用打包和替换的叫法。
-    返回 (是否成功, 状态消息) 的元组。
+    返回 (是否成功, 状态消息, (输出路径, 原始目标路径) 列表) 的元组。
     
     Args:
-        target_bundle_path: 目标Bundle文件的路径
+        target_bundle_path: 目标Bundle文件的路径，可以是单个路径或路径列表
         asset_folder: 包含待打包资源的文件夹路径
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
@@ -176,25 +176,22 @@ def process_asset_packing(
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
         log: 日志记录函数，默认为空函数
     """
+    bundle_paths = [target_bundle_path] if isinstance(target_bundle_path, Path) else list(target_bundle_path)
     temp_asset_folder = None
     try:
         if enable_rename_fix:
             temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(asset_folder, log)
             asset_folder = temp_asset_folder
 
-        target_bundle = Bundle.load(target_bundle_path, log)
-        if not target_bundle:
-            return False, t("message.packer.load_target_bundle_failed")
-        
         # 1. 从文件夹构建"替换清单"
-        replacement_map: dict[AssetKey, AssetContent] = {}
+        patch: Patch = {}
         supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
         input_files = [f for f in asset_folder.iterdir() if f.is_file() and f.suffix.lower() in supported_extensions]
 
         if not input_files:
             msg = t("message.packer.no_supported_files_found", extensions=', '.join(supported_extensions))
             log(f"⚠️ {t('common.warning')}: {msg}")
-            return False, msg
+            return False, msg, []
 
         for file_path in input_files:
             asset_key: AssetKey
@@ -227,61 +224,78 @@ def process_asset_packing(
                     content = f.read()
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
-            replacement_map[asset_key] = content
+            patch[asset_key] = content
         
-        original_tasks_count = len(replacement_map)
+        original_tasks_count = len(patch)
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
-        # 2. 应用替换
+        # 预构建原始文件名映射（用于未匹配文件日志）
+        original_filenames: dict[NameTypeKey, str] = {}
+        for f in input_files:
+            s = f.suffix.lower()
+            if s == '.png':
+                original_filenames[NameTypeKey(f.stem, AssetType.Texture2D.name)] = f.name
+            elif s in {'.skel', '.atlas'}:
+                original_filenames[NameTypeKey(f.name, AssetType.TextAsset.name)] = f.name
+
         strategy_name = 'name_type'
         key_func = MATCH_STRATEGIES[strategy_name]
-        result = target_bundle.apply_patch(replacement_map, key_func)
 
-        if not result.is_success:
-            log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')}")
-            log(t("log.packer.check_files_and_bundle"))
-            return False, t("message.packer.no_matching_assets_to_pack")
-        
-        log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
-        for item in result.applied_logs:
-            log(f"  - {item}")
+        # 2. 对每个目标 Bundle 应用替换并保存
+        file_pairs: list[tuple[Path, Path]] = []
+        success_count = 0
 
-        log(f'\n{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
+        for i, bundle_path in enumerate(bundle_paths):
+            if len(bundle_paths) > 1:
+                log(f"--- [{i + 1}/{len(bundle_paths)}] {bundle_path.name} ---")
 
-        # 报告未被打包的文件
-        if result.unmatched_keys:
-            log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
-            # 为了找到原始文件名，我们需要反向查找
-            original_filenames = {
-                NameTypeKey(f.stem, AssetType.Texture2D.name): f.name for f in input_files if f.suffix.lower() == '.png'
-            }
-            original_filenames.update({
-                NameTypeKey(f.name, AssetType.TextAsset.name): f.name for f in input_files if f.suffix.lower() in {'.skel', '.atlas'}
-            })
-            original_filenames.update({
-                NameTypeKey(f.name, AssetType.Mesh.name): f.name for f in input_files if f.suffix.lower() == '.mesh.bytes'
-            })
-            for key in sorted(result.unmatched_keys):
-                if isinstance(key, NameTypeKey):
-                    key_display = f"[{key.type}] {key.name}"
-                else:
-                    key_display = str(key)
-                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
+            target_bundle = Bundle.load(bundle_path, log)
+            if not target_bundle:
+                log(f"⚠️ {t('message.packer.load_target_bundle_failed')}: {bundle_path.name}")
+                continue
 
-        # 3. 保存
-        output_path = output_dir / target_bundle_path.name
-        save_ok, save_message = target_bundle.save(output_path, save_options)
+            result = target_bundle.apply_patch(patch, key_func)
 
-        if not save_ok:
-            return False, save_message
+            if not result.is_success:
+                log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')} ({bundle_path.name})")
+                log(t("log.packer.check_files_and_bundle"))
+                continue
 
-        log(t("log.file.saved", path=output_path))
-        return True, t("message.packer.process_complete", count=result.applied_count, button=t("action.replace_original"))
+            log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
+            for item in result.applied_logs:
+                log(f"  - {item}")
+
+            log(f'{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
+
+            if result.unmatched_keys:
+                log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
+                for key in sorted(result.unmatched_keys):
+                    if isinstance(key, NameTypeKey):
+                        key_display = f"[{key.type}] {key.name}"
+                    else:
+                        key_display = str(key)
+                    log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
+
+            output_path = output_dir / bundle_path.name
+            save_ok, save_message = target_bundle.save(output_path, save_options)
+
+            if not save_ok:
+                log(f"⚠️ {save_message}")
+                continue
+
+            log(t("log.file.saved", path=output_path))
+            file_pairs.append((output_path, bundle_path))
+            success_count += 1
+
+        if not file_pairs:
+            return False, t("message.packer.no_matching_assets_to_pack"), []
+
+        return True, t("message.packer.process_complete", count=success_count, button=t("action.replace_original")), file_pairs
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.error_during_process", error=e)
+        return False, t("message.error_during_process", error=e), []
     finally:
         if temp_asset_folder:
             try:

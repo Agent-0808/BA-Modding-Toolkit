@@ -513,7 +513,7 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 调用核心处理函数
-    success, message = process_asset_packing(
+    success, message, _ = process_asset_packing(
         target_bundle_path=bundle_path,
         asset_folder=asset_folder,
         output_dir=output_dir,

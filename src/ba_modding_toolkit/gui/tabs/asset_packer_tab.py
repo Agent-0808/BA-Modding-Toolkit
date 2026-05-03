@@ -8,12 +8,13 @@ from pathlib import Path
 from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
-from ..components import DropZone, SettingRow, UIComponents
-from ..utils import replace_file
+from ..components import GroupDropZone, DropZone, SettingRow, UIComponents
+from ..utils import replace_file, replace_files
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
-        self.final_output_path: Path | None = None
+        self.bundle_paths: list[Path] = []
+        self.current_file_pairs: list[tuple[Path, Path]] = []
         
         # 资源文件夹
         self.folder_zone = DropZone(
@@ -25,10 +26,10 @@ class AssetPackerTab(TabFrame):
         )
 
         # 目标 Bundle 文件
-        self.bundle_zone = DropZone(
+        self.bundle_zone = GroupDropZone(
             self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.packer.placeholder_bundle"),
-            on_file_selected=self.on_bundle_selected,
+            on_files_selected=self.on_bundles_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             logger=self.logger
         )
@@ -62,9 +63,12 @@ class AssetPackerTab(TabFrame):
         self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled", style="large")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=10)
 
-    def on_bundle_selected(self, path: Path):
+    def on_bundles_selected(self, paths: list[Path]):
         """Bundle 文件选中后的处理"""
-        self.logger.log(t("log.file.loaded", path=path))
+        self.bundle_paths = paths
+        self.logger.log(t("log.file.selected_num", count=len(paths)))
+        for p in paths:
+            self.logger.log(f"  - {p.name}")
         self.logger.status(t("status.ready"))
 
     def on_folder_selected(self, path: Path):
@@ -77,14 +81,14 @@ class AssetPackerTab(TabFrame):
         self.logger.status(t("status.ready"))
 
     def run_replacement_thread(self):
-        if not all([self.bundle_zone.path, self.folder_zone.path, self.app.output_dir_var.get()]):
+        if not all([self.bundle_paths, self.folder_zone.path, self.app.output_dir_var.get()]):
             messagebox.showerror(t("common.error"), t("message.packer.missing_paths"))
             return
         self.run_in_thread(self.run_replacement)
 
     # 因为打包资源的操作在原理上是替换目标Bundle内的资源，因此这个函数先保留这个名字
     def run_replacement(self):
-        self.final_output_path = None
+        self.current_file_pairs = []
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
 
         output_dir = Path(self.app.output_dir_var.get())
@@ -102,7 +106,7 @@ class AssetPackerTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            platform, unity_version = core.get_unity_platform_info(self.bundle_zone.path)
+            platform, unity_version = core.get_unity_platform_info(self.bundle_paths[0])
             self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
             perform_crc = platform == "StandaloneWindows64"
         elif crc_setting == "true":
@@ -121,8 +125,8 @@ class AssetPackerTab(TabFrame):
             target_version=self.app.target_spine_version_var.get()
         )
         
-        success, message = core.process_asset_packing(
-            target_bundle_path = self.bundle_zone.path,
+        success, message, file_pairs = core.process_asset_packing(
+            target_bundle_path = self.bundle_paths,
             asset_folder = self.folder_zone.path,
             output_dir = output_dir,
             save_options = save_options,
@@ -132,11 +136,10 @@ class AssetPackerTab(TabFrame):
             log = self.logger.log
         )
         
+        self.current_file_pairs = file_pairs
+        
         if success:
-            generated_bundle_filename = self.bundle_zone.path.name
-            self.final_output_path = output_dir / generated_bundle_filename
-            
-            self.logger.log(f'✅ {t("log.packer.pack_success_path", path=self.final_output_path)}')
+            self.logger.log(f'✅ {t("log.packer.pack_success_path", path=output_dir)}')
             self.logger.log(t("log.replace_original", button=t('action.replace_original')))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
@@ -146,25 +149,28 @@ class AssetPackerTab(TabFrame):
         self.logger.status(t("status.done"))
 
     def replace_original_thread(self):
-        """启动替换原始游戏文件的线程"""
-        if not self.final_output_path or not self.final_output_path.exists():
-            messagebox.showerror(t("common.error"), t("message.packer.generated_file_not_found_for_replace"))
-            return
-        if not self.bundle_zone.path or not self.bundle_zone.path.exists():
-            messagebox.showerror(t("common.error"), t("message.file_not_found", path=self.bundle_zone.path))
+        if not self.current_file_pairs:
+            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
         
         self.run_in_thread(self.replace_original)
 
     def replace_original(self):
-        target_file = self.bundle_zone.path
-        source_file = self.final_output_path
-        
-        replace_file(
-            source_path=source_file,
-            dest_path=target_file,
-            create_backup=self.app.create_backup_var.get(),
-            ask_confirm=True,
-            confirm_message=t("message.confirm_replace_file", path=self.bundle_zone.path.name),
-            log=self.logger.log,
-        )
+        if len(self.current_file_pairs) == 1:
+            source_file, target_file = self.current_file_pairs[0]
+            replace_file(
+                source_path=source_file,
+                dest_path=target_file,
+                create_backup=self.app.create_backup_var.get(),
+                ask_confirm=True,
+                confirm_message=t("message.confirm_replace_file", path=target_file.name),
+                log=self.logger.log,
+            )
+        else:
+            replace_files(
+                file_pairs=self.current_file_pairs,
+                create_backup=self.app.create_backup_var.get(),
+                ask_confirm=True,
+                confirm_message=t("message.confirm_replace_files", count=len(self.current_file_pairs), files="\n".join(f"  {t.name}" for _, t in self.current_file_pairs[:10])),
+                log=self.logger.log,
+            )

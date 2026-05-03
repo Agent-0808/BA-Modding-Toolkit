@@ -39,7 +39,7 @@ class TestAssetPacking:
             compression="none",
         )
         
-        success, msg = process_asset_packing(
+        success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
             asset_folder=asset_folder,
             output_dir=output_dir,
@@ -87,7 +87,7 @@ class TestAssetPacking:
             compression="none",
         )
         
-        success, msg = process_asset_packing(
+        success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
             asset_folder=asset_folder,
             output_dir=output_dir,
@@ -143,7 +143,7 @@ class TestAssetPacking:
             compression="none",
         )
         
-        success, msg = process_asset_packing(
+        success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
             asset_folder=asset_folder,
             output_dir=output_dir,

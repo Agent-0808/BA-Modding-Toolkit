@@ -56,7 +56,7 @@ class ModUpdateTab(TabFrame):
     def on_old_mod_selected(self, paths: list[Path]):
         """源文件组选中后的处理"""
         self.source_paths = paths
-        self.logger.log(t("log.mod_update.source_files", count=len(paths)))
+        self.logger.log(t("log.file.selected_num", count=len(paths)))
         for p in paths:
             self.logger.log(f"  - {p.name}")
         self.target_paths = []
@@ -66,7 +66,7 @@ class ModUpdateTab(TabFrame):
     def on_new_mod_selected(self, paths: list[Path]):
         """目标资源文件组选中后的处理"""
         self.target_paths = paths
-        self.logger.log(t("log.mod_update.target_files", count=len(paths)))
+        self.logger.log(t("log.file.selected_num", count=len(paths)))
         for p in paths:
             self.logger.log(f"  - {p.name}")
         self.logger.status(t("status.ready"))

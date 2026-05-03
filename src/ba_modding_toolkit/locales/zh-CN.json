@@ -215,6 +215,7 @@
 	"log": {
 		"file": {
 			"loaded": "已加载: {path}",
+			"selected_num": "已选中 {count} 个文件",
 			"saving_bundle_prefix": "正在保存 Bundle...",
 			"compression_method": "压缩方式: {compression}",
 			"crc_correction": "CRC修正: {crc_status}",
