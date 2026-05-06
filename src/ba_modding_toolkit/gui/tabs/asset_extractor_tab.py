@@ -9,35 +9,28 @@ from ...i18n import t
 from ... import core
 from ...naming import parse_filename
 from ..base_tab import TabFrame
-from ..components import UIComponents, SettingRow, FileListbox
+from ..components import UIComponents, SettingRow, GroupDropZone
 from ..utils import select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
-        self.bundle_paths: list[Path] = []
-
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
 
-        # 文件添加回调函数
-        def on_files_added(paths: list[Path]) -> None:
-            # 只有当列表之前为空，且这是第一个文件时，才提取核心文件名
-            if len(self.bundle_paths) == len(paths) and paths:
-                first_file = paths[0]
-                core_name = parse_filename(first_file.stem).core
+        # 文件选择回调函数
+        def on_files_selected(paths: list[Path]) -> None:
+            if paths:
+                core_name = parse_filename(paths[0].stem).core
                 self.subdir_var.set(core_name)
 
-        # 目标 Bundle 文件列表
-        self.bundle_listbox = FileListbox(
+        # 目标 Bundle 文件拖放区域
+        self.bundle_dropzone = GroupDropZone(
             self,
             title=t("ui.label.bundles_to_extract"),
-            file_list=self.bundle_paths,
             placeholder_text=t("ui.extractor.placeholder_bundle"),
-            height=5,
+            on_files_selected=on_files_selected,
             logger=self.logger,
-            on_files_added=on_files_added
         )
-        self.bundle_listbox.get_frame().pack(fill=tk.X, pady=(0, 5))
         
         # 输出目录
         self.output_frame = UIComponents.create_directory_path_entry(
@@ -125,7 +118,8 @@ class AssetExtractorTab(TabFrame):
         open_directory(output_path, create_if_not_exist=True)
 
     def run_extraction_thread(self):
-        if not self.bundle_paths:
+        bundle_paths = self.bundle_dropzone.paths
+        if not bundle_paths:
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
             
@@ -141,8 +135,8 @@ class AssetExtractorTab(TabFrame):
         
         # 获取子目录名
         subdir_name = self.subdir_var.get().strip()
-        if not subdir_name and len(self.bundle_paths) == 1:
-            subdir_name = self.bundle_paths[0].stem
+        if not subdir_name and len(bundle_paths) == 1:
+            subdir_name = bundle_paths[0].stem
         
         # 如果是相对路径，则与输出目录组合
         if subdir_name and not Path(subdir_name).is_absolute():
@@ -169,7 +163,7 @@ class AssetExtractorTab(TabFrame):
         spine_converter_path = self.app.spine_converter_path_var.get()
         atlas_export_mode = self.app.atlas_export_mode_var.get()
             
-        self.run_in_thread(self.run_extraction, self.bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path, atlas_export_mode)
+        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path, atlas_export_mode)
 
     def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None, atlas_export_mode="atlas"):
         self.logger.status(t("status.extracting"))
