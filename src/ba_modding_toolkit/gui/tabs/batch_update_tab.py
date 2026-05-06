@@ -9,7 +9,7 @@ from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents
-from ..utils import replace_file, replace_files
+from ..utils import confirm_and_replace
 from ...utils import get_search_resource_dirs
 
 
@@ -17,8 +17,7 @@ class BatchUpdateTab(TabFrame):
     """批量更新标签页，用于批量处理多个 mod 文件"""
 
     def __init__(self, *args, **kwargs):
-        self.final_output_paths: list[Path] = []
-        self.replaced_source_files: list[Path] = []
+        self.current_file_pairs: list[tuple[Path, Path]] = []
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -62,79 +61,13 @@ class BatchUpdateTab(TabFrame):
 
     def batch_replace_original_thread(self):
         """批量覆盖原文件的线程入口"""
-        if not self.final_output_paths:
-            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
-            return
-
-        target_files = self.replaced_source_files
-        if not target_files:
-            messagebox.showerror(t("common.error"), t("message.list_empty"))
-            return
-
-        # 检查输出文件是否存在
-        for output_path in self.final_output_paths:
-            if not output_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=output_path))
-                return
-
-        # 在主线程中显示确认对话框
-        files_to_replace = []
-        for i, output_path in enumerate(self.final_output_paths):
-            if i < len(target_files):
-                target_file = target_files[i]
-                files_to_replace.append(f"  {target_file.name}")
-
-        # 限制显示数量，最多显示10项
-        max_display = 10
-        if len(files_to_replace) > max_display:
-            displayed_files = files_to_replace[:max_display]
-            remaining_count = len(files_to_replace) - max_display
-            files_list = "\n".join(displayed_files) + f"\n{t('message.and_more_files', count=remaining_count)}"
-        else:
-            files_list = "\n".join(files_to_replace)
-
-        confirm_message = t("message.confirm_replace_files", count=len(files_to_replace), files=files_list)
-
-        # 显示确认对话框，如果用户确认则执行覆盖
-        if messagebox.askyesno(t("common.warning"), confirm_message):
-            self.run_in_thread(self.batch_replace_original)
-
-    def batch_replace_original(self):
-        """实际的批量覆盖逻辑"""
-        target_files = self.replaced_source_files
-
-        # 只有一个文件时，使用 replace_file
-        if len(self.final_output_paths) == 1 and len(target_files) >= 1:
-            success = replace_file(
-                source_path=self.final_output_paths[0],
-                dest_path=target_files[0],
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=False,
-                log=self.logger.log,
-            )
-
-            if success:
-                self.logger.status(t("status.done"))
-            else:
-                self.logger.status(t("status.failed"))
-        else:
-            # 多个文件时，使用 replace_files
-            file_pairs: list[tuple[Path, Path]] = []
-            for i, output_path in enumerate(self.final_output_paths):
-                if i < len(target_files):
-                    file_pairs.append((output_path, target_files[i]))
-
-            success_count, fail_count = replace_files(
-                file_pairs=file_pairs,
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=False,
-                log=self.logger.log,
-            )
-
-            self.logger.status(t("status.done"))
-
-        # 覆盖完成后禁用按钮
-        self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
+        confirm_and_replace(
+            file_pairs=self.current_file_pairs,
+            create_backup=self.app.create_backup_var.get(),
+            log=self.logger.log,
+            button_to_disable=self.batch_replace_button,
+            master=self.master,
+        )
 
     def run_batch_update_thread(self):
         if not self.mod_file_list:
@@ -166,8 +99,7 @@ class BatchUpdateTab(TabFrame):
             return
 
         # 重置输出文件路径列表和按钮状态
-        self.final_output_paths = []
-        self.replaced_source_files = []
+        self.current_file_pairs = []
         self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
 
         asset_types_to_replace = set()
@@ -214,9 +146,7 @@ class BatchUpdateTab(TabFrame):
             skip_unchanged=True
         )
 
-        # 记录输出文件路径和被替换的原始文件路径
-        self.final_output_paths = [pair[0] for pair in file_pairs]
-        self.replaced_source_files = [pair[1] for pair in file_pairs]
+        self.current_file_pairs = file_pairs
 
         total_files = len(self.mod_file_list)
 
@@ -228,7 +158,7 @@ class BatchUpdateTab(TabFrame):
             self.logger.log(failed_list)
 
         # 如果有成功处理的文件，启用覆盖按钮
-        if self.final_output_paths:
+        if self.current_file_pairs:
             self.master.after(0, lambda: self.batch_replace_button.config(state=tk.NORMAL))
 
         self.logger.status(t("status.done"))

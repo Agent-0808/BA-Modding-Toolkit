@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import toml
 from typing import Callable, TYPE_CHECKING
+import ttkbootstrap as tb
 if TYPE_CHECKING:
     from .app import App
 
@@ -251,6 +252,77 @@ def replace_files(
     )
 
     return success_count, fail_count 
+
+def confirm_and_replace(
+    file_pairs: list[tuple[Path, Path]],
+    create_backup: bool,
+    log,
+    button_to_disable: tb.Button | None = None,
+    master: tk.Tk | tk.Frame | None = None,
+) -> bool:
+    """
+    统一的确认+替换流程，包含：
+    1. 空检查
+    2. 文件存在检查
+    3. 确认对话框构建（含截断逻辑）
+    4. 单/多文件分发
+    5. 按钮状态管理
+
+    Args:
+        file_pairs: 文件对列表，每个元素为 (源文件路径, 目标文件路径) 的元组
+        create_backup: 是否创建备份
+        log: 日志函数
+        button_to_disable: 操作完成后需要禁用的按钮（可选）
+        master: tkinter master 对象，用于调度 UI 更新（可选）
+
+    Returns:
+        bool: 是否成功执行替换操作
+    """
+    if not file_pairs:
+        messagebox.showerror(t("common.error"), t("message.no_file_selected"))
+        return False
+
+    for output_path, _ in file_pairs:
+        if not output_path.exists():
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=output_path))
+            return False
+
+    files_to_replace = [f"  {target.name}" for _, target in file_pairs[:10]]
+    max_display = 10
+    if len(file_pairs) > max_display:
+        remaining_count = len(file_pairs) - max_display
+        files_list = "\n".join(files_to_replace) + f"\n{t('message.and_more_files', count=remaining_count)}"
+    else:
+        files_list = "\n".join(files_to_replace)
+
+    confirm_message = t("message.confirm_replace_files", count=len(file_pairs), files=files_list)
+
+    if not messagebox.askyesno(t("common.warning"), confirm_message):
+        return False
+
+    if len(file_pairs) == 1:
+        source_file, target_file = file_pairs[0]
+        replace_file(
+            source_path=source_file,
+            dest_path=target_file,
+            create_backup=create_backup,
+            ask_confirm=False,
+            log=log,
+        )
+    else:
+        replace_files(
+            file_pairs=file_pairs,
+            create_backup=create_backup,
+            ask_confirm=False,
+            log=log,
+        )
+
+    log(t("status.done"))
+
+    if button_to_disable and master:
+        master.after(0, lambda: button_to_disable.config(state=tk.DISABLED))
+
+    return True
 
 def select_directory(var: tk.Variable = None, title="", log=no_log):
     """

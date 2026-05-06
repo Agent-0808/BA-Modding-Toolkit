@@ -9,7 +9,7 @@ from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
 from ..components import GroupDropZone, UIComponents
-from ..utils import replace_file, replace_files
+from ..utils import confirm_and_replace
 from ...utils import get_search_resource_dirs
 
 
@@ -200,28 +200,10 @@ class ModUpdateTab(TabFrame):
         self.logger.status(t("status.done"))
 
     def replace_original_thread(self):
-        if not self.current_file_pairs:
-            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
-            return
-        
-        self.run_in_thread(self.replace_original)
-
-    def replace_original(self):
-        if len(self.current_file_pairs) == 1:
-            source_file, target_file = self.current_file_pairs[0]
-            replace_file(
-                source_path=source_file,
-                dest_path=target_file,
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=True,
-                confirm_message=t("message.confirm_replace_file", path=target_file),
-                log=self.logger.log,
-            )
-        else:
-            replace_files(
-                file_pairs=self.current_file_pairs,
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=True,
-                confirm_message=t("message.confirm_replace_files", count=len(self.current_file_pairs), files="\n".join(f"  {t.name}" for _, t in self.current_file_pairs[:10])),
-                log=self.logger.log,
-            )
+        confirm_and_replace(
+            file_pairs=self.current_file_pairs,
+            create_backup=self.app.create_backup_var.get(),
+            log=self.logger.log,
+            button_to_disable=self.replace_button,
+            master=self.master,
+        )

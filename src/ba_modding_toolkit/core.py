@@ -810,7 +810,7 @@ def process_batch_legacy_batch(
             continue
 
         # 执行转换处理
-        success, process_message, replaced_files = process_legacy_to_modern_conversion(
+        success, process_message, result_file_pairs = process_legacy_to_modern_conversion(
             legacy_bundle_path=legacy_file_path,
             modern_bundle_paths=new_global_files,
             output_dir=output_dir,
@@ -821,18 +821,14 @@ def process_batch_legacy_batch(
         )
 
         if success:
-            if skip_unchanged and not replaced_files:
+            if skip_unchanged and not result_file_pairs:
                 # 没有文件被实际替换（全部被跳过）
                 log(f'  ⏭️ {t("log.batch.process_unchanged", filename=filename)}')
                 unchanged_count += 1
             else:
                 log(f'  ✅ {t("log.batch.process_success", filename=filename)}')
                 success_count += 1
-                # 记录输出文件路径和被替换的原始文件路径（封装成tuple）
-                for src_file in replaced_files:
-                    output_path = output_dir / src_file.name
-                    if output_path.exists():
-                        file_pairs.append((output_path, src_file))
+                file_pairs.extend(result_file_pairs)
         else:
             log(f'  ❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
             fail_count += 1
@@ -915,7 +911,7 @@ def process_modern_to_legacy_conversion(
     save_options: SaveOptions,
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[tuple[Path, Path]]]:
     """
     处理新版到旧版的转换。
     将新版多个资源bundle中的资源，替换到旧版的bundle文件中对应的部分。
@@ -928,7 +924,7 @@ def process_modern_to_legacy_conversion(
         log: 日志记录函数
     
     Returns:
-        tuple[bool, str]: (是否成功, 状态消息) 的元组
+        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
     """
     try:
         log("="*50)
@@ -958,7 +954,7 @@ def process_modern_to_legacy_conversion(
         if not patch:
             msg = t("message.legacy_convert.no_assets_in_source")
             log(f"  > ⚠️ {msg}")
-            return False, msg
+            return False, msg, []
         
         log(f"  > {t('log.legacy_convert.extracted_count_from_jp', count=len(patch))}")
 
@@ -966,13 +962,13 @@ def process_modern_to_legacy_conversion(
         log(f'\n--- {t("log.section.applying_to_global")} ---')
         global_bundle = Bundle.load(legacy_bundle_path, log)
         if not global_bundle:
-            return False, t("message.legacy_convert.load_global_failed")
+            return False, t("message.legacy_convert.load_global_failed"), []
         
         result = global_bundle.apply_patch(patch, key_func)
         
         if not result.is_success:
             log(f"  > ⚠️ {t('log.legacy_convert.no_assets_replaced')}")
-            return False, t("message.legacy_convert.no_assets_matched")
+            return False, t("message.legacy_convert.no_assets_matched"), []
             
         log(f"\n✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
         for item in result.applied_logs:
@@ -983,16 +979,17 @@ def process_modern_to_legacy_conversion(
         save_ok, save_message = global_bundle.save(output_path, save_options)
         
         if not save_ok:
-            return False, save_message
+            return False, save_message, []
         
         log(f"  ✅ {t('log.file.saved', path=output_path)}")
         log(f"\n🎉 {t('log.legacy_convert.conversion_complete')}")
-        return True, t("message.legacy_convert.jp_to_global_success", asset_count=result.applied_count)
+        file_pairs = [(output_path, legacy_bundle_path)]
+        return True, t("message.legacy_convert.jp_to_global_success", asset_count=result.applied_count), file_pairs
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.legacy_convert.conversion_error", error=e)
+        return False, t("message.legacy_convert.conversion_error", error=e), []
         
 def process_legacy_to_modern_conversion(
     legacy_bundle_path: Path,
@@ -1002,7 +999,7 @@ def process_legacy_to_modern_conversion(
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
     skip_unchanged: bool = False,
-) -> tuple[bool, str, list[Path]]:
+) -> tuple[bool, str, list[tuple[Path, Path]]]:
     """
     处理旧版转新版的转换。
 
@@ -1020,7 +1017,7 @@ def process_legacy_to_modern_conversion(
         skip_unchanged: 是否跳过未变化的文件
 
     Returns:
-        tuple[bool, str, list[Path]]: (是否成功, 状态消息, 被替换的原始文件路径列表) 的元组
+        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
     """
     # 结果收集器
     output_files: list[tuple[str, int]] = []  # (文件名, 替换资源数)
@@ -1035,7 +1032,7 @@ def process_legacy_to_modern_conversion(
         
         legacy_bundle = Bundle.load(legacy_bundle_path, log)
         if not legacy_bundle:
-            return False, t("message.legacy_convert.load_global_source_failed")
+            return False, t("message.legacy_convert.load_global_source_failed"), []
         
         log(f'\n--- {t("log.section.extracting_from_global")} ---')
 
@@ -1048,7 +1045,7 @@ def process_legacy_to_modern_conversion(
 
         total_changes = 0
         total_files = len(modern_bundle_paths)
-        replaced_files: list[Path] = []  # 记录被成功替换的原始文件路径
+        file_pairs: list[tuple[Path, Path]] = []  # (输出文件, 原始目标文件)
 
         # 2. 按顺序尝试每种策略
         for strategy_name, key_func in strategies:
@@ -1101,7 +1098,7 @@ def process_legacy_to_modern_conversion(
                             total_changes += result.applied_count
                             strategy_success = True
                             strategy_total_changes += result.applied_count
-                            replaced_files.append(jp_template_path)
+                            file_pairs.append((output_path, jp_template_path))
                             current_output.append((jp_template_path.name, result.applied_count))
                         else:
                             log(f"    ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
@@ -1144,7 +1141,7 @@ def process_legacy_to_modern_conversion(
             for name, reason in failed_files:
                 log(t('log.summary.failed_item', name=name, reason=reason))
 
-        return True, t("message.legacy_convert.global_to_jp_success", bundle_count=len(output_files), asset_count=total_changes), replaced_files
+        return True, t("message.legacy_convert.global_to_jp_success", bundle_count=len(output_files), asset_count=total_changes), file_pairs
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")

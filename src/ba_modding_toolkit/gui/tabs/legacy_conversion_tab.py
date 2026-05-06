@@ -12,7 +12,7 @@ from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, FileListbox, ModeSwitcher, SettingRow, UIComponents
 from ..dialogs import FileSelectionDialog
-from ..utils import replace_file, replace_files
+from ..utils import confirm_and_replace
 
 class Mode(IntEnum):
     """日服/国际服转换模式"""
@@ -24,8 +24,7 @@ class LegacyConversionTab(TabFrame):
     """旧版与新版格式互相转换的标签页"""
 
     def __init__(self, *args, **kwargs):
-        self.final_output_paths: list[Path] = []
-        self.replaced_source_files: list[Path] = []  # 记录被成功替换的原始文件路径
+        self.current_file_pairs: list[tuple[Path, Path]] = []
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -253,90 +252,13 @@ class LegacyConversionTab(TabFrame):
     # --- 覆盖原文件功能 ---
     def replace_original_thread(self):
         """覆盖原文件的线程入口"""
-        if not self.final_output_paths:
-            messagebox.showerror(t("common.error"), t("message.no_file_selected"))
-            return
-
-        # 根据模式确定要覆盖的目标文件
-        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
-            target_files = self.modern_files_listbox.file_list
-        else:
-            # GLOBAL_TO_JP 使用被替换的原始文件列表
-            target_files = self.replaced_source_files
-
-        if not target_files:
-            messagebox.showerror(t("common.error"), t("message.list_empty"))
-            return
-
-        # 检查输出文件是否存在
-        for output_path in self.final_output_paths:
-            if not output_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=output_path))
-                return
-
-        # 在主线程中显示确认对话框
-        files_to_replace = []
-        for i, output_path in enumerate(self.final_output_paths):
-            if i < len(target_files):
-                target_file = target_files[i]
-                files_to_replace.append(f"  {target_file.name}")
-
-        # 限制显示数量，最多显示10项
-        max_display = 10
-        if len(files_to_replace) > max_display:
-            displayed_files = files_to_replace[:max_display]
-            remaining_count = len(files_to_replace) - max_display
-            files_list = "\n".join(displayed_files) + f"\n{t('message.and_more_files', count=remaining_count)}"
-        else:
-            files_list = "\n".join(files_to_replace)
-
-        confirm_message = t("message.confirm_replace_files", count=len(files_to_replace), files=files_list)
-
-        # 显示确认对话框，如果用户确认则执行覆盖
-        if messagebox.askyesno(t("common.warning"), confirm_message):
-            self.run_in_thread(self.replace_original)
-
-    def replace_original(self):
-        """实际的覆盖逻辑"""
-        if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
-            target_files = self.modern_files_listbox.file_list
-        else:
-            # GLOBAL_TO_JP 使用被替换的原始文件列表
-            target_files = self.replaced_source_files
-
-        # 只有一个文件时，使用 replace_file
-        if len(self.final_output_paths) == 1 and len(target_files) >= 1:
-            success = replace_file(
-                source_path=self.final_output_paths[0],
-                dest_path=target_files[0],
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=False,  # 已经在上一步确认过了
-                log=self.logger.log,
-            )
-
-            # 更新状态栏
-            if success:
-                self.logger.status(t("status.done"))
-            else:
-                self.logger.status(t("status.failed"))
-        else:
-            # 多个文件时，使用 replace_files
-            file_pairs: list[tuple[Path, Path]] = []
-            for i, output_path in enumerate(self.final_output_paths):
-                if i < len(target_files):
-                    file_pairs.append((output_path, target_files[i]))
-
-            success_count, fail_count = replace_files(
-                file_pairs=file_pairs,
-                create_backup=self.app.create_backup_var.get(),
-                ask_confirm=False,  # 已经在上一步确认过了
-                log=self.logger.log,
-            )
-
-            self.logger.status(t("status.done"))
-
-        # 覆盖完成后禁用按钮
-        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        confirm_and_replace(
+            file_pairs=self.current_file_pairs,
+            create_backup=self.app.create_backup_var.get(),
+            log=self.logger.log,
+            button_to_disable=self.replace_button,
+            master=self.master,
+        )
 
     def run_conversion(self):
         """处理 JP_TO_GLOBAL 和 GLOBAL_TO_JP 模式"""
@@ -358,8 +280,7 @@ class LegacyConversionTab(TabFrame):
             return
         
         # 重置输出文件路径列表和按钮状态
-        self.final_output_paths = []
-        self.replaced_source_files = []
+        self.current_file_pairs = []
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
         
         # 2. 准备选项
@@ -392,7 +313,7 @@ class LegacyConversionTab(TabFrame):
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))
         if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
-            success, message = core.process_modern_to_legacy_conversion(
+            success, message, file_pairs = core.process_modern_to_legacy_conversion(
                 legacy_bundle_path=self.legacy_zone.path,
                 modern_bundle_paths=modern_files,
                 output_dir=output_dir,
@@ -401,15 +322,11 @@ class LegacyConversionTab(TabFrame):
                 log=self.logger.log
             )
 
-            # 记录输出文件路径（MODERN_TO_LEGACY 模式只输出一个文件）
-            if success:
-                output_path = output_dir / self.legacy_zone.path.name
-                if output_path.exists():
-                    self.final_output_paths.append(output_path)
-                    # 启用覆盖按钮
-                    self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
+            if success and file_pairs:
+                self.current_file_pairs = file_pairs
+                self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
         else:  # LEGACY_TO_MODERN
-            success, message, replaced_files = core.process_legacy_to_modern_conversion(
+            success, message, file_pairs = core.process_legacy_to_modern_conversion(
                 legacy_bundle_path=self.legacy_zone.path,
                 modern_bundle_paths=modern_files,
                 output_dir=output_dir,
@@ -419,17 +336,9 @@ class LegacyConversionTab(TabFrame):
                 skip_unchanged=True
             )
 
-            # 记录输出文件路径和被替换的原始文件路径
-            if success:
-                self.replaced_source_files = replaced_files
-                for src_file in replaced_files:
-                    output_path = output_dir / src_file.name
-                    if output_path.exists():
-                        self.final_output_paths.append(output_path)
-
-                # 如果有输出文件，启用覆盖按钮
-                if self.final_output_paths:
-                    self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
+            if success and file_pairs:
+                self.current_file_pairs = file_pairs
+                self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
         
         # 4. 结果反馈
         if success:
