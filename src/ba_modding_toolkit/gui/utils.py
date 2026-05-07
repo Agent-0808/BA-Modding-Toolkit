@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 from ..utils import no_log
 from ..i18n import t
+from ..models import FilePair
 
 def is_multiple_drop(data: str) -> bool:
     """
@@ -208,7 +209,7 @@ def replace_file(
 
 
 def replace_files(
-    file_pairs: list[tuple[Path, Path]],
+    file_pairs: list[FilePair],
     create_backup: bool = True,
     ask_confirm: bool = True,
     confirm_message: str = "",
@@ -237,8 +238,8 @@ def replace_files(
     success_count = 0
     fail_count = 0
 
-    for source_path, dest_path in file_pairs:
-        success = _perform_file_replace(source_path, dest_path, create_backup, log)
+    for pair in file_pairs:
+        success = _perform_file_replace(pair.output, pair.source, create_backup, log)
         if success:
             success_count += 1
         else:
@@ -254,7 +255,7 @@ def replace_files(
     return success_count, fail_count 
 
 def confirm_and_replace(
-    file_pairs: list[tuple[Path, Path]],
+    file_pairs: list[FilePair],
     create_backup: bool,
     log,
     button_to_disable: tb.Button | None = None,
@@ -282,12 +283,12 @@ def confirm_and_replace(
         messagebox.showerror(t("common.error"), t("message.no_file_selected"))
         return False
 
-    for output_path, _ in file_pairs:
-        if not output_path.exists():
-            messagebox.showerror(t("common.error"), t("message.file_not_found", path=output_path))
+    for pair in file_pairs:
+        if not pair.output.exists():
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=pair.output))
             return False
 
-    files_to_replace = [f"  {target.name}" for _, target in file_pairs[:10]]
+    files_to_replace = [f"  {pair.source.name}" for pair in file_pairs[:10]]
     max_display = 10
     if len(file_pairs) > max_display:
         remaining_count = len(file_pairs) - max_display
@@ -301,10 +302,10 @@ def confirm_and_replace(
         return False
 
     if len(file_pairs) == 1:
-        source_file, target_file = file_pairs[0]
+        pair = file_pairs[0]
         replace_file(
-            source_path=source_file,
-            dest_path=target_file,
+            source_path=pair.output,
+            dest_path=pair.source,
             create_backup=create_backup,
             ask_confirm=False,
             log=log,

@@ -201,7 +201,7 @@ class ModUpdateTab(TabFrame):
             return
 
         if file_pairs:
-            self.logger.log(t("log.file.saved", path=file_pairs[0][0]))
+            self.logger.log(t("log.file.saved", path=file_pairs[0].output))
             self.logger.log(t("log.replace_original", button=t("action.replace_original")))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)

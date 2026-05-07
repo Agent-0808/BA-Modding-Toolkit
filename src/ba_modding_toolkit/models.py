@@ -105,6 +105,11 @@ class PatchResult(NamedTuple):
         """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
 
+class FilePair(NamedTuple):
+    # core 中处理产生的文件对
+    output: Path    # 输出文件路径
+    source: Path    # 源文件路径
+
 class ParsedFilename(NamedTuple):
     """
     解析后的文件名结构。

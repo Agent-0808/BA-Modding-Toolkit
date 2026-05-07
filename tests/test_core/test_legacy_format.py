@@ -30,7 +30,7 @@ class TestJpToGlobalConversion:
             compression="none",
         )
 
-        success, msg = process_modern_to_legacy_conversion(
+        success, msg, file_pairs = process_modern_to_legacy_conversion(
             legacy_bundle_path=legacy_bundle_path,
             modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
@@ -39,6 +39,7 @@ class TestJpToGlobalConversion:
         )
 
         assert success is True, msg
+        assert file_pairs is not None, "No file pairs returned"
 
         output_files = list(output_dir.glob("*.bundle"))
         assert len(output_files) > 0, "No output files generated"
@@ -58,7 +59,7 @@ class TestJpToGlobalConversion:
             compression="none",
         )
 
-        success, msg = process_modern_to_legacy_conversion(
+        success, msg, file_pairs = process_modern_to_legacy_conversion(
             legacy_bundle_path=legacy_bundle_path,
             modern_bundle_paths=modern_bundles_path,
             output_dir=output_dir,
@@ -67,6 +68,7 @@ class TestJpToGlobalConversion:
         )
 
         assert success is True, msg
+        assert file_pairs is not None, "No file pairs returned"
 
         output_files = list(output_dir.glob("*.bundle"))
         assert len(output_files) > 0

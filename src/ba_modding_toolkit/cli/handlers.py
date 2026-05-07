@@ -111,7 +111,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 调用核心处理函数
-    success, message, _ = process_mod_update(
+    success, message, file_pairs = process_mod_update(
         source_paths=[old_mod_path],
         target_paths=[new_bundle_path],
         output_dir=output_dir,
@@ -128,6 +128,12 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
+    if file_pairs:
+        logger.log(f"Output files: {len(file_pairs)}")
+        for pair in file_pairs:
+            logger.log(f"  - {pair.source}")
+    else:
+        logger.log("  - No file pairs processed.")
 
 def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'batch-update' 命令的逻辑。"""
@@ -216,8 +222,8 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
 
     if file_pairs:
         logger.log(f"\n✅ Output files ({len(file_pairs)}):")
-        for output_path, _ in file_pairs:
-            logger.log(f"  - {output_path.name}")
+        for pair in file_pairs:
+            logger.log(f"  - {pair.output.name}")
 
     if failed_tasks:
         logger.log(f"\n❌ Failed tasks:")
@@ -381,7 +387,7 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数 (merge = jp_to_global = 多并一)
     logger.log(f"\nMerging assets from {len(modern_files)} modern file(s) into '{legacy_path.name}'...")
-    success, message = process_modern_to_legacy_conversion(
+    success, message, file_pairs = process_modern_to_legacy_conversion(
         legacy_bundle_path=legacy_path,
         modern_bundle_paths=modern_files,
         output_dir=output_dir,
@@ -396,6 +402,12 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
+    if file_pairs:
+        logger.log(f"Total file pairs: {len(file_pairs)}")
+        for pair in file_pairs:
+            logger.log(f"  - {pair.output} -> {pair.source}")
+    else:
+        logger.log("  - No file pairs processed.")
 
 def handle_batch_legacy(args: BatchLegacyTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'batch-legacy' 命令的逻辑。"""
@@ -473,8 +485,8 @@ def handle_batch_legacy(args: BatchLegacyTap, logger: Logger = NULL_LOGGER) -> N
 
     if file_pairs:
         logger.log(f"\n✅ Output files ({len(file_pairs)}):")
-        for output_path, _ in file_pairs:
-            logger.log(f"  - {output_path.name}")
+        for pair in file_pairs:
+            logger.log(f"  - {pair.output.name}")
 
     if failed_tasks:
         logger.log(f"\n❌ Failed tasks:")
@@ -515,7 +527,7 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 调用核心处理函数
-    success, message, _ = process_asset_packing(
+    success, message, file_pairs = process_asset_packing(
         target_bundle_path=bundle_path,
         asset_folder=asset_folder,
         output_dir=output_dir,
@@ -529,6 +541,16 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"✅ Operation Successful: {message}")
     else:
         logger.log(f"❌ Operation Failed: {message}")
+
+    if file_pairs:
+        logger.log(f"Total file pairs: {len(file_pairs)}")
+        for pair in file_pairs:
+            logger.log(f"  - {pair.output} -> {pair.source}")
+    else:
+        logger.log("  - No file pairs processed.")
+
+
+    logger.log("="*50)
 
 
 def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:

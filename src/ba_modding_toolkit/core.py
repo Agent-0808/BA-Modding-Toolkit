@@ -12,7 +12,7 @@ from .i18n import t
 from .utils import SpineUtils, ImageUtils, no_log
 from .naming import parse_filename
 from .models import (
-    NameTypeKey, ContNameTypeKey, ParsedFilename,
+    NameTypeKey, ContNameTypeKey, ParsedFilename, FilePair,
     AssetKey, AssetContent, AssetType, Patch,
     KeyGeneratorFunc, LogFunc, PatchResult,
     MATCH_STRATEGIES, MatchStrategy, SaveOptions, SpineOptions,
@@ -153,7 +153,7 @@ def process_asset_packing(
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
     log: LogFunc = no_log,
-) -> tuple[bool, str, list[tuple[Path, Path]]]:
+) -> tuple[bool, str, list[FilePair]]:
     """
     从指定文件夹中，将同名的资源打包到一个或多个目标 Bundle 中。
     支持 .png, .skel, .atlas 文件。
@@ -242,7 +242,7 @@ def process_asset_packing(
         key_func = MATCH_STRATEGIES[strategy_name]
 
         # 2. 对每个目标 Bundle 应用替换并保存
-        file_pairs: list[tuple[Path, Path]] = []
+        file_pairs: list[FilePair] = []
         success_count = 0
 
         for i, bundle_path in enumerate(bundle_paths):
@@ -284,7 +284,7 @@ def process_asset_packing(
                 continue
 
             log(t("log.file.saved", path=output_path))
-            file_pairs.append((output_path, bundle_path))
+            file_pairs.append(FilePair(output_path, bundle_path))
             success_count += 1
 
         if not file_pairs:
@@ -518,7 +518,7 @@ def process_mod_update(
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
     log: LogFunc = no_log,
-) -> tuple[bool, str, list[tuple[Path, Path]]]:
+) -> tuple[bool, str, list[FilePair]]:
     """
     自动化Mod更新流程 (N-to-N)。
     
@@ -539,7 +539,7 @@ def process_mod_update(
         log: 日志记录函数，默认为空函数
     
     Returns:
-        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, 文件对列表) 的元组
+        tuple[bool, str, list[FilePair]]: (是否成功, 状态消息, 文件对列表) 的元组
         文件对列表为 (输出文件路径, 原始目标文件路径) 的元组
         如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged", [])
     """
@@ -576,7 +576,7 @@ def process_mod_update(
 
         # 2. 按需注入 (Application)
         log(f'\n--- {t("log.section.applying_to_targets")} ---')
-        file_pairs: list[tuple[Path, Path]] = []
+        file_pairs: list[FilePair] = []
         total_applied = 0
         total_matched = 0  # 总匹配数（包括跳过的）
         total_targets = len(target_paths)
@@ -600,7 +600,7 @@ def process_mod_update(
                 save_ok, save_message = tgt_bundle.save(output_path, save_options)
                 if save_ok:
                     total_applied += result.applied_count
-                    file_pairs.append((output_path, tgt))
+                    file_pairs.append(FilePair(output_path, tgt))
                     output_files.append((tgt.name, result.applied_count))
                     log(f"  ✅ {t('log.mod_update.target_processed', name=tgt.name, applied=result.applied_count)}")
                 else:
@@ -657,7 +657,7 @@ def process_batch_mod_update(
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
     log: LogFunc = no_log,
-) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
+) -> tuple[int, int, list[str], list[FilePair]]:
     """
     执行批量Mod更新的核心逻辑。
 
@@ -675,7 +675,7 @@ def process_batch_mod_update(
         log: 日志记录函数。
 
     Returns:
-        tuple[int, int, list[str], list[tuple[Path, Path]]]: 
+        tuple[int, int, list[str], list[FilePair]]: 
             (成功计数, 失败计数, 失败任务详情列表, (输出文件路径, 被替换的原始文件路径) 元组列表)
     """
     total_files = len(mod_file_list)
@@ -683,7 +683,7 @@ def process_batch_mod_update(
     fail_count = 0
     unchanged_count = 0
     failed_tasks = []
-    file_pairs: list[tuple[Path, Path]] = []
+    file_pairs: list[FilePair] = []
 
     log("\n" + "=" * 50)
     log(f"📦 {t('log.batch.start')}")
@@ -765,7 +765,7 @@ def process_batch_legacy_batch(
     log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
     skip_unchanged: bool = False,
-) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
+) -> tuple[int, int, list[str], list[FilePair]]:
     """
     执行批量旧版国际服到新版国际服转换的核心逻辑。
 
@@ -781,7 +781,7 @@ def process_batch_legacy_batch(
         skip_unchanged: 是否跳过未变化的文件
 
     Returns:
-        tuple[int, int, list[str], list[tuple[Path, Path]]]: 
+        tuple[int, int, list[str], list[FilePair]]: 
             (成功计数, 失败计数, 失败任务详情列表, (输出文件路径, 被替换的原始文件路径) 元组列表)
     """
     total_files = len(legacy_file_list)
@@ -789,7 +789,7 @@ def process_batch_legacy_batch(
     fail_count = 0
     unchanged_count = 0
     failed_tasks = []
-    file_pairs: list[tuple[Path, Path]] = []
+    file_pairs: list[FilePair] = []
 
     log("\n" + "=" * 50)
     log(f"📦 {t('log.batch.start')}")
@@ -916,7 +916,7 @@ def process_modern_to_legacy_conversion(
     save_options: SaveOptions,
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
-) -> tuple[bool, str, list[tuple[Path, Path]]]:
+) -> tuple[bool, str, list[FilePair]]:
     """
     处理新版到旧版的转换。
     将新版多个资源bundle中的资源，替换到旧版的bundle文件中对应的部分。
@@ -929,7 +929,7 @@ def process_modern_to_legacy_conversion(
         log: 日志记录函数
     
     Returns:
-        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
+        tuple[bool, str, list[FilePair]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
     """
     try:
         log("="*50)
@@ -1004,7 +1004,7 @@ def process_legacy_to_modern_conversion(
     asset_types_to_replace: set[str],
     log: LogFunc = no_log,
     skip_unchanged: bool = False,
-) -> tuple[bool, str, list[tuple[Path, Path]]]:
+) -> tuple[bool, str, list[FilePair]]:
     """
     处理旧版转新版的转换。
 
@@ -1022,7 +1022,7 @@ def process_legacy_to_modern_conversion(
         skip_unchanged: 是否跳过未变化的文件
 
     Returns:
-        tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
+        tuple[bool, str, list[FilePair]]: (是否成功, 状态消息, (输出文件, 原始目标文件) 元组列表) 的元组
     """
     # 结果收集器
     output_files: list[tuple[str, int]] = []  # (文件名, 替换资源数)
@@ -1050,7 +1050,7 @@ def process_legacy_to_modern_conversion(
 
         total_changes = 0
         total_files = len(modern_bundle_paths)
-        file_pairs: list[tuple[Path, Path]] = []  # (输出文件, 原始目标文件)
+        file_pairs: list[FilePair] = []  # (输出文件, 原始目标文件)
 
         # 2. 按顺序尝试每种策略
         for strategy_name, key_func in strategies:
@@ -1103,7 +1103,7 @@ def process_legacy_to_modern_conversion(
                             total_changes += result.applied_count
                             strategy_success = True
                             strategy_total_changes += result.applied_count
-                            file_pairs.append((output_path, jp_template_path))
+                            file_pairs.append(FilePair(output_path, jp_template_path))
                             current_output.append((jp_template_path.name, result.applied_count))
                         else:
                             log(f"    ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
