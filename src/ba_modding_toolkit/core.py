@@ -543,20 +543,7 @@ def process_mod_update(
         文件对列表为 (输出文件路径, 原始目标文件路径) 的元组
         如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged", [])
     """
-    # 结果收集器
-    output_files: list[tuple[str, int]] = []  # (文件名, 替换资源数)
-    skipped_files: list[str] = []  # 文件名列表
-    failed_files: list[tuple[str, str]] = []  # (文件名, 原因)
-
     try:
-        log("="*50)
-        log(f'  > {t("log.mod_update.source_files", count=len(source_paths))}')
-        for src in source_paths:
-            log(f"    - {src.name}")
-        log(f'  > {t("log.mod_update.target_files", count=len(target_paths))}')
-        for tgt in target_paths:
-            log(f"    - {tgt.name}")
-
         # 1. 提取资源 (Extraction)
         log(f'\n--- {t("log.section.extracting_patches")} ---')
         patches: Patch = {}
@@ -577,14 +564,12 @@ def process_mod_update(
         # 2. 按需注入 (Application)
         log(f'\n--- {t("log.section.applying_to_targets")} ---')
         file_pairs: list[FilePair] = []
-        total_applied = 0
         total_matched = 0  # 总匹配数（包括跳过的）
-        total_targets = len(target_paths)
 
         for tgt in target_paths:
             tgt_bundle = Bundle.load(tgt, log)
             if not tgt_bundle:
-                failed_files.append((tgt.name, t('message.load_failed')))
+                log(f"  ❌ {t('message.load_failed')}: {tgt.name}")
                 continue
             
             result = tgt_bundle.apply_patch(patches, key_func)
@@ -592,53 +577,25 @@ def process_mod_update(
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
                 log(f"  ⏭️ {t('log.mod_update.target_unchanged', name=tgt.name, count=result.skipped_count)}")
-                skipped_files.append(tgt.name)
                 continue
             
             if result.is_success:
                 output_path = output_dir / tgt.name
                 save_ok, save_message = tgt_bundle.save(output_path, save_options)
                 if save_ok:
-                    total_applied += result.applied_count
                     file_pairs.append(FilePair(output_path, tgt))
-                    output_files.append((tgt.name, result.applied_count))
                     log(f"  ✅ {t('log.mod_update.target_processed', name=tgt.name, applied=result.applied_count)}")
                 else:
-                    failed_files.append((tgt.name, save_message))
                     log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_message)}")
             else:
-                skipped_files.append(tgt.name)
                 log(f"  > {t('log.file.no_changes_made')} ({tgt.name})")
         
-        if not output_files:
+        if not file_pairs:
             # 区分：完全没有匹配 vs 匹配了但都被跳过
             if total_matched > 0 and skip_unchanged:
                 return True, "all_targets_unchanged", []
             return False, t("message.mod_update.no_targets_processed"), []
 
-        # 输出处理总结
-        log(f'\n--- {t("log.summary.title")} ---')
-        log(f"📊 {t('log.summary.total_files', count=total_targets)}")
-        log(f"  > {t('log.mod_update.pool_built', count=len(patches))}")
-
-        if output_files:
-            log(f"✅ {t('log.summary.output_files', count=len(output_files))}")
-            for name, count in output_files:
-                detail = t('log.summary.replaced_assets', count=count)
-                log(t('log.summary.output_item', name=name, detail=detail))
-
-        if skipped_files:
-            skip_reason = t('log.summary.no_changes')
-            log(f"⏭️ {t('log.summary.skipped_files', count=len(skipped_files))} ({skip_reason})")
-            for name in skipped_files:
-                log(t('log.summary.skipped_item', name=name))
-
-        if failed_files:
-            log(f"❌ {t('log.summary.failed_files', count=len(failed_files))}")
-            for name, reason in failed_files:
-                log(t('log.summary.failed_item', name=name, reason=reason))
-
-        log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=total_applied)}')
         return True, t("message.mod_update.success"), file_pairs
 
     except Exception as e:

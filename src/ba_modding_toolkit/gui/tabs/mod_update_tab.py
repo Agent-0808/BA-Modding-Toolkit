@@ -143,6 +143,12 @@ class ModUpdateTab(TabFrame):
 
         self.logger.log("\n" + "="*50)
         self.logger.log(t("log.mod_update.updating"))
+        self.logger.log(f"  > {t('log.mod_update.source_files', count=len(self.source_paths))}")
+        for src in self.source_paths:
+            self.logger.log(f"    - {src.name}")
+        self.logger.log(f"  > {t('log.mod_update.target_files', count=len(self.target_paths))}")
+        for tgt in self.target_paths:
+            self.logger.log(f"    - {tgt.name}")
         self.logger.status(t("status.processing_detailed", filename=self.source_paths[0].name))
         
         asset_types_to_replace = set()
@@ -200,8 +206,14 @@ class ModUpdateTab(TabFrame):
             self.logger.status(t("status.done"))
             return
 
+        # 输出处理总结
+        self.logger.log(f'\n--- {t("log.summary.title")} ---')
+        self.logger.log(f"✅ {t('log.summary.output_files', count=len(file_pairs))}")
+        for pair in file_pairs:
+            self.logger.log(f"  - {pair.source.name}")
+        self.logger.log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=len(file_pairs))}')
+
         if file_pairs:
-            self.logger.log(t("log.file.saved", path=file_pairs[0].output))
             self.logger.log(t("log.replace_original", button=t("action.replace_original")))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
             messagebox.showinfo(t("common.success"), message)
