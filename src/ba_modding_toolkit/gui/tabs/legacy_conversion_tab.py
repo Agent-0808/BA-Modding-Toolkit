@@ -76,8 +76,9 @@ class LegacyConversionTab(TabFrame):
             file_frame,
             title=t("ui.legacy_conversion.role_global_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_global_bundle"),
-            on_file_selected=self.on_global_selected,
+            on_files_selected=self.on_global_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            allow_multiple=False,
             logger=self.logger
         )
         self.legacy_zone.pack(fill=tk.X, pady=(0, 3))

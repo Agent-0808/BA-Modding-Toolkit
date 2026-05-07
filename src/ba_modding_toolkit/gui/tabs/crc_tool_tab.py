@@ -19,8 +19,9 @@ class CrcToolTab(TabFrame):
         self.modified_zone = DropZone(
             self, title=t("ui.label.modified_file"),
             placeholder_text=t("ui.crc_tool.placeholder_modified"),
-            on_file_selected=self.on_modified_selected,
+            on_files_selected=self.on_modified_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            allow_multiple=False,
             logger=self.logger
         )
 
@@ -38,9 +39,10 @@ class CrcToolTab(TabFrame):
         self.original_zone = DropZone(
             self, title=t("ui.label.original_file"),
             placeholder_text=t("ui.crc_tool.placeholder_origin"),
-            on_file_selected=self.on_original_selected,
+            on_files_selected=self.on_original_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             search_path_var=self.app.game_resource_dir_var,
+            allow_multiple=False,
             logger=self.logger
         )
 

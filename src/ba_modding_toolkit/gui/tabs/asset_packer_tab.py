@@ -8,7 +8,7 @@ from pathlib import Path
 from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
-from ..components import GroupDropZone, DropZone, SettingRow, UIComponents
+from ..components import DropZone, SettingRow, UIComponents
 from ..utils import confirm_and_replace
 
 class AssetPackerTab(TabFrame):
@@ -20,13 +20,14 @@ class AssetPackerTab(TabFrame):
         self.folder_zone = DropZone(
             self, title=t("ui.label.assets_folder_to_pack"),
             placeholder_text=t("ui.packer.placeholder_assets"),
-            on_file_selected=self.on_folder_selected,
+            on_files_selected=self.on_folder_selected,
             allow_folder=True,
+            allow_multiple=False,
             logger=self.logger
         )
 
         # 目标 Bundle 文件
-        self.bundle_zone = GroupDropZone(
+        self.bundle_zone = DropZone(
             self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.packer.placeholder_bundle"),
             on_files_selected=self.on_bundles_selected,

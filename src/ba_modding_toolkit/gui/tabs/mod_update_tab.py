@@ -8,7 +8,7 @@ from pathlib import Path
 from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
-from ..components import GroupDropZone, UIComponents
+from ..components import DropZone, UIComponents
 from ..utils import confirm_and_replace
 from ...utils import get_search_resource_dirs
 
@@ -24,7 +24,7 @@ class ModUpdateTab(TabFrame):
 
     def create_widgets(self):
         # 1. 源文件组
-        self.old_mod_zone = GroupDropZone(
+        self.old_mod_zone = DropZone(
             self, title=t("ui.label.mod_file"),
             placeholder_text=t("ui.mod_update.placeholder_old"),
             on_files_selected=self.on_old_mod_selected,
@@ -33,7 +33,7 @@ class ModUpdateTab(TabFrame):
         )
         
         # 2. 目标资源文件组
-        self.new_mod_zone = GroupDropZone(
+        self.new_mod_zone = DropZone(
             self, title=t("ui.label.target_resource_bundle"),
             placeholder_text=t("ui.mod_update.placeholder_new"),
             on_files_selected=self.on_new_mod_selected,

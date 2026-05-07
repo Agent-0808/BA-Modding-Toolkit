@@ -9,7 +9,7 @@ from ...i18n import t
 from ... import core
 from ...naming import parse_filename
 from ..base_tab import TabFrame
-from ..components import UIComponents, SettingRow, GroupDropZone
+from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
@@ -24,7 +24,7 @@ class AssetExtractorTab(TabFrame):
                 self.subdir_var.set(core_name)
 
         # 目标 Bundle 文件拖放区域
-        self.bundle_dropzone = GroupDropZone(
+        self.bundle_dropzone = DropZone(
             self,
             title=t("ui.label.bundles_to_extract"),
             placeholder_text=t("ui.extractor.placeholder_bundle"),

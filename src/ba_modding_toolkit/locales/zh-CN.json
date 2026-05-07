@@ -475,7 +475,8 @@
 		"drop_zone": {
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",
 			"folder_hint": "将文件夹拖放到此处\n或点击下方按钮选择",
-			"searching": "正在查找……"
+			"searching": "正在查找……",
+			"multiple_files_rejected": "仅支持单个文件"
 		},
 		"group_drop_zone": {
 			"contains": "包含 {count} 个文件: {types}"
