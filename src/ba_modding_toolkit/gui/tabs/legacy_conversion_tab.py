@@ -222,7 +222,7 @@ class LegacyConversionTab(TabFrame):
             self.legacy_zone.set_error(ui_message)
             self.logger.status(t("status.search_not_found"))
         elif len(found_paths) == 1:
-            self.legacy_zone.set_path(found_paths[0])
+            self.legacy_zone.set_files(found_paths)
             self.logger.log(t("log.file.loaded", path=found_paths[0]))
             self.logger.status(t("status.ready"))
         else:
@@ -237,7 +237,7 @@ class LegacyConversionTab(TabFrame):
 
             selected_path = dialog.get_selected_path()
             if selected_path:
-                self.legacy_zone.set_path(selected_path)
+                self.legacy_zone.set_files(selected_path)
                 self.logger.log(t("log.file.loaded", path=selected_path))
                 self.logger.status(t("status.ready"))
             else:

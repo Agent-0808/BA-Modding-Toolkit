@@ -341,8 +341,16 @@ class DropZone(tb.Labelframe):
         """兼容旧接口，返回第一个路径"""
         return self._paths[0] if self._paths else None
 
-    def set_files(self, paths: list[Path]) -> None:
-        """外部设置文件列表"""
+    def set_files(self, paths: list[Path] | Path) -> None:
+        """外部设置文件列表，支持单Path或Path列表"""
+        # 统一转换为列表
+        if isinstance(paths, Path):
+            paths = [paths]
+        
+        # 当不允许多文件时，检查路径数量
+        if not self._allow_multiple and len(paths) > 1:
+            raise ValueError(f"DropZone does not allow multiple files, but got {len(paths)} paths")
+        
         self._paths = paths
         if paths:
             self._update_display()
@@ -398,6 +406,7 @@ class DropZone(tb.Labelframe):
             return
         
         if not self._allow_multiple and len(paths_to_add) > 1:
+            self.clear()
             self.set_warning(t("ui.drop_zone.multiple_files_rejected"))
             return
         

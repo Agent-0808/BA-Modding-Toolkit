@@ -91,7 +91,7 @@ class CrcToolTab(TabFrame):
             
             candidate = directory / path.name
             if candidate.exists():
-                self.original_zone.set_path(candidate)
+                self.original_zone.set_files(candidate)
                 self.logger.log(t("log.file_found_in_subdir", subdir=directory.name, filename=candidate.name))
                 return
         
