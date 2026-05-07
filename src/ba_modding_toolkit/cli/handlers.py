@@ -387,7 +387,7 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数 (merge = jp_to_global = 多并一)
     logger.log(f"\nMerging assets from {len(modern_files)} modern file(s) into '{legacy_path.name}'...")
-    success, message, file_pairs = process_modern_to_legacy_conversion(
+    success, message, file_pair = process_modern_to_legacy_conversion(
         legacy_bundle_path=legacy_path,
         modern_bundle_paths=modern_files,
         output_dir=output_dir,
@@ -402,12 +402,10 @@ def handle_merge(args: MergeTap, logger: Logger = NULL_LOGGER) -> None:
     else:
         logger.log(f"❌ Operation Failed: {message}")
 
-    if file_pairs:
-        logger.log(f"Total file pairs: {len(file_pairs)}")
-        for pair in file_pairs:
-            logger.log(f"  - {pair.output} -> {pair.source}")
+    if file_pair:
+        logger.log(f"Output file: {file_pair.output} -> {file_pair.source}")
     else:
-        logger.log("  - No file pairs processed.")
+        logger.log("  - No file pair processed.")
 
 def handle_batch_legacy(args: BatchLegacyTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'batch-legacy' 命令的逻辑。"""

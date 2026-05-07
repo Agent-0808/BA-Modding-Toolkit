@@ -314,7 +314,7 @@ class LegacyConversionTab(TabFrame):
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))
         if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
-            success, message, file_pairs = core.process_modern_to_legacy_conversion(
+            success, message, file_pair = core.process_modern_to_legacy_conversion(
                 legacy_bundle_path=self.legacy_zone.path,
                 modern_bundle_paths=modern_files,
                 output_dir=output_dir,
@@ -323,8 +323,8 @@ class LegacyConversionTab(TabFrame):
                 log=self.logger.log
             )
 
-            if success and file_pairs:
-                self.current_file_pairs = file_pairs
+            if success and file_pair:
+                self.current_file_pairs = [file_pair]
                 self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
         else:  # LEGACY_TO_MODERN
             success, message, file_pairs = core.process_legacy_to_modern_conversion(
