@@ -393,13 +393,15 @@ class DropZone(tb.Labelframe):
             self._clear_cmd()
 
     def _handle_drop(self, event: tk.Event) -> None:
-        """内部处理拖放事件，支持多文件"""
+        """内部处理拖放事件，支持多文件和文件夹"""
         raw_paths = event.widget.tk.splitlist(event.data)
         paths_to_add = []
         
         for p_str in raw_paths:
             path = Path(p_str.strip('{}'))
-            if path.is_file() and path.suffix == '.bundle':
+            if self._allow_folder and path.is_dir():
+                paths_to_add.append(path)
+            elif path.is_file() and path.suffix == '.bundle':
                 paths_to_add.append(path)
         
         if not paths_to_add:
