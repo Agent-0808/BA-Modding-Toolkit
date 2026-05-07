@@ -1,6 +1,7 @@
 # bundle.py
 
 import traceback
+from functools import cached_property
 from pathlib import Path
 
 import UnityPy
@@ -14,7 +15,7 @@ from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch,
     KeyGeneratorFunc, LogFunc, CompressionType, PatchResult,
-    SaveOptions, SpineOptions,
+    SaveOptions, SpineOptions, ParsedFilename,
     REPLACEABLE_ASSET_TYPES
 )
 
@@ -35,11 +36,31 @@ class Bundle:
         """快捷获取文件名"""
         return self.path.name
     
+    @cached_property
+    def parsed_name(self) -> ParsedFilename:
+        """获取解析后的文件名信息（带缓存）"""
+        return parse_filename(self.name)
+
+    @property
+    def crc(self) -> str:
+        """从文件名获取 CRC32 值"""
+        return self.parsed_name.crc
+
+    @property
+    def core_name(self) -> str:
+        """从文件名获取核心名称"""
+        return self.parsed_name.core
+
+    @property
+    def res_type(self) -> str | None:
+        """从文件名获取资源类型"""
+        return self.parsed_name.res_type
+    
     def is_empty(self) -> bool:
         """检查 Bundle 是否为空（不包含任何文件）"""
         return len(self.env.files) == 0
     
-    @property
+    @cached_property
     def platform_info(self) -> tuple[str, str]:
         """
         获取 Bundle 文件的平台信息和 Unity 版本。
@@ -137,7 +158,7 @@ class Bundle:
             success_message = t("message.save_success")
             
             if save_options.perform_crc:
-                crc_str = parse_filename(output_path.name).crc
+                crc_str = self.crc
                 if not crc_str or not crc_str.isdigit():
                     return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
                 target_crc = int(crc_str)
