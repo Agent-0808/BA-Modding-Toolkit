@@ -15,7 +15,7 @@ from .models import (
     NameTypeKey, ContNameTypeKey, ParsedFilename,
     AssetKey, AssetContent, AssetType, Patch,
     KeyGeneratorFunc, LogFunc, PatchResult,
-    MATCH_STRATEGIES, SaveOptions, SpineOptions,
+    MATCH_STRATEGIES, MatchStrategy, SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
@@ -515,8 +515,9 @@ def process_mod_update(
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
-    log: LogFunc = no_log,
     skip_unchanged: bool = False,
+    match_strategy: MatchStrategy = 'path_id',
+    log: LogFunc = no_log,
 ) -> tuple[bool, str, list[tuple[Path, Path]]]:
     """
     自动化Mod更新流程 (N-to-N)。
@@ -533,8 +534,9 @@ def process_mod_update(
         asset_types_to_replace: 需要替换的资源类型集合（如 {"Texture2D", "TextAsset"}）
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
-        log: 日志记录函数，默认为空函数
         skip_unchanged: 是否跳过未变化的文件
+        match_strategy: 匹配策略
+        log: 日志记录函数，默认为空函数
     
     Returns:
         tuple[bool, str, list[tuple[Path, Path]]]: (是否成功, 状态消息, 文件对列表) 的元组
@@ -558,7 +560,7 @@ def process_mod_update(
         # 1. 提取资源 (Extraction)
         log(f'\n--- {t("log.section.extracting_patches")} ---')
         patches: Patch = {}
-        key_func = MATCH_STRATEGIES['path_id']
+        key_func = MATCH_STRATEGIES[match_strategy]
         
         for src in source_paths:
             src_bundle = Bundle.load(src, log)
@@ -651,9 +653,10 @@ def process_batch_mod_update(
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
     spine_options: SpineOptions | None,
-    log: LogFunc = no_log,
     progress_callback: Callable[[int, int, str], None] | None = None,
     skip_unchanged: bool = False,
+    match_strategy: MatchStrategy = 'path_id',
+    log: LogFunc = no_log,
 ) -> tuple[int, int, list[str], list[tuple[Path, Path]]]:
     """
     执行批量Mod更新的核心逻辑。
@@ -665,10 +668,11 @@ def process_batch_mod_update(
         asset_types_to_replace: 需要替换的资源类型集合。
         save_options: 保存和CRC修正的选项。
         spine_options: Spine资源升级的选项。
-        log: 日志记录函数。
         progress_callback: 进度回调函数，用于更新UI。
                            接收 (当前索引, 总数, 文件名)。
         skip_unchanged: 是否跳过未变化的文件
+        match_strategy: 匹配策略，可选 'path_id'、'name_type'、'cont_name_type'
+        log: 日志记录函数。
 
     Returns:
         tuple[int, int, list[str], list[tuple[Path, Path]]]: 
@@ -713,7 +717,8 @@ def process_batch_mod_update(
             save_options=save_options,
             spine_options=spine_options,
             log=log,
-            skip_unchanged=skip_unchanged
+            skip_unchanged=skip_unchanged,
+            match_strategy=match_strategy,
         )
 
         if success:

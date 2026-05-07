@@ -572,13 +572,16 @@ class SettingRow:
         label: str,
         text_var: tk.StringVar,
         values: list[str],
-        tooltip: str | None = None
+        tooltip: str | None = None,
+        width: int | None = None,
     ) -> tb.Combobox:
         """创建下拉框行"""
+        if width is None:
+            width = max((len(v) for v in values), default=0) + 2
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
-        combobox = tb.Combobox(container, textvariable=text_var, values=values, width=10)
+        combobox = tb.Combobox(container, textvariable=text_var, values=values, width=width)
         combobox.pack(side=tk.RIGHT, padx=(10, 0))
         return combobox
 

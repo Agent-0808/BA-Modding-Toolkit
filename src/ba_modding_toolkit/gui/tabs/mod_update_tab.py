@@ -8,7 +8,7 @@ from pathlib import Path
 from ...i18n import t
 from ... import core
 from ..base_tab import TabFrame
-from ..components import DropZone, UIComponents
+from ..components import DropZone, UIComponents, SettingRow
 from ..utils import confirm_and_replace
 from ...utils import get_search_resource_dirs
 
@@ -20,6 +20,7 @@ class ModUpdateTab(TabFrame):
         self.source_paths: list[Path] = []
         self.target_paths: list[Path] = []
         self.current_file_pairs: list[tuple[Path, Path]] = []
+        self.match_strategy_var = tk.StringVar(value='path_id')
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -40,6 +41,17 @@ class ModUpdateTab(TabFrame):
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             search_path_var=self.app.game_resource_dir_var,
             logger=self.logger
+        )
+
+        # 匹配策略选择
+        strategy_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
+        strategy_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.strategy_combo = SettingRow.create_combobox_row(
+            strategy_frame, t("option.match_strategy"),
+            self.match_strategy_var,
+            values=['path_id', 'cont_name_type', 'name_type'],
+            tooltip=t("option.match_strategy_info")
         )
 
         # 操作按钮区域
@@ -170,7 +182,8 @@ class ModUpdateTab(TabFrame):
             asset_types_to_replace=asset_types_to_replace,
             save_options=save_options,
             spine_options=spine_options,
-            log=self.logger.log
+            match_strategy=self.match_strategy_var.get(),
+            log=self.logger.log,
         )
         
         self.current_file_pairs = file_pairs

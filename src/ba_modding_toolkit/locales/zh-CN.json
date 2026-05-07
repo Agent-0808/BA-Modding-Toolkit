@@ -87,6 +87,8 @@
 		"output_dir_info": "",
 		"skel_converter_path": "Skel 转换器路径",
 		"skel_converter_path_info": "SpineSkeletonDataConverter.exe 文件的路径",
+		"match_strategy": "匹配策略",
+		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "启用 Bleed 处理",
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
 		"enable_spine38_name_fix": "修正旧版 Spine 文件名",

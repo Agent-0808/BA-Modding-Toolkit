@@ -35,6 +35,9 @@ class UpdateTap(Tap):
     spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
     target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
 
+    # 匹配策略
+    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy for cross-version migration.
+
     def configure(self) -> None:
         self.description = '''Update or port a Mod, migrating assets from an old Mod to a specific Bundle.
         
@@ -282,6 +285,9 @@ class BatchUpdateTap(Tap):
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
     spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
     target_spine_version: str = '4.2.33'  # Target Spine version.
+
+    # 匹配策略
+    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy.
 
     def configure(self) -> None:
         self.description = '''Batch update multiple Mod files, migrating assets from old Mods to new game bundles.

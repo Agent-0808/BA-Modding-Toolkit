@@ -118,7 +118,8 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
         asset_types_to_replace=asset_types,
         save_options=save_options,
         spine_options=spine_options,
-        log=logger.log
+        match_strategy=args.strategy,
+        log=logger.log,
     )
 
     logger.log("\n" + "="*50)
@@ -202,7 +203,8 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         spine_options=spine_options,
         log=logger.log,
         progress_callback=callback_log,
-        skip_unchanged=True
+        skip_unchanged=True,
+        match_strategy=args.strategy,
     )
 
     # 输出结果摘要

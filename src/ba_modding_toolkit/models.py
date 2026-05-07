@@ -45,10 +45,13 @@ LogFunc = Callable[[str], None]
 # 压缩类型
 CompressionType = Literal["lzma", "lz4", "original", "none"]  
 
+# 匹配策略类型
+MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
+
 
 # -------- 匹配策略 (用于生成 AssetKey) ---------
 
-MATCH_STRATEGIES: dict[str, KeyGeneratorFunc] = {
+MATCH_STRATEGIES: dict[MatchStrategy, KeyGeneratorFunc] = {
     # path_id: 使用 Unity 对象的 path_id 作为键，适用于相同版本精确匹配，主要方式
     'path_id': lambda obj: obj.path_id,
     # name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配，在Asset Packing中使用
