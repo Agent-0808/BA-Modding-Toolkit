@@ -41,7 +41,7 @@ class TestAssetPacking:
         
         success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
-            asset_folder=asset_folder,
+            assets=asset_folder,
             output_dir=output_dir,
             save_options=save_options,
             enable_bleed=True
@@ -89,7 +89,7 @@ class TestAssetPacking:
         
         success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
-            asset_folder=asset_folder,
+            assets=asset_folder,
             output_dir=output_dir,
             save_options=save_options
         )
@@ -145,7 +145,7 @@ class TestAssetPacking:
         
         success, msg, _ = process_asset_packing(
             target_bundle_path=sample_bundle_path,
-            asset_folder=asset_folder,
+            assets=asset_folder,
             output_dir=output_dir,
             save_options=save_options
         )

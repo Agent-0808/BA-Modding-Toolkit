@@ -699,7 +699,8 @@ class FileListbox:
     
     def __init__(self, parent, title:str, file_list:list[Path] = [], placeholder_text:str | None = None, height=10, logger=None,
     display_formatter: Callable[[Path], str] | None = None, 
-    on_files_added: Callable[[list[Path]], None] | None = None
+    on_files_added: Callable[[list[Path]], None] | None = None,
+    allowed_suffixes: set[str] = {".bundle"}
     ):
         """
         初始化文件列表框组件
@@ -713,6 +714,7 @@ class FileListbox:
             logger: 日志记录器
             display_formatter: 可选的文件名显示格式化函数 (Path -> str)。如果不提供，默认显示文件名。
             on_files_added: 可选的文件添加回调函数，当文件被添加时调用
+            allowed_suffixes: 允许的文件后缀集合，默认仅 .bundle
         """
         self.parent = parent
         self.file_list: list[Path] = file_list
@@ -721,6 +723,7 @@ class FileListbox:
         self.logger: Logger = logger
         self.display_formatter = display_formatter
         self.on_files_added = on_files_added
+        self.allowed_suffixes = allowed_suffixes
         
         self._create_widgets(title)
         
@@ -874,15 +877,15 @@ class FileListbox:
         """处理拖放事件"""
         # tkinterdnd2 返回的events.data有{}的形式也有空格分隔的形式，要用自带的函数处理
         raw_paths = event.widget.tk.splitlist(event.data)
+        suffixes = self.allowed_suffixes
         paths_to_add = []
         
         for p_str in raw_paths:
             path = Path(p_str)
             if path.is_dir():
-                # 如果是目录，添加目录下的所有.bundle文件
-                paths_to_add.extend(sorted(path.glob('*.bundle')))
-            elif path.is_file() and path.suffix == '.bundle':
-                # 如果是.bundle文件，直接添加
+                for suf in suffixes:
+                    paths_to_add.extend(sorted(path.glob(f'*{suf}')))
+            elif path.is_file() and path.suffix.lower() in suffixes:
                 paths_to_add.append(path)
         
         if paths_to_add:
@@ -890,9 +893,11 @@ class FileListbox:
     
     def _browse_add_files(self):
         """浏览添加文件"""
+        ft = [(f"*{s}", f"*{s}") for s in sorted(self.allowed_suffixes)]
+        ft.append((t("file_type.all_files"), "*.*"))
         select_file(
             title=t("action.add_files"),
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            filetypes=ft,
             multiple=True,
             callback=lambda paths: self.add_files(paths),
             log=self.logger.log if self.logger else None
@@ -907,14 +912,16 @@ class FileListbox:
 
         if folder:
             path = Path(folder)
-            files = sorted(path.glob("*.bundle"))
+            files: list[Path] = []
+            for suf in self.allowed_suffixes:
+                files.extend(sorted(path.glob(f'*{suf}')))
             if files:
                 self.add_files(files)
                 if self.logger:
                     self.logger.log(t('log.file.added_count', count=len(files)))
             else:
                 if self.logger:
-                    self.logger.log(t('log.file.no_files_found_in_folder', type=".bundle"))
+                    self.logger.log(t('log.file.no_files_found_in_folder', type=', '.join(sorted(self.allowed_suffixes))))
     
     def _remove_selected(self):
         """移除选中的文件"""

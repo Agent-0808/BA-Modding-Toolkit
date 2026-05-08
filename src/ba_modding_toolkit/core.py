@@ -146,7 +146,7 @@ find_new_bundle_path = find_target_bundles
 
 def process_asset_packing(
     target_bundle_path: Path | list[Path],
-    asset_folder: Path,
+    assets: Path | list[Path],
     output_dir: Path,
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
@@ -155,7 +155,7 @@ def process_asset_packing(
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
-    从指定文件夹中，将同名的资源打包到一个或多个目标 Bundle 中。
+    从指定文件夹或文件列表中，将同名的资源打包到一个或多个目标 Bundle 中。
     支持 .png, .skel, .atlas 文件。
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
@@ -168,7 +168,7 @@ def process_asset_packing(
     
     Args:
         target_bundle_path: 目标Bundle文件的路径，可以是单个路径或路径列表
-        asset_folder: 包含待打包资源的文件夹路径
+        assets: 包含待打包资源的文件列表，或文件夹
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
@@ -177,16 +177,32 @@ def process_asset_packing(
         log: 日志记录函数，默认为空函数
     """
     bundle_paths = [target_bundle_path] if isinstance(target_bundle_path, Path) else list(target_bundle_path)
+    asset_paths = [assets] if isinstance(assets, Path) else list(assets)
     temp_asset_folder = None
     try:
-        if enable_rename_fix:
-            temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(asset_folder, log)
-            asset_folder = temp_asset_folder
-
-        # 1. 从文件夹构建"替换清单"
+        # 1. 从所有资源路径中收集输入文件
         patch: Patch = {}
         supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
-        input_files = [f for f in asset_folder.iterdir() if f.is_file() and f.suffix.lower() in supported_extensions]
+        input_files: list[Path] = []
+        
+        for asset_path in asset_paths:
+            if asset_path.is_dir():
+                for f in asset_path.iterdir():
+                    if f.is_file() and f.suffix.lower() in supported_extensions:
+                        input_files.append(f)
+            elif asset_path.is_file() and asset_path.suffix.lower() in supported_extensions:
+                input_files.append(asset_path)
+
+        if enable_rename_fix and input_files:
+            # 将所有文件复制到临时目录，应用文件名修正
+            temp_dir = tempfile.mkdtemp(prefix="asset_pack_")
+            temp_path = Path(temp_dir)
+            for f in input_files:
+                shutil.copy2(f, temp_path / f.name)
+            temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(temp_path, log)
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            input_files = [f for f in temp_asset_folder.iterdir()
+                          if f.is_file() and f.suffix.lower() in supported_extensions]
 
         if not input_files:
             msg = t("message.packer.no_supported_files_found", extensions=', '.join(supported_extensions))

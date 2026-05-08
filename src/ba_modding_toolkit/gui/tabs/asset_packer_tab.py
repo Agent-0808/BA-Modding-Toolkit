@@ -9,23 +9,25 @@ from ...i18n import t
 from ... import core
 from ...bundle import Bundle
 from ..base_tab import TabFrame
-from ..components import DropZone, SettingRow, UIComponents
+from ..components import DropZone, SettingRow, UIComponents, FileListbox
 from ..utils import confirm_and_replace
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
         self.bundle_paths: list[Path] = []
+        self.asset_paths: list[Path] = []
         self.current_file_pairs: list[tuple[Path, Path]] = []
         
         # 资源文件夹
-        self.folder_zone = DropZone(
+        self.assets_listbox = FileListbox(
             self, title=t("ui.label.assets_folder_to_pack"),
+            file_list=self.asset_paths,
             placeholder_text=t("ui.packer.placeholder_assets"),
-            on_files_selected=self.on_folder_selected,
-            allow_folder=True,
-            allow_multiple=False,
+            height=5,
+            allowed_suffixes={".png", ".skel", ".atlas", ".bytes"},
             logger=self.logger
         )
+        self.assets_listbox.get_frame().pack(fill=tk.X, pady=(0, 10))
 
         # 目标 Bundle 文件
         self.bundle_zone = DropZone(
@@ -73,17 +75,8 @@ class AssetPackerTab(TabFrame):
             self.logger.log(f"  - {p.name}")
         self.logger.status(t("status.ready"))
 
-    def on_folder_selected(self, path: Path):
-        """资源文件夹选中后的处理"""
-        if not path.is_dir():
-            messagebox.showwarning(t("message.invalid_operation"), t("message.packer.require_folder_with_assets"))
-            self.folder_zone.clear()
-            return
-        self.logger.log(t("log.file.loaded", path=path))
-        self.logger.status(t("status.ready"))
-
     def run_replacement_thread(self):
-        if not all([self.bundle_paths, self.folder_zone.path, self.app.output_dir_var.get()]):
+        if not all([self.bundle_paths, self.asset_paths, self.app.output_dir_var.get()]):
             messagebox.showerror(t("common.error"), t("message.packer.missing_paths"))
             return
         self.run_in_thread(self.run_replacement)
@@ -127,7 +120,7 @@ class AssetPackerTab(TabFrame):
         
         success, message, file_pairs = core.process_asset_packing(
             target_bundle_path = self.bundle_paths,
-            asset_folder = self.folder_zone.path,
+            assets = self.asset_paths,
             output_dir = output_dir,
             save_options = save_options,
             spine_options = spine_options,
