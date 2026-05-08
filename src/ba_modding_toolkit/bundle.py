@@ -56,6 +56,21 @@ class Bundle:
         """从文件名获取资源类型"""
         return self.parsed_name.res_type
     
+    def need_crc(self) -> bool:
+        """
+        判断是否需要执行 CRC 修正。
+        当前需要修正的为国际服+Windows平台
+        条件：资源类型不是列表中的类型（日服），且目标平台为 StandaloneWindows64
+        """
+
+        if self.res_type in JP_RES_TYPES:
+            return False
+        # 如果是res_type为空，无法从文件名里判断，先默认为国际服版。
+        # 不过这种文件一般不会做mod
+
+        platform_name, _ = self.platform_info
+        return platform_name == "StandaloneWindows64"
+
     def is_empty(self) -> bool:
         """检查 Bundle 是否为空（不包含任何文件）"""
         return len(self.env.files) == 0
@@ -111,6 +126,21 @@ class Bundle:
         
         log(f'❌ {t("log.file.load_failed", path=bundle_path)}')
         return None
+    
+    @classmethod
+    def check_need_crc(cls, bundle_path: Path, log: LogFunc = no_log) -> bool:
+        """
+        检查指定的 bundle 文件是否需要 CRC 修正。
+        适用于只需要判断 CRC 需求而不需要进一步操作的场景。
+        """
+        bundle = cls.load(bundle_path)
+        if bundle is None:
+            return False
+        
+        platform, unity_version = bundle.platform_info
+        log(t("log.platform_info", platform=platform, version=unity_version))
+        
+        return bundle.need_crc()
     
     def compress(self, compression: CompressionType = "none") -> bytes:
         """

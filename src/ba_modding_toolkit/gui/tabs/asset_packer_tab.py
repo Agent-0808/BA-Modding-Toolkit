@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
+from ...bundle import Bundle
 from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents
 from ..utils import confirm_and_replace
@@ -107,9 +108,7 @@ class AssetPackerTab(TabFrame):
         perform_crc = False
         
         if crc_setting == "auto":
-            platform, unity_version = core.get_unity_platform_info(self.bundle_paths[0])
-            self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
-            perform_crc = platform == "StandaloneWindows64"
+            perform_crc = Bundle.check_need_crc(self.bundle_paths[0], log=self.logger.log)
         elif crc_setting == "true":
             perform_crc = True
         

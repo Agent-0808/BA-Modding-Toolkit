@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
+from ...bundle import Bundle
 from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents
@@ -99,9 +100,7 @@ class BatchLegacyTab(TabFrame):
 
         if crc_setting == "auto":
             target_bundle = self.legacy_file_list[0]
-            platform, unity_version = core.get_unity_platform_info(target_bundle)
-            self.logger.log(t("log.platform_info", platform=platform, version=unity_version))
-            perform_crc = (platform == "StandaloneWindows64")
+            perform_crc = Bundle.check_need_crc(target_bundle, log=self.logger.log)
         elif crc_setting == "true":
             perform_crc = True
 
