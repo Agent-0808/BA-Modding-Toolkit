@@ -22,7 +22,7 @@ from .models import (
 
 class Bundle:
     """
-    封装蔚蓝档案 Bundle 文件的业务类。
+    封装 Bundle 文件的业务类。
     包含了底层的 UnityPy Environment 以及所有业务相关操作（加载、保存、替换、提取等）。
     """
     
@@ -158,7 +158,7 @@ class Bundle:
             success_message = t("message.save_success")
             
             if save_options.perform_crc:
-                crc_str = self.crc
+                crc_str = parse_filename(output_path.name).crc
                 if not crc_str or not crc_str.isdigit():
                     return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
                 target_crc = int(crc_str)
@@ -327,3 +327,5 @@ class Bundle:
             patch["__mode__"] = {"ALL"}
         
         return patch
+
+JP_RES_TYPES = ("animationclips", "assets", "audio", "materials", "meshes", "prefabs", "textassets", "textures")
