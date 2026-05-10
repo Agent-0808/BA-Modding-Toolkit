@@ -9,7 +9,7 @@ from ...i18n import t
 from ... import core
 from ...bundle import Bundle
 from ..base_tab import TabFrame
-from ..components import FileListbox, UIComponents
+from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
 from ...utils import get_search_resource_dirs
 
@@ -19,6 +19,7 @@ class BatchUpdateTab(TabFrame):
 
     def __init__(self, *args, **kwargs):
         self.current_file_pairs: list[tuple[Path, Path]] = []
+        self.match_strategy_var = tk.StringVar(value='path_id')
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -36,6 +37,17 @@ class BatchUpdateTab(TabFrame):
             display_formatter=lambda p: f"{p.parent.name} / {p.name}"
         )
         self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
+        # 匹配策略选择
+        strategy_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
+        strategy_frame.pack(fill=tk.X, pady=(5, 0))
+
+        self.strategy_combo = SettingRow.create_combobox_row(
+            strategy_frame, t("option.match_strategy"),
+            self.match_strategy_var,
+            values=['path_id', 'cont_name_type', 'name_type'],
+            tooltip=t("option.match_strategy_info")
+        )
 
         # 操作按钮区域
         action_button_frame = tb.Frame(self)
@@ -144,7 +156,8 @@ class BatchUpdateTab(TabFrame):
             spine_options=spine_options,
             log=self.logger.log,
             progress_callback=progress_callback,
-            skip_unchanged=True
+            skip_unchanged=True,
+            match_strategy=self.match_strategy_var.get()
         )
 
         self.current_file_pairs = file_pairs
