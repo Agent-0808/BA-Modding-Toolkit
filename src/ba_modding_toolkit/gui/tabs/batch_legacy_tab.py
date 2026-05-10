@@ -99,8 +99,11 @@ class BatchLegacyTab(TabFrame):
         perform_crc = False
 
         if crc_setting == "auto":
-            target_bundle = self.legacy_file_list[0]
-            perform_crc = Bundle.check_need_crc(target_bundle, log=self.logger.log)
+            target_paths, msg = core.find_target_bundles([self.legacy_file_list[0]], search_paths)
+            if not target_paths:
+                self.logger.log(msg)
+                return
+            perform_crc = Bundle.check_need_crc(target_paths[0], log=self.logger.log)
         elif crc_setting == "true":
             perform_crc = True
 
