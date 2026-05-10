@@ -9,6 +9,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
+from ..models import SaveOptions, SpineOptions
 from .components import Theme, Logger, UIComponents
 from .utils import ConfigManager, open_directory, select_directory
 from .dialogs import SettingsDialog
@@ -190,6 +191,51 @@ class App(tk.Frame):
     def get_extra_bytes(self) -> bytes | None:
         """获取用户输入的 extra_bytes 配置值"""
         return parse_hex_bytes(self.extra_bytes_var.get())
+
+    def get_asset_types(self) -> set[str]:
+        """从当前替换选项构建资源类型集合"""
+        if self.replace_all_var.get():
+            return {"ALL"}
+        asset_types: set[str] = set()
+        if self.replace_texture2d_var.get():
+            asset_types.add("Texture2D")
+        if self.replace_textasset_var.get():
+            asset_types.add("TextAsset")
+        if self.replace_mesh_var.get():
+            asset_types.add("Mesh")
+        return asset_types
+
+    def has_any_asset_type(self) -> bool:
+        """是否至少选择了一种资源类型"""
+        return bool(self.get_asset_types())
+
+    def build_save_options(self, perform_crc: bool = True) -> SaveOptions:
+        """从全局配置构建 SaveOptions"""
+        return SaveOptions(
+            perform_crc=perform_crc,
+            extra_bytes=self.get_extra_bytes(),
+            compression=self.compression_method_var.get()
+        )
+
+    def build_spine_options(self, upgrade_mode: bool = True) -> SpineOptions:
+        """从全局配置构建 SpineOptions
+
+        Args:
+            upgrade: True 为升级模式，False 为降级模式
+        """
+
+        if upgrade_mode:
+            return SpineOptions(
+                enabled=self.enable_spine_conversion_var.get(),
+                converter_path=Path(self.spine_converter_path_var.get()),
+                target_version=self.target_spine_version_var.get()
+            )
+        else:
+            return SpineOptions(
+                enabled=self.enable_atlas_downgrade_var.get(),
+                converter_path=Path(self.spine_converter_path_var.get()),
+                target_version=self.spine_downgrade_version_var.get().strip()
+            )
 
     def select_game_resource_directory(self):
         # 根据复选框状态决定对话框标题

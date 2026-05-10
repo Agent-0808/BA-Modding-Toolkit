@@ -49,7 +49,7 @@ wheels = [
 
 [[package]]
 name = "ba-modding-toolkit"
-version = "2.0.0"
+version = "2.0.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "pillow" },

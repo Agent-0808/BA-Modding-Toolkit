@@ -106,17 +106,9 @@ class AssetPackerTab(TabFrame):
             perform_crc = True
         
         # 创建 SaveOptions 和 SpineOptions 对象
-        save_options = core.SaveOptions(
-            perform_crc=perform_crc,
-            extra_bytes=self.app.get_extra_bytes(),
-            compression=self.app.compression_method_var.get()
-        )
-        
-        spine_options = core.SpineOptions(
-            enabled=self.app.enable_spine_conversion_var.get(),
-            converter_path=Path(self.app.spine_converter_path_var.get()),
-            target_version=self.app.target_spine_version_var.get()
-        )
+        save_options = self.app.build_save_options(perform_crc)
+
+        spine_options = self.app.build_spine_options()
         
         success, message, file_pairs = core.process_asset_packing(
             target_bundle_path = self.bundle_paths,

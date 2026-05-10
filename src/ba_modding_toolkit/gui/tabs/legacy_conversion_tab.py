@@ -295,20 +295,10 @@ class LegacyConversionTab(TabFrame):
         elif crc_setting == "true":
             perform_crc = True
         
-        save_options = core.SaveOptions(
-            perform_crc=perform_crc,
-            extra_bytes=self.app.get_extra_bytes(),
-            compression=self.app.compression_method_var.get()
-        )
+        save_options = self.app.build_save_options(perform_crc)
         
         # 从设置页获取资源类型
-        asset_types_to_replace = set()
-        if self.app.replace_all_var.get():
-            asset_types_to_replace = {"ALL"}
-        else:
-            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
-            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
-            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
+        asset_types_to_replace = self.app.get_asset_types()
         
         # 3. 调用处理函数
         self.logger.status(t("common.processing"))

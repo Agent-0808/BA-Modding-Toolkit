@@ -146,36 +146,20 @@ class AssetExtractorTab(TabFrame):
         else:
             final_output_path = output_path
             
-        asset_types = set()
-        if self.app.replace_all_var.get():
-            asset_types.add("ALL")
-        else:
-            if self.app.replace_texture2d_var.get(): asset_types.add("Texture2D")
-            if self.app.replace_textasset_var.get(): asset_types.add("TextAsset")
-            if self.app.replace_mesh_var.get(): asset_types.add("Mesh")
+        asset_types = self.app.get_asset_types()
         
         if not asset_types:
             messagebox.showwarning(t("common.tip"), t("message.missing_asset_type"))
             return
             
-        # 传递 Spine 降级选项
-        enable_atlas_downgrade = self.app.enable_atlas_downgrade_var.get()
-        spine_converter_path = self.app.spine_converter_path_var.get()
         atlas_export_mode = self.app.atlas_export_mode_var.get()
             
-        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, enable_atlas_downgrade, spine_converter_path, atlas_export_mode)
+        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, atlas_export_mode)
 
-    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], enable_atlas_downgrade=False, spine_converter_path=None, atlas_export_mode="atlas"):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], atlas_export_mode="atlas"):
         self.logger.status(t("status.extracting"))
         
-        # 创建 SpineOptions 对象
-        target_version = self.app.spine_downgrade_version_var.get().strip()
-        
-        spine_options = core.SpineOptions(
-            enabled=enable_atlas_downgrade,
-            converter_path=Path(spine_converter_path),
-            target_version=target_version
-        )
+        spine_options = self.app.build_spine_options(upgrade_mode=False)
         
         success, message = core.process_asset_extraction(
             bundle_path=bundle_paths,

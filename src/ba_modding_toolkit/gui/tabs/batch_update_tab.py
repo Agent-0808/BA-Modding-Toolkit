@@ -89,7 +89,7 @@ class BatchUpdateTab(TabFrame):
         if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
             messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
-        if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
+        if not self.app.has_any_asset_type():
             messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
 
@@ -115,13 +115,7 @@ class BatchUpdateTab(TabFrame):
         self.current_file_pairs = []
         self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
 
-        asset_types_to_replace = set()
-        if self.app.replace_all_var.get():
-            asset_types_to_replace = {"ALL"}
-        else:
-            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
-            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
-            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
+        asset_types_to_replace = self.app.get_asset_types()
 
         crc_setting = self.app.enable_crc_correction_var.get()
         perform_crc = False
@@ -135,17 +129,9 @@ class BatchUpdateTab(TabFrame):
         elif crc_setting == "true":
             perform_crc = True
 
-        save_options = core.SaveOptions(
-            perform_crc=perform_crc,
-            extra_bytes=self.app.get_extra_bytes(),
-            compression=self.app.compression_method_var.get()
-        )
+        save_options = self.app.build_save_options(perform_crc)
 
-        spine_options = core.SpineOptions(
-            enabled=self.app.enable_spine_conversion_var.get(),
-            converter_path=Path(self.app.spine_converter_path_var.get()),
-            target_version=self.app.target_spine_version_var.get()
-        )
+        spine_options = self.app.build_spine_options()
 
         # 更新UI状态的回调函数
         def progress_callback(current, total, filename):

@@ -125,7 +125,7 @@ class ModUpdateTab(TabFrame):
             messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
         
-        if not any([self.app.replace_texture2d_var.get(), self.app.replace_textasset_var.get(), self.app.replace_mesh_var.get(), self.app.replace_all_var.get()]):
+        if not self.app.has_any_asset_type():
             messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
 
@@ -152,13 +152,7 @@ class ModUpdateTab(TabFrame):
             self.logger.log(f"    - {tgt.name}")
         self.logger.status(t("status.processing_detailed", filename=self.source_paths[0].name))
         
-        asset_types_to_replace = set()
-        if self.app.replace_all_var.get():
-            asset_types_to_replace = {"ALL"}
-        else:
-            if self.app.replace_texture2d_var.get(): asset_types_to_replace.add("Texture2D")
-            if self.app.replace_textasset_var.get(): asset_types_to_replace.add("TextAsset")
-            if self.app.replace_mesh_var.get(): asset_types_to_replace.add("Mesh")
+        asset_types_to_replace = self.app.get_asset_types()
         
         crc_setting = self.app.enable_crc_correction_var.get()
         perform_crc = False
@@ -168,18 +162,10 @@ class ModUpdateTab(TabFrame):
         elif crc_setting == "true":
             perform_crc = True
         
-        save_options = core.SaveOptions(
-            perform_crc=perform_crc,
-            extra_bytes=self.app.get_extra_bytes(),
-            compression=self.app.compression_method_var.get()
-        )
-        
-        spine_options = core.SpineOptions(
-            enabled=self.app.enable_spine_conversion_var.get(),
-            converter_path=Path(self.app.spine_converter_path_var.get()),
-            target_version=self.app.target_spine_version_var.get()
-        )
-        
+        save_options = self.app.build_save_options(perform_crc)
+
+        spine_options = self.app.build_spine_options()
+
         success, message, file_pairs = core.process_mod_update(
             source_paths=self.source_paths,
             target_paths=self.target_paths,
