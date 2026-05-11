@@ -10,6 +10,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
+from ..bundle import Bundle
 from .components import Theme, Logger, UIComponents
 from .utils import ConfigManager, open_directory, select_directory
 from .dialogs import SettingsDialog
@@ -216,6 +217,17 @@ class App(tk.Frame):
             extra_bytes=self.get_extra_bytes(),
             compression=self.compression_method_var.get()
         )
+
+    def resolve_crc_setting(self, target_path: Path | None) -> bool:
+        """根据全局CRC配置和目标文件，判断是否需要CRC修正"""
+        crc_setting = self.enable_crc_correction_var.get()
+        if crc_setting == "true":
+            return True
+        if crc_setting == "false":
+            return False
+        if target_path is None:
+            return False
+        return Bundle.check_need_crc(target_path, log=self.logger.log)
 
     def build_spine_options(self, upgrade_mode: bool = True) -> SpineOptions:
         """从全局配置构建 SpineOptions

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
-from ...bundle import Bundle
 from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents, FileListbox
 from ..utils import confirm_and_replace
@@ -97,13 +96,7 @@ class AssetPackerTab(TabFrame):
         self.logger.log(t("log.packer.start_packing"))
         self.logger.status(t("common.processing"))
         
-        crc_setting = self.app.enable_crc_correction_var.get()
-        perform_crc = False
-        
-        if crc_setting == "auto":
-            perform_crc = Bundle.check_need_crc(self.bundle_paths[0], log=self.logger.log)
-        elif crc_setting == "true":
-            perform_crc = True
+        perform_crc = self.app.resolve_crc_setting(self.bundle_paths[0])
         
         # 创建 SaveOptions 和 SpineOptions 对象
         save_options = self.app.build_save_options(perform_crc)

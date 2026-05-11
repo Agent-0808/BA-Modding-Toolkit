@@ -7,7 +7,6 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
-from ...bundle import Bundle
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
@@ -125,9 +124,9 @@ class BatchUpdateTab(TabFrame):
             if not target_paths:
                 self.logger.log(msg)
                 return
-            perform_crc = Bundle.check_need_crc(target_paths[0], log=self.logger.log)
-        elif crc_setting == "true":
-            perform_crc = True
+            perform_crc = self.app.resolve_crc_setting(target_paths[0])
+        else:
+            perform_crc = self.app.resolve_crc_setting(None)
 
         save_options = self.app.build_save_options(perform_crc)
 

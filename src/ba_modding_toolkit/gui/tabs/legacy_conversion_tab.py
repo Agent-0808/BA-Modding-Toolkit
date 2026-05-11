@@ -8,7 +8,6 @@ from enum import IntEnum
 
 from ...i18n import t
 from ... import core
-from ...bundle import Bundle
 from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, FileListbox, ModeSwitcher, SettingRow, UIComponents
@@ -286,14 +285,8 @@ class LegacyConversionTab(TabFrame):
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
         
         # 2. 准备选项
-        crc_setting = self.app.enable_crc_correction_var.get()
-        perform_crc = False
-        
-        if crc_setting == "auto":
-            target_bundle = self.legacy_zone.path if self.mode_var.get() == Mode.MODERN_TO_LEGACY else modern_files[0]
-            perform_crc = Bundle.check_need_crc(target_bundle, log=self.logger.log)
-        elif crc_setting == "true":
-            perform_crc = True
+        target_bundle = self.legacy_zone.path if self.mode_var.get() == Mode.MODERN_TO_LEGACY else modern_files[0]
+        perform_crc = self.app.resolve_crc_setting(target_bundle)
         
         save_options = self.app.build_save_options(perform_crc)
         
