@@ -106,7 +106,8 @@ class PatchResult(NamedTuple):
         return self.matched_count > 0
 
 class FilePair(NamedTuple):
-    # core 中处理产生的文件对
+    """core 中处理产生的文件对，包含output和source"""
+
     output: Path    # 输出文件路径
     source: Path    # 源文件路径
 
@@ -129,18 +130,6 @@ class ParsedFilename(NamedTuple):
     crc: str
     prefix: str
 
-# -------- 全局游戏业务映射常量 ---------
-
-# 将日服文件名中的类型标识符映射到UnityPy的AssetType名称
-JP_FILENAME_TYPE_MAP = {
-    "textures": "Texture2D",
-    "textassets": "TextAsset",
-    "materials": "Material",
-    "meshes": "Mesh",
-    "animationclip": "AnimationClip",
-    "audio": "AudioClip",
-    "prefabs": "Prefab",
-}
 
 # 可替换的资源类型白名单
 REPLACEABLE_ASSET_TYPES: set[AssetType] = {

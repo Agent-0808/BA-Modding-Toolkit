@@ -1,7 +1,6 @@
 # utils.py
 
 import binascii
-import os
 import re
 import shutil
 from PIL import Image

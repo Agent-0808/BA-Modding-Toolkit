@@ -12,7 +12,7 @@ from .i18n import t
 from .utils import SpineUtils, ImageUtils, no_log
 from .naming import parse_filename
 from .models import (
-    NameTypeKey, ContNameTypeKey, ParsedFilename, FilePair,
+    NameTypeKey, FilePair,
     AssetKey, AssetContent, AssetType, Patch,
     KeyGeneratorFunc, LogFunc, PatchResult,
     MATCH_STRATEGIES, MatchStrategy, SaveOptions, SpineOptions,
