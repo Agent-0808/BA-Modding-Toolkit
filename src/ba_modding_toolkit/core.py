@@ -20,24 +20,6 @@ from .models import (
 )
 from .bundle import Bundle
 
-# ====== 读取与保存相关 ======
-
-def get_unity_platform_info(input: Path | Env) -> tuple[str, str]:
-    """
-    获取 Bundle 文件的平台信息和 Unity 版本。
-    
-    Returns:
-        tuple[str, str]: (平台名称, Unity版本) 的元组
-                         如果找不到则返回 ("UnknownPlatform", "Unknown")
-    """
-    if isinstance(input, Path):
-        bundle = Bundle.load(input)
-        return bundle.platform_info if bundle else ("UnknownPlatform", "Unknown")
-    elif isinstance(input, Env):
-        temp_bundle = Bundle(Path("temp"), input)
-        return temp_bundle.platform_info
-    else:
-        raise ValueError("input 必须是 Path 或 UnityPy.Environment 类型")
 
 # ====== 寻找对应文件 ======
 

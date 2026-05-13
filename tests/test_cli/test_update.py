@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 
 from ba_modding_toolkit.bundle import Bundle
-from ba_modding_toolkit.core import get_unity_platform_info
 from ba_modding_toolkit.cli.taps import UpdateTap
 from ba_modding_toolkit.cli.handlers import handle_update
 from conftest import has_mod_update_samples
@@ -98,7 +97,8 @@ class TestUpdateCommand:
         tmp_path: Path,
     ):
         """测试 update 后元数据保持一致"""
-        original_platform, original_version = get_unity_platform_info(new_original_bundle_path)
+        new_original_bundle = Bundle.load(new_original_bundle_path)
+        original_platform, original_version = new_original_bundle.platform_info
 
         output_dir = tmp_path / "output"
         output_dir.mkdir()

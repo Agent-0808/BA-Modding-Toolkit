@@ -3,7 +3,6 @@ from pathlib import Path
 
 from ba_modding_toolkit.core import (
     process_mod_update,
-    get_unity_platform_info,
     process_asset_extraction,
     SaveOptions,
 )
@@ -52,7 +51,9 @@ class TestModUpdate:
         new_original_bundle_path: Path,
         tmp_path: Path,
     ):
-        original_platform, original_version = get_unity_platform_info(new_original_bundle_path)
+        
+        new_original_bundle = Bundle.load(new_original_bundle_path)
+        original_platform, original_version = new_original_bundle.platform_info
         
         output_dir = tmp_path / "output"
         output_dir.mkdir()
@@ -72,8 +73,9 @@ class TestModUpdate:
         
         assert success is True, msg
         
-        updated_bundle = output_dir / new_original_bundle_path.name
-        updated_platform, updated_version = get_unity_platform_info(updated_bundle)
+        updated_bundle_path = output_dir / new_original_bundle_path.name
+        updated_bundle = Bundle.load(updated_bundle_path)
+        updated_platform, updated_version = updated_bundle.platform_info
         
         assert updated_platform == original_platform
         assert updated_version == original_version
