@@ -123,9 +123,6 @@ def find_target_bundles(
 
 # ====== 资源处理相关 ======
 
-# 向后兼容别名
-find_new_bundle_path = find_target_bundles
-
 def process_asset_packing(
     target_bundle_path: Path | list[Path],
     assets: Path | list[Path],

@@ -204,8 +204,8 @@ class LegacyConversionTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        # 使用find_new_bundle_path查找Global文件
-        found_paths, message = core.find_new_bundle_path(
+        # 使用find_target_bundles查找Global文件
+        found_paths, message = core.find_target_bundles(
             reference_file,
             search_paths,
             self.logger.log
