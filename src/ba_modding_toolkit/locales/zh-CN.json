@@ -459,12 +459,12 @@
 		"legacy_conversion": {
 			"mode_modern_to_legacy": "新版 → 旧版 (合并)",
 			"mode_legacy_to_modern": "旧版 → 新版 (拆分)",
-			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
+			"placeholder_modern_bundles": "拖放所有相关的新版 Bundle 到此处\n如：textures, textassets等",
 			"role_legacy_target": "旧版 Bundle (目标文件)",
 			"role_modern_source": "新版 Bundle (源文件)",
 			"role_legacy_source": "旧版 Bundle (源文件)",
 			"role_modern_target": "新版 Bundle (目标文件)",
-			"placeholder_legacy_bundle": "拖放旧版 Bundle\n或点击下方按钮选择"
+			"placeholder_legacy_bundle": "拖放旧版 Bundle 文件到此处\n或点击下方按钮选择"
 		},
 		"dialog": {
 			"select": "选择{type}",

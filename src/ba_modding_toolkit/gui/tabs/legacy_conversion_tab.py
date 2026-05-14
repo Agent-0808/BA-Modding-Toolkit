@@ -10,7 +10,7 @@ from ...i18n import t
 from ... import core
 from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
-from ..components import DropZone, FileListbox, ModeSwitcher, SettingRow, UIComponents
+from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
 from ..dialogs import FileSelectionDialog
 from ..utils import confirm_and_replace
 
@@ -41,29 +41,20 @@ class LegacyConversionTab(TabFrame):
             command=self._switch_view
         )
 
-        # --- 容器框架 ---
-        self.convert_frame = tb.Frame(self)
-
         # 创建转换模式的UI
-        self._create_convert_mode_widgets(self.convert_frame)
+        self._create_convert_mode_widgets(self)
 
-        # 初始化视图
+        # 根据选择的模式更新UI标签文案"""
         self._switch_view()
     
     def _switch_view(self):
         """根据选择的模式更新UI标签文案"""
-        self.convert_frame.pack(fill=tk.BOTH, expand=True)
-        # 更新转换模式的UI文案
-        self._update_convert_mode_labels()
-
-    def _update_convert_mode_labels(self):
-        """根据当前转换模式更新标签文案"""
         if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
             self.legacy_zone.config(text=t("ui.legacy_conversion.role_legacy_target"))
-            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_modern_source"))
+            self.modern_zone.config(text=t("ui.legacy_conversion.role_modern_source"))
         else:
             self.legacy_zone.config(text=t("ui.legacy_conversion.role_legacy_source"))
-            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_modern_target"))
+            self.modern_zone.config(text=t("ui.legacy_conversion.role_modern_target"))
 
     # --- 转换模式UI ---
     def _create_convert_mode_widgets(self, parent):
@@ -84,15 +75,15 @@ class LegacyConversionTab(TabFrame):
         self.legacy_zone.pack(fill=tk.X, pady=(0, 3))
 
         # 2. 日服 Bundle 文件列表
-        self.modern_files_listbox = FileListbox(
+        self.modern_zone = DropZone(
             file_frame,
             title=t("ui.legacy_conversion.role_modern_source"),
-            placeholder_text=t("ui.legacy_conversion.placeholder_jp_files"),
-            height=3,
-            logger=self.logger,
-            on_files_added=self._on_modern_files_added
+            placeholder_text=t("ui.legacy_conversion.placeholder_modern_bundles"),
+            on_files_selected=self._on_modern_files_selected,
+            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            allow_multiple=True,
+            logger=self.logger
         )
-        self.modern_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
         # --- 选项设置区域 ---
         options_frame = tb.Labelframe(parent, text=t("ui.label.options"), padding=10)
@@ -145,9 +136,9 @@ class LegacyConversionTab(TabFrame):
         if not self.legacy_zone.path:
             self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.legacy_zone.path)}')
             return
-        
+
         # 清除旧的文件列表，准备重新搜索
-        self.modern_files_listbox._clear_list()
+        self.modern_zone.clear()
         self.run_in_thread(self._find_worker)
 
     def _find_worker(self):
@@ -168,13 +159,13 @@ class LegacyConversionTab(TabFrame):
             self.logger.status(t("status.search_not_found"))
 
     def _update_modern_listbox(self, files: list[Path]):
-        self.modern_files_listbox._clear_list()
-        self.modern_files_listbox.add_files(files)
+        self.modern_zone.clear()
+        self.modern_zone.set_files(files)
         self.logger.log(t("log.search.found_count", count=len(files)))
 
     # --- 新版文件添加后自动查找旧版文件 ---
-    def _on_modern_files_added(self, paths: list[Path]) -> None:
-        """当文件被添加时的回调，如果是第一个文件且开启了自动搜索，则查找对应的旧版文件"""
+    def _on_modern_files_selected(self, paths: list[Path]) -> None:
+        """当文件被选中时的回调，如果是第一个文件且开启了自动搜索，则查找对应的旧版文件"""
         if not self.app.auto_search_var.get():
             return
         if not paths:
@@ -264,8 +255,8 @@ class LegacyConversionTab(TabFrame):
     def run_conversion(self):
         # 1. 验证输入
         output_dir = Path(self.app.output_dir_var.get())
-        modern_files = self.modern_files_listbox.file_list
-        
+        modern_files = self.modern_zone.paths
+
         if not self.legacy_zone.path:
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
