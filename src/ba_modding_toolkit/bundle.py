@@ -358,4 +358,4 @@ class Bundle:
         
         return patch
 
-JP_RES_TYPES = ("animationclips", "assets", "audio", "materials", "meshes", "prefabs", "textassets", "textures")
+JP_RES_TYPES = {"animationclips", "assets", "audio", "materials", "meshes", "prefabs", "textassets", "textures"}

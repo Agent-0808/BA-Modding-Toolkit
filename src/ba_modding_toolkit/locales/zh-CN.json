@@ -424,7 +424,7 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"jp_conversion": "JP/GL 转换",
+			"legacy_conversion": "旧版/新版格式转换",
 			"batch_legacy": "批量处理旧版"
 		},
 		"settings": {
@@ -450,22 +450,21 @@
 			"target_crc_placeholder": "选择待修正文件后自动填充"
 		},
 		"packer": {
-			"placeholder_assets": "拖放包含待打包资源 (.png/.skel/.atlas) 的文件夹\n或点击下方按钮选择",
+			"placeholder_assets": "将待打包资源（.png/.skel/.atlas等）拖放到此处",
 			"placeholder_bundle": "拖放目标 Bundle 文件\n或点击下方按钮选择"
 		},
 		"extractor": {
-			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处"
+			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处\n或点击下方按钮选择"
 		},
 		"legacy_conversion": {
 			"mode_modern_to_legacy": "新版 → 旧版 (合并)",
 			"mode_legacy_to_modern": "旧版 → 新版 (拆分)",
-			"mode_legacy_batch": "批量处理旧版",
 			"placeholder_jp_files": "拖放所有相关的日服文件 (textures, textassets...) 到此处",
-			"role_jp_source": "日服 Bundle (源文件)",
-			"role_jp_target": "日服 Bundle (目标文件)",
-			"role_global_source": "国际服 Bundle (源文件)",
-			"role_global_target": "国际服 Bundle (目标文件)",
-			"placeholder_global_bundle": "拖放国际服的Bundle文件\n或点击下方按钮选择"
+			"role_legacy_target": "旧版 Bundle (目标文件)",
+			"role_modern_source": "新版 Bundle (源文件)",
+			"role_legacy_source": "旧版 Bundle (源文件)",
+			"role_modern_target": "新版 Bundle (目标文件)",
+			"placeholder_legacy_bundle": "拖放旧版 Bundle\n或点击下方按钮选择"
 		},
 		"dialog": {
 			"select": "选择{type}",
@@ -478,9 +477,7 @@
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",
 			"folder_hint": "将文件夹拖放到此处\n或点击下方按钮选择",
 			"searching": "正在查找……",
-			"multiple_files_rejected": "仅支持单个文件"
-		},
-		"group_drop_zone": {
+			"multiple_files_rejected": "仅支持单个文件",
 			"contains": "包含 {count} 个文件: {types}"
 		},
 		"label": {

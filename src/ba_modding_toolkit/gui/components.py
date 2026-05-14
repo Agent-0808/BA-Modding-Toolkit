@@ -272,7 +272,7 @@ class UIComponents:
         return label
 
 class DropZone(tb.Labelframe):
-    """分组拖放区域组件，支持多文件拖放和同组智能补全，提供 paths 属性和 on_files_selected 回调"""
+    """拖放区域组件，支持多文件拖放"""
 
     def __init__(
         self, parent,
@@ -364,7 +364,7 @@ class DropZone(tb.Labelframe):
             parsed = parse_filename(self._paths[0].name)
             res_types = [parse_filename(p.name).res_type or "base" for p in self._paths]
             type_str = ", ".join(sorted(set(res_types)))
-            ui_text = f"{parsed.core}\n({t('ui.group_drop_zone.contains', count=len(self._paths), types=type_str)})"
+            ui_text = f"{parsed.core}\n({t('ui.drop_zone.contains', count=len(self._paths), types=type_str)})"
             self.set_success(ui_text)
         else:
             self.set_success(self._paths[0].name)

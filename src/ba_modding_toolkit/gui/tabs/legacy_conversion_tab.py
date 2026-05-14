@@ -59,11 +59,11 @@ class LegacyConversionTab(TabFrame):
     def _update_convert_mode_labels(self):
         """根据当前转换模式更新标签文案"""
         if self.mode_var.get() == Mode.MODERN_TO_LEGACY:
-            self.legacy_zone.config(text=t("ui.legacy_conversion.role_global_target"))
-            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_jp_source"))
+            self.legacy_zone.config(text=t("ui.legacy_conversion.role_legacy_target"))
+            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_modern_source"))
         else:
-            self.legacy_zone.config(text=t("ui.legacy_conversion.role_global_source"))
-            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_jp_target"))
+            self.legacy_zone.config(text=t("ui.legacy_conversion.role_legacy_source"))
+            self.modern_files_listbox.get_frame().config(text=t("ui.legacy_conversion.role_modern_target"))
 
     # --- 转换模式UI ---
     def _create_convert_mode_widgets(self, parent):
@@ -74,9 +74,9 @@ class LegacyConversionTab(TabFrame):
         # 1. 国际服 Bundle 文件
         self.legacy_zone = DropZone(
             file_frame,
-            title=t("ui.legacy_conversion.role_global_source"),
-            placeholder_text=t("ui.legacy_conversion.placeholder_global_bundle"),
-            on_files_selected=self.on_global_selected,
+            title=t("ui.legacy_conversion.role_legacy_source"),
+            placeholder_text=t("ui.legacy_conversion.placeholder_legacy_bundle"),
+            on_files_selected=self.on_legacy_selected,
             filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
             allow_multiple=False,
             logger=self.logger
@@ -86,11 +86,11 @@ class LegacyConversionTab(TabFrame):
         # 2. 日服 Bundle 文件列表
         self.modern_files_listbox = FileListbox(
             file_frame,
-            title=t("ui.legacy_conversion.role_jp_source"),
+            title=t("ui.legacy_conversion.role_modern_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_jp_files"),
             height=3,
             logger=self.logger,
-            on_files_added=self._on_jp_files_added
+            on_files_added=self._on_modern_files_added
         )
         self.modern_files_listbox.get_frame().pack(fill=tk.BOTH, expand=True)
         
@@ -128,17 +128,17 @@ class LegacyConversionTab(TabFrame):
         )
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
-    def on_global_selected(self, path: Path):
-        """Global 文件选中后的处理"""
+    def on_legacy_selected(self, path: Path):
+        """旧版文件选中后的处理"""
         self.logger.log(t("log.file.loaded", path=path))
         self.logger.status(t("status.ready"))
-        # 自动搜索 JP 文件
+        # 自动搜索新版文件
         if self.app.auto_search_var.get():
-            self._auto_find_jp_files()
+            self._auto_find_modern_files()
 
     # --- 自动搜索逻辑 ---
-    def _auto_find_jp_files(self):
-        """当指定了 Global 文件后，自动在资源目录查找所有匹配的文件"""
+    def _auto_find_modern_files(self):
+        """当指定了旧版文件后，自动在资源目录查找所有匹配的文件"""
         if not self.app.game_resource_dir_var.get():
             self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
             return
@@ -156,46 +156,46 @@ class LegacyConversionTab(TabFrame):
         game_search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
         # 搜索日服文件
-        jp_files = core.find_all_jp_counterparts(
+        modern_files = core.find_all_jp_counterparts(
             self.legacy_zone.path, game_search_dirs, self.logger.log
         )
 
-        if jp_files:
-            self.master.after(0, lambda: self._update_jp_listbox(jp_files))
+        if modern_files:
+            self.master.after(0, lambda: self._update_modern_listbox(modern_files))
             self.logger.status(t("status.ready"))
         else:
             self.logger.log(f'⚠️ {t("log.search.no_found")}')
             self.logger.status(t("status.search_not_found"))
 
-    def _update_jp_listbox(self, files: list[Path]):
+    def _update_modern_listbox(self, files: list[Path]):
         self.modern_files_listbox._clear_list()
         self.modern_files_listbox.add_files(files)
         self.logger.log(t("log.search.found_count", count=len(files)))
 
-    # --- 反向查找：JP文件添加后自动查找Global文件 ---
-    def _on_jp_files_added(self, paths: list[Path]) -> None:
-        """当文件被添加时的回调，如果是第一个文件且开启了自动搜索，则查找对应的Global文件"""
+    # --- 新版文件添加后自动查找旧版文件 ---
+    def _on_modern_files_added(self, paths: list[Path]) -> None:
+        """当文件被添加时的回调，如果是第一个文件且开启了自动搜索，则查找对应的旧版文件"""
         if not self.app.auto_search_var.get():
             return
         if not paths:
             return
-        # 只有当Global文件未设置时才进行查找
+        # 只有当旧版文件未设置时才进行查找
         if self.legacy_zone.path is not None:
             return
         # 使用第一个文件作为查找基础
         first_file = paths[0]
-        self._auto_find_global_file(first_file)
+        self._auto_find_legacy_file(first_file)
 
-    def _auto_find_global_file(self, reference_file: Path):
-        """当指定了参考文件后，自动在资源目录查找对应的Global文件"""
+    def _auto_find_legacy_file(self, reference_file: Path):
+        """当指定了参考文件后，自动在资源目录查找对应的旧版文件"""
         if not self.app.game_resource_dir_var.get():
             self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
             return
 
-        self.run_in_thread(lambda: self._find_global_worker(reference_file))
+        self.run_in_thread(lambda: self._find_legacy_worker(reference_file))
 
-    def _find_global_worker(self, reference_file: Path):
-        """后台线程：查找Global文件"""
+    def _find_legacy_worker(self, reference_file: Path):
+        """后台线程：查找旧版文件"""
         self.logger.status(t("status.searching"))
 
         # 更新UI为搜索中状态
@@ -204,7 +204,7 @@ class LegacyConversionTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
 
-        # 使用find_target_bundles查找Global文件
+        # 使用find_target_bundles查找旧版文件
         found_paths, message = core.find_target_bundles(
             reference_file,
             search_paths,
@@ -212,10 +212,10 @@ class LegacyConversionTab(TabFrame):
         )
 
         # 在主线程中处理结果
-        self.master.after(0, lambda: self._handle_global_search_result(found_paths, message))
+        self.master.after(0, lambda: self._handle_legacy_search_result(found_paths, message))
 
-    def _handle_global_search_result(self, found_paths: list[Path], message: str):
-        """处理Global文件搜索结果"""
+    def _handle_legacy_search_result(self, found_paths: list[Path], message: str):
+        """处理旧版文件搜索结果"""
         if not found_paths:
             # 没有找到匹配文件
             ui_message = t("ui.mod_update.status_not_found", message=message)
@@ -262,7 +262,6 @@ class LegacyConversionTab(TabFrame):
         )
 
     def run_conversion(self):
-        """处理 JP_TO_GLOBAL 和 GLOBAL_TO_JP 模式"""
         # 1. 验证输入
         output_dir = Path(self.app.output_dir_var.get())
         modern_files = self.modern_files_listbox.file_list
