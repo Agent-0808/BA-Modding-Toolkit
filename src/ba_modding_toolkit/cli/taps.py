@@ -140,8 +140,8 @@ class ExtractTap(Tap):
     spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
     target_spine_version: str = '3.8.75'  # Target Spine version for downgrade (e.g., "3.8.75").
 
-    # Atlas导出参数
-    atlas_export_mode: str = 'atlas'  # Atlas export mode: "atlas", "unpack", or "both".
+    # Atlas解包参数
+    unpack_atlas: bool = False  # Unpack Atlas into individual PNG frames while keeping the original files.
 
     def configure(self) -> None:
         self.description = '''Extract assets from Unity Bundle files.
@@ -160,12 +160,11 @@ Examples:
   bamt-cli extract "CH0808_assets.bundle" --subdir "CH0808"
 
   # Extract with unpack mode for atlas files
-  bamt-cli extract "bundle.bundle" --atlas-export-mode unpack
+  bamt-cli extract "bundle.bundle" --unpack-atlas
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
         self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('--atlas-export-mode', choices=['atlas', 'unpack', 'both'])
 
 
 class EnvTap(Tap):

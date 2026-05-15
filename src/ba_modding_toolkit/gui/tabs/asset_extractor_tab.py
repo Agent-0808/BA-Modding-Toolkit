@@ -60,13 +60,12 @@ class AssetExtractorTab(TabFrame):
             tooltip=t("option.spine_downgrade_target_version_info")
         )
         
-        # Atlas 导出模式
-        SettingRow.create_radiobutton_row(
+        # Atlas 解包帧选项
+        SettingRow.create_switch(
             options_frame,
-            label=t("option.atlas_export_mode"),
-            text_var=self.app.atlas_export_mode_var,
-            values=["atlas", "unpack", "both"],
-            tooltip=t("option.atlas_export_mode_info")
+            label=t("option.unpack_atlas"),
+            variable=self.app.unpack_atlas_var,
+            tooltip=t("option.unpack_atlas_info")
         )
 
         # 操作按钮
@@ -152,11 +151,11 @@ class AssetExtractorTab(TabFrame):
             messagebox.showwarning(t("common.tip"), t("message.missing_asset_type"))
             return
             
-        atlas_export_mode = self.app.atlas_export_mode_var.get()
+        unpack_atlas = self.app.unpack_atlas_var.get()
             
-        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, atlas_export_mode)
+        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, unpack_atlas)
 
-    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], atlas_export_mode="atlas"):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], unpack_atlas=False):
         self.logger.status(t("status.extracting"))
         
         spine_options = self.app.build_spine_options(upgrade_mode=False)
@@ -166,7 +165,7 @@ class AssetExtractorTab(TabFrame):
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
             spine_options=spine_options,
-            atlas_export_mode=atlas_export_mode,
+            unpack_atlas=unpack_atlas,
             log=self.logger.log
         )
         

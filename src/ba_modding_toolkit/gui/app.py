@@ -82,8 +82,8 @@ class App(tk.Frame):
         # Spine 降级选项
         self.enable_atlas_downgrade_var.set(False)
         self.spine_downgrade_version_var.set("3.8.75")  # 设置默认值
-        # Atlas 导出模式选项
-        self.atlas_export_mode_var.set("atlas")
+        # Atlas 解包选项
+        self.unpack_atlas_var.set(False)
         
         # Asset Packer 选项
         self.enable_spine38_namefix_var.set(False)
@@ -113,8 +113,8 @@ class App(tk.Frame):
         # Spine 降级选项
         self.enable_atlas_downgrade_var = tk.BooleanVar()
         self.spine_downgrade_version_var = tk.StringVar()
-        # Atlas 导出模式选项
-        self.atlas_export_mode_var = tk.StringVar()
+        # Atlas 解包选项
+        self.unpack_atlas_var = tk.BooleanVar()
         
         # Asset Packer Bleed 选项
         self.enable_spine38_namefix_var = tk.BooleanVar()

@@ -303,21 +303,20 @@ def process_asset_extraction(
     output_dir: Path,
     asset_types_to_extract: set[str],
     spine_options: SpineOptions | None = None,
-    atlas_export_mode: str = "atlas",
+    unpack_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
     从指定的 Bundle 文件中提取选定类型的资源到输出目录。
     支持 Texture2D (保存为 .png) 和 TextAsset (按原名保存)。
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
-    支持Atlas导出模式：atlas（保留原文件）、unpack（解包为PNG帧）、both（两者皆有）。
 
     Args:
         bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
         asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
         spine_options: Spine资源转换的选项。
-        atlas_export_mode: Atlas导出模式，可选值："atlas"、"unpack"、"both"。
+        unpack_atlas: 是否解包Atlas为单独的PNG帧（同时保留原文件）。
         log: 日志记录函数。
 
     Returns:
@@ -408,17 +407,11 @@ def process_asset_extraction(
                     SpineUtils.process_atlas_downgrade(atlas_path, work_dir, log)
 
             # 2.2 Atlas解包处理
-            if atlas_export_mode in ("unpack", "both"):
+            if unpack_atlas:
                 log(f'\n--- {t("log.section.process_atlas_unpack")} ---')
 
                 for atlas_path in work_dir.glob("*.atlas"):
                     SpineUtils.unpack_atlas_frames(atlas_path, output_dir, log)
-
-                    # unpack模式下删除atlas和png（只保留解包后的帧）
-                    if atlas_export_mode == "unpack":
-                        atlas_path.unlink(missing_ok=True)
-                        png_path = work_dir / f"{atlas_path.stem}.png"
-                        png_path.unlink(missing_ok=True)
 
             # ========== 阶段 3: 输出文件 ==========
             # 将工作目录中剩余的文件复制到输出目录
