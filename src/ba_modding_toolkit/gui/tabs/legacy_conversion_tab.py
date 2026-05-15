@@ -42,7 +42,7 @@ class LegacyConversionTab(TabFrame):
         )
 
         # 创建转换模式的UI
-        self._create_convert_mode_widgets(self)
+        self._create_convert_mode_widgets()
 
         # 根据选择的模式更新UI标签文案"""
         self._switch_view()
@@ -57,10 +57,10 @@ class LegacyConversionTab(TabFrame):
             self.modern_zone.config(text=t("ui.legacy_conversion.role_modern_target"))
 
     # --- 转换模式UI ---
-    def _create_convert_mode_widgets(self, parent):
+    def _create_convert_mode_widgets(self):
         # 文件输入区域
-        file_frame = tb.Frame(parent)
-        file_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 3))
+        file_frame = tb.Frame(self)
+        file_frame.pack(fill=tk.BOTH, pady=(0, 3))
         
         # 1. 国际服 Bundle 文件
         self.legacy_zone = DropZone(
@@ -86,19 +86,11 @@ class LegacyConversionTab(TabFrame):
         )
         
         # --- 选项设置区域 ---
-        options_frame = tb.Labelframe(parent, text=t("ui.label.options"), padding=10)
+        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X)
         
-        # 自动搜索开关
-        SettingRow.create_switch(
-            options_frame,
-            label=t("option.auto_search"),
-            variable=self.app.auto_search_var,
-            tooltip=t("option.auto_search_info")
-        )
-        
         # --- 操作按钮 ---
-        action_button_frame = tb.Frame(parent)
+        action_button_frame = tb.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=10)
         action_button_frame.grid_columnconfigure((0, 1), weight=1)
         
@@ -124,8 +116,7 @@ class LegacyConversionTab(TabFrame):
         self.logger.log(t("log.file.loaded", path=path))
         self.logger.status(t("status.ready"))
         # 自动搜索新版文件
-        if self.app.auto_search_var.get():
-            self._auto_find_modern_files()
+        self._auto_find_modern_files()
 
     # --- 自动搜索逻辑 ---
     def _auto_find_modern_files(self):
@@ -165,9 +156,7 @@ class LegacyConversionTab(TabFrame):
 
     # --- 新版文件添加后自动查找旧版文件 ---
     def _on_modern_files_selected(self, paths: list[Path]) -> None:
-        """当文件被选中时的回调，如果是第一个文件且开启了自动搜索，则查找对应的旧版文件"""
-        if not self.app.auto_search_var.get():
-            return
+        """当文件被选中时的回调，如果是第一个文件则查找对应的旧版文件"""
         if not paths:
             return
         # 只有当旧版文件未设置时才进行查找

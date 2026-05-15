@@ -68,9 +68,6 @@ class App(tk.Frame):
         self.create_backup_var.set(True)
         self.compression_method_var.set("lzma")
         
-        # JP/GB转换自动搜索选项
-        self.auto_search_var.set(True)
-        
         # 一键更新的资源类型选项
         self.replace_texture2d_var.set(True)
         self.replace_textasset_var.set(True)
@@ -102,8 +99,7 @@ class App(tk.Frame):
         self.enable_crc_correction_var = tk.StringVar()
         self.create_backup_var = tk.BooleanVar()
         self.compression_method_var = tk.StringVar()
-        # JP/GB转换自动搜索选项
-        self.auto_search_var = tk.BooleanVar()
+
         # 一键更新的资源类型选项
         self.replace_texture2d_var = tk.BooleanVar()
         self.replace_textasset_var = tk.BooleanVar()

@@ -419,7 +419,6 @@ class ConfigManager:
                 "Directories": {
                     "game_resource_dir": app.game_resource_dir_var.get(),
                     "auto_detect_subdirs": app.auto_detect_subdirs_var.get(),
-                    "auto_search": app.auto_search_var.get()
                 },
                 "AppSettings": {
                     "language": app.language_var.get(),
@@ -473,7 +472,6 @@ class ConfigManager:
             dirs: dict[str] = data.get("Directories", {})
             app.game_resource_dir_var.set(dirs.get("game_resource_dir", ""))
             app.auto_detect_subdirs_var.set(dirs.get("auto_detect_subdirs", False))
-            app.auto_search_var.set(dirs.get("auto_search", False))
             
             app_settings = data.get("AppSettings", {})
             if not hasattr(app, 'language_var'):
