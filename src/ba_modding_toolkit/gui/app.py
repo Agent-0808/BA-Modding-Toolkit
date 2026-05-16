@@ -3,6 +3,7 @@
 import sys
 import tkinter as tk
 from tkinter import messagebox
+from typing import get_type_hints
 import ttkbootstrap as tb
 from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
@@ -12,17 +13,18 @@ from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
 from .components import Theme, Logger, UIComponents
-from .utils import ConfigManager, open_directory, select_directory
+from .utils import open_directory, select_directory
+from .configs import ConfigManager, ConfigMeta, ConfigMixin
 from .dialogs import SettingsDialog
 from .base_tab import TabFrame
 from .tabs import *
 
-class App(tk.Frame):
+class App(tk.Frame, ConfigMixin):
     def __init__(self, master: tk.Tk):
         super().__init__(master)
         self.master: tk.Tk = master
         self.setup_main_window()
-        self.config_manager = ConfigManager()
+        self.config_manager = ConfigManager("config.toml")
         self.init_shared_variables()
         # 在创建UI组件前加载配置，确保语言设置正确
         self.load_config_on_startup()  # 启动时加载配置
@@ -50,82 +52,28 @@ class App(tk.Frame):
             print(f"Setting icon to {icon_path}")
             self.master.iconbitmap(icon_path)
 
-    def _set_default_values(self):
-        """设置所有共享变量的默认值。"""
-        # 尝试从注册表获取游戏根目录，如果没有则使用默认路径
-        ba_path = get_BA_path()
-        if ba_path:
-            game_root_dir = Path(ba_path)
-        else:
-            game_root_dir = Path(r"C:\Program Files (x86)\Steam\steamapps\common\BlueArchive")
-        self.game_resource_dir_var.set(str(game_root_dir))
-        self.auto_detect_subdirs_var.set(True)
-        
-        # 共享变量
-        self.output_dir_var.set(str(Path.cwd() / "output"))
-        self.extra_bytes_var.set("0x08080808")
-        self.enable_crc_correction_var.set("auto")
-        self.create_backup_var.set(True)
-        self.compression_method_var.set("lzma")
-        
-        # 一键更新的资源类型选项
-        self.replace_texture2d_var.set(True)
-        self.replace_textasset_var.set(True)
-        self.replace_mesh_var.set(True)
-        self.replace_all_var.set(False)
-        
-        # Spine 转换器选项
-        self.spine_converter_path_var.set("")
-        self.enable_spine_conversion_var.set(False)
-        self.target_spine_version_var.set("4.2.33")
-        
-        # Spine 降级选项
-        self.enable_atlas_downgrade_var.set(False)
-        self.spine_downgrade_version_var.set("3.8.75")  # 设置默认值
-        # Atlas 解包选项
-        self.unpack_atlas_var.set(False)
-        
-        # Asset Packer 选项
-        self.enable_spine38_namefix_var.set(False)
-        self.enable_bleed_var.set(False)
-
     def init_shared_variables(self):
-        """初始化所有Tabs共享的变量。"""
-        # 创建变量
-        self.game_resource_dir_var = tk.StringVar()
-        self.auto_detect_subdirs_var = tk.BooleanVar()
-        self.output_dir_var = tk.StringVar()
-        self.extra_bytes_var = tk.StringVar()
-        self.enable_crc_correction_var = tk.StringVar()
-        self.create_backup_var = tk.BooleanVar()
-        self.compression_method_var = tk.StringVar()
-
-        # 一键更新的资源类型选项
-        self.replace_texture2d_var = tk.BooleanVar()
-        self.replace_textasset_var = tk.BooleanVar()
-        self.replace_mesh_var = tk.BooleanVar()
-        self.replace_all_var = tk.BooleanVar()
+        """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""
+        self._config_specs: dict[str, ConfigMeta] = {}
         
-        # Spine 转换器选项
-        self.spine_converter_path_var = tk.StringVar()
-        self.enable_spine_conversion_var = tk.BooleanVar()
-        self.target_spine_version_var = tk.StringVar()
-        # Spine 降级选项
-        self.enable_atlas_downgrade_var = tk.BooleanVar()
-        self.spine_downgrade_version_var = tk.StringVar()
-        # Atlas 解包选项
-        self.unpack_atlas_var = tk.BooleanVar()
+        hints = get_type_hints(self.__class__, include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+            
+            var_type = hint.__origin__
+            meta: ConfigMeta = hint.__metadata__[0]
+            
+            var_instance = var_type()
+            setattr(self, var_name, var_instance)
+            self._config_specs[var_name] = meta
+            
+            default = meta.default() if callable(meta.default) else meta.default
+            var_instance.set(default)
         
-        # Asset Packer Bleed 选项
-        self.enable_spine38_namefix_var = tk.BooleanVar()
-        self.enable_bleed_var = tk.BooleanVar()
-        
-        # 语言设置
-        self.language_var = tk.StringVar(value=i18n_manager.lang)
+        # 特殊处理：语言设置
+        self.language_var.set(i18n_manager.lang)
         self.available_languages = i18n_manager.get_available_languages()
-        
-        # 设置默认值
-        self._set_default_values()
 
     def create_widgets(self):
         # 使用grid布局确保status_widget固定在底部

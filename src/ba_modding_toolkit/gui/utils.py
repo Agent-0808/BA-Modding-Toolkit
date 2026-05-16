@@ -7,11 +7,8 @@ import tkinter as tk
 from tkinter import messagebox, filedialog
 from pathlib import Path
 import shutil
-import toml
 from typing import Callable, TYPE_CHECKING
 import ttkbootstrap as tb
-if TYPE_CHECKING:
-    from .app import App
 
 from ..utils import no_log
 from ..i18n import t
@@ -401,111 +398,3 @@ def select_file(title: str,
     except Exception as e:
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
         return [] if multiple else None
-
-
-
-# --- 配置管理类 ---
-
-class ConfigManager:
-    """配置管理类，负责保存和读取应用设置到config.toml文件"""
-    
-    def __init__(self, config_file="config.toml"):
-        self.config_file = Path(config_file)
-        
-    def save_config(self, app: "App"):
-        """保存当前应用配置到文件"""
-        try:
-            data = {
-                "Directories": {
-                    "game_resource_dir": app.game_resource_dir_var.get(),
-                    "auto_detect_subdirs": app.auto_detect_subdirs_var.get(),
-                },
-                "AppSettings": {
-                    "language": app.language_var.get(),
-                    "output_dir": app.output_dir_var.get()
-                },
-                "GlobalOptions": {
-                    "extra_bytes": app.extra_bytes_var.get(),
-                    "enable_crc_correction": app.enable_crc_correction_var.get(),
-                    "create_backup": app.create_backup_var.get(),
-                    "compression_method": app.compression_method_var.get()
-                },
-                "ResourceTypes": {
-                    "replace_texture2d": app.replace_texture2d_var.get(),
-                    "replace_textasset": app.replace_textasset_var.get(),
-                    "replace_mesh": app.replace_mesh_var.get(),
-                    "replace_all": app.replace_all_var.get()
-                },
-                "SpineConverter": {
-                    "enable_spine_conversion": app.enable_spine_conversion_var.get(),
-                    "spine_converter_path": app.spine_converter_path_var.get(),
-                    "target_spine_version": app.target_spine_version_var.get()
-                },
-                "SpineDowngrade": {
-                    "enable_atlas_downgrade": app.enable_atlas_downgrade_var.get(),
-                    "spine_downgrade_version": app.spine_downgrade_version_var.get(),
-                    "unpack_atlas": app.unpack_atlas_var.get()
-                },
-                "Tabs": {
-                    "enable_spine38_namefix": app.enable_spine38_namefix_var.get(),
-                    "enable_bleed": app.enable_bleed_var.get()
-                }
-            }
-            
-            with open(self.config_file, 'w', encoding='utf-8') as f:
-                toml.dump(data, f)
-                
-            return True
-        except Exception as e:
-            print(t("log.config.save_failed", error=e))
-            return False
-    
-    def load_config(self, app: "App"):
-        """从文件加载配置到应用实例"""
-        try:
-            if not self.config_file.exists():
-                return False
-                
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                data = toml.load(f)
-            
-            dirs: dict[str] = data.get("Directories", {})
-            app.game_resource_dir_var.set(dirs.get("game_resource_dir", ""))
-            app.auto_detect_subdirs_var.set(dirs.get("auto_detect_subdirs", False))
-            
-            app_settings = data.get("AppSettings", {})
-            if not hasattr(app, 'language_var'):
-                app.language_var = tk.StringVar()
-            app.language_var.set(app_settings.get("language", ""))
-            app.output_dir_var.set(app_settings.get("output_dir", ""))
-            
-            global_options = data.get("GlobalOptions", {})
-            app.extra_bytes_var.set(global_options.get("extra_bytes", "0x08080808"))
-            app.enable_crc_correction_var.set(global_options.get("enable_crc_correction", "auto"))
-            app.create_backup_var.set(global_options.get("create_backup", False))
-            app.compression_method_var.set(global_options.get("compression_method", ""))
-            
-            resource_types = data.get("ResourceTypes", {})
-            app.replace_texture2d_var.set(resource_types.get("replace_texture2d", False))
-            app.replace_textasset_var.set(resource_types.get("replace_textasset", False))
-            app.replace_mesh_var.set(resource_types.get("replace_mesh", False))
-            app.replace_all_var.set(resource_types.get("replace_all", False))
-            
-            spine_converter = data.get("SpineConverter", {})
-            app.enable_spine_conversion_var.set(spine_converter.get("enable_spine_conversion", False))
-            app.spine_converter_path_var.set(spine_converter.get("spine_converter_path", ""))
-            app.target_spine_version_var.set(spine_converter.get("target_spine_version", ""))
-            
-            spine_downgrade = data.get("SpineDowngrade", {})
-            app.enable_atlas_downgrade_var.set(spine_downgrade.get("enable_atlas_downgrade", False))
-            app.spine_downgrade_version_var.set(spine_downgrade.get("spine_downgrade_version", ""))
-            app.unpack_atlas_var.set(spine_downgrade.get("unpack_atlas", False))
-            
-            tabs = data.get("Tabs", {})
-            app.enable_spine38_namefix_var.set(tabs.get("enable_spine38_namefix", False))
-            app.enable_bleed_var.set(tabs.get("enable_bleed", False))
-            
-            return True
-        except Exception as e:
-            print(t("message.process_failed", error=e))
-            return False
