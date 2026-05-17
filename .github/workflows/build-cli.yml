@@ -97,12 +97,10 @@ jobs:
           copyright: "Copyright ©2025-2026 Agent-0808. Licensed under GPLv3."
           trademarks: "Blue Archive ©NEXON Games Co., Ltd. & Yostar, Inc. This tool is unofficial and not endorsed by them."
 
+          clang: true
           low-memory: true
-          # 经测试使用mingw64可以避免堆内存问题
-          mingw64: true
-          # CLI 版本不需要 tk-inter 插件
-          # enable-plugins: tk-inter
-          # 包含代码依赖包
+          # lto: "no"
+          # jobs: 1
           include-package: |
             ba_modding_toolkit
             UnityPy.resources

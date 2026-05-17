@@ -80,15 +80,17 @@ jobs:
               print(f"version={version}", file=fh)
               print(f"file_version={file_version}", file=fh)
 
-      - name: Build Executable with Nuitka
+      - name: Build Executable with Nuitka (${{ matrix.compiler.name }})
         uses: Nuitka/Nuitka-Action@main
         with:
           nuitka-version: main
-          script-name: src/ba_modding_toolkit/__main__.py
+          working-directory: src
+          script-name: ba_modding_toolkit
           mode: onefile
+          python-flag: "-m"
 
           # 元数据
-          windows-icon-from-ico: src/ba_modding_toolkit/assets/eligma.ico
+          windows-icon-from-ico: ba_modding_toolkit/assets/eligma.ico
           product-name: "BA Modding Toolkit"
           product-version: ${{ steps.get_version.outputs.file_version }}
           file-version: ${{ steps.get_version.outputs.file_version }}
@@ -97,9 +99,10 @@ jobs:
           copyright: "Copyright ©2025-2026 Agent-0808. Licensed under GPLv3."
           trademarks: "Blue Archive ©NEXON Games Co., Ltd. & Yostar, Inc. This tool is unofficial and not endorsed by them."
 
+          clang: true
           low-memory: true
-          # 经测试使用mingw64可以避免堆内存问题
-          mingw64: true
+          # lto: "no"
+          # jobs: 1
           enable-plugins: tk-inter
           # 包含代码依赖包
           include-package: |
@@ -112,10 +115,10 @@ jobs:
             archspec
           # 包含资源目录
           include-data-dir: |
-            src/ba_modding_toolkit/assets=ba_modding_toolkit/assets
-            src/ba_modding_toolkit/locales=ba_modding_toolkit/locales
+            ba_modding_toolkit/assets=ba_modding_toolkit/assets
+            ba_modding_toolkit/locales=ba_modding_toolkit/locales
           windows-console-mode: disable
-          output-dir: build
+          output-dir: ../build
           output-file: "BA-Modding-Toolkit.exe"
           assume-yes-for-downloads: true
 
