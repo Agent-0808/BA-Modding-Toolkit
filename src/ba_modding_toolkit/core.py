@@ -805,6 +805,7 @@ def process_batch_legacy_batch(
 
 # ====== 日服处理相关 ======
 
+# TODO: 名字不太对
 def find_all_jp_counterparts(
     global_bundle_path: Path,
     search_dirs: list[Path],
@@ -879,11 +880,11 @@ def process_modern_to_legacy_conversion(
     try:
         log("="*50)
         log(t("log.legacy_convert.starting_conversion"))
-        log(f'  > {t("log.legacy_convert.global_base_file", name=legacy_bundle_path.name)}')
-        log(f'  > {t("log.legacy_convert.jp_files_count", count=len(modern_bundle_paths))}')
+        log(f'  > {t("log.legacy_convert.legacy_source_file", name=legacy_bundle_path.name)}')
+        log(f'  > {t("log.legacy_convert.modern_files_count", count=len(modern_bundle_paths))}')
         
         # 1. 从所有日服包中构建一个完整的"替换清单"
-        log(f'\n--- {t("log.section.extracting_from_jp")} ---')
+        log(f'\n--- {t("log.section.extracting_patches")} ---')
         patch: Patch = {}
         strategy_name = 'cont_name_type'
         key_func = MATCH_STRATEGIES[strategy_name]
@@ -912,7 +913,7 @@ def process_modern_to_legacy_conversion(
         log(f'\n--- {t("log.section.applying_to_global")} ---')
         global_bundle = Bundle.load(legacy_bundle_path, log)
         if not global_bundle:
-            return False, t("message.legacy_convert.load_global_failed"), None
+            return False, t("message.legacy_convert.load_legacy_failed"), None
         
         result = global_bundle.apply_patch(patch, key_func)
         
@@ -934,7 +935,7 @@ def process_modern_to_legacy_conversion(
         log(f"  ✅ {t('log.file.saved', path=output_path)}")
         log(f"\n🎉 {t('log.legacy_convert.conversion_complete')}")
         file_pair: FilePair = FilePair(output_path, legacy_bundle_path)
-        return True, t("message.legacy_convert.jp_to_global_success", asset_count=result.applied_count), file_pair
+        return True, t("message.legacy_convert.modern_to_legacy_success", asset_count=result.applied_count), file_pair
         
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")
@@ -977,14 +978,14 @@ def process_legacy_to_modern_conversion(
     try:
         log("="*50)
         log(t("log.legacy_convert.starting_conversion"))
-        log(f'  > {t("log.legacy_convert.global_source_file", name=legacy_bundle_path.name)}')
-        log(f'  > {t("log.legacy_convert.jp_files_count", count=len(modern_bundle_paths))}')
+        log(f'  > {t("log.legacy_convert.legacy_source_file", name=legacy_bundle_path.name)}')
+        log(f'  > {t("log.legacy_convert.modern_files_count", count=len(modern_bundle_paths))}')
         
         legacy_bundle = Bundle.load(legacy_bundle_path, log)
         if not legacy_bundle:
-            return False, t("message.legacy_convert.load_global_source_failed"), []
+            return False, t("message.legacy_convert.load_legacy_failed"), []
         
-        log(f'\n--- {t("log.section.extracting_from_global")} ---')
+        log(f'\n--- {t("log.section.extracting_patches")} ---')
 
         # 定义匹配策略
         strategies: list[tuple[str, KeyGeneratorFunc]] = [
@@ -1018,13 +1019,13 @@ def process_legacy_to_modern_conversion(
             current_failed: list[tuple[str, str]] = []
 
             # 3. 遍历每个日服模板文件进行处理
-            for i, jp_template_path in enumerate(modern_bundle_paths, 1):
-                log(t("log.processing_filename_with_progress", current=i, total=total_files, name=jp_template_path.name))
+            for i, modern_path in enumerate(modern_bundle_paths, 1):
+                log(t("log.processing_filename_with_progress", current=i, total=total_files, name=modern_path.name))
 
-                template_bundle = Bundle.load(jp_template_path, log)
+                template_bundle = Bundle.load(modern_path, log)
                 if not template_bundle:
-                    log(f"  > ❌ {t('message.load_failed')}: {jp_template_path.name}")
-                    current_failed.append((jp_template_path.name, t('message.load_failed')))
+                    log(f"  > ❌ {t('message.load_failed')}: {modern_path.name}")
+                    current_failed.append((modern_path.name, t('message.load_failed')))
                     continue
 
                 result = template_bundle.apply_patch(patch, key_func)
@@ -1032,8 +1033,8 @@ def process_legacy_to_modern_conversion(
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）
                     if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
-                        log(f"  > ⏭️ {t('log.legacy_convert.file_unchanged', name=jp_template_path.name, count=result.skipped_count)}")
-                        current_skipped.append(jp_template_path.name)
+                        log(f"  > ⏭️ {t('log.legacy_convert.file_unchanged', name=modern_path.name, count=result.skipped_count)}")
+                        current_skipped.append(modern_path.name)
                         # 跳过也算作策略成功，避免继续尝试其他策略
                         strategy_success = True
                     else:
@@ -1041,21 +1042,21 @@ def process_legacy_to_modern_conversion(
                         for item in result.applied_logs:
                             log(f"    - {item}")
 
-                        output_path = output_dir / jp_template_path.name
+                        output_path = output_dir / modern_path.name
                         save_ok, save_msg = template_bundle.save(output_path, save_options)
                         if save_ok:
                             log(f"    ✅ {t('log.file.saved', path=output_path)}")
                             total_changes += result.applied_count
                             strategy_success = True
                             strategy_total_changes += result.applied_count
-                            file_pairs.append(FilePair(output_path, jp_template_path))
-                            current_output.append((jp_template_path.name, result.applied_count))
+                            file_pairs.append(FilePair(output_path, modern_path))
+                            current_output.append((modern_path.name, result.applied_count))
                         else:
                             log(f"    ❌ {t('log.file.save_failed', path=output_path, error=save_msg)}")
-                            current_failed.append((jp_template_path.name, save_msg))
+                            current_failed.append((modern_path.name, save_msg))
                 else:
                     log(f"  > {t('log.file.no_changes_made')}")
-                    current_skipped.append(jp_template_path.name)
+                    current_skipped.append(modern_path.name)
 
             # 如果当前策略成功替换了至少一个资源，就结束
             if strategy_success:
@@ -1091,7 +1092,7 @@ def process_legacy_to_modern_conversion(
             for name, reason in failed_files:
                 log(t('log.summary.failed_item', name=name, reason=reason))
 
-        return True, t("message.legacy_convert.global_to_jp_success", bundle_count=len(output_files), asset_count=total_changes), file_pairs
+        return True, t("message.legacy_convert.legacy_to_modern_success", bundle_count=len(output_files), asset_count=total_changes), file_pairs
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_detail', error=e)}")

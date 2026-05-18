@@ -83,10 +83,10 @@
 		"skel_converter_path_info": "SpineSkeletonDataConverter.exe 文件的路径",
 		"match_strategy": "匹配策略",
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
-		"enable_bleed": "启用 Bleed 处理",
+		"enable_bleed": "溢出",
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
 		"enable_spine38_name_fix": "修正旧版 Spine 文件名",
-		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式修复为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png"
+		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png"
 	},
 	"file_type": {
 		"executable": "可执行文件",
@@ -174,13 +174,12 @@
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
 		"legacy_convert": {
-			"load_global_failed": "无法加载国际服源文件",
-			"jp_to_global_success": "JP -> Global 转换成功！\n已替换 {asset_count} 个 资源",
-			"global_to_jp_success": "Global -> JP 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
+			"modern_to_legacy_success": "新版 -> 旧版 转换成功！\n已替换 {asset_count} 个 资源",
+			"legacy_to_modern_success": "旧版 -> 新版 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
 			"conversion_error": "转换过程中发生错误:\n{error}",
-			"load_global_source_failed": "无法加载国际服源文件",
 			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
-			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。"
+			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
+			"load_legacy_failed": "无法加载旧版文件"
 		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
@@ -351,16 +350,14 @@
 		"legacy_convert": {
 			"found_match": "成功找到: {path}",
 			"searching_jp_counterparts": "正在为 \"{name}\" 搜索对应的JP文件...",
-			"global_base_file": "国际服源文件: {name}",
-			"jp_files_count": "选中的日服文件数量: {count}",
 			"extracted_count_from_jp": "从日服文件提取了 {count} 个资源",
 			"no_assets_replaced": "未替换任何资源",
 			"starting_conversion": "开始转换...",
-			"global_source_file": "国际服源文件: {name}",
 			"extracted_count": "提取了 {count} 个资源。",
 			"conversion_complete": "转换完成！",
-			"auto_search_no_game_dir": "自动查找失败：未设置游戏资源目录。",
-			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成"
+			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成",
+			"legacy_source_file": "旧版源文件: {name}",
+			"modern_files_count": "选中的新版文件数量: {count}"
 		},
 		"summary": {
 			"title": "处理总结",

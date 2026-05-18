@@ -121,13 +121,6 @@ class LegacyConversionTab(TabFrame):
     # --- 自动搜索逻辑 ---
     def _auto_find_modern_files(self):
         """当指定了旧版文件后，自动在资源目录查找所有匹配的文件"""
-        if not self.app.game_resource_dir_var.get():
-            self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
-            return
-        if not self.legacy_zone.path:
-            self.logger.log(f'⚠️ {t("log.file.not_exist", path=self.legacy_zone.path)}')
-            return
-
         # 清除旧的文件列表，准备重新搜索
         self.modern_zone.clear()
         self.run_in_thread(self._find_worker)
@@ -168,10 +161,6 @@ class LegacyConversionTab(TabFrame):
 
     def _auto_find_legacy_file(self, reference_file: Path):
         """当指定了参考文件后，自动在资源目录查找对应的旧版文件"""
-        if not self.app.game_resource_dir_var.get():
-            self.logger.log(f'⚠️ {t("log.legacy_convert.auto_search_no_game_dir")}')
-            return
-
         self.run_in_thread(lambda: self._find_legacy_worker(reference_file))
 
     def _find_legacy_worker(self, reference_file: Path):
