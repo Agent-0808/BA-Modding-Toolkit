@@ -263,7 +263,7 @@
 			"atlas_unpack_failed": "Atlas unpack failed"
 		},
 		"packer": {
-			"start_packing": "Starting packing from resource folder...",
+			"start_packing": "Starting packing resources...",
 			"pack_success_path": "Packing successful. File output to: {path}",
 			"found_files_to_process": "Found {count} files to process. Scanning bundle and replacing...",
 			"no_assets_packed": "No successful asset packing performed.",

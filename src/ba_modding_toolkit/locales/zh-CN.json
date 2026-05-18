@@ -12,8 +12,6 @@
 		"warning": "警告",
 		"tip": "提示",
 		"processing": "处理中...",
-		"done": "完成",
-		"all": "全部",
 		"fail": "失败",
 		"result": "结果",
 		"unknown": "未知",
@@ -25,9 +23,6 @@
 		"browse_folder": "浏览文件夹...",
 		"select": "选择",
 		"open": "打开",
-		"enable": "启用",
-		"disable": "禁用",
-		"add": "添加",
 		"add_files": "添加文件",
 		"add_folder": "添加文件夹",
 		"remove": "移除",
@@ -35,7 +30,6 @@
 		"clear": "清除",
 		"clear_list": "清空列表",
 		"replace_original": "覆盖原文件",
-		"create_backup": "创建备份",
 		"print": "打印",
 		"start": "开始",
 		"update": "更新",
@@ -115,7 +109,6 @@
 		"no_file_selected": "未选择文件。",
 		"list_empty": "列表为空，请先添加项目。",
 		"drop_single_file": "请一次只拖放一个文件。",
-		"drop_single_folder": "请一次只拖放一个文件夹。",
 		"missing_paths": "请确保已设置所有必要的路径",
 		"missing_asset_type": "请至少选择一种资源类型。",
 		"process_success": "处理成功！",
@@ -137,9 +130,7 @@
 			"language_changed": "语言设置已更改。\n请保存配置并重启程序以使更改生效。\n是否立即保存当前配置并关闭程序？"
 		},
 		"packer": {
-			"require_folder_with_assets": "请输入包含了要打包的资源文件的文件夹。",
-			"missing_paths": "请确保已选择目标 Bundle、待打包资源文件夹，并在全局设置中指定了输出目录。",
-			"generated_file_not_found_for_replace": "找不到已生成的替换文件。\n请先成功执行一次\"生成替换文件\"。",
+			"missing_paths": "请确保已选择目标 Bundle 与待打包资源，并在全局设置中指定了输出目录。",
 			"load_target_bundle_failed": "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。",
 			"no_supported_files_found": "在指定文件夹中没有找到任何支持的文件 ({extensions})。",
 			"no_matching_assets_to_pack": "没有找到任何名称匹配的资源进行打包。",
@@ -177,9 +168,7 @@
 			"extraction_complete": "提取完成，共输出 {count} 个文件。"
 		},
 		"mod_update": {
-			"no_matching_assets_to_replace": "没有找到任何名称匹配的资源进行替换，无法继续更新。",
 			"success": "一键更新成功！",
-			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。",
 			"no_assets_extracted": "没有资源被提取",
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
@@ -266,7 +255,7 @@
 			"atlas_unpack_failed": "Atlas 解包失败"
 		},
 		"packer": {
-			"start_packing": "开始从资源文件夹打包...",
+			"start_packing": "开始打包资源...",
 			"pack_success_path": "打包成功。文件已输出至: {path}",
 			"found_files_to_process": "找到 {count} 个待处理文件，正在扫描 bundle 并进行替换...",
 			"no_assets_packed": "没有执行任何成功的资源打包。",
@@ -280,7 +269,6 @@
 			"loaded_original": "已加载原始文件: {file}",
 			"loaded_modified": "已加载待修正文件: {file}",
 			"start_correction": "开始CRC修正过程...",
-			"check_failed": "检测CRC值时发生错误: {error}",
 			"match_no_correction_needed": "CRC值已匹配，无需修正",
 			"correction_success": "CRC 修正成功！",
 			"correction_failed": "CRC修正失败",
@@ -296,13 +284,9 @@
 			"move_to_output": "移动提取的文件到输出目录",
 			"process_spine_downgrade": "处理Spine资产并降级",
 			"process_atlas_unpack": "解包 Atlas 帧图片",
-			"copy_standalone_files": "复制独立文件",
-			"asset_migration": "资源迁移",
 			"extracting_from_global": "正在从国际服文件提取资源",
 			"extracting_from_jp": "正在从日服文件提取资源",
 			"applying_to_global": "正在应用到国际服文件",
-			"conversion_complete": "转换完成",
-			"copy_converted_files": "复制成功转换的文件",
 			"applying_to_targets": "应用到目标文件组",
 			"extracting_patches": "正在提取补丁"
 		},
@@ -313,11 +297,9 @@
 			"lz4": "LZ4"
 		},
 		"search": {
-			"searching_for_file": "正在为 \"{name}\" 搜索对应文件...",
 			"searching_for_file_group": "正在为 {count} 个源文件搜索对应目标文件...",
 			"file_prefix": "文件前缀: \"{prefix}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
-			"old_mod_asset_count": "旧 Mod 包含 {count} 个资源。",
 			"source_mod_asset_count": "源文件组包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",
 			"find_failed": "查找失败: {message}",
@@ -347,22 +329,14 @@
 			"strategy_skipped_unchanged": "策略 \"{name}\"：所有文件内容未变化，跳过生成"
 		},
 		"mod_update": {
-			"using_old_mod": "使用旧版 Mod: {name}",
-			"using_new_resource": "使用新版资源: {name}",
-			"migration_complete": "资源迁移完成，共处理 {count} 个资源。",
 			"all_processes_complete": "全部流程处理完成！共处理 {count} 个资源。",
 			"updating": "正在更新……",
-			"all_resources_unchanged": "所有资源内容未变化（{count} 个），跳过生成输出文件",
 			"source_files": "源文件组 ({count} 个文件)",
 			"target_files": "目标文件组 ({count} 个文件)",
 			"pool_built": "共有 {count} 个匹配资源",
 			"target_unchanged": "目标文件内容未变化: {name}（{count} 个资源），跳过",
 			"target_processed": "目标文件处理完成: {name}（替换 {applied} 个资源）",
-			"no_assets_extracted": "无法从源文件中提取任何资源",
-			"no_targets_processed": "没有目标文件被成功处理",
-			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新",
-			"no_matching_assets_to_replace": "没有找到任何名称匹配的资源进行替换，无法继续更新。",
-			"migration_failed": "资源迁移过程失败，请检查日志获取详细信息。"
+			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
@@ -437,8 +411,6 @@
 			"group_paths": "路径设置"
 		},
 		"mod_update": {
-			"mode_single": "单个更新",
-			"mode_batch": "批量更新",
 			"placeholder_old": "拖放待更新或移植的 Mod 文件到此处\n或点击下方按钮选择",
 			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
@@ -482,14 +454,12 @@
 		},
 		"label": {
 			"custom_resource_dir": "自定义资源目录",
-			"source_file": "源文件",
-			"target_file": "目标文件",
 			"mod_file": "待处理 Mod 文件",
 			"target_resource_bundle": "目标资源 Bundle",
 			"spine_version": "Spine 版本",
 			"search_path": "查找路径:",
 			"game_resource_dir": "游戏资源目录",
-			"assets_folder_to_pack": "待打包资源文件夹",
+			"assets_to_pack": "待打包资源文件",
 			"target_bundle_file": "目标 Bundle 文件",
 			"bundles_to_extract": "待提取资源的 Bundle 文件",
 			"original_file": "原始文件",

@@ -17,9 +17,9 @@ class AssetPackerTab(TabFrame):
         self.asset_paths: list[Path] = []
         self.current_file_pairs: list[tuple[Path, Path]] = []
         
-        # 资源文件夹
+        # 资源文件列表
         self.assets_listbox = FileListbox(
-            self, title=t("ui.label.assets_folder_to_pack"),
+            self, title=t("ui.label.assets_to_pack"),
             file_list=self.asset_paths,
             placeholder_text=t("ui.packer.placeholder_assets"),
             height=5,
