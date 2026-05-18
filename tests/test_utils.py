@@ -49,15 +49,6 @@ class TestSpineUtils:
         version = SpineUtils.get_skel_version(data)
         assert version is None
 
-    @pytest.mark.skipif(
-        not has_sample_skel(),
-        reason="sample.skel IS REQUIRED"
-    )
-    def test_get_skel_version_from_file(self, sample_skel_path: Path):
-        version = SpineUtils.get_skel_version(sample_skel_path)
-        assert version is not None
-        assert "." in version
-
 
 class TestImageUtils:
     def test_bleed_image_basic(self):

@@ -51,6 +51,11 @@ def has_file(directory: Path, extension: str) -> bool:
         return False
     return bool(list(directory.glob(f"*{extension}")))
 
+def file_list(directory: Path) -> list[Path]:
+    if not directory.exists():
+        return []
+    return list(directory.iterdir())
+
 
 def compare_directory_assets(
     old_dir: Path,
