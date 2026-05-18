@@ -539,35 +539,13 @@ class SpineUtils:
         return skel_bytes
 
     @staticmethod
-    def run_atlas_downgrader(
-        input_atlas: Path,
-        output_dir: Path,
-        log: LogFunc = no_log,
-    ) -> bool:
-        """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
-        from SpineAtlas import Atlas, ReadAtlasFile
-        try:
-            log(f'    > {t("log.spine.converting_atlas", name=input_atlas.name)}')
-            
-            atlas: Atlas = ReadAtlasFile(str(input_atlas))
-            atlas.version = False
-            
-            atlas.ReScale()
-            atlas.SaveAtlas4_0Scale(outPath=output_dir)
-
-            return True
-        except Exception as e:
-            log(f'      ✗ {t("log.error_detail", error=e)}')
-            return False
-
-    @staticmethod
     def process_skel_downgrade(
         skel_path: Path,
         output_dir: Path,
         converter_path: Path,
         target_version: str,
         log: LogFunc = no_log,
-    ) -> None:
+    ) -> bool:
         """处理单个 .skel 文件的降级。"""
         version = SpineUtils.get_skel_version(skel_path, log)
         log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
@@ -584,22 +562,29 @@ class SpineUtils:
             log(f'    > {t("log.spine.skel_conversion_success", name=skel_path.name)}')
         else:
             log(f'    ✗ {t("log.spine.skel_conversion_failed")}')
+        return skel_success
 
     @staticmethod
     def process_atlas_downgrade(
         atlas_path: Path,
         output_dir: Path,
         log: LogFunc = no_log,
-    ) -> None:
-        """处理单个 .atlas 文件的降级，自动处理相关的 png 文件。"""
-        atlas_success = SpineUtils.run_atlas_downgrader(
-            atlas_path, output_dir, log
-        )
-
-        if atlas_success:
+    ) -> bool:
+        """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
+        from SpineAtlas import Atlas, ReadAtlasFile
+        try:
+            log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
+            
+            atlas: Atlas = ReadAtlasFile(str(atlas_path))
+            atlas.version = False
+            
+            atlas.ReScale()
+            atlas.SaveAtlas4_0Scale(outPath=output_dir)
             log(f'    > {t("log.spine.atlas_downgrade_success")}')
-        else:
-            log(f'    ✗ {t("log.spine.atlas_downgrade_failed")}.')
+            return True
+        except Exception as e:
+            log(f'    ✗ {t("log.error_detail", error=e)}')
+            return False
 
     @staticmethod
     def unpack_atlas_frames(
