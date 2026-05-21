@@ -66,7 +66,7 @@
 		"spine_target_version": "Target Version",
 		"spine_target_version_info": "Format should be \"A.B.C\".",
 		"spine_downgrade": "Enable Spine Downgrade",
-		"spine_downgrade_info": "(Optional Extension)\nCalls an external program to export files compatible with older Spine versions (.skel and .atlas).\nRequires configuring. path to Skel Converter.",
+		"spine_downgrade_info": "(Optional Extension)\nCalls an external program to export files compatible with older Spine versions (.skel and .atlas).\nRequires configuring the path to the Skel Converter.",
 		"spine_downgrade_target_version": "Target Version",
 		"spine_downgrade_target_version_info": "Format should be \"A.B.C\".",
 		"unpack_atlas": "Unpack Atlas",
@@ -85,7 +85,7 @@
 		"match_strategy_info": "Select the strategy for matching resources:\n- path_id: Best for same-version files, exact match\n- cont_name_type: Best for cross-version migration (between Global and Japanese servers) with container+name+type matching\n- name_type: name+type matching",
 		"enable_bleed": "Bleed",
 		"enable_bleed_info": "Applies bleed operations to image files.\nRecommended if packed images show black or jagged edges in-game.",
-		"enable_spine38_name_fix": "Fix Old Spine Filenames",
+		"enable_spine38_name_fix": "Rename Old Spine Filenames",
 		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png"
 	},
 	"file_type": {
@@ -419,7 +419,7 @@
 			"target_crc_placeholder": "Will be auto-filled after selecting a modified file"
 		},
 		"packer": {
-			"placeholder_assets": "Drag and drop folder containing assets (.png/.skel/.atlas) here\nOr click the button below to select",
+			"placeholder_assets": "Drag and drop the resources to be packed (.png/.skel/.atlas, etc.) here",
 			"placeholder_bundle": "Drag and drop target Bundle file here\nOr click the button below to select"
 		},
 		"extractor": {
