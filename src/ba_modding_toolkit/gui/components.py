@@ -305,7 +305,6 @@ class DropZone(tb.Labelframe):
             UIComponents.create_textbox_entry(
                 search_frame,
                 textvariable=search_path_var,
-                placeholder_text=t("ui.label.game_resource_dir"),
                 readonly=True
             ).pack(side=tk.LEFT, fill=tk.X, expand=True)
 

@@ -101,7 +101,7 @@ class BatchUpdateTab(TabFrame):
 
         output_dir = Path(self.app.output_dir_var.get())
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        search_paths = get_search_resource_dirs(base_game_dir)
 
         try:
             output_dir.mkdir(parents=True, exist_ok=True)

@@ -83,7 +83,7 @@ class CrcToolTab(TabFrame):
             return
 
         base_game_dir = Path(game_dir_str)
-        search_dirs = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        search_dirs = get_search_resource_dirs(base_game_dir)
 
         for directory in search_dirs:
             if not directory.is_dir():

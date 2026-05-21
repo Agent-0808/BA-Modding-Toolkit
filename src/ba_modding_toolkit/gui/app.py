@@ -194,12 +194,7 @@ class App(tk.Frame, ConfigMixin):
             )
 
     def select_game_resource_directory(self):
-        # 根据复选框状态决定对话框标题
-        if self.auto_detect_subdirs_var.get():
-            title = t("option.game_root_dir")
-        else:
-            title = t("ui.label.custom_resource_dir")
-        select_directory(self.game_resource_dir_var, title, self.logger.log)
+        select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
         
     def open_game_resource_in_explorer(self):
         open_directory(self.game_resource_dir_var.get(), self.logger.log)

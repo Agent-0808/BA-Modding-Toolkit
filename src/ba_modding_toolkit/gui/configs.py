@@ -39,7 +39,6 @@ class ConfigMixin:
     
     # Directories
     game_resource_dir_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir)]
-    auto_detect_subdirs_var: Annotated[tk.BooleanVar, ConfigMeta("Directories", True)]
     
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]

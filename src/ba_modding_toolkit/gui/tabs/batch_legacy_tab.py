@@ -112,7 +112,7 @@ class BatchLegacyTab(TabFrame):
         asset_types_to_replace = self.app.get_asset_types()
 
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_resource_dirs(base_game_dir, self.app.auto_detect_subdirs_var.get())
+        search_paths = get_search_resource_dirs(base_game_dir)
 
         self.logger.status(t("common.processing"))
 
