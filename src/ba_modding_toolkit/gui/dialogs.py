@@ -188,7 +188,6 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.spine_target_version"),
             text_var=self.app.target_spine_version_var,
-            placeholder_text=t("ui.label.spine_version"),
             tooltip=t("option.spine_target_version_info")
         )
 

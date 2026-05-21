@@ -27,11 +27,12 @@ class CrcToolTab(TabFrame):
 
         # 目标 CRC 输入框
         self.target_crc_var = tk.StringVar()
+        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=5)
+        options_frame.pack(fill=tk.X, pady=(5,0))
         SettingRow.create_entry_row(
-            self,
+            options_frame,
             label=t("ui.label.target_crc"),
             text_var=self.target_crc_var,
-            placeholder_text=t("ui.crc_tool.target_crc_placeholder"),
             expand=True
         )
 

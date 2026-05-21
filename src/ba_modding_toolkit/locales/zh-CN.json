@@ -415,8 +415,7 @@
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",
-			"placeholder_origin": "选择待修正文件后将自动查找原始文件\n或手动拖放/浏览文件",
-			"target_crc_placeholder": "选择待修正文件后自动填充"
+			"placeholder_origin": "选择待修正文件后将自动查找原始文件\n或手动拖放/浏览文件"
 		},
 		"packer": {
 			"placeholder_assets": "将待打包资源（.png/.skel/.atlas等）拖放到此处",
@@ -452,7 +451,6 @@
 		"label": {
 			"mod_file": "待处理 Mod 文件",
 			"target_resource_bundle": "目标资源 Bundle",
-			"spine_version": "Spine 版本",
 			"search_path": "查找路径:",
 			"assets_to_pack": "待打包资源文件",
 			"target_bundle_file": "目标 Bundle 文件",

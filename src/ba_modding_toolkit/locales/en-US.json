@@ -415,8 +415,7 @@
 		},
 		"crc_tool": {
 			"placeholder_modified": "Drag and drop Bundle to correct CRC here\nOr click the button below to select",
-			"placeholder_origin": "Selecting a file to correct will auto-search for the original\nOr drag/browse manually",
-			"target_crc_placeholder": "Will be auto-filled after selecting a modified file"
+			"placeholder_origin": "Selecting a file to correct will auto-search for the original\nOr drag/browse manually"
 		},
 		"packer": {
 			"placeholder_assets": "Drag and drop the resources to be packed (.png/.skel/.atlas, etc.) here",
@@ -452,7 +451,6 @@
 		"label": {
 			"mod_file": "Mod File to Process",
 			"target_resource_bundle": "Target Resource Bundle",
-			"spine_version": "Spine Version",
 			"search_path": "Search Path:",
 			"game_resource_dir": "Game Resource Dir",
 			"assets_to_pack": "Assets to Pack",
