@@ -237,7 +237,7 @@ class SettingsDialog(tb.Toplevel):
     def load_config(self):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
-            self.app.logger.log(t("status.ready"))
+            self.app.logger.log(t("log.config.loaded"))
             messagebox.showinfo(t("common.success"), t("message.config.loaded"))
         else:
             self.app.logger.log(t("log.config.load_failed"))

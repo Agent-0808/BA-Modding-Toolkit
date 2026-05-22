@@ -75,6 +75,18 @@ class App(tk.Frame, ConfigMixin):
         self.language_var.set(i18n_manager.lang)
         self.available_languages = i18n_manager.get_available_languages()
 
+    def _set_default_values(self):
+        """重置所有配置变量为默认值"""
+        hints = get_type_hints(self.__class__, include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+
+            meta: ConfigMeta = hint.__metadata__[0]
+            var = getattr(self, var_name)
+            default = meta.default() if callable(meta.default) else meta.default
+            var.set(default)
+
     def create_widgets(self):
         # 使用grid布局确保status_widget固定在底部
         self.master.grid_rowconfigure(0, weight=1)  # 主内容区域可扩展
