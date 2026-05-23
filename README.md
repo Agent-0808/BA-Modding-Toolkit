@@ -40,14 +40,12 @@ You can download the latest version of the executable file from the [Releases](h
 The program contains multiple functional tabs:
 
 - **Mod Update**: Update or port Mod files between different platforms
-  - **Single Update**: Update a single Mod file
-  - **Batch Update**: Batch process multiple Mod files
-- **CRC Tool**: CRC checksum correction functionality
+- **Batch Update**: Batch process multiple Mod files
+- **CRC Tool**: CRC checksum calculation and correction functionality
 - **Asset Packer**: Pack asset files from a folder into a Bundle file, replacing the corresponding assets in the Bundle
 - **Asset Extractor**: Extract specified types of assets from Bundle files
-- **JP/GL Conversion**: Convert between JP server format and Legacy Global server format
-  - Convert between a single file and multiple files
-  - Batch convert legacy Global server format to new format
+- **Legacy Conversion**: Convert between Legacy format(old global version) and Modern format(JP and new global version)
+- **Batch Legacy**: Batch convert Legacy format to Modern format
 
 Check the [Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/Usage) Page for detailed instructions.
 
@@ -61,7 +59,7 @@ The following extended features are independent third-party programs. Please com
 
 ### Spine Converter
 
-**[SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter)**
+**[wang606/SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter)**
 
 This program provides an interface to call the Skel conversion tool. Based on the SpineSkeletonDataConverter project, it can convert Spine 3 format `.skel` files used in some older Mods to the Spine 4 format supported by the current game version. Additionally, it can convert Spine 4 format files to Spine 3 format in the "Asset Extractor" feature.
 
@@ -113,13 +111,15 @@ The table below lists tested environment configurations for reference.
 | Operating System | Python | UnityPy | Pillow | Status | Note   |
 |:------------------- |:-------------- |:--------------- |:-------------- |:------ | :--- |
 | Windows 10          | 3.12.4         | 1.23.0     | 12.0.0    | ✅   | Dev Env |
+| Windows 10          | 3.11.x         | 1.23.0     | 12.0.0    | ✅   |  |
 | Windows 10          | 3.12.4         | 1.23.0     | 10.4.0    | ✅   |  |
-| Windows 10          | 3.13.7         | 1.23.0          | 11.3.0         | ✅     |  |
-| Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0          | 12.0.0         | ✅     |  |
+| Windows 10          | 3.13.7         | 1.23.0     | 11.3.0    | ✅   |  |
+| Windows 10          | 3.12.4         | 1.24.0     | 10.4.0    | ❌   |  |
+| Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0     | 12.0.0    | ✅   |  |
 
 ## Developing
 
-Please ensure that Python 3.12 or higher is installed.
+Please ensure that Python 3.11 or higher is installed.
 
 ```bash
 git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
@@ -151,6 +151,9 @@ BA-Modding-Toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # Entry point
 │ ├── core.py        # Core processing logic
+│ ├── bundle.py      # Bundle class
+│ ├── naming.py      # File naming logic
+│ ├── models.py      # Data models
 │ ├── i18n.py        # Internationalization functionality
 │ ├── utils.py       # Utility classes and helper functions
 │ ├── cli/           # Command Line Interface (CLI) package
@@ -164,15 +167,18 @@ BA-Modding-Toolkit/
 │ │ ├── app.py          # Main application App class
 │ │ ├── base_tab.py     # TabFrame base class
 │ │ ├── components.py   # UI components, themes, logging
+│ │ ├── configs.py      # Configuration definitions
 │ │ ├── dialogs.py      # Settings dialogs
 │ │ ├── utils.py        # UI related utility functions
 │ │ └── tabs/           # Feature tabs
 │ │   ├── __init__.py
-│ │   ├── mod_update_tab.py       # Mod Update tab
-│ │   ├── crc_tool_tab.py         # CRC Fix Tool tab
-│ │   ├── asset_packer_tab.py     # Asset Packer tab
-│ │   ├── asset_extractor_tab.py  # Asset Extractor tab
-│ │   └── jp_conversion_tab.py    # JP/GL Conversion tab
+│ │   ├── mod_update_tab.py        # Mod Update tab
+│ │   ├── batch_update_tab.py      # Batch Update tab
+│ │   ├── crc_tool_tab.py          # CRC Tool tab
+│ │   ├── asset_packer_tab.py      # Asset Packer tab
+│ │   ├── asset_extractor_tab.py   # Asset Extractor tab
+│ │   ├── legacy_conversion_tab.py # Legacy Conversion tab
+│ │   └── batch_legacy_tab.py      # Batch Legacy tab
 │ ├── assets/         # Project assets
 │ └── locales/        # Language files
 ├── tests/            # Pytest test cases folder

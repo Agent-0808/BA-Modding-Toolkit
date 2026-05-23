@@ -395,7 +395,7 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"legacy_conversion": "旧版/新版格式转换",
+			"legacy_conversion": "旧版/新版转换",
 			"batch_legacy": "批量处理旧版"
 		},
 		"settings": {

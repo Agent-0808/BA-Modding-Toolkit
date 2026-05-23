@@ -668,7 +668,7 @@ class SpineUtils:
                         log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
 
                 except Exception as e:
-                    log(f"  ❌ {t("log.error_detail", error=e)}")
+                    log(f"  ❌ {t('log.error_detail', error=e)}")
 
             final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
             final_temp_path = Path(final_temp_dir)

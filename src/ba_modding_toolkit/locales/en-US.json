@@ -452,7 +452,6 @@
 			"mod_file": "Mod File to Process",
 			"target_resource_bundle": "Target Resource Bundle",
 			"search_path": "Search Path:",
-			"game_resource_dir": "Game Resource Dir",
 			"assets_to_pack": "Assets to Pack",
 			"target_bundle_file": "Target Bundle File",
 			"bundles_to_extract": "Bundles to Extract From",
