@@ -274,6 +274,7 @@ class Bundle:
         applied_count = 0
         skipped_count = 0
         applied_assets_log = []
+        matched_keys: list[AssetKey] = []
         
         tasks = patch.copy()
         
@@ -293,6 +294,7 @@ class Bundle:
                 
                 if asset_key in tasks:
                     content: AssetContent = tasks.pop(asset_key)
+                    matched_keys.append(asset_key)
                     resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
                     
                     if obj.type == AssetType.Texture2D:
@@ -330,7 +332,8 @@ class Bundle:
             applied_count=applied_count,
             skipped_count=skipped_count,
             applied_logs=applied_assets_log,
-            unmatched_keys=list(tasks.keys())
+            unmatched_keys=list(tasks.keys()),
+            matched_keys=matched_keys
         )
     
     def extract_patch(

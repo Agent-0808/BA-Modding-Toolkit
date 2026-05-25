@@ -228,6 +228,7 @@ def process_asset_packing(
         # 2. 对每个目标 Bundle 应用替换并保存
         file_pairs: list[FilePair] = []
         success_count = 0
+        all_matched_keys: set[AssetKey] = set()
 
         for i, bundle_path in enumerate(bundle_paths):
             if len(bundle_paths) > 1:
@@ -251,14 +252,7 @@ def process_asset_packing(
 
             log(f'{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
 
-            if result.unmatched_keys:
-                log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
-                for key in sorted(result.unmatched_keys):
-                    if isinstance(key, NameTypeKey):
-                        key_display = f"[{key.type}] {key.name}"
-                    else:
-                        key_display = str(key)
-                    log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=key_display)})")
+            all_matched_keys.update(result.matched_keys)
 
             output_path = output_dir / bundle_path.name
             save_ok, save_message = target_bundle.save(output_path, save_options)
@@ -270,6 +264,13 @@ def process_asset_packing(
             log(t("log.file.saved", path=output_path))
             file_pairs.append(FilePair(output_path, bundle_path))
             success_count += 1
+
+        # 3. 汇总输出所有bundle都未匹配的资源
+        never_matched_keys = set(patch.keys()) - all_matched_keys
+        if never_matched_keys:
+            log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
+            for key in sorted(never_matched_keys):
+                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=str(key))})")
 
         if not file_pairs:
             return False, t("message.packer.no_matching_assets_to_pack"), []
@@ -436,12 +437,12 @@ def _migrate_bundle_assets(
     log(t("log.migration.extracting_from_old_bundle", types=', '.join(asset_types_to_replace)))
     old_bundle = Bundle.load(old_bundle_path, log)
     if not old_bundle:
-        return None, PatchResult(0, 0, [], [])
+        return None, PatchResult(0, 0, [], [], [])
     
     log(t("log.migration.loading_new_bundle"))
     new_bundle = Bundle.load(new_bundle_path, log)
     if not new_bundle:
-        return None, PatchResult(0, 0, [], [])
+        return None, PatchResult(0, 0, [], [], [])
 
     # 定义匹配策略
     strategies: list[MatchStrategy] = ['path_id', 'cont_name_type', 'name_type']
@@ -477,7 +478,7 @@ def _migrate_bundle_assets(
 
     # 5. 所有策略都失败了
     log(f"\n⚠️ {t('common.warning')}: {t('log.migration.all_strategies_failed', types=', '.join(asset_types_to_replace))}")
-    return None, PatchResult(0, 0, [], [])
+    return None, PatchResult(0, 0, [], [], [])
 
 def process_mod_update(
     source_paths: list[Path],

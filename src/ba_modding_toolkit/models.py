@@ -80,6 +80,7 @@ class PatchResult(NamedTuple):
     skipped_count: int              # 匹配但内容相同跳过的数量
     applied_logs: list[str]         # 修改成功的日志
     unmatched_keys: list[AssetKey]  # 未匹配的资源键
+    matched_keys: list[AssetKey]    # 匹配成功的资源键（包括修改和跳过的）
     
     @property
     def matched_count(self) -> int:
