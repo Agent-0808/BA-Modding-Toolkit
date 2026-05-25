@@ -29,6 +29,7 @@ class UpdateTap(Tap):
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
     asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.

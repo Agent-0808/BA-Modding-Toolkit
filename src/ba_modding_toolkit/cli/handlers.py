@@ -119,7 +119,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
         save_options=save_options,
         spine_options=spine_options,
         match_strategy=args.strategy,
-        skip_unchanged=True,
+        skip_unchanged=not args.save_all,
         log=logger.log,
     )
 

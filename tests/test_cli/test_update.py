@@ -28,6 +28,7 @@ class TestUpdateCommand:
             "--output-dir", str(output_dir),
             "--no-crc",
             "--compression", "none",
+            "--save-all",
         ])
 
         handle_update(args)
@@ -56,6 +57,7 @@ class TestUpdateCommand:
             "--asset-types", "Texture2D", "TextAsset",
             "--no-crc",
             "--compression", "none",
+            "--save-all",
         ])
 
         handle_update(args)
@@ -79,6 +81,7 @@ class TestUpdateCommand:
             "--output-dir", str(output_dir),
             "--no-crc",
             "--compression", "none",
+            "--save-all",
         ])
 
         handle_update(args)
@@ -109,6 +112,7 @@ class TestUpdateCommand:
             "--output-dir", str(output_dir),
             "--no-crc",
             "--compression", "none",
+            "--save-all",
         ])
 
         handle_update(args)
