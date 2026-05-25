@@ -14,7 +14,8 @@ from .utils import CRCUtils, SpineUtils, no_log
 from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch,
-    KeyGeneratorFunc, LogFunc, CompressionType, PatchResult,
+    NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
+    CompressionType, PatchResult,
     SaveOptions, SpineOptions, ParsedFilename,
     REPLACEABLE_ASSET_TYPES
 )
@@ -74,6 +75,44 @@ class Bundle:
     def is_empty(self) -> bool:
         """检查 Bundle 是否为空（不包含任何文件）"""
         return len(self.env.files) == 0
+    
+    # -------- 匹配策略相关 --------
+    
+    @staticmethod
+    def _get_key_func(strategy: MatchStrategy):
+        """根据匹配策略名获取对应的键生成函数。"""
+        if strategy == 'path_id':
+            return lambda obj: obj.path_id
+        elif strategy == 'name_type':
+            return lambda obj: NameTypeKey(obj.peek_name(), obj.type.name)
+        elif strategy == 'cont_name_type':
+            return lambda obj: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name)
+        raise ValueError(f"Unknown match strategy: {strategy}")
+    
+    def get_asset_keys(
+        self,
+        strategy: MatchStrategy = 'name_type',
+        asset_types: set[AssetType] | None = None,
+    ) -> set[AssetKey]:
+        """
+        根据匹配策略获取资源键集合，用于指纹比对或匹配。
+
+        Args:
+            strategy: 匹配策略 ('path_id', 'name_type', 'cont_name_type')
+            asset_types: 资源类型过滤，None 表示不过滤
+
+        Returns:
+            资源键集合
+        """
+        key_func = self._get_key_func(strategy)
+        keys: set[AssetKey] = set()
+        for obj in self.env.objects:
+            if asset_types and obj.type not in asset_types:
+                continue
+            key = key_func(obj)
+            if key is not None:
+                keys.add(key)
+        return keys
     
     @cached_property
     def platform_info(self) -> tuple[str, str]:
@@ -219,18 +258,19 @@ class Bundle:
     def apply_patch(
         self,
         patch: Patch,
-        key_func: KeyGeneratorFunc
+        match_strategy: MatchStrategy = 'path_id'
     ) -> PatchResult:
         """
         将补丁中的资源应用到当前的 bundle。
 
         Args:
             patch: 资源补丁，格式为 { asset_key: content }。
-            key_func: 用于从目标环境中的对象生成 asset_key 的函数。
+            match_strategy: 匹配策略，用于从目标环境中的对象生成 asset_key。
 
         Returns:
             PatchResult: 包含修改结果的数据类，包括实际修改数量、跳过数量、日志和未匹配键。
         """
+        key_func = self._get_key_func(match_strategy)
         applied_count = 0
         skipped_count = 0
         applied_assets_log = []
@@ -296,7 +336,7 @@ class Bundle:
     def extract_patch(
         self,
         asset_types_to_replace: set[str],
-        key_func: KeyGeneratorFunc,
+        match_strategy: MatchStrategy = 'path_id',
         spine_options: SpineOptions | None = None
     ) -> Patch:
         """
@@ -304,12 +344,13 @@ class Bundle:
         
         Args:
             asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 或 {"ALL"}）
-            key_func: 用于生成资源键的函数
+            match_strategy: 匹配策略，用于生成资源键
             spine_options: Spine 资源升级选项
             
         Returns:
             资源补丁 { asset_key: content }
         """
+        key_func = self._get_key_func(match_strategy)
         patch: Patch = {}
         replace_all = "ALL" in asset_types_to_replace
         

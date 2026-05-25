@@ -14,8 +14,8 @@ from .naming import parse_filename
 from .models import (
     NameTypeKey, FilePair,
     AssetKey, AssetContent, AssetType, Patch,
-    KeyGeneratorFunc, LogFunc, PatchResult,
-    MATCH_STRATEGIES, MatchStrategy, SaveOptions, SpineOptions,
+    LogFunc, PatchResult,
+    MatchStrategy, SaveOptions, SpineOptions,
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
@@ -72,15 +72,12 @@ def find_target_bundles(
     
     # 构建源文件组的指纹集合
     source_fingerprint: set[AssetKey] = set()
-    key_func = MATCH_STRATEGIES['name_type']
     
     for src_path in source_paths:
         src_bundle = Bundle.load(src_path, log)
         if not src_bundle:
             continue
-        for obj in src_bundle.env.objects:
-            if obj.type in comparable_types:
-                source_fingerprint.add(key_func(obj))
+        source_fingerprint |= src_bundle.get_asset_keys('name_type', comparable_types)
 
     if not source_fingerprint:
         msg = t("message.search.no_comparable_assets")
@@ -99,15 +96,8 @@ def find_target_bundles(
             continue
         
         # 检查候选包中是否有匹配的资源
-        has_match = False
-        for obj in candidate_bundle.env.objects:
-            if obj.type in comparable_types:
-                candidate_key = key_func(obj)
-                if candidate_key in source_fingerprint:
-                    has_match = True
-                    break
-        
-        if has_match:
+        candidate_keys = candidate_bundle.get_asset_keys('name_type', comparable_types)
+        if candidate_keys & source_fingerprint:
             matched_paths.append(candidate_path)
             msg = t("message.search.new_file_confirmed", name=candidate_path.name)
             log(f"  ✅ {msg}")
@@ -234,7 +224,6 @@ def process_asset_packing(
                 original_filenames[NameTypeKey(f.name, AssetType.TextAsset.name)] = f.name
 
         strategy_name = 'name_type'
-        key_func = MATCH_STRATEGIES[strategy_name]
 
         # 2. 对每个目标 Bundle 应用替换并保存
         file_pairs: list[FilePair] = []
@@ -249,7 +238,7 @@ def process_asset_packing(
                 log(f"⚠️ {t('message.packer.load_target_bundle_failed')}: {bundle_path.name}")
                 continue
 
-            result = target_bundle.apply_patch(patch, key_func)
+            result = target_bundle.apply_patch(patch, strategy_name)
 
             if not result.is_success:
                 log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')} ({bundle_path.name})")
@@ -455,21 +444,15 @@ def _migrate_bundle_assets(
         return None, PatchResult(0, 0, [], [])
 
     # 定义匹配策略
-    strategies: list[tuple[str, KeyGeneratorFunc]] = [
-        ('path_id', MATCH_STRATEGIES['path_id']),
-        ('cont_name_type', MATCH_STRATEGIES['cont_name_type']),
-        ('name_type', MATCH_STRATEGIES['name_type']),
-        # ('container', MATCH_STRATEGIES['container']),
-        # 因为多个Mesh可能共享同一个Container，所以这个策略很可能失效，因此不使用
-    ]
+    strategies: list[MatchStrategy] = ['path_id', 'cont_name_type', 'name_type']
 
-    for name, key_func in strategies:
+    for name in strategies:
         log(f'\n{t("log.migration.trying_strategy", name=name)}')
         
         # 2. 根据当前策略从旧版 bundle 构建"替换清单"
         log(f'  > {t("log.migration.extracting_from_old_bundle_simple")}')
         old_assets_map = old_bundle.extract_patch(
-            asset_types_to_replace, key_func, spine_options
+            asset_types_to_replace, name, spine_options
         )
         
         if not old_assets_map:
@@ -481,7 +464,7 @@ def _migrate_bundle_assets(
         # 3. 根据当前策略应用替换
         log(f'  > {t("log.migration.writing_to_new_bundle")}')
         
-        result = new_bundle.apply_patch(old_assets_map, key_func)
+        result = new_bundle.apply_patch(old_assets_map, name)
         
         # 4. 如果当前策略成功匹配了至少一个资源，就结束
         if result.is_success:
@@ -535,13 +518,12 @@ def process_mod_update(
         # 1. 提取资源 (Extraction)
         log(f'\n--- {t("log.section.extracting_patches")} ---')
         patches: Patch = {}
-        key_func = MATCH_STRATEGIES[match_strategy]
         
         for src in source_paths:
             src_bundle = Bundle.load(src, log)
             if not src_bundle:
                 continue
-            patch = src_bundle.extract_patch(asset_types_to_replace, key_func, spine_options)
+            patch = src_bundle.extract_patch(asset_types_to_replace, match_strategy, spine_options)
             patches.update(patch)
         
         if not patches:
@@ -560,7 +542,7 @@ def process_mod_update(
                 log(f"  ❌ {t('message.load_failed')}: {tgt.name}")
                 continue
             
-            result = tgt_bundle.apply_patch(patches, key_func)
+            result = tgt_bundle.apply_patch(patches, match_strategy)
             total_matched += result.matched_count
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
@@ -886,8 +868,7 @@ def process_modern_to_legacy_conversion(
         # 1. 从所有日服包中构建一个完整的"替换清单"
         log(f'\n--- {t("log.section.extracting_patches")} ---')
         patch: Patch = {}
-        strategy_name = 'cont_name_type'
-        key_func = MATCH_STRATEGIES[strategy_name]
+        strategy_name: MatchStrategy = 'cont_name_type'
 
         total_files = len(modern_bundle_paths)
         for i, jp_path in enumerate(modern_bundle_paths, 1):
@@ -898,7 +879,7 @@ def process_modern_to_legacy_conversion(
                 continue
             
             assets = modern_bundle.extract_patch(
-                asset_types_to_replace, key_func, None
+                asset_types_to_replace, strategy_name
             )
             patch.update(assets)
 
@@ -915,7 +896,7 @@ def process_modern_to_legacy_conversion(
         if not global_bundle:
             return False, t("message.legacy_convert.load_legacy_failed"), None
         
-        result = global_bundle.apply_patch(patch, key_func)
+        result = global_bundle.apply_patch(patch, strategy_name)
         
         if not result.is_success:
             log(f"  > ⚠️ {t('log.legacy_convert.no_assets_replaced')}")
@@ -988,22 +969,18 @@ def process_legacy_to_modern_conversion(
         log(f'\n--- {t("log.section.extracting_patches")} ---')
 
         # 定义匹配策略
-        strategies: list[tuple[str, KeyGeneratorFunc]] = [
-            ('path_id', MATCH_STRATEGIES['path_id']),
-            ('cont_name_type', MATCH_STRATEGIES['cont_name_type']),
-            ('name_type', MATCH_STRATEGIES['name_type']),
-        ]
+        strategies: list[MatchStrategy] = ['path_id', 'cont_name_type', 'name_type']
 
         total_changes = 0
         total_files = len(modern_bundle_paths)
         file_pairs: list[FilePair] = []  # (输出文件, 原始目标文件)
 
         # 2. 按顺序尝试每种策略
-        for strategy_name, key_func in strategies:
+        for strategy_name in strategies:
             log(f'\n{t("log.migration.trying_strategy", name=strategy_name)}')
 
             patch: Patch = legacy_bundle.extract_patch(
-                asset_types_to_replace, key_func, None
+                asset_types_to_replace, strategy_name
             )
 
             if not patch:
@@ -1028,7 +1005,7 @@ def process_legacy_to_modern_conversion(
                     current_failed.append((modern_path.name, t('message.load_failed')))
                     continue
 
-                result = template_bundle.apply_patch(patch, key_func)
+                result = template_bundle.apply_patch(patch, strategy_name)
 
                 if result.is_success:
                     # 检查是否所有匹配的资源都未变化（只有skipped，没有实际替换）

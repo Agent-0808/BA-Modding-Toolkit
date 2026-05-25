@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from typing import Callable, Literal, NamedTuple
 from PIL import Image
 
-# 导入 UnityPy 相关类型
+
 from UnityPy.enums import ClassIDType as AssetType
-from UnityPy.files import ObjectReader as Obj
 
 
 # -------- 基础命名元组和类型别名 ---------
 
 class NameTypeKey(NamedTuple):
+    """name_type匹配策略所用的键"""
     name: str | None
     type: str
 
@@ -20,6 +20,7 @@ class NameTypeKey(NamedTuple):
 
 
 class ContNameTypeKey(NamedTuple):
+    """cont_name_type匹配策略所用的键"""
     container: str | None
     name: str
     type: str
@@ -33,9 +34,6 @@ AssetKey = str | int | NameTypeKey | ContNameTypeKey
 # 资源的具体内容，可以是字节数据、PIL图像或None
 AssetContent = bytes | Image.Image | None  
 
-# 从对象生成资源键的函数，接收UnityPy对象，返回该资源的键
-KeyGeneratorFunc = Callable[[Obj], AssetKey]
-
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]
 
@@ -47,18 +45,6 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 
 # 匹配策略类型
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
-
-
-# -------- 匹配策略 (用于生成 AssetKey) ---------
-
-MATCH_STRATEGIES: dict[MatchStrategy, KeyGeneratorFunc] = {
-    # path_id: 使用 Unity 对象的 path_id 作为键，适用于相同版本精确匹配，主要方式
-    'path_id': lambda obj: obj.path_id,
-    # name_type: 使用 (资源名, 资源类型) 作为键，适用于按名称和类型匹配，在Asset Packing中使用
-    'name_type': lambda obj: NameTypeKey(obj.peek_name(), obj.type.name),
-    # cont_name_type: 使用 (容器名, 资源名, 资源类型) 作为键，适用于按容器、名称和类型匹配，用于跨版本移植
-    'cont_name_type': lambda obj: ContNameTypeKey(obj.container, obj.peek_name(), obj.type.name),
-}
 
 
 # -------- 业务配置 DataClass ---------
