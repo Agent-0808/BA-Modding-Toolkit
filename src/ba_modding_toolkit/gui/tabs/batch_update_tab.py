@@ -1,5 +1,6 @@
 # gui/tabs/batch_update_tab.py
 
+import os
 import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
@@ -19,6 +20,7 @@ class BatchUpdateTab(TabFrame):
     def __init__(self, *args, **kwargs):
         self.current_file_pairs: list[tuple[Path, Path]] = []
         self.match_strategy_var = tk.StringVar(value='path_id')
+        self.workers_var = tk.IntVar(value=min(os.cpu_count() or 4, 8))
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -37,16 +39,39 @@ class BatchUpdateTab(TabFrame):
         )
         self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        # 匹配策略选择
-        strategy_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
-        strategy_frame.pack(fill=tk.X, pady=(5, 0))
+        # 匹配策略选择 + 线程数选择
+        option_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
+        option_frame.pack(fill=tk.X, pady=(5, 0))
 
         self.strategy_combo = SettingRow.create_combobox_row(
-            strategy_frame, t("option.match_strategy"),
+            option_frame, t("option.match_strategy"),
             self.match_strategy_var,
             values=['path_id', 'cont_name_type', 'name_type'],
             tooltip=t("option.match_strategy_info")
         )
+
+        cpu_count = os.cpu_count() or 4
+        worker_values = list(range(1, min(cpu_count, 8) + 1))
+        self.workers_combo = SettingRow.create_combobox_row(
+            option_frame, t("option.max_workers"),
+            self.workers_var,
+            values=worker_values,
+            tooltip=t("option.max_workers_info")
+        )
+
+        # 进度条区域
+        progress_frame = tb.Frame(self)
+        progress_frame.pack(fill=tk.X, pady=(5, 0))
+
+        self.progress_label = tb.Label(progress_frame, text="")
+        self.progress_label.pack(fill=tk.X)
+
+        self.progress_bar = tb.Progressbar(
+            progress_frame,
+            mode="determinate",
+            bootstyle="success-striped"
+        )
+        self.progress_bar.pack(fill=tk.X, pady=(3, 0))
 
         # 操作按钮区域
         action_button_frame = tb.Frame(self)
@@ -94,6 +119,18 @@ class BatchUpdateTab(TabFrame):
 
         self.run_in_thread(self._batch_update_worker)
 
+    def _init_progress(self, total: int):
+        self.progress_bar["maximum"] = total
+        self.progress_bar["value"] = 0
+        self.progress_label.config(text=t("status.processing_batch", current=0, total=total, filename=""))
+
+    def _update_progress(self, completed: int, total: int, filename: str):
+        self.progress_bar["value"] = completed
+        self.progress_label.config(
+            text=t("status.processing_batch", current=completed, total=total, filename=filename)
+        )
+        self.logger.status(t("status.processing_batch", current=completed, total=total, filename=filename))
+
     def _batch_update_worker(self):
         self.logger.log("\n" + "#"*50)
         self.logger.log(t("log.batch.start"))
@@ -110,14 +147,12 @@ class BatchUpdateTab(TabFrame):
             self.logger.status(t("status.error", error=e))
             return
 
-        # 重置输出文件路径列表和按钮状态
         self.current_file_pairs = []
         self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
 
         asset_types_to_replace = self.app.get_asset_types()
 
         crc_setting = self.app.enable_crc_correction_var.get()
-        perform_crc = False
 
         if crc_setting == "auto":
             target_paths, msg = core.find_target_bundles([self.mod_file_list[0]], search_paths)
@@ -129,12 +164,13 @@ class BatchUpdateTab(TabFrame):
             perform_crc = self.app.resolve_crc_setting(None)
 
         save_options = self.app.build_save_options(perform_crc)
-
         spine_options = self.app.build_spine_options()
 
-        # 更新UI状态的回调函数
-        def progress_callback(current, total, filename):
-            self.logger.status(t("status.processing_batch", current=current, total=total, filename=filename))
+        total = len(self.mod_file_list)
+        self.master.after(0, lambda: self._init_progress(total))
+
+        def progress_callback(completed, total, filename):
+            self.master.after(0, lambda: self._update_progress(completed, total, filename))
 
         success_count, fail_count, failed_tasks, file_pairs = core.process_batch_mod_update(
             mod_file_list=self.mod_file_list,
@@ -143,24 +179,22 @@ class BatchUpdateTab(TabFrame):
             asset_types_to_replace=asset_types_to_replace,
             save_options=save_options,
             spine_options=spine_options,
+            max_workers=self.workers_var.get(),
             log=self.logger.log,
             progress_callback=progress_callback,
             skip_unchanged=True,
-            match_strategy=self.match_strategy_var.get()
+            match_strategy=self.match_strategy_var.get(),
         )
 
         self.current_file_pairs = file_pairs
 
-        total_files = len(self.mod_file_list)
-
-        self.logger.log(t("log.batch.summary", total=total_files, success=success_count, fail=fail_count))
+        self.logger.log(t("log.batch.summary", total=total, success=success_count, fail=fail_count))
 
         if failed_tasks:
             self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
             failed_list = "\n".join([t("log.batch.failed_item", filename=f) for f in failed_tasks])
             self.logger.log(failed_list)
 
-        # 如果有成功处理的文件，启用覆盖按钮
         if self.current_file_pairs:
             self.master.after(0, lambda: self.batch_replace_button.config(state=tk.NORMAL))
 

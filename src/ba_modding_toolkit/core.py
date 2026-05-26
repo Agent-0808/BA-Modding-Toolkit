@@ -1,11 +1,12 @@
 # core.py
 
 import traceback
+import threading
 from pathlib import Path
 import shutil
 import tempfile
 from typing import Callable
-from UnityPy.environment import Environment as Env
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 
 from .i18n import t
@@ -574,6 +575,67 @@ def process_mod_update(
         log(traceback.format_exc())
         return False, t("message.error_during_process", error=e), []
 
+def _process_single_mod_update(
+    mod_path: Path,
+    search_paths: list[Path],
+    output_dir: Path,
+    asset_types_to_replace: set[str],
+    save_options: SaveOptions,
+    spine_options: SpineOptions | None,
+    skip_unchanged: bool,
+    match_strategy: MatchStrategy,
+    log: LogFunc,
+) -> tuple[bool, str, list[FilePair]]:
+    """
+    处理单个 mod 文件：查找目标 → 执行更新
+
+    Args:
+        mod_path: 单个 mod 文件路径
+        search_paths: 用于查找新版bundle文件的目录列表
+        output_dir: 输出目录
+        asset_types_to_replace: 需要替换的资源类型集合
+        save_options: 保存和CRC修正的选项
+        spine_options: Spine资源升级的选项
+        skip_unchanged: 是否跳过未变化的文件
+        match_strategy: 匹配策略
+        log: 日志记录函数
+
+    Returns:
+        (success, message, file_pairs)
+        - success=True, message="" 表示处理成功且有输出
+        - success=True, message="unchanged" 表示内容未变化，无输出
+        - success=False, message=错误信息 表示处理失败
+    """
+    new_bundle_paths, find_message = find_target_bundles([mod_path], search_paths, log)
+
+    if not new_bundle_paths:
+        log(f'  ❌ {t("log.search.find_failed", message=find_message)}')
+        return False, t("log.search.find_failed", message=find_message), []
+
+    success, process_message, update_file_pairs = process_mod_update(
+        source_paths=[mod_path],
+        target_paths=new_bundle_paths,
+        output_dir=output_dir,
+        asset_types_to_replace=asset_types_to_replace,
+        save_options=save_options,
+        spine_options=spine_options,
+        log=log,
+        skip_unchanged=skip_unchanged,
+        match_strategy=match_strategy,
+    )
+
+    if success:
+        if process_message in ("unchanged", "all_targets_unchanged"):
+            log(f'  ⏭️ {t("log.batch.process_unchanged", filename=mod_path.name)}')
+            return True, "unchanged", []
+        else:
+            log(f'  ✅ {t("log.batch.process_success", filename=mod_path.name)}')
+            return True, "", update_file_pairs
+    else:
+        log(f'  ❌ {t("log.batch.process_failed", filename=mod_path.name, message=process_message)}')
+        return False, process_message, []
+
+
 def process_batch_mod_update(
     mod_file_list: list[Path],
     search_paths: list[Path],
@@ -581,6 +643,7 @@ def process_batch_mod_update(
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
     spine_options: SpineOptions | None,
+    max_workers: int = 1,
     progress_callback: Callable[[int, int, str], None] | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
@@ -596,8 +659,9 @@ def process_batch_mod_update(
         asset_types_to_replace: 需要替换的资源类型集合。
         save_options: 保存和CRC修正的选项。
         spine_options: Spine资源升级的选项。
+        max_workers: 并行处理的线程数，默认为1（串行）。
         progress_callback: 进度回调函数，用于更新UI。
-                           接收 (当前索引, 总数, 文件名)。
+                           接收 (已完成数, 总数, 文件名)。
         skip_unchanged: 是否跳过未变化的文件
         match_strategy: 匹配策略，可选 'path_id'、'name_type'、'cont_name_type'
         log: 日志记录函数。
@@ -610,61 +674,92 @@ def process_batch_mod_update(
     success_count = 0
     fail_count = 0
     unchanged_count = 0
-    failed_tasks = []
+    failed_tasks: list[str] = []
     file_pairs: list[FilePair] = []
 
     log("\n" + "=" * 50)
     log(f"📦 {t('log.batch.start')}")
     log(f"  > {t('log.summary.total_files', count=total_files)}")
 
-    # 遍历每个旧Mod文件
-    for i, old_mod_path in enumerate(mod_file_list):
-        current_progress = i + 1
-        filename = old_mod_path.name
-        
-        if progress_callback:
-            progress_callback(current_progress, total_files, filename)
+    if max_workers <= 1:
+        # 串行处理
+        for i, old_mod_path in enumerate(mod_file_list):
+            current_progress = i + 1
+            filename = old_mod_path.name
 
-        log("\n" + "=" * 50)
-        log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
+            if progress_callback:
+                progress_callback(current_progress, total_files, filename)
 
-        new_bundle_paths, find_message = find_target_bundles([old_mod_path], search_paths, log)
+            log("\n" + "=" * 50)
+            log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-        if not new_bundle_paths:
-            log(f'  ❌ {t("log.search.find_failed", message=find_message)}')
-            fail_count += 1
-            failed_tasks.append(f"{filename} - {t('log.search.find_failed', message=find_message)}")
-            continue
+            success, message, pairs = _process_single_mod_update(
+                mod_path=old_mod_path,
+                search_paths=search_paths,
+                output_dir=output_dir,
+                asset_types_to_replace=asset_types_to_replace,
+                save_options=save_options,
+                spine_options=spine_options,
+                skip_unchanged=skip_unchanged,
+                match_strategy=match_strategy,
+                log=log,
+            )
 
-        # 执行Mod更新处理（将单路径包装为列表传入）
-        success, process_message, update_file_pairs = process_mod_update(
-            source_paths=[old_mod_path],
-            target_paths=new_bundle_paths,
-            output_dir=output_dir,
-            asset_types_to_replace=asset_types_to_replace,
-            save_options=save_options,
-            spine_options=spine_options,
-            log=log,
-            skip_unchanged=skip_unchanged,
-            match_strategy=match_strategy,
-        )
-
-        if success:
-            if process_message == "unchanged" or process_message == "all_targets_unchanged":
-                # 资源未变化，不生成输出文件
-                log(f'  ⏭️ {t("log.batch.process_unchanged", filename=filename)}')
-                unchanged_count += 1
+            if success:
+                if message == "unchanged":
+                    unchanged_count += 1
+                else:
+                    success_count += 1
+                    file_pairs.extend(pairs)
             else:
-                log(f'  ✅ {t("log.batch.process_success", filename=filename)}')
-                success_count += 1
-                # 记录输出文件路径和被替换的原始文件路径
-                file_pairs.extend(update_file_pairs)
-        else:
-            log(f'  ❌ {t("log.batch.process_failed", filename=filename, message=process_message)}')
-            fail_count += 1
-            failed_tasks.append(f"{filename} - {process_message}")
+                fail_count += 1
+                failed_tasks.append(f"{filename} - {message}")
+    else:
+        # 并行处理
+        lock = threading.Lock()
+        completed = 0
 
-    # 批量处理总结
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for mod_path in mod_file_list:
+                future = executor.submit(
+                    _process_single_mod_update,
+                    mod_path, search_paths, output_dir,
+                    asset_types_to_replace, save_options,
+                    spine_options, skip_unchanged,
+                    match_strategy, log,
+                )
+                futures[future] = mod_path.name
+
+            for future in as_completed(futures):
+                filename = futures[future]
+                try:
+                    success, message, pairs = future.result()
+                except Exception as e:
+                    with lock:
+                        fail_count += 1
+                        failed_tasks.append(f"{filename} - {t('message.process_failed', error=e)}")
+                        completed += 1
+                    log(t("log.batch.process_failed", filename=filename, message=str(e)))
+                else:
+                    with lock:
+                        if success:
+                            if message == "unchanged":
+                                unchanged_count += 1
+                                log(t("log.batch.process_unchanged", filename=filename))
+                            else:
+                                success_count += 1
+                                file_pairs.extend(pairs)
+                                log(t("log.batch.process_success", filename=filename))
+                        else:
+                            fail_count += 1
+                            failed_tasks.append(f"{filename} - {message}")
+                            log(t("log.batch.process_failed", filename=filename, message=message))
+                        completed += 1
+
+                if progress_callback:
+                    progress_callback(completed, total_files, filename)
+
     log("\n" + "=" * 50)
     log(f"📊 {t('log.batch.summary', total=total_files, success=success_count, fail=fail_count)}")
 

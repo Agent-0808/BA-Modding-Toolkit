@@ -587,7 +587,7 @@ class SettingRow:
     ) -> tb.Combobox:
         """创建下拉框行"""
         if width is None:
-            width = max((len(v) for v in values), default=0) + 2
+            width = max((len(str(v)) for v in values), default=0) + 2
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
