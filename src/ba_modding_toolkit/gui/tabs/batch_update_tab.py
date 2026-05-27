@@ -7,11 +7,11 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ... import core, searching
+from ... import core
+from ...searching import get_search_dirs
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
-from ...utils import get_search_resource_dirs
 
 
 class BatchUpdateTab(TabFrame):
@@ -138,7 +138,7 @@ class BatchUpdateTab(TabFrame):
 
         output_dir = Path(self.app.output_dir_var.get())
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_resource_dirs(base_game_dir)
+        search_paths = get_search_dirs(base_game_dir)
 
         try:
             output_dir.mkdir(parents=True, exist_ok=True)

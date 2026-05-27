@@ -7,8 +7,8 @@ from pathlib import Path
 from enum import IntEnum
 
 from ...i18n import t
-from ... import core, searching
-from ...utils import get_search_resource_dirs
+from ... import core
+from ...searching import get_search_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
 from ..dialogs import FileSelectionDialog
@@ -128,7 +128,7 @@ class LegacyConversionTab(TabFrame):
     def _find_worker(self):
         self.logger.status(t("status.searching"))
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        game_search_dirs = get_search_resource_dirs(base_game_dir)
+        game_search_dirs = get_search_dirs(base_game_dir)
 
         # 搜索日服文件
         modern_files = core.find_all_jp_counterparts(
@@ -171,7 +171,7 @@ class LegacyConversionTab(TabFrame):
         self.master.after(0, lambda: self.legacy_zone.set_searching())
 
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_resource_dirs(base_game_dir)
+        search_paths = get_search_dirs(base_game_dir)
 
         # 使用find_target_bundles查找旧版文件
         found_paths, message = searching.find_target_bundles(

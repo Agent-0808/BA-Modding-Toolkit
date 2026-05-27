@@ -402,5 +402,3 @@ class Bundle:
             patch["__mode__"] = {"ALL"}
         
         return patch
-
-JP_RES_TYPES = {"animationclips", "assets", "audio", "materials", "meshes", "prefabs", "textassets", "textures"}

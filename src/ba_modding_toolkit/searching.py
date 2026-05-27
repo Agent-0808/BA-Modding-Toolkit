@@ -182,3 +182,23 @@ def find_target_bundles(
         return [], err_msg
 
     return _asset_match(source_paths, candidates, log)
+
+
+SEARCH_DIR_SUFFIXES = ["",
+    "BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows",
+    "BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows",
+    "GameData/Windows",
+    "Preload/Windows",
+    "GameData/Android",
+    "Preload/Android",
+    ]
+
+def get_search_dirs(base_dir: Path) -> list[Path]:
+    """
+    获取游戏资源搜索目录列表。
+    """
+    
+    return [base_dir / suffix
+                for suffix in SEARCH_DIR_SUFFIXES
+                if (base_dir / suffix).is_dir()
+            ]

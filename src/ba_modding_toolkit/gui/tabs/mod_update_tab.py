@@ -7,10 +7,10 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core, searching
+from ...searching import get_search_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import confirm_and_replace
-from ...utils import get_search_resource_dirs
 
 
 class ModUpdateTab(TabFrame):
@@ -88,7 +88,7 @@ class ModUpdateTab(TabFrame):
         self.logger.status(t("status.processing_detailed"))
         
         base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_resource_dirs(base_game_dir)
+        search_paths = get_search_dirs(base_game_dir)
 
         found_paths, message = searching.find_target_bundles(
             self.source_paths,

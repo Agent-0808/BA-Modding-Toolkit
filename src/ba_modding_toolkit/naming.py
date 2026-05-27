@@ -5,20 +5,18 @@ from .models import ParsedFilename
 
 # -------- 文件名解析常量 --------
 
-REMOVE_SUFFIX = [
-    r"[-_]mxdependency",  # 匹配 -mxdependency 或 _mxdependency
-    r"[-_]mxload",        # 匹配 -mxload 或 _mxload
-    r"-\d{4}-\d{2}-\d{2}" # 匹配日期格式 (如 -2024-11-18)，作为最后的保底
-]
-
 FIXED_PREFIX = [
     "assets-_mx-",
 ]
 
 # 日服版额外的资源类型后缀
-RESOURCE_TYPES = {
-    'textures', 'assets', 'textassets', 'materials',
-    "animationclip", "audio", "meshes", "prefabs", "timelines"
+RESOURCE_TYPES_TEXT = {
+    'textures', 'textassets', 'meshes', 'materials',
+    'assets', 'animationclips', 'audio', 'prefabs', 'timelines'
+}
+RESOURCE_TYPES_NUM = {
+    '000', '001', '002', '003', '004', '005', '006', '007', '008', '009',
+    '010', '011', '012', '013', '014', '015', '016', '017', '018', '019',
 }
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
@@ -26,8 +24,6 @@ _RE_CRC = re.compile(r'_(\d+)\.[^.]+$')
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
 _RE_TYPE = re.compile(r'[-_](?:mxdependency|mxload)-([a-zA-Z0-9]+)')
 _RE_MODERN = re.compile(r'\d{4}-\d{2}-\d{2}_([0-9]{3})_')
-_RE_MX = re.compile(r'[-_](?:mxdependency|mxload)')
-_RE_DATE_PREFIX = re.compile(r'-\d{4}-\d{2}-\d{2}')
 _RE_YEAR = re.compile(r'^\d{4}$')
 
 # core 后缀 → 搜索前缀 映射（用于 core 匹配初筛，缩小 iterdir 范围）
@@ -63,21 +59,22 @@ def parse_filename(filename: str) -> ParsedFilename:
     if match_crc:
         crc = match_crc.group(1)
 
-    # 提取 Date
+    # 提取 Date（同时记录日期起始位置）
     date = ""
-    prefix_end_index = 0
+    date_start = 0
     match_date = _RE_DATE.search(filename)
     if match_date:
         date = match_date.group(1)
-        prefix_end_index = match_date.start()
+        date_start = match_date.start()
 
-    # 提取 Type
+    # 提取 res_type 和 mx 位置（一次 _RE_TYPE 搜索同时获取）
     res_type = None
-    # 匹配 -mxdependency-xxx 或 _mxload-xxx
+    mx_start = 0
     match_type = _RE_TYPE.search(filename)
     if match_type:
+        mx_start = match_type.start()
         extracted = match_type.group(1)
-        # 如果提取出的 type 是年份，说明实际上没有 type，而是直接接了日期
+        # 如果提取出的是年份，说明没有 type，而是直接接了日期
         if _RE_YEAR.match(extracted):
             res_type = None
             # 国际服 Modern 版：res_type 在日期之后（如 -2024-11-18_002_assets）
@@ -87,19 +84,14 @@ def parse_filename(filename: str) -> ParsedFilename:
         else:
             res_type = extracted
 
-    # 找到最早的 _mxdependency 或 _mxload 位置
-    mx_match = _RE_MX.search(filename)
-    if mx_match:
-        # Core 是这之前的部分
-        core_part = filename[:mx_match.start()]
+    # 提取 core_part（利用 _RE_TYPE 已找到的 mx 位置，无需再次搜索）
+    if mx_start > 0:
+        core_part = filename[:mx_start]
+    elif date_start > 1:
+        # 无 mx 标记时，以日期前的 `-` 为界
+        core_part = filename[:date_start - 1]
     else:
-        # 如果没找到，尝试用日期作为分隔
-        date_match = _RE_DATE_PREFIX.search(filename)
-        if date_match:
-            core_part = filename[:date_match.start()]
-        else:
-            # 最后的保底：去除扩展名
-            core_part = filename.rsplit('.', 1)[0]
+        core_part = filename.rsplit('.', 1)[0]
 
     # 去除固定前缀
     for fixed_prefix in FIXED_PREFIX:
@@ -120,14 +112,12 @@ def parse_filename(filename: str) -> ParsedFilename:
     # 计算 prefix（用于搜索新版文件）
     prefix = ""
     if date:
-        before_date = filename[:prefix_end_index].removesuffix('-')
-        parts = before_date.split('-')
-        last_part = parts[-1] if parts else ''
-        
-        if last_part.lower() in RESOURCE_TYPES:
-            prefix = before_date.removesuffix(f'-{last_part}') + '-'
+        if res_type and res_type.lower() in RESOURCE_TYPES_TEXT:
+            # JP 格式：文本类型 res_type 在日期之前，需从 prefix 中剥离
+            before_date = filename[:date_start].removesuffix('-')
+            prefix = before_date.removesuffix(f'-{res_type}') + '-'
         else:
-            prefix = filename[:prefix_end_index]
+            prefix = filename[:date_start]
 
     return ParsedFilename(
         category=category,

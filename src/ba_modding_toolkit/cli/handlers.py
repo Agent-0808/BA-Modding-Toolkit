@@ -19,7 +19,8 @@ from ..core import (
     process_batch_legacy_batch,
 )
 from ..models import SaveOptions, SpineOptions
-from ..utils import get_environment_info, CRCUtils, get_BA_path, get_search_resource_dirs, parse_hex_bytes
+from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
+from ..searching import get_search_dirs
 from ..naming import parse_filename
 
 class Logger:
@@ -85,7 +86,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
             logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
             return
 
-        found_paths, message = find_target_bundles([old_mod_path], get_search_resource_dirs(resource_path), logger.log)
+        found_paths, message = find_target_bundles([old_mod_path], get_search_dirs(resource_path), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
@@ -163,7 +164,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         return
 
     # 获取搜索路径
-    search_paths = get_search_resource_dirs(resource_path)
+    search_paths = get_search_dirs(resource_path)
     logger.log(f"Searching for new bundles in '{resource_path}'...")
 
     # 收集输入目录中的所有.bundle文件
@@ -435,7 +436,7 @@ def handle_batch_legacy(args: BatchLegacyTap, logger: Logger = NULL_LOGGER) -> N
         return
 
     # 获取搜索路径
-    search_paths = get_search_resource_dirs(resource_path)
+    search_paths = get_search_dirs(resource_path)
     logger.log(f"Searching for modern bundles in '{resource_path}'...")
 
     # 收集输入目录中的所有.bundle文件
@@ -579,7 +580,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
             return
 
         # 在搜索目录中查找同名文件（只取第一个找到的）
-        search_dirs = get_search_resource_dirs(game_dir)
+        search_dirs = get_search_dirs(game_dir)
         target_name = modified_path.name
         original_path: Path | None = None
         for dir_path in search_dirs:
