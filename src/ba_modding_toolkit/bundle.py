@@ -13,7 +13,7 @@ from .i18n import t
 from .utils import CRCUtils, SpineUtils, no_log
 from .naming import parse_filename
 from .models import (
-    AssetKey, AssetContent, AssetType, Patch,
+    AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
     SaveOptions, SpineOptions, ParsedFilename,
@@ -64,10 +64,10 @@ class Bundle:
         条件：资源类型不是列表中的类型（日服），且目标平台为 StandaloneWindows64
         """
 
-        if self.res_type in JP_RES_TYPES:
-            return False
-        # 如果是res_type为空，无法从文件名里判断，先默认为国际服版。
-        # 不过这种文件一般不会做mod
+        # if self.res_type in JP_RES_TYPES:
+        #     return False
+        
+        # 牛魔的为什么新版国际服的也用textures而不是003了？？？
 
         platform_name, _ = self.platform_info
         return platform_name == "StandaloneWindows64"
@@ -79,7 +79,7 @@ class Bundle:
     # -------- 匹配策略相关 --------
     
     @staticmethod
-    def _get_key_func(strategy: MatchStrategy):
+    def _get_key_func(strategy: MatchStrategy) -> KeyFunc:
         """根据匹配策略名获取对应的键生成函数。"""
         if strategy == 'path_id':
             return lambda obj: obj.path_id
@@ -152,6 +152,7 @@ class Bundle:
             log(f'  ❌ {t("log.file.read_in_memory_failed", name=bundle_path.name, error=e)}')
             return None
         
+        # TODO: 支持用户指定输入
         bytes_to_remove = [4, 8, 12]
         
         for bytes_num in bytes_to_remove:

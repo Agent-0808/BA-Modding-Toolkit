@@ -6,7 +6,7 @@ from PIL import Image
 
 
 from UnityPy.enums import ClassIDType as AssetType
-
+from UnityPy.files import ObjectReader as Obj
 
 # -------- 基础命名元组和类型别名 ---------
 
@@ -46,6 +46,7 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 # 匹配策略类型
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
 
+KeyFunc = Callable[[Obj], AssetKey]
 
 # -------- 业务配置 DataClass ---------
 
