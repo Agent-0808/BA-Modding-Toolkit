@@ -300,6 +300,7 @@
 		"search": {
 			"searching_for_file_group": "正在为 {count} 个源文件搜索对应目标文件...",
 			"file_prefix": "文件前缀: \"{prefix}\"",
+			"file_core": "文件核心名称: \"{core}\"",
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
 			"source_mod_asset_count": "源文件组包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",

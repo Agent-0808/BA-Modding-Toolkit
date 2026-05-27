@@ -7,7 +7,7 @@ from pathlib import Path
 from enum import IntEnum
 
 from ...i18n import t
-from ... import core
+from ... import core, searching
 from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
@@ -174,8 +174,8 @@ class LegacyConversionTab(TabFrame):
         search_paths = get_search_resource_dirs(base_game_dir)
 
         # 使用find_target_bundles查找旧版文件
-        found_paths, message = core.find_target_bundles(
-            reference_file,
+        found_paths, message = searching.find_target_bundles(
+            [reference_file],
             search_paths,
             self.logger.log
         )

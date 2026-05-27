@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap
+from ..searching import find_target_bundles
 from ..core import (
-    find_target_bundles,
     find_all_jp_counterparts,
     SaveOptions,
     SpineOptions,
@@ -85,7 +85,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
             logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
             return
 
-        found_paths, message = find_target_bundles(old_mod_path, get_search_resource_dirs(resource_path), logger.log)
+        found_paths, message = find_target_bundles([old_mod_path], get_search_resource_dirs(resource_path), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return

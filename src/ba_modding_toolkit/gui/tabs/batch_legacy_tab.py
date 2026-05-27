@@ -6,7 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ... import core
+from ... import core, searching
 from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents
@@ -98,7 +98,7 @@ class BatchLegacyTab(TabFrame):
         perform_crc = False
 
         if crc_setting == "auto":
-            target_paths, msg = core.find_target_bundles([self.legacy_file_list[0]], search_paths)
+            target_paths, msg = searching.find_target_bundles([self.legacy_file_list[0]], search_paths)
             if not target_paths:
                 self.logger.log(msg)
                 return
