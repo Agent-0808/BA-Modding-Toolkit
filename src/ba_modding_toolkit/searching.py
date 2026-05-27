@@ -4,12 +4,12 @@ from pathlib import Path
 
 from .i18n import t
 from .utils import no_log
-from .naming import parse_filename
+from .naming import parse_filename, get_category_prefix
 from .models import LogFunc, AssetKey, AssetType
 from .bundle import Bundle
 
 
-def _collect_candidates_by_prefix(
+def collect_candidates_by_prefix(
     source_paths: list[Path],
     search_dirs: list[Path],
     log: LogFunc = no_log,
@@ -53,7 +53,7 @@ def _collect_candidates_by_prefix(
     return candidates, ""
 
 
-def _collect_candidates_by_core(
+def collect_candidates_by_core(
     source_paths: list[Path],
     search_dirs: list[Path],
     log: LogFunc = no_log,
@@ -82,17 +82,20 @@ def _collect_candidates_by_core(
     extension_backup = '.backup'
 
     # 字符串包含匹配，粗筛
+    core_lower = core.lower()
+    search_prefix = get_category_prefix(core_lower)
     rough = [
         file for dir in search_dirs
         if dir.exists() and dir.is_dir()
         for file in dir.iterdir()
-        if file.is_file() and core in file.name and file.suffix != extension_backup
+        if file.is_file() and file.name.startswith(search_prefix)
+        and core_lower in file.name.lower() and file.suffix != extension_backup
     ]
 
-    # 第二轮：parse_filename 确认 core 相同
+    # 第二轮：parse_filename 确认 core 相同（大小写不敏感）
     candidates = [
         file for file in rough
-        if parse_filename(file.name).core == core
+        if parse_filename(file.name).core.lower() == core_lower
     ]
 
     if not candidates:
@@ -174,32 +177,7 @@ def find_target_bundles(
 
     search_dirs = [game_resource_dir] if isinstance(game_resource_dir, Path) else game_resource_dir
 
-    candidates, err_msg = _collect_candidates_by_prefix(source_paths, search_dirs, log)
-    if not candidates:
-        return [], err_msg
-
-    return _asset_match(source_paths, candidates, log)
-
-
-def find_target_bundles_by_core(
-    source_paths: list[Path],
-    game_resource_dir: Path | list[Path],
-    log: LogFunc = no_log,
-) -> tuple[list[Path], str]:
-    """
-    根据源文件组，在游戏资源目录中智能查找对应的目标文件组（通过 core 匹配）。
-
-    Returns:
-        tuple[list[Path], str]: (找到的目标路径列表, 状态消息)
-    """
-    if not source_paths:
-        return [], t("message.search.check_file_exists", path="[]")
-
-    log(t("log.search.searching_for_file_group", count=len(source_paths)))
-
-    search_dirs = [game_resource_dir] if isinstance(game_resource_dir, Path) else game_resource_dir
-
-    candidates, err_msg = _collect_candidates_by_core(source_paths, search_dirs, log)
+    candidates, err_msg = collect_candidates_by_prefix(source_paths, search_dirs, log)
     if not candidates:
         return [], err_msg
 

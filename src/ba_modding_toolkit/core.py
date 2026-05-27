@@ -20,7 +20,7 @@ from .models import (
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
-from .searching import find_target_bundles, find_target_bundles_by_core
+from .searching import find_target_bundles
 
 
 # ====== 资源处理相关 ======

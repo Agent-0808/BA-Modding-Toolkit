@@ -7,6 +7,8 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
+from ...searching import collect_candidates_by_core
+from ...utils import get_search_resource_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents, FileListbox
 from ..utils import confirm_and_replace
@@ -24,7 +26,8 @@ class AssetPackerTab(TabFrame):
             placeholder_text=t("ui.packer.placeholder_assets"),
             height=5,
             allowed_suffixes={".png", ".skel", ".atlas", ".bytes"},
-            logger=self.logger
+            logger=self.logger,
+            on_files_added=self._on_assets_added
         )
         self.assets_listbox.get_frame().pack(fill=tk.X, pady=(0, 10))
 
@@ -73,6 +76,32 @@ class AssetPackerTab(TabFrame):
         for p in paths:
             self.logger.log(f"  - {p.name}")
         self.logger.status(t("status.ready"))
+
+    def _on_assets_added(self, added_paths: list[Path]):
+        """资源文件添加回调：首次从空到有资源时自动搜索对应 bundle"""
+        if len(self.asset_paths) == len(added_paths) and not self.bundle_paths:
+            self.run_in_thread(self._auto_search_target_bundles)
+
+    def _auto_search_target_bundles(self):
+        """在后台线程中搜索匹配的 bundle，结果通过 after 回主线程填充"""
+        self.master.after(0, lambda: self.bundle_zone.set_searching())
+        self.logger.status(t("status.processing_detailed"))
+
+        search_dirs = get_search_resource_dirs(Path(self.app.game_resource_dir_var.get()))
+        candidates, _ = collect_candidates_by_core(self.asset_paths, search_dirs, self.logger.log)
+
+        def _apply_result():
+            if not candidates:
+                self.logger.log(f'  > {t("message.search.no_matching_files_in_dir")}')
+            elif len(candidates) == 1:
+                self.bundle_zone.set_files(candidates)
+                self.logger.log(f'  > {t("log.search.found_count", count=1)}')
+            else:
+                self.bundle_zone.set_files(candidates)
+                self.logger.log(f'  > {t("message.search.found_multiple_matches", count=len(candidates))}')
+            self.logger.status(t("status.ready"))
+
+        self.master.after(0, _apply_result)
 
     def run_replacement_thread(self):
         if not all([self.bundle_paths, self.asset_paths, self.app.output_dir_var.get()]):
