@@ -90,18 +90,23 @@ class AssetPackerTab(TabFrame):
         search_dirs = get_search_resource_dirs(Path(self.app.game_resource_dir_var.get()))
         candidates, _ = collect_candidates_by_core(self.asset_paths, search_dirs, self.logger.log)
 
-        def _apply_result():
-            if not candidates:
-                self.logger.log(f'  > {t("message.search.no_matching_files_in_dir")}')
-            elif len(candidates) == 1:
-                self.bundle_zone.set_files(candidates)
-                self.logger.log(f'  > {t("log.search.found_count", count=1)}')
-            else:
-                self.bundle_zone.set_files(candidates)
-                self.logger.log(f'  > {t("message.search.found_multiple_matches", count=len(candidates))}')
-            self.logger.status(t("status.ready"))
+        self.master.after(0, lambda: self._handle_search_result(candidates))
 
-        self.master.after(0, _apply_result)
+    def _handle_search_result(self, found_paths: list[Path]):
+        """处理自动搜索结果"""
+        if not found_paths:
+            self.bundle_zone.set_error(t("message.search.no_matching_files_in_dir"))
+            self.logger.status(t("status.search_not_found"))
+        elif len(found_paths) == 1:
+            self.bundle_paths = found_paths
+            self.bundle_zone.set_files(found_paths)
+            self.logger.log(t("log.file.loaded", path=found_paths[0]))
+            self.logger.status(t("status.ready"))
+        else:
+            self.bundle_paths = found_paths
+            self.bundle_zone.set_files(found_paths)
+            self.logger.log(t("message.search.found_multiple_matches", count=len(found_paths)))
+            self.logger.status(t("status.ready"))
 
     def run_replacement_thread(self):
         if not all([self.bundle_paths, self.asset_paths, self.app.output_dir_var.get()]):
