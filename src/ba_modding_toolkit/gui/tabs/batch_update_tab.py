@@ -51,11 +51,12 @@ class BatchUpdateTab(TabFrame):
         )
 
         cpu_count = os.cpu_count() or 4
-        worker_values = list(range(1, min(cpu_count, 8) + 1))
-        self.workers_combo = SettingRow.create_combobox_row(
+        max_workers = min(cpu_count, 8)
+        self.workers_spinbox = SettingRow.create_spinbox_row(
             option_frame, t("option.max_workers"),
             self.workers_var,
-            values=worker_values,
+            from_=1,
+            to=max_workers,
             tooltip=t("option.max_workers_info")
         )
 

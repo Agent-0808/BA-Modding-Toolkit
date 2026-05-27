@@ -466,7 +466,7 @@ class SettingRow:
     def create_container(parent: tk.Widget) -> tb.Frame:
         """创建标准的行容器，带有底部间距"""
         frame = tb.Frame(parent)
-        frame.pack(fill=tk.X, padx=5, pady=5)  # 垂直间距，让每一行呼吸感更强
+        frame.pack(fill=tk.X, padx=5, pady=4)  # 垂直间距，让每一行呼吸感更强
         return frame
 
     @staticmethod
@@ -629,6 +629,31 @@ class SettingRow:
         return container
 
     @staticmethod
+    def create_spinbox_row(
+        parent: tk.Widget,
+        label: str,
+        int_var: tk.IntVar,
+        from_: int = 1,
+        to: int = 8,
+        tooltip: str | None = None,
+        width: int | None = None,
+    ) -> tb.Spinbox:
+        """创建数值选择器行"""
+        container = SettingRow.create_container(parent)
+        SettingRow._add_label_area(container, label, tooltip)
+        if width is None:
+            width = len(str(to)) + 2
+
+        spinbox = tb.Spinbox(
+            container,
+            from_=from_, to=to,
+            textvariable=int_var,
+            width=width,
+        )
+        spinbox.pack(side=tk.RIGHT, padx=(10, 0))
+        return spinbox
+
+    @staticmethod
     def create_button_row(
         parent: tk.Widget,
         label: str,
@@ -640,10 +665,10 @@ class SettingRow:
         """创建按钮行"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
-        
+
         button = UIComponents.create_button(container, button_text, command, bootstyle=bootstyle, style="compact")
         button.pack(side=tk.RIGHT)
-        
+
         return container
 
 
