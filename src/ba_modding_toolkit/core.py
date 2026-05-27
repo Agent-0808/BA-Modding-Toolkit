@@ -817,7 +817,7 @@ def find_all_jp_counterparts(
     # 1. 从国际服文件名提取前缀
     prefix = parse_filename(global_bundle_path.name).prefix
     if not prefix:
-        log(f'  > ❌ {t("log.search.find_failed")}: {t("message.search.date_pattern_not_found", filename=global_bundle_path.name)}')
+        log(f'  > ❌ {t("log.search.find_failed")}: {t("message.search.filename_parse_failed")}')
         return []
     
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")

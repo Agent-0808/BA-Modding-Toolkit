@@ -8,7 +8,7 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
-from ...searching import get_search_dirs
+from ...searching import get_search_dirs, find_target_bundles
 from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
@@ -155,7 +155,7 @@ class BatchUpdateTab(TabFrame):
         crc_setting = self.app.enable_crc_correction_var.get()
 
         if crc_setting == "auto":
-            target_paths, msg = searching.find_target_bundles([self.mod_file_list[0]], search_paths)
+            target_paths, msg = find_target_bundles([self.mod_file_list[0]], search_paths)
             if not target_paths:
                 self.logger.log(msg)
                 return

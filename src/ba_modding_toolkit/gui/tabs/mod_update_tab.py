@@ -6,8 +6,8 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ... import core, searching
-from ...searching import get_search_dirs
+from ... import core
+from ...searching import get_search_dirs, find_target_bundles
 from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import confirm_and_replace
@@ -90,7 +90,7 @@ class ModUpdateTab(TabFrame):
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_dirs(base_game_dir)
 
-        found_paths, message = searching.find_target_bundles(
+        found_paths, message = find_target_bundles(
             self.source_paths,
             search_paths,
             self.logger.log

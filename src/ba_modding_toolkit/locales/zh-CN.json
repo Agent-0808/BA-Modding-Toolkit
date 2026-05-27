@@ -155,7 +155,6 @@
 			"missing_converter_tool": "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。"
 		},
 		"search": {
-			"date_pattern_not_found": "无法在文件名 \"{filename}\" 中找到日期模式 (YYYY-MM-DD)，无法确定用于匹配的文件前缀。",
 			"prefix_extracted": "前缀提取成功",
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
@@ -163,7 +162,8 @@
 			"no_comparable_assets": "旧版Mod文件中不包含可比较的资源。",
 			"new_file_confirmed": "已确定新版文件: {name}",
 			"no_matching_asset_found": "在所有候选文件中都未找到与旧 Mod 资源名称匹配的资源。无法确定正确的新版文件。",
-			"found_multiple_matches": "找到 {count} 个匹配的文件"
+			"found_multiple_matches": "找到 {count} 个匹配的文件",
+			"filename_parse_failed": "解析文件名失败"
 		},
 		"extractor": {
 			"no_assets_found": "未找到指定类型的可提取资源。",

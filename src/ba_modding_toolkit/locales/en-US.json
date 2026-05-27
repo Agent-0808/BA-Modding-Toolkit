@@ -86,7 +86,9 @@
 		"enable_bleed": "Bleed",
 		"enable_bleed_info": "Applies bleed operations to image files.\nRecommended if packed images show black or jagged edges in-game.",
 		"enable_spine38_name_fix": "Rename Old Spine Filenames",
-		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png"
+		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png",
+		"max_workers": "Max Workers",
+		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage."
 	},
 	"file_type": {
 		"executable": "Executable File",
@@ -153,7 +155,6 @@
 			"missing_converter_tool": "Spine downgrade is enabled, but a valid SpineDataConverter.exe path is not specified."
 		},
 		"search": {
-			"date_pattern_not_found": "Could not find a date pattern (YYYY-MM-DD) in filename \"{filename}\". Cannot determine file prefix for matching.",
 			"prefix_extracted": "Prefix extracted successfully",
 			"check_file_exists": "Please check if \"{path}\" exists.",
 			"no_matching_files_in_dir": "No matching files found in the specified directory.",
@@ -161,7 +162,8 @@
 			"no_comparable_assets": "The old Mod file contains no comparable assets.",
 			"new_file_confirmed": "Confirmed new version file: {name}",
 			"no_matching_asset_found": "No assets matching the old Mod resource names were found in any candidate files. Cannot determine the correct new version file.",
-			"found_multiple_matches": "Found {count} matching files"
+			"found_multiple_matches": "Found {count} matching files",
+			"filename_parse_failed": "Failed to parse the filename"
 		},
 		"extractor": {
 			"no_assets_found": "No extractable assets of the specified type found.",
@@ -297,17 +299,18 @@
 		},
 		"search": {
 			"searching_for_file_group": "Searching target files for {count} source files...",
-			"file_prefix": "File prefix: \"{prefix}\"",
+			"file_prefix": "Filename prefix: \"{prefix}\"",
 			"found_candidates": "Found {count} candidate files. Verifying content...",
 			"source_mod_asset_count": "Source group contains {count} assets.",
 			"checking_candidate": "Checking: {name}",
 			"find_failed": "Search failed: {message}",
 			"found_count": "Successfully found {count} matching files.",
-			"no_found": "No files found"
+			"no_found": "No files found",
+			"file_core": "Filename core: \"{core}\""
 		},
 		"extractor": {
 			"starting_extraction": "Starting extraction from \"{filename}\"...",
-			"starting_extraction_num": "Extracting resources from {num} fils...",
+			"starting_extraction_num": "Extracting resources from {num} files...",
 			"extraction_types": "Extraction types: {types}",
 			"using_temp_dir": "Using temp directory: {path}",
 			"skipping_unnamed": "Skipping an unnamed {type} asset",
