@@ -205,6 +205,32 @@ class App(tk.Frame, ConfigMixin):
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
 
+    def is_spine_converter_available(self) -> bool:
+        """检查SpineConverter程序路径是否有效"""
+        path = self.spine_converter_path_var.get()
+        if not path:
+            return False
+        return Path(path).exists()
+
+    def check_dependency(self, depends_on: str) -> bool:
+        """检查依赖条件是否满足"""
+        if depends_on == "spine_converter_path_var":
+            return self.is_spine_converter_available()
+        return True
+
+    def show_spine_converter_download_guide(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineConverter下载引导对话框"""
+        url = "https://github.com/wang606/SpineSkeletonDataConverter"
+        result = messagebox.askyesno(
+                t("common.3rd_party"),
+                t("message.3rd_party.skel_converter_required",
+                  url=url),
+                parent=parent or self.master
+            )
+        import webbrowser
+        if result:
+            webbrowser.open(url)
+
     def select_game_resource_directory(self):
         select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
         

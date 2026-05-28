@@ -4,7 +4,10 @@ import tkinter as tk
 import ttkbootstrap as tb
 from tkinterdnd2 import DND_FILES
 from pathlib import Path
-from typing import Callable, Any
+from typing import Callable, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .app import App
 
 from .utils import select_file, select_directory
 from ..i18n import t
@@ -490,22 +493,39 @@ class SettingRow:
         label: str,
         variable: tk.BooleanVar,
         tooltip: str | None = None,
-        command: Callable[[], Any] | None = None
+        command: Callable[[], Any] | None = None,
+        app: "App | None" = None,
+        depends_on: str | None = None
     ) -> tb.Checkbutton:
         """创建开关行"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
-        # 核心改变：使用 success-round-toggle 样式
-        # side=RIGHT 确保开关始终在最右侧
         chk = tb.Checkbutton(
             container,
             variable=variable,
             command=command,
             style="success-square-toggle",
-            text=""  # 开关本身不需要文字，文字在左侧 Label
+            text=""
         )
         chk.pack(side=tk.RIGHT)
+        
+        if app and depends_on:
+            def update_status():
+                available = app.check_dependency(depends_on)
+                if not available:
+                    chk.config(state=tk.DISABLED)
+                    variable.set(False)
+                    chk.bind('<Button-1>', lambda e: app.show_spine_converter_download_guide(parent))
+                else:
+                    chk.config(state=tk.NORMAL)
+                    chk.unbind('<Button-1>')
+            
+            dep_var = getattr(app, depends_on)
+            dep_var.trace_add('write', lambda *_: update_status())
+            
+            update_status()
+        
         return chk
 
     @staticmethod
@@ -546,16 +566,16 @@ class SettingRow:
         text_var: tk.StringVar,
         tooltip: str | None = None,
         placeholder_text: str | None = None,
-        expand: bool = False
+        expand: bool = False,
+        app: "App | None" = None,
+        depends_on: str | None = None
     ) -> tb.Entry:
-        """创建输入行"""
+        """创建输入行，支持依赖管理和点击提示"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
         entry = tb.Entry(container, textvariable=text_var, width = 10)
-        # 使用传统方式实现占位符功能
         if placeholder_text:
-            # 初始显示占位符
             if not text_var.get():
                 entry.insert(0, placeholder_text)
             
@@ -574,6 +594,22 @@ class SettingRow:
             entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
         else:
             entry.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        if app and depends_on:
+            def update_status():
+                available = app.check_dependency(depends_on)
+                if not available:
+                    entry.config(state=tk.DISABLED)
+                    entry.bind('<Button-1>', lambda e: app.show_spine_converter_download_guide(parent))
+                else:
+                    entry.config(state=tk.NORMAL)
+                    entry.unbind('<Button-1>')
+            
+            dep_var = getattr(app, depends_on)
+            dep_var.trace_add('write', lambda *_: update_status())
+            
+            update_status()
+        
         return entry
 
     @staticmethod

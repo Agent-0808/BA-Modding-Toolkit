@@ -11,6 +11,7 @@
 		"error": "错误",
 		"warning": "警告",
 		"tip": "提示",
+		"3rd_party": "第三方功能",
 		"processing": "处理中...",
 		"fail": "失败",
 		"result": "结果",
@@ -151,9 +152,7 @@
 			"match_no": "CRC值匹配: ❌否",
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
-		"spine": {
-			"missing_converter_tool": "已启用 Spine 降级，但未指定有效的 SpineDataConverter.exe 路径。"
-		},
+		"spine": {},
 		"search": {
 			"prefix_extracted": "前缀提取成功",
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
@@ -187,6 +186,9 @@
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
 		"batch": {
 			"success": "批量处理完成！\n成功: {success}，失败: {fail}"
+		},
+		"3rd_party": {
+			"skel_converter_required": "SpineSkeletonDataConverter 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineSkeletonDataConverter 程序，并遵守其协议\n\n是否要在浏览器中打开下载页面？\n{url}"
 		}
 	},
 	"status": {

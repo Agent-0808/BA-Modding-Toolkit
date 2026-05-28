@@ -19,6 +19,7 @@ class ConfigMeta:
     group: str           # TOML 中的 [Section]
     default: Any         # 默认值或返回默认值的函数
     key: str | None = None  # TOML 中的键名，默认取变量名去掉 _var
+    depends_on: str | None = None  # 依赖的变量名（如 "spine_converter_path_var"）
 
 
 def _get_default_game_dir() -> str:
@@ -57,13 +58,13 @@ class ConfigMixin:
     replace_all_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", False)]
     
     # SpineConverter
-    enable_spine_conversion_var: Annotated[tk.BooleanVar, ConfigMeta("SpineConverter", False)]
     spine_converter_path_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "")]
-    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33")]
+    enable_spine_conversion_var: Annotated[tk.BooleanVar, ConfigMeta("SpineConverter", False, depends_on="spine_converter_path_var")]
+    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33", depends_on="spine_converter_path_var")]
     
     # SpineDowngrade
-    enable_atlas_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False)]
-    spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75")]
+    enable_atlas_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
+    spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75", depends_on="spine_converter_path_var")]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False)]
     
     # Tabs
