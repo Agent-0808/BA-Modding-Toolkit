@@ -156,15 +156,7 @@ class UIComponents:
 
     @staticmethod
     def create_checkbutton(parent, text, variable, command=None):
-        """创建复选框组件
-        
-        Args:
-            parent: 父组件
-            text: 复选框文本（form_row=True时忽略）
-            variable: 变量
-            command: 命令回调
-            form_row: 是否作为表单行使用（True时不显示文本，文本由外部Label显示）
-        """
+        """创建复选框组件"""
         checkbutton = tb.Checkbutton(
             parent, 
             text=text, 
@@ -488,6 +480,36 @@ class SettingRow:
             tip_label.pack(side=tk.LEFT, padx=(5, 0))
 
     @staticmethod
+    def _setup_dependency(
+        widget: tk.Widget,
+        app: "App",
+        depends_on: str,
+        on_disabled: Callable[[], None],
+        on_enabled: Callable[[], None],
+        parent: tk.Widget,
+        on_click_disabled: Callable[[tk.Widget], None]
+    ) -> None:
+        """设置依赖管理：当依赖无效时禁用控件，点击时显示下载引导"""
+        def update_status():
+            # 检查控件是否仍然存在
+            try:
+                widget.winfo_exists()
+            except tk.TclError:
+                return
+            
+            available = app.check_dependency(depends_on)
+            if not available:
+                on_disabled()
+                widget.bind('<Button-1>', lambda e: on_click_disabled(parent))
+            else:
+                on_enabled()
+                widget.unbind('<Button-1>')
+        
+        dep_var = getattr(app, depends_on)
+        dep_var.trace_add('write', lambda *_: update_status())
+        update_status()
+
+    @staticmethod
     def create_switch(
         parent: tk.Widget,
         label: str,
@@ -495,7 +517,8 @@ class SettingRow:
         tooltip: str | None = None,
         command: Callable[[], Any] | None = None,
         app: "App | None" = None,
-        depends_on: str | None = None
+        depends_on: str | None = None,
+        on_click_disabled: Callable[[tk.Widget], None] | None = None
     ) -> tb.Checkbutton:
         """创建开关行"""
         container = SettingRow.create_container(parent)
@@ -511,20 +534,13 @@ class SettingRow:
         chk.pack(side=tk.RIGHT)
         
         if app and depends_on:
-            def update_status():
-                available = app.check_dependency(depends_on)
-                if not available:
-                    chk.config(state=tk.DISABLED)
-                    variable.set(False)
-                    chk.bind('<Button-1>', lambda e: app.show_spine_converter_download_guide(parent))
-                else:
-                    chk.config(state=tk.NORMAL)
-                    chk.unbind('<Button-1>')
-            
-            dep_var = getattr(app, depends_on)
-            dep_var.trace_add('write', lambda *_: update_status())
-            
-            update_status()
+            SettingRow._setup_dependency(
+                chk, app, depends_on,
+                on_disabled=lambda: (chk.config(state=tk.DISABLED), variable.set(False)),
+                on_enabled=lambda: chk.config(state=tk.NORMAL),
+                parent=parent,
+                on_click_disabled=on_click_disabled
+            )
         
         return chk
 
@@ -568,9 +584,14 @@ class SettingRow:
         placeholder_text: str | None = None,
         expand: bool = False,
         app: "App | None" = None,
-        depends_on: str | None = None
+        depends_on: str | None = None,
+        on_click_disabled: Callable[[tk.Widget], None] | None = None
     ) -> tb.Entry:
-        """创建输入行，支持依赖管理和点击提示"""
+        """创建输入行，支持依赖管理和点击提示
+        
+        Args:
+            on_click_disabled: 点击禁用控件时的回调
+        """
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
@@ -596,19 +617,13 @@ class SettingRow:
             entry.pack(side=tk.RIGHT, padx=(10, 0))
         
         if app and depends_on:
-            def update_status():
-                available = app.check_dependency(depends_on)
-                if not available:
-                    entry.config(state=tk.DISABLED)
-                    entry.bind('<Button-1>', lambda e: app.show_spine_converter_download_guide(parent))
-                else:
-                    entry.config(state=tk.NORMAL)
-                    entry.unbind('<Button-1>')
-            
-            dep_var = getattr(app, depends_on)
-            dep_var.trace_add('write', lambda *_: update_status())
-            
-            update_status()
+            SettingRow._setup_dependency(
+                entry, app, depends_on,
+                on_disabled=lambda: entry.config(state=tk.DISABLED),
+                on_enabled=lambda: entry.config(state=tk.NORMAL),
+                parent=parent,
+                on_click_disabled=on_click_disabled
+            )
         
         return entry
 

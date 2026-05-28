@@ -52,7 +52,8 @@ class AssetExtractorTab(TabFrame):
             variable=self.app.enable_atlas_downgrade_var,
             tooltip=t("option.spine_downgrade_info"),
             app=self.app,
-            depends_on=meta_downgrade.depends_on if meta_downgrade else None
+            depends_on=meta_downgrade.depends_on if meta_downgrade else None,
+            on_click_disabled=self.app.show_spine_converter_download_guide
         )
         
         # Spine 降级版本输入框
@@ -63,7 +64,8 @@ class AssetExtractorTab(TabFrame):
             text_var=self.app.spine_downgrade_version_var,
             tooltip=t("option.spine_downgrade_target_version_info"),
             app=self.app,
-            depends_on=meta_version.depends_on if meta_version else None
+            depends_on=meta_version.depends_on if meta_version else None,
+            on_click_disabled=self.app.show_spine_converter_download_guide
         )
         
         # Atlas 解包帧选项

@@ -192,7 +192,8 @@ class SettingsDialog(tb.Toplevel):
             variable=self.app.enable_spine_conversion_var,
             tooltip=t("option.spine_conversion_info"),
             app=self.app,
-            depends_on=meta.depends_on if meta else None
+            depends_on=meta.depends_on if meta else None,
+            on_click_disabled=self.app.show_spine_converter_download_guide
         )
 
         meta_version = self.app._config_specs.get("target_spine_version_var")
@@ -202,7 +203,8 @@ class SettingsDialog(tb.Toplevel):
             text_var=self.app.target_spine_version_var,
             tooltip=t("option.spine_target_version_info"),
             app=self.app,
-            depends_on=meta_version.depends_on if meta_version else None
+            depends_on=meta_version.depends_on if meta_version else None,
+            on_click_disabled=self.app.show_spine_converter_download_guide
         )
 
     def _init_footer_buttons(self):
