@@ -9,7 +9,7 @@ from typing import Callable, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import select_file, select_directory
+from .utils import select_file, select_directory, open_directory
 from ..i18n import t
 from ..naming import parse_filename
 
@@ -278,7 +278,7 @@ class DropZone(tb.Labelframe):
         clear_cmd: Callable[[], None] | None = None,
         allow_folder: bool = False,
         allow_multiple: bool = True,
-        logger=None,
+        logger: Logger | None = None,
         **kwargs
     ):
         super().__init__(parent, text=title, padding=(15, 12), **kwargs)
@@ -292,6 +292,8 @@ class DropZone(tb.Labelframe):
         self._allow_multiple = allow_multiple
         self._logger = logger
         self._paths: list[Path] = []
+        self._open_btn = None  # "打开"按钮引用
+        self._clear_btn = None  # "清除"按钮引用
 
         if search_path_var is not None:
             search_frame = tb.Frame(self)
@@ -323,7 +325,11 @@ class DropZone(tb.Labelframe):
         button_text = t("action.browse_folder") if allow_folder else t("action.browse_file")
         UIComponents.create_button(btn_frame, button_text, self._handle_browse, bootstyle="primary", style="short").pack(side=tk.LEFT, padx=(0, 5))
 
-        UIComponents.create_button(btn_frame, t("action.clear"), self.clear, bootstyle="warning", style="short").pack(side=tk.LEFT)
+        self._open_btn = UIComponents.create_button(btn_frame, t("action.open"), self._handle_open_directory, bootstyle="info", style="short", state=tk.DISABLED)
+        self._open_btn.pack(side=tk.LEFT, padx=(0, 5))
+
+        self._clear_btn = UIComponents.create_button(btn_frame, t("action.clear"), self.clear, bootstyle="warning", style="short", state=tk.DISABLED)
+        self._clear_btn.pack(side=tk.LEFT)
 
     @property
     def paths(self) -> list[Path]:
@@ -336,7 +342,7 @@ class DropZone(tb.Labelframe):
         return self._paths[0] if self._paths else None
 
     def set_files(self, paths: list[Path] | Path) -> None:
-        """外部设置文件列表，支持单Path或Path列表"""
+        """设置文件列表，支持单Path或Path列表"""
         # 统一转换为列表
         if isinstance(paths, Path):
             paths = [paths]
@@ -348,6 +354,14 @@ class DropZone(tb.Labelframe):
         self._paths = paths
         if paths:
             self._update_display()
+        self._update_btn_state()
+        
+        # 触发回调
+        if self._on_files_selected:
+            if self._allow_multiple:
+                self._on_files_selected(paths)
+            else:
+                self._on_files_selected(paths[0])
 
     def _update_display(self) -> None:
         """根据当前文件列表更新 UI 显示"""
@@ -383,8 +397,25 @@ class DropZone(tb.Labelframe):
         """清除状态，恢复初始状态，并调用外部清理回调"""
         self._paths = []
         self.label.config(text=self.placeholder_text, bootstyle="inverse-light")
+        self._update_btn_state()
         if self._clear_cmd:
             self._clear_cmd()
+
+    def _handle_open_directory(self) -> None:
+        """打开选中文件所在的目录"""
+        if not self._paths:
+            return
+
+        directory = self._paths[0].parent
+        open_directory(directory, log=self._logger.log if self._logger else None)
+
+    def _update_btn_state(self) -> None:
+        """更新"打开"和"清除"按钮的启用/禁用状态"""
+        state = tk.NORMAL if self._paths else tk.DISABLED
+        if self._open_btn:
+            self._open_btn.config(state=state)
+        if self._clear_btn:
+            self._clear_btn.config(state=state)
 
     def _handle_drop(self, event: tk.Event) -> None:
         """内部处理拖放事件，支持多文件和文件夹"""
@@ -406,7 +437,7 @@ class DropZone(tb.Labelframe):
             self.set_warning(t("ui.drop_zone.multiple_files_rejected"))
             return
         
-        self._set_files(paths_to_add[:1] if not self._allow_multiple else paths_to_add)
+        self.set_files(paths_to_add[:1] if not self._allow_multiple else paths_to_add)
 
     def _handle_browse(self) -> None:
         """内部处理浏览按钮，支持多文件选择"""
@@ -419,7 +450,7 @@ class DropZone(tb.Labelframe):
                 dir_path = Path(path)
                 bundle_files = sorted(f for f in dir_path.iterdir() if f.is_file() and f.suffix == '.bundle')
                 if bundle_files:
-                    self._set_files(bundle_files[:1] if not self._allow_multiple else bundle_files)
+                    self.set_files(bundle_files[:1] if not self._allow_multiple else bundle_files)
         else:
             select_file(
                 title=t("ui.dialog.select", type=self.cget("text")),
@@ -432,17 +463,7 @@ class DropZone(tb.Labelframe):
     def _handle_browse_callback(self, paths: list[Path]) -> None:
         """浏览选择后的回调处理"""
         if paths:
-            self._set_files(paths)
-
-    def _set_files(self, paths: list[Path]) -> None:
-        """设置文件列表并触发回调"""
-        self._paths = paths
-        self._update_display()
-        if self._on_files_selected:
-            if self._allow_multiple:
-                self._on_files_selected(paths)
-            else:
-                self._on_files_selected(paths[0])
+            self.set_files(paths)
 
     @staticmethod
     def _debounce_wraplength(event: tk.Event) -> None:
@@ -772,7 +793,7 @@ class ModeSwitcher:
 class FileListbox:
     """可复用的文件列表框组件，支持拖放、多选、添加/删除文件等功能"""
     
-    def __init__(self, parent, title:str, file_list:list[Path] = [], placeholder_text:str | None = None, height=10, logger=None,
+    def __init__(self, parent, title:str, file_list:list[Path] = [], placeholder_text:str | None = None, height=10, logger: Logger | None = None,
     display_formatter: Callable[[Path], str] | None = None, 
     on_files_added: Callable[[list[Path]], None] | None = None,
     allowed_suffixes: set[str] = {".bundle"}

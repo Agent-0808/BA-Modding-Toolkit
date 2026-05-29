@@ -105,16 +105,10 @@ class ModUpdateTab(TabFrame):
             self.new_mod_zone.set_error(ui_message)
             self.logger.status(t("status.search_not_found"))
         elif len(found_paths) == 1:
-            self.target_paths = found_paths
             self.new_mod_zone.set_files(found_paths)
-            self.logger.log(t("log.file.loaded", path=found_paths[0]))
-            self.logger.status(t("status.ready"))
         else:
             # 多个匹配文件，直接将所有文件设置为目标组
-            self.target_paths = found_paths
             self.new_mod_zone.set_files(found_paths)
-            self.logger.log(t("message.search.found_multiple_matches", count=len(found_paths)))
-            self.logger.status(t("status.ready"))
 
     def run_update_thread(self):
         if not self.source_paths or not self.target_paths:
