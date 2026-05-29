@@ -102,6 +102,8 @@ bamt-cli env
 
 > Note: Due to the technical limitation of the `Tap` library, the compiled binary file cannot display parameter variable annotations. When running the source code, the parameter variable annotations will be displayed in the help information.
 
+Check the [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) Page for Complete Usage Instructions.
+
 ## Technical Details
 
 ### Tested Environments
@@ -151,6 +153,7 @@ BA-Modding-Toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # Entry point
 │ ├── core.py        # Core processing logic
+│ ├── searching.py   # Searching logic
 │ ├── bundle.py      # Bundle class
 │ ├── naming.py      # File naming logic
 │ ├── models.py      # Data models

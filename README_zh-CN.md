@@ -100,6 +100,8 @@ bamt-cli env
 
 > 注：由于`Tap`库技术限制，打包后的二进制文件无法显示参数变量的注释信息。当使用源代码运行时，参数变量的注释信息会显示在帮助信息中。
 
+请查看 [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) 页面参考详细用法说明。
+
 ## 技术细节
 
 ### 经过测试的环境
@@ -149,6 +151,7 @@ BA-Modding-Toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # 程序入口
 │ ├── core.py        # 核心处理逻辑
+│ ├── searching.py   # 搜索功能逻辑
 │ ├── bundle.py      # Bundle 类
 │ ├── naming.py      # 文件名处理逻辑
 │ ├── models.py      # 数据模型类
