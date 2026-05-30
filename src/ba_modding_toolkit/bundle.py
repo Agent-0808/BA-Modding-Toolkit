@@ -130,24 +130,101 @@ class Bundle:
         
         return "UnknownPlatform", "Unknown"
     
+    @staticmethod
+    def get_trailing_bytes(bundle_path: Path) -> int | None:
+        """
+        快速检测 UnityFS bundle 文件尾部添加的额外字节数。
+        
+        通过读取文件头中的 size 字段与实际文件大小比较，
+        可以在不解压的情况下判断是否需要移除尾部字节。
+        
+        Args:
+            bundle_path: bundle 文件路径
+            
+        Returns:
+            int: 需要移除的尾部字节数（0 表示无需移除）
+            None: 读取失败
+        """
+        try:
+            with open(bundle_path, 'rb') as f:
+                # 读取签名 (以 null 结尾)
+                signature = bytearray()
+                while True:
+                    byte = f.read(1)
+                    if byte == b'\x00':
+                        break
+                    signature.extend(byte)
+                
+                if signature != b'UnityFS':
+                    return None
+                
+                # 读取 version (uint32)
+                f.read(4)
+                
+                # 读取 version_player (以 null 结尾的字符串)
+                while f.read(1) != b'\x00':
+                    pass
+                
+                # 读取 version_engine (以 null 结尾的字符串)
+                while f.read(1) != b'\x00':
+                    pass
+                
+                # 读取 size (int64, big-endian)
+                size_bytes = f.read(8)
+                if len(size_bytes) != 8:
+                    return None
+                
+                recorded_size = int.from_bytes(size_bytes, 'big')
+                
+                # 获取实际文件大小
+                actual_size = bundle_path.stat().st_size
+                
+                # 计算差值
+                trailing_bytes = actual_size - recorded_size
+                
+                # 如果实际大小小于记录大小，说明文件损坏
+                if trailing_bytes < 0:
+                    return None
+                
+                return trailing_bytes
+                
+        except Exception:
+            return None
+    
     @classmethod
     def load(cls, bundle_path: Path, log: LogFunc = no_log) -> 'Bundle | None':
         """
         尝试加载一个 Unity bundle 文件。
-        如果直接加载失败，会尝试移除末尾的几个字节后再次加载。
+        使用快速检测尾部字节的方式优化加载流程。
         
         Returns:
             Bundle 实例，如果加载失败则返回 None
         """
+        if not bundle_path.exists():
+            log(f'❌ {t("log.file.not_exist", path=bundle_path)}')
+            return None
+        
+        # 快速检测尾部字节数
+        trailing = cls.get_trailing_bytes(bundle_path)
+        
+        if trailing is None:
+            log(f'❌ {t("log.file.load_failed", path=bundle_path)}')
+            return None
+        
+        # 尝试加载
         try:
-            env = UnityPy.load(str(bundle_path))
+            if trailing == 0:
+                env = UnityPy.load(str(bundle_path))
+            else:
+                data = bundle_path.read_bytes()[:-trailing]
+                env = UnityPy.load(data)
             return cls(bundle_path, env, log)
         except Exception:
             pass
         
+        # 如果精确检测后加载失败，尝试 fallback 方式
         try:
-            with open(bundle_path, "rb") as f:
-                data = f.read()
+            data = bundle_path.read_bytes()
         except Exception as e:
             log(f'  ❌ {t("log.file.read_in_memory_failed", name=bundle_path.name, error=e)}')
             return None

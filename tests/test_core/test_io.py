@@ -40,8 +40,8 @@ class TestLoadBundle:
     def test_load_bundle_nonexistent(self, tmp_path: Path):
         nonexistent = tmp_path / "nonexistent.bundle"
         bundle = Bundle.load(nonexistent)
-        # UnityPy.load 对于不存在的文件会创建一个空的 Environment
-        assert bundle.is_empty()
+        # 不存在的文件应该返回 None
+        assert bundle is None
 
 
 @pytest.mark.skipif(

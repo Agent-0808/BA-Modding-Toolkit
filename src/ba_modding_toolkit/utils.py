@@ -329,32 +329,6 @@ def get_environment_info(ignore_tk: bool = False):
 
     return "\n".join(lines)
 
-def is_bundle_file(source: Path | bytes, log = no_log) -> bool:
-    """
-    通过检查文件或字节数据头部来判断是否为Unity的.bundle文件
-    """
-    try:
-        data: bytes = b''
-        if isinstance(source, Path):
-            if not source.exists():
-                log(f"错误: 文件不存在 -> {source}")
-                return False
-            with open(str(source), 'rb') as f:
-                # 读取文件的前32个字节，足够检测"UnityFS"标识
-                data = f.read(32)
-        else:
-            data = source
-
-        if b"UnityFS" in data[:32]:
-            return True
-        else:
-            return False
-
-    except Exception as e:
-        log(f"处理源数据时发生错误: {e}")
-        return False
-
-
 class SpineUtils:
     """Spine 资源转换工具类，支持版本升级和降级。"""
 
