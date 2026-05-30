@@ -77,8 +77,9 @@ class AssetPackerTab(TabFrame):
         self.logger.status(t("status.ready"))
 
     def _on_assets_added(self, added_paths: list[Path]):
-        """资源文件添加回调：首次从空到有资源时自动搜索对应 bundle"""
-        if len(self.asset_paths) == len(added_paths) and not self.bundle_paths:
+        """资源文件添加回调：从空到有资源时自动搜索对应 bundle"""
+        # 当添加后长度等于本次添加数量时，说明添加前列表为空
+        if len(self.asset_paths) == len(added_paths):
             self.run_in_thread(self._auto_search_target_bundles)
 
     def _auto_search_target_bundles(self):
