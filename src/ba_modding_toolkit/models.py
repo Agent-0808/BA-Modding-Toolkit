@@ -101,15 +101,6 @@ class FilePair(NamedTuple):
     output: Path    # 输出文件路径
     source: Path    # 源文件路径
 
-@dataclass
-class BundleFileInfo:
-    """扫描结果中单个 bundle 文件的信息"""
-    path: Path
-    file_size: int
-    trailing_bytes: int | None
-    trailing_content: bytes | None
-    crc_expected: str
-
 class ParsedFilename(NamedTuple):
     """
     解析后的文件名结构。
@@ -128,6 +119,17 @@ class ParsedFilename(NamedTuple):
     date: str
     crc: str
     prefix: str
+
+@dataclass
+class BundleFileInfo:
+    """扫描结果中单个 bundle 文件的信息"""
+    path: Path
+    file_size: int
+    modified_time: float = 0.0
+    trailing_bytes: int | None = None
+    trailing_content: bytes | None = None
+    parsed_name: ParsedFilename | None = None
+    crc_actual: int | None = None
 
 
 # 可替换的资源类型白名单

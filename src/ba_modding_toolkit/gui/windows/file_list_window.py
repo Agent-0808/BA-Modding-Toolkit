@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import threading
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,7 +12,8 @@ import ttkbootstrap as tb
 from ...i18n import t
 from ...utils import CRCUtils
 from ...naming import parse_filename
-from ...searching import scan_bundle_files
+from ...searching import list_bundle_files
+from ...bundle import analyze_bundles, BUNDLE_ANALYZERS
 from ...models import BundleFileInfo
 from ..components import Theme, UIComponents
 from ..utils import open_directory, select_directory
@@ -35,6 +37,15 @@ def _format_hex(data: bytes | None) -> str:
     return " ".join(f"{b:02X}" for b in data)
 
 
+def _format_time(mtime: float) -> str:
+    if mtime <= 0:
+        return ""
+    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+
+
+_UNSET = "—"
+
+
 class FileListWindow(tb.Toplevel):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
 
@@ -42,8 +53,19 @@ class FileListWindow(tb.Toplevel):
         {"id": "filename", "text_key": "ui.file_list.column_filename", "width": 300},
         {"id": "directory", "text_key": "ui.file_list.column_directory", "width": 120},
         {"id": "file_size", "text_key": "ui.file_list.column_file_size", "width": 80},
+        {"id": "modified_time", "text_key": "ui.file_list.column_modified_time", "width": 130},
         {"id": "trailing_bytes", "text_key": "ui.file_list.column_trailing_bytes", "width": 80},
         {"id": "trailing_content", "text_key": "ui.file_list.column_trailing_content", "width": 200},
+        {"id": "core", "text_key": "ui.file_list.column_core", "width": 150},
+        {"id": "res_type", "text_key": "ui.file_list.column_res_type", "width": 100},
+        {"id": "crc", "text_key": "ui.file_list.column_crc", "width": 80},
+        {"id": "crc_actual", "text_key": "ui.file_list.column_crc_actual", "width": 80},
+    ]
+
+    ANALYZER_OPTIONS = [
+        {"key": "trailing", "text_key": "ui.file_list.analyze_trailing"},
+        {"key": "naming", "text_key": "ui.file_list.analyze_naming"},
+        {"key": "crc", "text_key": "ui.file_list.analyze_crc"},
     ]
 
     def __init__(self, master: tk.Tk, app: "App"):
@@ -67,7 +89,7 @@ class FileListWindow(tb.Toplevel):
 
     def _setup_window(self):
         self.title(t("ui.file_list.window_title"))
-        self.geometry("900x600")
+        self.geometry("1000x600")
         self.transient(self.master)
 
         icon_path = self.app.root_path / "assets" / "eligma.ico"
@@ -93,13 +115,21 @@ class FileListWindow(tb.Toplevel):
             self._refresh, bootstyle="success", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
 
-        self._show_zero_var = tk.BooleanVar(value=False)
-        tb.Checkbutton(
-            toolbar,
-            text=t("ui.file_list.show_zero_trailing"),
-            variable=self._show_zero_var,
-            command=self._apply_filter,
-        ).pack(side=tk.LEFT, padx=(10, 5))
+        tb.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+
+        self._analyzer_vars: dict[str, tk.BooleanVar] = {}
+        for opt in self.ANALYZER_OPTIONS:
+            var = tk.BooleanVar(value=False)
+            self._analyzer_vars[opt["key"]] = var
+            tb.Checkbutton(
+                toolbar, text=t(opt["text_key"]),
+                variable=var,
+            ).pack(side=tk.LEFT, padx=(0, 5))
+
+        UIComponents.create_button(
+            toolbar, t("action.analyze"),
+            self._analyze, bootstyle="warning", style="compact"
+        ).pack(side=tk.LEFT, padx=(0, 5))
 
         self._search_var = tk.StringVar()
         self._search_var.trace_add("write", lambda *_: self._apply_filter())
@@ -192,17 +222,39 @@ class FileListWindow(tb.Toplevel):
         self._progress["value"] = 0
         self.tree.delete(*self.tree.get_children())
 
+        def _scan():
+            items = list_bundle_files(base_dir)
+            if not self._closed:
+                self.after(0, lambda: self._on_scan_complete(items))
+
+        thread = threading.Thread(target=_scan, daemon=True)
+        thread.start()
+
+    def _analyze(self):
+        if not self._all_items:
+            return
+
+        analyzer_names = [
+            key for key, var in self._analyzer_vars.items() if var.get()
+        ]
+        if not analyzer_names:
+            messagebox.showinfo(t("action.analyze"), t("ui.file_list.no_analyzer_selected"))
+            return
+
+        self._status_label.config(text=t("ui.file_list.analyzing"))
+        self._progress["value"] = 0
+
         def _on_progress(done: int, total: int, filename: str):
             if self._closed:
                 return
             self.after(0, lambda: self._update_progress(done, total, filename))
 
-        def _scan():
-            items = scan_bundle_files(base_dir, self.app.logger.log, progress_callback=_on_progress)
+        def _run():
+            analyze_bundles(self._all_items, analyzer_names, progress_callback=_on_progress)
             if not self._closed:
-                self.after(0, lambda: self._on_scan_complete(items))
+                self.after(0, self._on_analyze_complete)
 
-        thread = threading.Thread(target=_scan, daemon=True)
+        thread = threading.Thread(target=_run, daemon=True)
         thread.start()
 
     def _update_progress(self, done: int, total: int, filename: str):
@@ -211,7 +263,7 @@ class FileListWindow(tb.Toplevel):
         if total > 0:
             self._progress["value"] = done / total * 100
         self._status_label.config(
-            text=t("ui.file_list.scanning_progress", done=done, total=total, filename=filename)
+            text=t("ui.file_list.analyzing_progress", done=done, total=total, filename=filename)
         )
 
     def _on_scan_complete(self, items: list[BundleFileInfo]):
@@ -222,20 +274,21 @@ class FileListWindow(tb.Toplevel):
         self._apply_filter()
         self.app.logger.log(t("ui.file_list.scan_complete"))
 
+    def _on_analyze_complete(self):
+        if self._closed:
+            return
+        self._progress["value"] = 0
+        self._apply_filter()
+        self.app.logger.log(t("ui.file_list.analyze_complete"))
+
     def _apply_filter(self):
         if self._closed:
             return
         self.tree.delete(*self.tree.get_children())
 
-        show_zero = self._show_zero_var.get()
         search_text = self._search_var.get().strip().lower()
 
         filtered = self._all_items
-        if not show_zero:
-            filtered = [
-                item for item in filtered
-                if item.trailing_bytes is None or item.trailing_bytes > 0
-            ]
         if search_text:
             filtered = [
                 item for item in filtered
@@ -249,16 +302,26 @@ class FileListWindow(tb.Toplevel):
             self._insert_tree_item(idx, item)
 
         total = len(self._all_items)
-        trailing = sum(
-            1 for item in self._all_items
-            if item.trailing_bytes is not None and item.trailing_bytes > 0
-        )
         self._status_label.config(
-            text=t("ui.file_list.status_summary", total=total, trailing=trailing)
+            text=t("ui.file_list.status_summary", total=total)
         )
 
     def _insert_tree_item(self, idx: int, item: BundleFileInfo):
-        trailing_display = str(item.trailing_bytes) if item.trailing_bytes is not None else t("common.unknown")
+        trailing_display = (
+            str(item.trailing_bytes) if item.trailing_bytes is not None else _UNSET
+        )
+        trailing_content_display = (
+            _format_hex(item.trailing_content) if item.trailing_content is not None else _UNSET
+        )
+        core_display = item.parsed_name.core if item.parsed_name else _UNSET
+        res_type_display = item.parsed_name.res_type if item.parsed_name and item.parsed_name.res_type else _UNSET
+        crc_display = (
+            f"{int(item.parsed_name.crc):08X}" if item.parsed_name and item.parsed_name.crc else _UNSET
+        )
+        crc_actual_display = (
+            f"{item.crc_actual:08X}" if item.crc_actual is not None else _UNSET
+        )
+
         parent_dir = item.path.parent
         display_dir = parent_dir.parent if parent_dir.name in ["Windows", "Android"] else parent_dir
 
@@ -266,8 +329,13 @@ class FileListWindow(tb.Toplevel):
             item.path.name,
             display_dir.name,
             _format_file_size(item.file_size),
+            _format_time(item.modified_time),
             trailing_display,
-            _format_hex(item.trailing_content),
+            trailing_content_display,
+            core_display,
+            res_type_display,
+            crc_display,
+            crc_actual_display,
         )
         self.tree.insert("", tk.END, iid=str(idx), values=values)
 
@@ -286,8 +354,13 @@ class FileListWindow(tb.Toplevel):
             "filename": lambda i: i.path.name.lower(),
             "directory": lambda i: i.path.parent.name.lower(),
             "file_size": lambda i: i.file_size,
-            "trailing_bytes": lambda i: i.trailing_bytes or 0,
-            "trailing_content": lambda i: _format_hex(i.trailing_content),
+            "modified_time": lambda i: i.modified_time,
+            "trailing_bytes": lambda i: i.trailing_bytes if i.trailing_bytes is not None else -1,
+            "trailing_content": lambda i: _format_hex(i.trailing_content) if i.trailing_content else "",
+            "core": lambda i: i.parsed_name.core.lower() if i.parsed_name else "",
+            "res_type": lambda i: i.parsed_name.res_type.lower() if i.parsed_name and i.parsed_name.res_type else "",
+            "crc": lambda i: int(i.parsed_name.crc) if i.parsed_name and i.parsed_name.crc else -1,
+            "crc_actual": lambda i: i.crc_actual if i.crc_actual is not None else -1,
         }
         key_func = key_map.get(column, lambda i: "")
         return sorted(items, key=key_func, reverse=reverse)
@@ -302,15 +375,9 @@ class FileListWindow(tb.Toplevel):
         self._context_menu.post(event.x_root, event.y_root)
 
     def _get_selected_items(self) -> list[BundleFileInfo]:
-        show_zero = self._show_zero_var.get()
         search_text = self._search_var.get().strip().lower()
 
         filtered = self._all_items
-        if not show_zero:
-            filtered = [
-                item for item in filtered
-                if item.trailing_bytes is None or item.trailing_bytes > 0
-            ]
         if search_text:
             filtered = [
                 item for item in filtered
@@ -347,11 +414,14 @@ class FileListWindow(tb.Toplevel):
         results = []
         for item in items:
             try:
-                actual_crc = CRCUtils.compute_crc32(item.path)
+                actual_crc = item.crc_actual
+                if actual_crc is None:
+                    actual_crc = CRCUtils.compute_crc32(item.path)
                 actual_str = f"{actual_crc:08X}"
 
-                if item.crc_expected:
-                    expected_int = int(item.crc_expected)
+                expected_crc = item.parsed_name.crc if item.parsed_name else ""
+                if expected_crc:
+                    expected_int = int(expected_crc)
                     expected_str = f"{expected_int:08X}"
                     if actual_crc == expected_int:
                         results.append(t("ui.file_list.crc_match", expected=expected_str, actual=actual_str))

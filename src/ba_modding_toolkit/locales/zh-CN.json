@@ -45,6 +45,7 @@
 		"reset": "重置",
 		"refresh": "刷新",
 		"filter": "筛选",
+		"analyze": "分析",
 		"open_in_explorer": "打开所在目录",
 		"copy_filename": "复制文件名"
 	},
@@ -479,14 +480,22 @@
 			"column_filename": "文件名",
 			"column_directory": "目录",
 			"column_file_size": "大小",
+			"column_modified_time": "修改时间",
 			"column_trailing_bytes": "尾部字节",
 			"column_trailing_content": "尾部内容",
-			"show_zero_trailing": "显示尾部为0的文件",
-			"refresh": "刷新",
+			"column_core": "Core",
+			"column_res_type": "资源类型",
+			"column_crc": "文件名CRC",
+			"column_crc_actual": "实际CRC",
+			"analyze_trailing": "尾部字节",
+			"analyze_naming": "文件名解析",
+			"analyze_crc": "CRC校验",
+			"no_analyzer_selected": "请至少选择一种分析类型",
 			"scanning": "正在扫描...",
 			"scanning_progress": "正在扫描... ({done}/{total}) {filename}",
-			"status_summary": "共 {total} 个文件，其中 {trailing} 个有尾部字节",
-			"search_placeholder": "搜索文件名...",
+			"analyzing": "正在分析...",
+			"analyzing_progress": "正在分析... ({done}/{total}) {filename}",
+			"status_summary": "共 {total} 个文件",
 			"open_in_explorer": "打开所在目录",
 			"copy_filename": "复制文件名",
 			"check_crc": "检查 CRC",
@@ -494,7 +503,8 @@
 			"crc_mismatch": "CRC 不匹配: ❌ 文件名 {expected} != 实际 {actual}",
 			"crc_no_filename_crc": "文件名中未包含 CRC 值，实际 CRC: {actual}",
 			"no_dirs_found": "未找到有效的搜索目录",
-			"scan_complete": "扫描完成"
+			"scan_complete": "扫描完成",
+			"analyze_complete": "分析完成"
 		}
 	}
 }

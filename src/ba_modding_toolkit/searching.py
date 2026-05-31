@@ -6,7 +6,7 @@ from .i18n import t
 from .utils import no_log
 from .naming import parse_filename, get_category_prefix
 from .models import LogFunc, AssetKey, AssetType, BundleFileInfo, ProgressCallback
-from .bundle import Bundle
+from .bundle import Bundle, analyze_bundles, BUNDLE_ANALYZERS
 
 
 def collect_candidates_by_prefix(
@@ -207,29 +207,23 @@ def get_search_dirs(base_dir: Path) -> list[Path]:
     return ret
 
 
-def scan_bundle_files(
-    base_dir: Path,
-    log: LogFunc = no_log,
-    progress_callback: ProgressCallback | None = None,
-) -> list[BundleFileInfo]:
+def list_bundle_files(base_dir: Path) -> list[BundleFileInfo]:
     """
-    扫描搜索目录下的所有 bundle 文件，收集文件信息。
+    快速扫描搜索目录下的所有 bundle 文件，仅收集基础信息（路径、大小、修改时间）。
 
     Args:
         base_dir: 游戏资源根目录
         log: 日志记录函数
-        progress_callback: 进度回调函数，接收 (已完成数, 总数, 文件名)
 
     Returns:
-        BundleFileInfo 列表
+        BundleFileInfo 列表（仅基础字段已填充）
     """
     search_dirs = get_search_dirs(base_dir)
     if not search_dirs:
-        log(t("message.search.no_matching_files_in_dir"))
         return []
 
-    all_bundles: list[Path] = []
     seen: set[Path] = set()
+    results: list[BundleFileInfo] = []
 
     for directory in search_dirs:
         for bundle_path in sorted(directory.iterdir()):
@@ -238,28 +232,12 @@ def scan_bundle_files(
             if bundle_path in seen:
                 continue
             seen.add(bundle_path)
-            all_bundles.append(bundle_path)
 
-    total = len(all_bundles)
-    results: list[BundleFileInfo] = []
-
-    for i, bundle_path in enumerate(all_bundles):
-        trailing = Bundle.get_trailing_bytes(bundle_path)
-        content = None
-        if trailing is not None and trailing > 0:
-            content = Bundle.get_trailing_content(bundle_path, trailing)
-
-        crc_expected = parse_filename(bundle_path.name).crc
-
-        results.append(BundleFileInfo(
-            path=bundle_path,
-            file_size=bundle_path.stat().st_size,
-            trailing_bytes=trailing,
-            trailing_content=content,
-            crc_expected=crc_expected,
-        ))
-
-        if progress_callback:
-            progress_callback(i + 1, total, bundle_path.name)
+            stat = bundle_path.stat()
+            results.append(BundleFileInfo(
+                path=bundle_path,
+                file_size=stat.st_size,
+                modified_time=stat.st_mtime,
+            ))
 
     return results

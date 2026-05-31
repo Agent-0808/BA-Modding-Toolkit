@@ -3,6 +3,7 @@
 import traceback
 from functools import cached_property
 from pathlib import Path
+from typing import Callable
 
 import UnityPy
 from UnityPy.files import SerializedFile
@@ -17,6 +18,7 @@ from .models import (
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
     SaveOptions, SpineOptions, ParsedFilename,
+    BundleFileInfo, ProgressCallback,
     REPLACEABLE_ASSET_TYPES
 )
 
@@ -500,3 +502,64 @@ class Bundle:
             patch["__mode__"] = {"ALL"}
         
         return patch
+
+
+# -------- Bundle 分析器 --------
+
+BundleAnalyzer = Callable[[BundleFileInfo], None]
+
+
+def analyze_trailing(item: BundleFileInfo) -> None:
+    """分析尾部字节"""
+    trailing = Bundle.get_trailing_bytes(item.path)
+    content = None
+    if trailing is not None and trailing > 0:
+        content = Bundle.get_trailing_content(item.path, trailing)
+    item.trailing_bytes = trailing
+    item.trailing_content = content
+
+
+def analyze_naming(item: BundleFileInfo) -> None:
+    """分析文件名"""
+    item.parsed_name = parse_filename(item.path.name)
+
+
+def analyze_crc(item: BundleFileInfo) -> None:
+    """计算实际 CRC32"""
+    item.crc_actual = CRCUtils.compute_crc32(item.path)
+
+
+BUNDLE_ANALYZERS: dict[str, BundleAnalyzer] = {
+    "trailing": analyze_trailing,
+    "naming": analyze_naming,
+    "crc": analyze_crc,
+}
+
+
+def analyze_bundles(
+    items: list[BundleFileInfo],
+    analyzer_names: list[str],
+    progress_callback: ProgressCallback | None = None,
+) -> None:
+    """
+    对已有的 BundleFileInfo 列表运行指定的分析器，原地修改。
+
+    Args:
+        items: 待分析的 BundleFileInfo 列表
+        analyzer_names: 要运行的分析器名称列表（对应 BUNDLE_ANALYZERS 的 key）
+        progress_callback: 进度回调函数，接收 (已完成数, 总数, 文件名)
+    """
+    analyzers = [
+        BUNDLE_ANALYZERS[name]
+        for name in analyzer_names
+        if name in BUNDLE_ANALYZERS
+    ]
+    if not analyzers:
+        return
+
+    total = len(items)
+    for i, item in enumerate(items):
+        for analyzer in analyzers:
+            analyzer(item)
+        if progress_callback:
+            progress_callback(i + 1, total, item.path.name)
