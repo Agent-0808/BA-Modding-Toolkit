@@ -38,10 +38,15 @@
 		"extract": "提取",
 		"convert": "转换",
 		"calculate_crc": "计算 CRC",
+		"check_crc": "检查 CRC",
 		"run_crc_correction": "运行CRC修正",
 		"save": "保存",
 		"load": "读取",
-		"reset": "重置"
+		"reset": "重置",
+		"refresh": "刷新",
+		"filter": "筛选",
+		"open_in_explorer": "打开所在目录",
+		"copy_filename": "复制文件名"
 	},
 	"option": {
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
@@ -401,7 +406,8 @@
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
 			"legacy_conversion": "旧版/新版转换",
-			"batch_legacy": "批量处理旧版"
+			"batch_legacy": "批量处理旧版",
+			"file_list": "文件列表"
 		},
 		"settings": {
 			"title": "设置",
@@ -467,6 +473,27 @@
 			"target_crc": "目标 CRC"
 		},
 		"log_area": "日志",
-		"status_label": "状态："
+		"status_label": "状态：",
+		"file_list": {
+			"window_title": "Bundle 文件列表",
+			"column_filename": "文件名",
+			"column_directory": "目录",
+			"column_file_size": "大小",
+			"column_trailing_bytes": "尾部字节",
+			"column_trailing_content": "尾部内容",
+			"show_zero_trailing": "显示尾部为0的文件",
+			"refresh": "刷新",
+			"scanning": "正在扫描...",
+			"status_summary": "共 {total} 个文件，其中 {trailing} 个有尾部字节",
+			"search_placeholder": "搜索文件名...",
+			"open_in_explorer": "打开所在目录",
+			"copy_filename": "复制文件名",
+			"check_crc": "检查 CRC",
+			"crc_match": "CRC 匹配: ✅ 文件名 {expected} == 实际 {actual}",
+			"crc_mismatch": "CRC 不匹配: ❌ 文件名 {expected} != 实际 {actual}",
+			"crc_no_filename_crc": "文件名中未包含 CRC 值，实际 CRC: {actual}",
+			"no_dirs_found": "未找到有效的搜索目录",
+			"scan_complete": "扫描完成"
+		}
 	}
 }

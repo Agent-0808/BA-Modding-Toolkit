@@ -191,6 +191,27 @@ class Bundle:
         except Exception:
             return None
     
+    @staticmethod
+    def get_trailing_content(bundle_path: Path, trailing_size: int, max_bytes: int = 64) -> bytes | None:
+        """
+        读取 bundle 文件尾部的字节内容。
+
+        Args:
+            bundle_path: bundle 文件路径
+            trailing_size: 尾部字节数（由 get_trailing_bytes 返回）
+            max_bytes: 最大读取字节数，超出截断
+
+        Returns:
+            尾部字节内容，读取失败返回 None
+        """
+        try:
+            read_size = min(trailing_size, max_bytes)
+            with open(bundle_path, 'rb') as f:
+                f.seek(-read_size, 2)
+                return f.read(read_size)
+        except Exception:
+            return None
+    
     @classmethod
     def load(cls, bundle_path: Path, log: LogFunc = no_log) -> 'Bundle | None':
         """

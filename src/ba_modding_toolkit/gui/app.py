@@ -15,7 +15,7 @@ from ..bundle import Bundle
 from .components import Theme, Logger, UIComponents
 from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
-from .dialogs import SettingsDialog
+from .windows import SettingsDialog, FileListWindow
 from .base_tab import TabFrame
 from .tabs import *
 
@@ -140,6 +140,13 @@ class App(tk.Frame, ConfigMixin):
         """打开高级设置对话框"""
         dialog = SettingsDialog(self.master, self)
         self.master.wait_window(dialog) # 等待对话框关闭
+
+    def open_file_list_window(self):
+        """打开文件列表窗口"""
+        if hasattr(self, '_file_list_window') and self._file_list_window and self._file_list_window.winfo_exists():
+            self._file_list_window.focus()
+            return
+        self._file_list_window = FileListWindow(self.master, self)
 
     def show_environment_info(self):
         """显示环境信息"""
@@ -355,6 +362,15 @@ class App(tk.Frame, ConfigMixin):
         separator = tb.Frame(self.sidebar_frame, height=2, bootstyle="secondary")
         separator.pack(fill=tk.X, padx=5, pady=(10,5))
         
+        # 文件列表按钮（独立窗口）
+        file_list_btn = UIComponents.create_button(
+            self.sidebar_frame,
+            text=t("ui.tabs.file_list"),
+            command=self.open_file_list_window,
+            bootstyle="info"
+        )
+        file_list_btn.pack(fill=tk.X, padx=5, pady=(5,0))
+
         # 在底部添加设置按钮
         settings_btn = UIComponents.create_button(
             self.sidebar_frame,

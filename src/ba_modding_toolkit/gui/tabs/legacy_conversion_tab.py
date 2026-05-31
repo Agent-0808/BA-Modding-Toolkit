@@ -11,7 +11,7 @@ from ... import core
 from ...searching import get_search_dirs, find_target_bundles
 from ..base_tab import TabFrame
 from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
-from ..dialogs import FileSelectionDialog
+from ..windows import FileSelectionDialog
 from ..utils import confirm_and_replace
 
 class Mode(IntEnum):

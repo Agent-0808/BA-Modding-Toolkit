@@ -5,7 +5,7 @@ from pathlib import Path
 from .i18n import t
 from .utils import no_log
 from .naming import parse_filename, get_category_prefix
-from .models import LogFunc, AssetKey, AssetType
+from .models import LogFunc, AssetKey, AssetType, BundleFileInfo
 from .bundle import Bundle
 
 
@@ -205,3 +205,48 @@ def get_search_dirs(base_dir: Path) -> list[Path]:
         if (base_dir / suffix).is_dir()
     ]
     return ret
+
+
+def scan_bundle_files(base_dir: Path, log: LogFunc = no_log) -> list[BundleFileInfo]:
+    """
+    扫描搜索目录下的所有 bundle 文件，收集文件信息。
+
+    Args:
+        base_dir: 游戏资源根目录
+        log: 日志记录函数
+
+    Returns:
+        BundleFileInfo 列表
+    """
+    search_dirs = get_search_dirs(base_dir)
+    if not search_dirs:
+        log(t("message.search.no_matching_files_in_dir"))
+        return []
+
+    results: list[BundleFileInfo] = []
+    seen: set[Path] = set()
+
+    for directory in search_dirs:
+        for bundle_path in sorted(directory.iterdir()):
+            if not bundle_path.is_file() or bundle_path.suffix != '.bundle':
+                continue
+            if bundle_path in seen:
+                continue
+            seen.add(bundle_path)
+
+            trailing = Bundle.get_trailing_bytes(bundle_path)
+            content = None
+            if trailing is not None and trailing > 0:
+                content = Bundle.get_trailing_content(bundle_path, trailing)
+
+            crc_expected = parse_filename(bundle_path.name).crc
+
+            results.append(BundleFileInfo(
+                path=bundle_path,
+                file_size=bundle_path.stat().st_size,
+                trailing_bytes=trailing,
+                trailing_content=content,
+                crc_expected=crc_expected,
+            ))
+
+    return results
