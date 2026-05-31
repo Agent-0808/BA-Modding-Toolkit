@@ -484,6 +484,7 @@
 			"show_zero_trailing": "显示尾部为0的文件",
 			"refresh": "刷新",
 			"scanning": "正在扫描...",
+			"scanning_progress": "正在扫描... ({done}/{total}) {filename}",
 			"status_summary": "共 {total} 个文件，其中 {trailing} 个有尾部字节",
 			"search_placeholder": "搜索文件名...",
 			"open_in_explorer": "打开所在目录",

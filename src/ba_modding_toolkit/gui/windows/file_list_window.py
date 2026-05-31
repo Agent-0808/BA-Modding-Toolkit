@@ -142,11 +142,19 @@ class FileListWindow(tb.Toplevel):
         self.tree.bind("<Button-3>", self._show_context_menu)
 
     def _create_status_bar(self):
+        status_frame = tb.Frame(self)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
+
+        self._progress = tb.Progressbar(
+            status_frame, mode="determinate", length=200, bootstyle="primary",
+        )
+        self._progress.pack(side=tk.LEFT, padx=(5, 0), pady=2)
+
         self._status_label = tb.Label(
-            self, relief=tk.SUNKEN, padding=(5, 2),
+            status_frame, relief=tk.SUNKEN, padding=(5, 2),
             font=Theme.STATUS_BAR_FONT, bootstyle="inverse-bg",
         )
-        self._status_label.pack(fill=tk.X, side=tk.BOTTOM)
+        self._status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
     def _create_context_menu(self):
         self._context_menu = tk.Menu(self, tearoff=0)
@@ -181,19 +189,35 @@ class FileListWindow(tb.Toplevel):
             return
 
         self._status_label.config(text=t("ui.file_list.scanning"))
+        self._progress["value"] = 0
         self.tree.delete(*self.tree.get_children())
 
+        def _on_progress(done: int, total: int, filename: str):
+            if self._closed:
+                return
+            self.after(0, lambda: self._update_progress(done, total, filename))
+
         def _scan():
-            items = scan_bundle_files(base_dir, self.app.logger.log)
+            items = scan_bundle_files(base_dir, self.app.logger.log, progress_callback=_on_progress)
             if not self._closed:
                 self.after(0, lambda: self._on_scan_complete(items))
 
         thread = threading.Thread(target=_scan, daemon=True)
         thread.start()
 
+    def _update_progress(self, done: int, total: int, filename: str):
+        if self._closed:
+            return
+        if total > 0:
+            self._progress["value"] = done / total * 100
+        self._status_label.config(
+            text=t("ui.file_list.scanning_progress", done=done, total=total, filename=filename)
+        )
+
     def _on_scan_complete(self, items: list[BundleFileInfo]):
         if self._closed:
             return
+        self._progress["value"] = 0
         self._all_items = items
         self._apply_filter()
         self.app.logger.log(t("ui.file_list.scan_complete"))
@@ -235,11 +259,12 @@ class FileListWindow(tb.Toplevel):
 
     def _insert_tree_item(self, idx: int, item: BundleFileInfo):
         trailing_display = str(item.trailing_bytes) if item.trailing_bytes is not None else t("common.unknown")
-        parent_dir = item.path.parent.name
+        parent_dir = item.path.parent
+        display_dir = parent_dir.parent if parent_dir.name in ["Windows", "Android"] else parent_dir
 
         values = (
             item.path.name,
-            parent_dir,
+            display_dir.name,
             _format_file_size(item.file_size),
             trailing_display,
             _format_hex(item.trailing_content),

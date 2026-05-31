@@ -13,7 +13,7 @@ from .i18n import t
 from .utils import SpineUtils, ImageUtils, no_log
 from .naming import parse_filename
 from .models import (
-    NameTypeKey, FilePair,
+    NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
     LogFunc, PatchResult,
     MatchStrategy, SaveOptions, SpineOptions,
@@ -555,7 +555,7 @@ def process_batch_mod_update(
     save_options: SaveOptions,
     spine_options: SpineOptions | None,
     max_workers: int = 1,
-    progress_callback: Callable[[int, int, str], None] | None = None,
+    progress_callback: ProgressCallback | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
     log: LogFunc = no_log,

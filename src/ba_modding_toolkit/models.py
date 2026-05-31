@@ -40,6 +40,8 @@ Patch = dict[AssetKey, AssetContent]
 # 日志函数类型
 LogFunc = Callable[[str], None]  
 
+ProgressCallback = Callable[[int, int, str], None]
+
 # 压缩类型
 CompressionType = Literal["lzma", "lz4", "original", "none"]  
 
