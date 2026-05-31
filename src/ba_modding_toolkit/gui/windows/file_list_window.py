@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, NamedTuple
 from enum import Enum
 
 import ttkbootstrap as tb
+from ttkbootstrap.tableview import Tableview as TBTableview
 
 from ...i18n import t
 from ...utils import CRCUtils
@@ -48,21 +49,22 @@ _UNSET = "—"
 
 
 class ColumnId(Enum):
-    """TreeView 列 ID"""
-    filename = "filename"
-    directory = "directory"
-    file_size = "file_size"
-    modified_time = "modified_time"
-    trailing_bytes = "trailing_bytes"
-    trailing_content = "trailing_content"
-    core = "core"
-    res_type = "res_type"
-    crc = "crc"
-    crc_actual = "crc_actual"
+    """Tableview 列索引"""
+    filename = 0
+    directory = 1
+    file_size = 2
+    modified_time = 3
+    trailing_bytes = 4
+    trailing_content = 5
+    core = 6
+    res_type = 7
+    crc = 8
+    crc_actual = 9
+    _path = 10  # 隐藏列，用于 iid
 
 
 class ColumnDef(NamedTuple):
-    """TreeView 列定义"""
+    """Tableview 列定义"""
     id: ColumnId
     text: str
     width: int
@@ -95,31 +97,6 @@ ANALYZER_OPTIONS: list[AnalyzerOption] = [
 ]
 
 
-def _get_sort_key(item: BundleFileInfo, column: ColumnId):
-    """获取排序 key"""
-    if column == ColumnId.filename:
-        return item.path.name.lower()
-    if column == ColumnId.directory:
-        return item.path.parent.name.lower()
-    if column == ColumnId.file_size:
-        return item.file_size
-    if column == ColumnId.modified_time:
-        return item.modified_time
-    if column == ColumnId.trailing_bytes:
-        return item.trailing_bytes if item.trailing_bytes is not None else -1
-    if column == ColumnId.trailing_content:
-        return _format_hex(item.trailing_content) if item.trailing_content else ""
-    if column == ColumnId.core:
-        return item.parsed_name.core.lower() if item.parsed_name else ""
-    if column == ColumnId.res_type:
-        return item.parsed_name.res_type.lower() if item.parsed_name and item.parsed_name.res_type else ""
-    if column == ColumnId.crc:
-        return int(item.parsed_name.crc) if item.parsed_name and item.parsed_name.crc else -1
-    if column == ColumnId.crc_actual:
-        return item.crc_actual if item.crc_actual is not None else -1
-    return ""
-
-
 class FileListWindow(tb.Toplevel):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
 
@@ -128,15 +105,13 @@ class FileListWindow(tb.Toplevel):
         self.app = app
 
         self._all_items: list[BundleFileInfo] = []
-        self._sort_column: ColumnId | None = None
-        self._sort_reverse: bool = False
+        self._items_by_path: dict[str, BundleFileInfo] = {}
         self._closed: bool = False
 
         self._setup_window()
         self._create_toolbar()
         self._create_status_bar()
-        self._create_treeview()
-        self._create_context_menu()
+        self._create_tableview()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
@@ -173,14 +148,6 @@ class FileListWindow(tb.Toplevel):
             self._refresh, bootstyle="success", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
 
-        tb.Separator(row1, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
-
-        self._search_var = tk.StringVar()
-        self._search_var.trace_add("write", lambda *_: self._apply_filter())
-        tb.Label(row1, text=t("action.filter")).pack(side=tk.LEFT)
-        search_entry = tb.Entry(row1, textvariable=self._search_var, width=20)
-        search_entry.pack(side=tk.LEFT, padx=(5, 0))
-
         row2 = tb.Frame(toolbar_container, padding=5)
         row2.pack(fill=tk.X)
 
@@ -200,80 +167,81 @@ class FileListWindow(tb.Toplevel):
             self._analyze, bootstyle="warning", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 10))
 
-        tb.Separator(row2, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
-
-        self._column_vars: dict[ColumnId, tk.BooleanVar] = {}
-        for col in COLUMNS:
-            var = tk.BooleanVar(value=col.default_visible)
-            self._column_vars[col.id] = var
-
-        self._column_menu_btn = tb.Menubutton(
-            row2, text=t("ui.file_list.column_label"), bootstyle="secondary"
-        )
-        self._column_menu_btn.pack(side=tk.LEFT)
-
-        column_menu = tk.Menu(self._column_menu_btn, tearoff=0)
-        for col in COLUMNS:
-            var = self._column_vars[col.id]
-            column_menu.add_checkbutton(
-                label=col.text,
-                variable=var,
-                command=lambda c=col.id: self._update_column_visibility(),
-            )
-        self._column_menu_btn.config(menu=column_menu)
-
-    def _create_treeview(self):
-        tree_frame = tb.Frame(self)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
-
-        self._visible_columns: list[ColumnId] = [
-            col.id for col in COLUMNS if col.default_visible
+    def _create_tableview(self):
+        coldata = [
+            {"text": col.text, "width": col.width, "stretch": False}
+            for col in COLUMNS
+        ] + [
+            {"text": "_path", "width": 0, "stretch": False, "minwidth": 0}
         ]
 
-        col_ids = [col.id.value for col in COLUMNS]
-
-        self.tree = tb.Treeview(
-            tree_frame,
-            columns=col_ids,
-            show="headings",
-            selectmode="extended",
+        colors = tb.Style().colors
+        self.table = TBTableview(
+            master=self,
+            coldata=coldata,
+            rowdata=[],
+            paginated=True,
+            pagesize=500,
+            searchable=True,
+            yscrollbar=True,
+            autoalign=True,
+            autofit=True,
             bootstyle="primary",
+            stripecolor=(colors.light, None),
+            height=15,
+            disable_right_click=False,
+            iid_field="_path",
         )
+        self.table.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
-        for col in COLUMNS:
-            self.tree.heading(
-                col.id.value,
-                text=col.text,
-                command=lambda c=col.id: self._sort_by(c),
+        # 替换内置滚动条为 ttkbootstrap 风格
+        if hasattr(self.table, 'ybar'):
+            ybar_master = self.table.ybar.master
+            
+            # 暂时解除 view 的 pack 布局，以便重新调整装箱顺序
+            self.table.view.pack_forget()
+            
+            self.table.ybar.destroy()
+            self.table.ybar = tb.Scrollbar(
+                ybar_master, command=self.table.view.yview, orient=tk.VERTICAL,
             )
+            
+            # 先 pack 滚动条（抢占右侧固定宽度）
+            self.table.ybar.pack(fill=tk.Y, side=tk.RIGHT)
+            
+            # 再重新 pack view（占满左侧剩余的全部空间）
+            self.table.view.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+            
+            self.table.view.configure(yscrollcommand=self.table.ybar.set)
 
-        self._update_column_visibility()
+        if hasattr(self.table, 'hbar'):
+            self.table.hbar.destroy()
+            self.table.hbar = tb.Scrollbar(
+                self.table.hbar.master, command=self.table.view.xview, orient=tk.HORIZONTAL,
+            )
+            self.table.hbar.pack(fill=tk.X)
+            self.table.view.configure(xscrollcommand=self.table.hbar.set)
 
-        vsb = tb.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        hsb = tb.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        self.tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        # 默认隐藏非默认可见列和 _path 列
+        for i, col in enumerate(COLUMNS):
+            if not col.default_visible:
+                self.table.get_column(index=i, visible=False).hide()
+        self.table.get_column(index=len(COLUMNS), visible=False).hide()
 
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        vsb.grid(row=0, column=1, sticky="ns")
-        hsb.grid(row=1, column=0, sticky="ew")
-        tree_frame.grid_rowconfigure(0, weight=1)
-        tree_frame.grid_columnconfigure(0, weight=1)
+        # monkey-patch reset_column_filters 以确保 _path 列在重置过滤器后仍保持隐藏
+        # "Show All" 会显示所有业务列，但不应暴露技术列 _path
+        _orig_reset_column_filters = self.table.reset_column_filters
+        def _patched_reset_column_filters(*args, **kwargs):
+            _orig_reset_column_filters(*args, **kwargs)
+            self.table.get_column(index=len(COLUMNS), visible=False).hide()
+        self.table.reset_column_filters = _patched_reset_column_filters
 
-        self.tree.bind("<Button-3>", self._show_context_menu)
-
-    def _update_column_visibility(self):
-        self._visible_columns = [
-            col.id for col in COLUMNS
-            if self._column_vars.get(col.id) and self._column_vars[col.id].get()
-        ]
-
-        self.tree.config(displaycolumns=[col.value for col in self._visible_columns])
-
-        col_widths: dict[str, int] = {col.id.value: col.width for col in COLUMNS}
-        for col_id in self._visible_columns:
-            self.tree.column(col_id.value, width=col_widths[col_id.value])
-
-        self._apply_filter()
+        # 在内置右键菜单中追加应用专属操作
+        cell_menu = self.table._rightclickmenu_cell
+        cell_menu.add_separator()
+        cell_menu.add_command(label=t("action.open_in_explorer"), command=self._ctx_open_in_explorer)
+        cell_menu.add_command(label=t("action.copy_filename"), command=self._ctx_copy_filename)
+        cell_menu.add_command(label=t("action.check_crc"), command=self._ctx_check_crc)
 
     def _create_status_bar(self):
         status_frame = tb.Frame(self)
@@ -289,22 +257,6 @@ class FileListWindow(tb.Toplevel):
             font=Theme.STATUS_BAR_FONT, bootstyle="inverse-bg",
         )
         self._status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-    def _create_context_menu(self):
-        self._context_menu = tk.Menu(self, tearoff=0)
-        self._context_menu.add_command(
-            label=t("action.open_in_explorer"),
-            command=self._ctx_open_in_explorer,
-        )
-        self._context_menu.add_command(
-            label=t("action.copy_filename"),
-            command=self._ctx_copy_filename,
-        )
-        self._context_menu.add_separator()
-        self._context_menu.add_command(
-            label=t("action.check_crc"),
-            command=self._ctx_check_crc,
-        )
 
     # -------- 数据操作 --------
 
@@ -324,7 +276,7 @@ class FileListWindow(tb.Toplevel):
 
         self._status_label.config(text=t("ui.file_list.scanning"))
         self._progress["value"] = 0
-        self.tree.delete(*self.tree.get_children())
+        self.table.delete_rows()
 
         def _scan():
             items = list_bundle_files(base_dir)
@@ -370,47 +322,7 @@ class FileListWindow(tb.Toplevel):
             text=t("ui.file_list.analyzing_progress", done=done, total=total, filename=filename)
         )
 
-    def _on_scan_complete(self, items: list[BundleFileInfo]):
-        if self._closed:
-            return
-        self._progress["value"] = 0
-        self._all_items = items
-        self._apply_filter()
-        self.app.logger.log(t("ui.file_list.scan_complete"))
-
-    def _on_analyze_complete(self):
-        if self._closed:
-            return
-        self._progress["value"] = 0
-        self._apply_filter()
-        self.app.logger.log(t("ui.file_list.analyze_complete"))
-
-    def _apply_filter(self):
-        if self._closed:
-            return
-        self.tree.delete(*self.tree.get_children())
-
-        search_text = self._search_var.get().strip().lower()
-
-        filtered = self._all_items
-        if search_text:
-            filtered = [
-                item for item in filtered
-                if search_text in item.path.name.lower()
-            ]
-
-        if self._sort_column:
-            filtered = self._sort_items(filtered, self._sort_column, self._sort_reverse)
-
-        for idx, item in enumerate(filtered):
-            self._insert_tree_item(idx, item)
-
-        total = len(self._all_items)
-        self._status_label.config(
-            text=t("ui.file_list.status_summary", total=total)
-        )
-
-    def _insert_tree_item(self, idx: int, item: BundleFileInfo):
+    def _build_row_values(self, item: BundleFileInfo) -> list:
         trailing_display = (
             str(item.trailing_bytes) if item.trailing_bytes is not None else _UNSET
         )
@@ -429,63 +341,57 @@ class FileListWindow(tb.Toplevel):
         parent_dir = item.path.parent
         display_dir = parent_dir.parent if parent_dir.name in ["Windows", "Android"] else parent_dir
 
-        all_values = {
-            ColumnId.filename: item.path.name,
-            ColumnId.directory: display_dir.name,
-            ColumnId.file_size: _format_file_size(item.file_size),
-            ColumnId.modified_time: _format_time(item.modified_time),
-            ColumnId.trailing_bytes: trailing_display,
-            ColumnId.trailing_content: trailing_content_display,
-            ColumnId.core: core_display,
-            ColumnId.res_type: res_type_display,
-            ColumnId.crc: crc_display,
-            ColumnId.crc_actual: crc_actual_display,
-        }
+        return [
+            item.path.name,
+            display_dir.name,
+            _format_file_size(item.file_size),
+            _format_time(item.modified_time),
+            trailing_display,
+            trailing_content_display,
+            core_display,
+            res_type_display,
+            crc_display,
+            crc_actual_display,
+            str(item.path),
+        ]
 
-        values = tuple(all_values[col] for col in self._visible_columns)
-        self.tree.insert("", tk.END, iid=str(idx), values=values)
-
-    # -------- 排序 --------
-
-    def _sort_by(self, column: ColumnId):
-        if self._sort_column == column:
-            self._sort_reverse = not self._sort_reverse
-        else:
-            self._sort_column = column
-            self._sort_reverse = False
-        self._apply_filter()
-
-    def _sort_items(self, items: list[BundleFileInfo], column: ColumnId, reverse: bool) -> list[BundleFileInfo]:
-        return sorted(items, key=lambda i: _get_sort_key(i, column), reverse=reverse)
-
-    # -------- 右键菜单 --------
-
-    def _show_context_menu(self, event: tk.Event):
-        item_id = self.tree.identify_row(event.y)
-        if not item_id:
+    def _on_scan_complete(self, items: list[BundleFileInfo]):
+        if self._closed:
             return
-        self.tree.selection_set(item_id)
-        self._context_menu.post(event.x_root, event.y_root)
+        self._progress["value"] = 0
+        self._status_label.config(text=t("ui.file_list.scan_complete"))
+        self._all_items = items
+        self._items_by_path = {str(item.path): item for item in items}
+
+        rowdata = [self._build_row_values(item) for item in items]
+        self.table.delete_rows()
+        if rowdata:
+            self.table.insert_rows('end', rowdata)
+            self.table.goto_first_page()
+
+        self.app.logger.log(t("ui.file_list.scan_complete"))
+
+    def _on_analyze_complete(self):
+        if self._closed:
+            return
+        self._progress["value"] = 0
+        self._status_label.config(text=t("ui.file_list.analyze_complete"))
+        for row in self.table.tablerows:
+            path = row.values[ColumnId._path.value]
+            item = self._items_by_path.get(path)
+            if item:
+                row.values = self._build_row_values(item)
+        self.app.logger.log(t("ui.file_list.analyze_complete"))
+
+    # -------- 右键菜单操作 --------
 
     def _get_selected_items(self) -> list[BundleFileInfo]:
-        search_text = self._search_var.get().strip().lower()
-
-        filtered = self._all_items
-        if search_text:
-            filtered = [
-                item for item in filtered
-                if search_text in item.path.name.lower()
-            ]
-
-        if self._sort_column:
-            filtered = self._sort_items(filtered, self._sort_column, self._sort_reverse)
-
-        selected = []
-        for item_id in self.tree.selection():
-            idx = int(item_id)
-            if 0 <= idx < len(filtered):
-                selected.append(filtered[idx])
-        return selected
+        selected_iids = self.table.view.selection()
+        return [
+            self._items_by_path[iid]
+            for iid in selected_iids
+            if iid in self._items_by_path
+        ]
 
     def _ctx_open_in_explorer(self):
         items = self._get_selected_items()
