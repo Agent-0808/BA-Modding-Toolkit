@@ -66,6 +66,7 @@ class ColumnDef(NamedTuple):
     id: ColumnId
     text: str
     width: int
+    default_visible: bool = True
 
 
 class AnalyzerOption(NamedTuple):
@@ -77,14 +78,14 @@ class AnalyzerOption(NamedTuple):
 COLUMNS: list[ColumnDef] = [
     ColumnDef(ColumnId.filename, t("ui.file_list.column_filename"), 300),
     ColumnDef(ColumnId.directory, t("ui.file_list.column_directory"), 80),
-    ColumnDef(ColumnId.file_size, t("ui.file_list.column_file_size"), 40),
-    ColumnDef(ColumnId.modified_time, t("ui.file_list.column_modified_time"), 80),
-    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column_trailing_bytes"), 20),
-    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column_trailing_content"), 80),
-    ColumnDef(ColumnId.core, t("ui.file_list.column_core"), 150),
-    ColumnDef(ColumnId.res_type, t("ui.file_list.column_res_type"), 40),
-    ColumnDef(ColumnId.crc, t("ui.file_list.column_crc"), 60),
-    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column_crc_actual"), 60),
+    ColumnDef(ColumnId.file_size, t("ui.file_list.column_file_size"), 80),
+    ColumnDef(ColumnId.modified_time, t("ui.file_list.column_modified_time"), 100),
+    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column_trailing_bytes"), 80, default_visible=False),
+    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column_trailing_content"), 150, default_visible=False),
+    ColumnDef(ColumnId.core, t("ui.file_list.column_core"), 150, default_visible=False),
+    ColumnDef(ColumnId.res_type, t("ui.file_list.column_res_type"), 80, default_visible=False),
+    ColumnDef(ColumnId.crc, t("ui.file_list.column_crc"), 80, default_visible=False),
+    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column_crc_actual"), 80, default_visible=False),
 ]
 
 ANALYZER_OPTIONS: list[AnalyzerOption] = [
@@ -133,8 +134,8 @@ class FileListWindow(tb.Toplevel):
 
         self._setup_window()
         self._create_toolbar()
-        self._create_treeview()
         self._create_status_bar()
+        self._create_treeview()
         self._create_context_menu()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -151,49 +152,83 @@ class FileListWindow(tb.Toplevel):
             self.iconbitmap(icon_path)
 
     def _create_toolbar(self):
-        toolbar = tb.Frame(self, padding=5)
-        toolbar.pack(fill=tk.X)
+        toolbar_container = tb.Frame(self)
+        toolbar_container.pack(fill=tk.X)
+
+        row1 = tb.Frame(toolbar_container, padding=5)
+        row1.pack(fill=tk.X)
 
         self._dir_var = tk.StringVar(value=self.app.game_resource_dir_var.get())
 
-        dir_entry = tb.Entry(toolbar, textvariable=self._dir_var, width=50)
+        dir_entry = tb.Entry(row1, textvariable=self._dir_var, width=50)
         dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
         UIComponents.create_button(
-            toolbar, t("action.select"),
+            row1, t("action.select"),
             self._select_directory, bootstyle="primary", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
 
         UIComponents.create_button(
-            toolbar, t("action.refresh"),
+            row1, t("action.refresh"),
             self._refresh, bootstyle="success", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
 
-        tb.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        tb.Separator(row1, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+
+        self._search_var = tk.StringVar()
+        self._search_var.trace_add("write", lambda *_: self._apply_filter())
+        tb.Label(row1, text=t("action.filter")).pack(side=tk.LEFT)
+        search_entry = tb.Entry(row1, textvariable=self._search_var, width=20)
+        search_entry.pack(side=tk.LEFT, padx=(5, 0))
+
+        row2 = tb.Frame(toolbar_container, padding=5)
+        row2.pack(fill=tk.X)
+
+        tb.Label(row2, text=t("ui.file_list.analyze_label")).pack(side=tk.LEFT, padx=(0, 5))
 
         self._analyzer_vars: dict[str, tk.BooleanVar] = {}
         for opt in ANALYZER_OPTIONS:
             var = tk.BooleanVar(value=False)
             self._analyzer_vars[opt.key] = var
             tb.Checkbutton(
-                toolbar, text=opt.text,
+                row2, text=opt.text,
                 variable=var,
             ).pack(side=tk.LEFT, padx=(0, 5))
 
         UIComponents.create_button(
-            toolbar, t("action.analyze"),
+            row2, t("action.analyze"),
             self._analyze, bootstyle="warning", style="compact"
-        ).pack(side=tk.LEFT, padx=(0, 5))
+        ).pack(side=tk.LEFT, padx=(0, 10))
 
-        self._search_var = tk.StringVar()
-        self._search_var.trace_add("write", lambda *_: self._apply_filter())
-        search_entry = tb.Entry(toolbar, textvariable=self._search_var, width=20)
-        search_entry.pack(side=tk.RIGHT, padx=(5, 0))
-        tb.Label(toolbar, text=t("action.filter")).pack(side=tk.RIGHT)
+        tb.Separator(row2, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
+
+        self._column_vars: dict[ColumnId, tk.BooleanVar] = {}
+        for col in COLUMNS:
+            var = tk.BooleanVar(value=col.default_visible)
+            self._column_vars[col.id] = var
+
+        self._column_menu_btn = tb.Menubutton(
+            row2, text=t("ui.file_list.column_label"), bootstyle="secondary"
+        )
+        self._column_menu_btn.pack(side=tk.LEFT)
+
+        column_menu = tk.Menu(self._column_menu_btn, tearoff=0)
+        for col in COLUMNS:
+            var = self._column_vars[col.id]
+            column_menu.add_checkbutton(
+                label=col.text,
+                variable=var,
+                command=lambda c=col.id: self._update_column_visibility(),
+            )
+        self._column_menu_btn.config(menu=column_menu)
 
     def _create_treeview(self):
         tree_frame = tb.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
+
+        self._visible_columns: list[ColumnId] = [
+            col.id for col in COLUMNS if col.default_visible
+        ]
 
         col_ids = [col.id.value for col in COLUMNS]
 
@@ -211,7 +246,8 @@ class FileListWindow(tb.Toplevel):
                 text=col.text,
                 command=lambda c=col.id: self._sort_by(c),
             )
-            self.tree.column(col.id.value, width=col.width, minwidth=20)
+
+        self._update_column_visibility()
 
         vsb = tb.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
         hsb = tb.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
@@ -224,6 +260,20 @@ class FileListWindow(tb.Toplevel):
         tree_frame.grid_columnconfigure(0, weight=1)
 
         self.tree.bind("<Button-3>", self._show_context_menu)
+
+    def _update_column_visibility(self):
+        self._visible_columns = [
+            col.id for col in COLUMNS
+            if self._column_vars.get(col.id) and self._column_vars[col.id].get()
+        ]
+
+        self.tree.config(displaycolumns=[col.value for col in self._visible_columns])
+
+        col_widths: dict[str, int] = {col.id.value: col.width for col in COLUMNS}
+        for col_id in self._visible_columns:
+            self.tree.column(col_id.value, width=col_widths[col_id.value])
+
+        self._apply_filter()
 
     def _create_status_bar(self):
         status_frame = tb.Frame(self)
@@ -379,18 +429,20 @@ class FileListWindow(tb.Toplevel):
         parent_dir = item.path.parent
         display_dir = parent_dir.parent if parent_dir.name in ["Windows", "Android"] else parent_dir
 
-        values = (
-            item.path.name,
-            display_dir.name,
-            _format_file_size(item.file_size),
-            _format_time(item.modified_time),
-            trailing_display,
-            trailing_content_display,
-            core_display,
-            res_type_display,
-            crc_display,
-            crc_actual_display,
-        )
+        all_values = {
+            ColumnId.filename: item.path.name,
+            ColumnId.directory: display_dir.name,
+            ColumnId.file_size: _format_file_size(item.file_size),
+            ColumnId.modified_time: _format_time(item.modified_time),
+            ColumnId.trailing_bytes: trailing_display,
+            ColumnId.trailing_content: trailing_content_display,
+            ColumnId.core: core_display,
+            ColumnId.res_type: res_type_display,
+            ColumnId.crc: crc_display,
+            ColumnId.crc_actual: crc_actual_display,
+        }
+
+        values = tuple(all_values[col] for col in self._visible_columns)
         self.tree.insert("", tk.END, iid=str(idx), values=values)
 
     # -------- 排序 --------

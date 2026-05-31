@@ -487,6 +487,8 @@
 			"column_res_type": "资源类型",
 			"column_crc": "文件名CRC",
 			"column_crc_actual": "实际CRC",
+			"analyze_label": "分析:",
+			"column_label": "列",
 			"analyze_trailing": "尾部字节",
 			"analyze_naming": "文件名解析",
 			"analyze_crc": "CRC校验",
