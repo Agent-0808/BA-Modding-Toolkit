@@ -5,7 +5,8 @@ from tkinter import messagebox
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
+from enum import Enum
 
 import ttkbootstrap as tb
 
@@ -46,34 +47,87 @@ def _format_time(mtime: float) -> str:
 _UNSET = "—"
 
 
+class ColumnId(Enum):
+    """TreeView 列 ID"""
+    filename = "filename"
+    directory = "directory"
+    file_size = "file_size"
+    modified_time = "modified_time"
+    trailing_bytes = "trailing_bytes"
+    trailing_content = "trailing_content"
+    core = "core"
+    res_type = "res_type"
+    crc = "crc"
+    crc_actual = "crc_actual"
+
+
+class ColumnDef(NamedTuple):
+    """TreeView 列定义"""
+    id: ColumnId
+    text: str
+    width: int
+
+
+class AnalyzerOption(NamedTuple):
+    """分析器选项定义"""
+    key: str
+    text: str
+
+
+COLUMNS: list[ColumnDef] = [
+    ColumnDef(ColumnId.filename, t("ui.file_list.column_filename"), 300),
+    ColumnDef(ColumnId.directory, t("ui.file_list.column_directory"), 80),
+    ColumnDef(ColumnId.file_size, t("ui.file_list.column_file_size"), 40),
+    ColumnDef(ColumnId.modified_time, t("ui.file_list.column_modified_time"), 80),
+    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column_trailing_bytes"), 20),
+    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column_trailing_content"), 80),
+    ColumnDef(ColumnId.core, t("ui.file_list.column_core"), 150),
+    ColumnDef(ColumnId.res_type, t("ui.file_list.column_res_type"), 40),
+    ColumnDef(ColumnId.crc, t("ui.file_list.column_crc"), 60),
+    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column_crc_actual"), 60),
+]
+
+ANALYZER_OPTIONS: list[AnalyzerOption] = [
+    AnalyzerOption("trailing", t("ui.file_list.analyze_trailing")),
+    AnalyzerOption("naming", t("ui.file_list.analyze_naming")),
+    AnalyzerOption("crc", t("ui.file_list.analyze_crc")),
+]
+
+
+def _get_sort_key(item: BundleFileInfo, column: ColumnId):
+    """获取排序 key"""
+    if column == ColumnId.filename:
+        return item.path.name.lower()
+    if column == ColumnId.directory:
+        return item.path.parent.name.lower()
+    if column == ColumnId.file_size:
+        return item.file_size
+    if column == ColumnId.modified_time:
+        return item.modified_time
+    if column == ColumnId.trailing_bytes:
+        return item.trailing_bytes if item.trailing_bytes is not None else -1
+    if column == ColumnId.trailing_content:
+        return _format_hex(item.trailing_content) if item.trailing_content else ""
+    if column == ColumnId.core:
+        return item.parsed_name.core.lower() if item.parsed_name else ""
+    if column == ColumnId.res_type:
+        return item.parsed_name.res_type.lower() if item.parsed_name and item.parsed_name.res_type else ""
+    if column == ColumnId.crc:
+        return int(item.parsed_name.crc) if item.parsed_name and item.parsed_name.crc else -1
+    if column == ColumnId.crc_actual:
+        return item.crc_actual if item.crc_actual is not None else -1
+    return ""
+
+
 class FileListWindow(tb.Toplevel):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
-
-    COLUMNS = [
-        {"id": "filename", "text_key": "ui.file_list.column_filename", "width": 300},
-        {"id": "directory", "text_key": "ui.file_list.column_directory", "width": 120},
-        {"id": "file_size", "text_key": "ui.file_list.column_file_size", "width": 80},
-        {"id": "modified_time", "text_key": "ui.file_list.column_modified_time", "width": 130},
-        {"id": "trailing_bytes", "text_key": "ui.file_list.column_trailing_bytes", "width": 80},
-        {"id": "trailing_content", "text_key": "ui.file_list.column_trailing_content", "width": 200},
-        {"id": "core", "text_key": "ui.file_list.column_core", "width": 150},
-        {"id": "res_type", "text_key": "ui.file_list.column_res_type", "width": 100},
-        {"id": "crc", "text_key": "ui.file_list.column_crc", "width": 80},
-        {"id": "crc_actual", "text_key": "ui.file_list.column_crc_actual", "width": 80},
-    ]
-
-    ANALYZER_OPTIONS = [
-        {"key": "trailing", "text_key": "ui.file_list.analyze_trailing"},
-        {"key": "naming", "text_key": "ui.file_list.analyze_naming"},
-        {"key": "crc", "text_key": "ui.file_list.analyze_crc"},
-    ]
 
     def __init__(self, master: tk.Tk, app: "App"):
         super().__init__(master)
         self.app = app
 
         self._all_items: list[BundleFileInfo] = []
-        self._sort_column: str = ""
+        self._sort_column: ColumnId | None = None
         self._sort_reverse: bool = False
         self._closed: bool = False
 
@@ -89,7 +143,7 @@ class FileListWindow(tb.Toplevel):
 
     def _setup_window(self):
         self.title(t("ui.file_list.window_title"))
-        self.geometry("1000x600")
+        self.geometry("1200x600")
         self.transient(self.master)
 
         icon_path = self.app.root_path / "assets" / "eligma.ico"
@@ -118,11 +172,11 @@ class FileListWindow(tb.Toplevel):
         tb.Separator(toolbar, orient=tk.VERTICAL).pack(side=tk.LEFT, fill=tk.Y, padx=5)
 
         self._analyzer_vars: dict[str, tk.BooleanVar] = {}
-        for opt in self.ANALYZER_OPTIONS:
+        for opt in ANALYZER_OPTIONS:
             var = tk.BooleanVar(value=False)
-            self._analyzer_vars[opt["key"]] = var
+            self._analyzer_vars[opt.key] = var
             tb.Checkbutton(
-                toolbar, text=t(opt["text_key"]),
+                toolbar, text=opt.text,
                 variable=var,
             ).pack(side=tk.LEFT, padx=(0, 5))
 
@@ -141,7 +195,7 @@ class FileListWindow(tb.Toplevel):
         tree_frame = tb.Frame(self)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
-        col_ids = [col["id"] for col in self.COLUMNS]
+        col_ids = [col.id.value for col in COLUMNS]
 
         self.tree = tb.Treeview(
             tree_frame,
@@ -151,13 +205,13 @@ class FileListWindow(tb.Toplevel):
             bootstyle="primary",
         )
 
-        for col in self.COLUMNS:
+        for col in COLUMNS:
             self.tree.heading(
-                col["id"],
-                text=t(col["text_key"]),
-                command=lambda c=col["id"]: self._sort_by(c),
+                col.id.value,
+                text=col.text,
+                command=lambda c=col.id: self._sort_by(c),
             )
-            self.tree.column(col["id"], width=col["width"], minwidth=50)
+            self.tree.column(col.id.value, width=col.width, minwidth=20)
 
         vsb = tb.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
         hsb = tb.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
@@ -341,7 +395,7 @@ class FileListWindow(tb.Toplevel):
 
     # -------- 排序 --------
 
-    def _sort_by(self, column: str):
+    def _sort_by(self, column: ColumnId):
         if self._sort_column == column:
             self._sort_reverse = not self._sort_reverse
         else:
@@ -349,21 +403,8 @@ class FileListWindow(tb.Toplevel):
             self._sort_reverse = False
         self._apply_filter()
 
-    def _sort_items(self, items: list[BundleFileInfo], column: str, reverse: bool) -> list[BundleFileInfo]:
-        key_map = {
-            "filename": lambda i: i.path.name.lower(),
-            "directory": lambda i: i.path.parent.name.lower(),
-            "file_size": lambda i: i.file_size,
-            "modified_time": lambda i: i.modified_time,
-            "trailing_bytes": lambda i: i.trailing_bytes if i.trailing_bytes is not None else -1,
-            "trailing_content": lambda i: _format_hex(i.trailing_content) if i.trailing_content else "",
-            "core": lambda i: i.parsed_name.core.lower() if i.parsed_name else "",
-            "res_type": lambda i: i.parsed_name.res_type.lower() if i.parsed_name and i.parsed_name.res_type else "",
-            "crc": lambda i: int(i.parsed_name.crc) if i.parsed_name and i.parsed_name.crc else -1,
-            "crc_actual": lambda i: i.crc_actual if i.crc_actual is not None else -1,
-        }
-        key_func = key_map.get(column, lambda i: "")
-        return sorted(items, key=key_func, reverse=reverse)
+    def _sort_items(self, items: list[BundleFileInfo], column: ColumnId, reverse: bool) -> list[BundleFileInfo]:
+        return sorted(items, key=lambda i: _get_sort_key(i, column), reverse=reverse)
 
     # -------- 右键菜单 --------
 
