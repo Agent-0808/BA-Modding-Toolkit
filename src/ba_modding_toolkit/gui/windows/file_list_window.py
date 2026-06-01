@@ -5,7 +5,7 @@ from tkinter import messagebox
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple, Callable
 from enum import Enum
 
 import ttkbootstrap as tb
@@ -96,6 +96,19 @@ ANALYZER_OPTIONS: list[AnalyzerOption] = [
     AnalyzerOption("crc", t("ui.file_list.analyze_crc")),
 ]
 
+ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
+    "trailing": [ColumnId.trailing_bytes, ColumnId.trailing_content],
+    "naming": [ColumnId.core, ColumnId.res_type],
+    "crc": [ColumnId.crc, ColumnId.crc_actual],
+}
+
+EXCLUDE_FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
+    "trailing_zero": ("排除尾部字节为 0", lambda item: item.trailing_bytes == 0),
+    "trailing_none": ("排除无尾部数据", lambda item: item.trailing_bytes is None),
+    "crc_match": ("排除 CRC 匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
+    "crc_mismatch": ("排除 CRC 不匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
+}
+
 
 class FileListWindow(tb.Toplevel):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
@@ -166,6 +179,17 @@ class FileListWindow(tb.Toplevel):
             row2, t("action.analyze"),
             self._analyze, bootstyle="warning", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 10))
+
+        tb.Label(row2, text=t("ui.file_list.exclude_filter_label")).pack(side=tk.LEFT, padx=(0, 5))
+
+        self._exclude_filter_var = tk.StringVar(value="")
+        exclude_options = [""] + [label for key, (label, _) in EXCLUDE_FILTERS.items()]
+        exclude_combo = tb.Combobox(
+            row2, textvariable=self._exclude_filter_var,
+            values=exclude_options, width=20, state="readonly",
+        )
+        exclude_combo.pack(side=tk.LEFT, padx=(0, 5))
+        exclude_combo.bind("<<ComboboxSelected>>", self._apply_exclude_filter)
 
     def _create_tableview(self):
         coldata = [
@@ -381,7 +405,41 @@ class FileListWindow(tb.Toplevel):
             item = self._items_by_path.get(path)
             if item:
                 row.values = self._build_row_values(item)
+
+        for analyzer_key in self._analyzer_vars:
+            if self._analyzer_vars[analyzer_key].get():
+                for col_id in ANALYZER_TO_COLUMNS.get(analyzer_key, []):
+                    self.table.get_column(index=col_id.value, visible=False).show()
+
         self.app.logger.log(t("ui.file_list.analyze_complete"))
+
+    def _apply_exclude_filter(self, event=None):
+        selected_label = self._exclude_filter_var.get()
+        if not selected_label:
+            self.table.reset_row_filters()
+            return
+
+        filter_func = None
+        for key, (label, func) in EXCLUDE_FILTERS.items():
+            if label == selected_label:
+                filter_func = func
+                break
+
+        if filter_func is None:
+            return
+
+        self.table._filtered = True
+        self.table.tablerows_filtered.clear()
+        self.table.unload_table_data()
+
+        for row in self.table.tablerows:
+            path = row.values[ColumnId._path.value]
+            item = self._items_by_path.get(path)
+            if item and not filter_func(item):
+                self.table.tablerows_filtered.append(row)
+
+        self.table._rowindex.set(0)
+        self.table.load_table_data()
 
     # -------- 右键菜单操作 --------
 

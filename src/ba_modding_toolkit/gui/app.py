@@ -351,7 +351,7 @@ class App(tk.Frame, ConfigMixin):
                 self.sidebar_frame,
                 text=title,
                 command=lambda t=tab: self.show_tab(t),
-                bootstyle="light-outline",
+                bootstyle="secondary",
                 padding=(0, 5)
             )
             # 增加 ipadx/ipady 让按钮看起来更饱满
@@ -359,7 +359,7 @@ class App(tk.Frame, ConfigMixin):
             self.tab_buttons.append((btn, tab))
         
         # 添加分隔线
-        separator = tb.Frame(self.sidebar_frame, height=2, bootstyle="secondary")
+        separator = tb.Separator(self.sidebar_frame, bootstyle="secondary")
         separator.pack(fill=tk.X, padx=5, pady=(10,5))
         
         # 文件列表按钮（独立窗口）
@@ -367,9 +367,13 @@ class App(tk.Frame, ConfigMixin):
             self.sidebar_frame,
             text=t("ui.tabs.file_list"),
             command=self.open_file_list_window,
-            bootstyle="info"
+            bootstyle="secondary"
         )
         file_list_btn.pack(fill=tk.X, padx=5, pady=(5,0))
+
+        # 添加分隔线
+        separator = tb.Separator(self.sidebar_frame, bootstyle="secondary")
+        separator.pack(fill=tk.X, padx=5, pady=(10,5))
 
         # 在底部添加设置按钮
         settings_btn = UIComponents.create_button(

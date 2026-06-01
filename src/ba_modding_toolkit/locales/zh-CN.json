@@ -488,6 +488,7 @@
 			"column_crc": "文件名CRC",
 			"column_crc_actual": "实际CRC",
 			"analyze_label": "分析:",
+			"exclude_filter_label": "排除筛选:",
 			"column_label": "列",
 			"analyze_trailing": "尾部字节",
 			"analyze_naming": "文件名解析",
