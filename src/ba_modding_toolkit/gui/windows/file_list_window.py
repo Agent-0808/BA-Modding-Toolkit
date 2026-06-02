@@ -104,7 +104,6 @@ ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
 
 EXCLUDE_FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
     "trailing_zero": ("排除尾部字节为 0", lambda item: item.trailing_bytes == 0),
-    "trailing_none": ("排除无尾部数据", lambda item: item.trailing_bytes is None),
     "crc_match": ("排除 CRC 匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
     "crc_mismatch": ("排除 CRC 不匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
 }
@@ -120,6 +119,13 @@ class FileListWindow(tb.Toplevel):
         self._all_items: list[BundleFileInfo] = []
         self._items_by_path: dict[str, BundleFileInfo] = {}
         self._closed: bool = False
+
+        self.ctx_list: list[tuple[str, Callable[[], None]]] = [
+            (t("action.analyze"), self._ctx_analyze),
+            (t("action.open_in_explorer"), self._ctx_open_in_explorer),
+            (t("action.copy_filename"), self._ctx_copy_filename),
+            (t("action.check_crc"), self._ctx_check_crc),
+        ]
 
         self._setup_window()
         self._create_toolbar()
@@ -263,9 +269,8 @@ class FileListWindow(tb.Toplevel):
         # 在内置右键菜单中追加应用专属操作
         cell_menu = self.table._rightclickmenu_cell
         cell_menu.add_separator()
-        cell_menu.add_command(label=t("action.open_in_explorer"), command=self._ctx_open_in_explorer)
-        cell_menu.add_command(label=t("action.copy_filename"), command=self._ctx_copy_filename)
-        cell_menu.add_command(label=t("action.check_crc"), command=self._ctx_check_crc)
+        for label, command in self.ctx_list:
+            cell_menu.add_command(label=label, command=command)
 
     def _create_status_bar(self):
         status_frame = tb.Frame(self)
@@ -463,6 +468,43 @@ class FileListWindow(tb.Toplevel):
             self.clipboard_clear()
             self.clipboard_append(text)
 
+    def _ctx_analyze(self):
+        items = self._get_selected_items()
+        if not items:
+            return
+
+        self._status_label.config(text=t("ui.file_list.analyzing"))
+        self._progress["value"] = 0
+
+        def _on_progress(done: int, total: int, filename: str):
+            if self._closed:
+                return
+            self.after(0, lambda: self._update_progress(done, total, filename))
+
+        def _run():
+            analyze_bundles(items, ["trailing", "naming", "crc"], progress_callback=_on_progress)
+            if not self._closed:
+                self.after(0, self._ctx_analyze_complete)
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+    def _ctx_analyze_complete(self):
+        if self._closed:
+            return
+        self._progress["value"] = 0
+        self._status_label.config(text=t("ui.file_list.analyze_complete"))
+
+        for item in self._get_selected_items():
+            row = self.table.get_row(iid=str(item.path))
+            if row:
+                row.values = self._build_row_values(item)
+
+        for col_id in ANALYZER_TO_COLUMNS.get("trailing", []) + ANALYZER_TO_COLUMNS.get("naming", []) + ANALYZER_TO_COLUMNS.get("crc", []):
+            self.table.get_column(index=col_id.value, visible=False).show()
+
+        self.app.logger.log(t("ui.file_list.analyze_complete"))
+
     def _ctx_check_crc(self):
         items = self._get_selected_items()
         if not items:
@@ -471,16 +513,22 @@ class FileListWindow(tb.Toplevel):
         results = []
         for item in items:
             try:
-                actual_crc = item.crc_actual
-                if actual_crc is None:
-                    actual_crc = CRCUtils.compute_crc32(item.path)
-                actual_str = f"{actual_crc:08X}"
+                if item.parsed_name is None:
+                    item.parsed_name = parse_filename(item.path.name)
 
+                if item.crc_actual is None:
+                    item.crc_actual = CRCUtils.compute_crc32(item.path)
+
+                row = self.table.get_row(iid=str(item.path))
+                if row:
+                    row.values = self._build_row_values(item)
+
+                actual_str = f"{item.crc_actual:08X}"
                 expected_crc = item.parsed_name.crc if item.parsed_name else ""
                 if expected_crc:
                     expected_int = int(expected_crc)
                     expected_str = f"{expected_int:08X}"
-                    if actual_crc == expected_int:
+                    if item.crc_actual == expected_int:
                         results.append(t("ui.file_list.crc_match", expected=expected_str, actual=actual_str))
                     else:
                         results.append(t("ui.file_list.crc_mismatch", expected=expected_str, actual=actual_str))
@@ -488,6 +536,9 @@ class FileListWindow(tb.Toplevel):
                     results.append(t("ui.file_list.crc_no_filename_crc", actual=actual_str))
             except Exception as e:
                 results.append(f"{item.path.name}: {t('common.error')} - {e}")
+
+        for col_id in ANALYZER_TO_COLUMNS.get("crc", []):
+            self.table.get_column(index=col_id.value, visible=False).show()
 
         messagebox.showinfo(t("action.check_crc"), "\n\n".join(results))
 
