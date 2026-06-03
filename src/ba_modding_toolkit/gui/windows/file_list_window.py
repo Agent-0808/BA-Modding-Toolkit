@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import threading
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple, Callable
@@ -108,6 +109,125 @@ EXCLUDE_FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
     "crc_mismatch": ("排除 CRC 不匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
 }
 
+# 批量选中操作符定义
+SELECT_OPERATORS: list[tuple[str, str]] = [
+    ("contains", "包含"),
+    ("equals", "等于"),
+    ("starts_with", "开头是"),
+    ("ends_with", "结尾是"),
+    ("regex", "正则匹配"),
+]
+
+
+class BatchSelectDialog(tb.Toplevel):
+    """批量选中条件对话框（从表头右键菜单调用，已知目标列）"""
+
+    def __init__(self, master, column_id: ColumnId, column_name: str):
+        super().__init__(master)
+        self.column_id = column_id
+        self.column_name = column_name
+        self._result: tuple[str, str, bool, bool] | None = None  # (操作符, 值, 是否反选, 是否筛选)
+
+        self._setup_window()
+        self._create_widgets()
+
+        self.wait_visibility()
+        self.grab_set()
+
+    def _setup_window(self):
+        self.title(t("ui.file_list.batch_select_dialog_title"))
+        self.geometry("350x170")
+        self.transient(self.master)
+        self.resizable(False, False)
+
+    def _create_widgets(self):
+        main_frame = tb.Frame(self, padding=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # 显示目标列名称
+        tb.Label(
+            main_frame,
+            text=f"{t('ui.file_list.batch_select_column')}: {self.column_name}",
+            bootstyle="info"
+        ).pack(fill=tk.X, pady=(0, 5))
+
+        # 操作符选择
+        row1 = tb.Frame(main_frame)
+        row1.pack(fill=tk.X, pady=(0, 5))
+
+        tb.Label(row1, text=t("ui.file_list.batch_select_operator")).pack(side=tk.LEFT, padx=(0, 5))
+        self._operator_var = tk.StringVar()
+        operator_values = [op[1] for op in SELECT_OPERATORS]
+        operator_combo = tb.Combobox(
+            row1, textvariable=self._operator_var,
+            values=operator_values, width=15, state="readonly",
+        )
+        operator_combo.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        if operator_values:
+            operator_combo.set(operator_values[0])
+
+        # 值输入 + 反选勾选框
+        row2 = tb.Frame(main_frame)
+        row2.pack(fill=tk.X, pady=(0, 5))
+
+        tb.Label(row2, text=t("ui.file_list.batch_select_value")).pack(side=tk.LEFT, padx=(0, 5))
+        self._value_var = tk.StringVar()
+        value_entry = tb.Entry(row2, textvariable=self._value_var, width=20)
+        value_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+
+        self._invert_var = tk.BooleanVar(value=False)
+        tb.Checkbutton(row2, text=t("ui.file_list.batch_select_invert"), variable=self._invert_var).pack(side=tk.LEFT)
+
+        # 按钮
+        btn_frame = tb.Frame(main_frame)
+        btn_frame.pack(fill=tk.X, pady=(5, 0))
+
+        UIComponents.create_button(
+            btn_frame, t("ui.file_list.batch_select_action"),
+            lambda: self._on_submit(filter_rows=False),
+            bootstyle="primary", style="compact"
+        ).pack(side=tk.LEFT, padx=(0, 5))
+
+        UIComponents.create_button(
+            btn_frame, t("ui.file_list.batch_select_action_filter"),
+            lambda: self._on_submit(filter_rows=True),
+            bootstyle="success", style="compact"
+        ).pack(side=tk.LEFT, padx=(0, 5))
+
+        UIComponents.create_button(
+            btn_frame, t("common.cancel"),
+            self._on_cancel, bootstyle="secondary", style="compact"
+        ).pack(side=tk.RIGHT)
+
+    def _get_operator_key(self) -> str | None:
+        """根据选择的操作符文本获取操作符键"""
+        selected_text = self._operator_var.get()
+        for key, text in SELECT_OPERATORS:
+            if text == selected_text:
+                return key
+        return None
+
+    def _on_submit(self, filter_rows: bool):
+        """提交选择"""
+        operator_key = self._get_operator_key()
+        value = self._value_var.get()
+        invert = self._invert_var.get()
+
+        if operator_key and value:
+            self._result = (operator_key, value, invert, filter_rows)
+            self.grab_release()
+            self.destroy()
+
+    def _on_cancel(self):
+        """取消"""
+        self._result = None
+        self.grab_release()
+        self.destroy()
+
+    def get_result(self) -> tuple[str, str, bool, bool] | None:
+        """返回 (操作符, 值, 是否反选, 是否筛选) 或 None"""
+        return self._result
+
 
 class FileListWindow(tb.Toplevel):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
@@ -211,7 +331,7 @@ class FileListWindow(tb.Toplevel):
             coldata=coldata,
             rowdata=[],
             paginated=True,
-            pagesize=500,
+            pagesize=1000,
             searchable=True,
             yscrollbar=True,
             autoalign=True,
@@ -271,6 +391,40 @@ class FileListWindow(tb.Toplevel):
         cell_menu.add_separator()
         for label, command in self.ctx_list:
             cell_menu.add_command(label=label, command=command)
+
+        # 在表头右键菜单中添加批量选中入口
+        # 存储当前右键点击的列索引
+        self._header_click_column: int | None = None
+
+        # 绑定右键事件，在菜单弹出前捕获列索引
+        self.table.view.bind("<Button-3>", self._capture_header_column, add="+")
+
+        if hasattr(self.table, '_rightclickmenu_head'):
+            head_menu = self.table._rightclickmenu_head
+            head_menu.add_separator()
+            head_menu.add_command(
+                label=t("ui.file_list.batch_select"),
+                command=self._on_header_batch_select
+            )
+
+    def _capture_header_column(self, event):
+        """在右键菜单弹出前捕获点击的列索引"""
+        region = self.table.view.identify_region(event.x, event.y)
+        if region == "heading":
+            column_id = self.table.view.identify_column(event.x)
+            # column_id 格式为 "#1", "#2" 等，转换为索引
+            if column_id:
+                self._header_click_column = int(column_id.replace("#", "")) - 1
+
+    def _on_header_batch_select(self):
+        """从表头右键菜单调用批量选中"""
+        column_index = self._header_click_column
+
+        if column_index is None or column_index >= len(COLUMNS):
+            return
+
+        col_def = COLUMNS[column_index]
+        self._show_batch_select_dialog(col_def.id, col_def.text)
 
     def _create_status_bar(self):
         status_frame = tb.Frame(self)
@@ -445,6 +599,64 @@ class FileListWindow(tb.Toplevel):
 
         self.table._rowindex.set(0)
         self.table.load_table_data()
+
+    def _show_batch_select_dialog(self, column_id: ColumnId, column_name: str):
+        """显示批量选中对话框"""
+        dialog = BatchSelectDialog(self, column_id, column_name)
+        self.wait_window(dialog)
+
+        result = dialog.get_result()
+        if result is None:
+            return
+
+        operator, value, invert, do_filter = result
+
+        # 执行批量选中
+        self._apply_batch_select(column_id, operator, value, invert, do_filter)
+
+    def _apply_batch_select(self, column_id: ColumnId, operator: str, value: str, invert: bool, do_filter: bool):
+        """根据条件批量选中行"""
+        matched_iids = []
+        all_iids = []
+
+        # 只处理当前可见的行（分页模式下其他行被 detach）
+        for row in self.table.tablerows_visible:
+            iid = row.iid
+            all_iids.append(iid)
+            cell_value = str(row.values[column_id.value])
+            if self._match_condition(cell_value, operator, value):
+                matched_iids.append(iid)
+
+        # 如果反选，选中不匹配的行
+        if invert:
+            selected_iids = [iid for iid in all_iids if iid not in matched_iids]
+        else:
+            selected_iids = matched_iids
+
+        if selected_iids:
+            self.table.view.selection_set(selected_iids)
+            if do_filter:
+                self.table.filter_to_selected_rows()
+            self._status_label.config(text=t("ui.file_list.batch_select_matched", count=len(selected_iids)))
+        else:
+            messagebox.showinfo(t("common.tip"), t("ui.file_list.batch_select_no_match"))
+
+    def _match_condition(self, cell_value: str, operator: str, pattern: str) -> bool:
+        """判断单元格值是否匹配条件"""
+        if operator == "contains":
+            return pattern.lower() in cell_value.lower()
+        elif operator == "equals":
+            return cell_value == pattern
+        elif operator == "starts_with":
+            return cell_value.lower().startswith(pattern.lower())
+        elif operator == "ends_with":
+            return cell_value.lower().endswith(pattern.lower())
+        elif operator == "regex":
+            try:
+                return re.search(pattern, cell_value) is not None
+            except re.error:
+                return False
+        return False
 
     # -------- 右键菜单操作 --------
 

@@ -507,7 +507,17 @@
 			"crc_no_filename_crc": "文件名中未包含 CRC 值，实际 CRC: {actual}",
 			"no_dirs_found": "未找到有效的搜索目录",
 			"scan_complete": "扫描完成",
-			"analyze_complete": "分析完成"
+			"analyze_complete": "分析完成",
+			"batch_select": "批量选中",
+			"batch_select_dialog_title": "批量选中条件",
+			"batch_select_column": "目标列",
+			"batch_select_operator": "操作符",
+			"batch_select_value": "匹配值",
+			"batch_select_action": "选中",
+			"batch_select_action_filter": "选中并筛选",
+			"batch_select_invert": "反选",
+			"batch_select_no_match": "未找到匹配的行",
+			"batch_select_matched": "已选中 {count} 行"
 		}
 	}
 }
