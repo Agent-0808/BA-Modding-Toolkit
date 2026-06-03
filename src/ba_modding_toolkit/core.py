@@ -25,6 +25,73 @@ from .searching import find_target_bundles
 
 # ====== 资源处理相关 ======
 
+def _extract_assets_from_bundle(
+    bundle_paths: list[Path],
+    work_dir: Path,
+    asset_types_to_extract: set[str],
+    log: LogFunc = no_log,
+) -> dict[AssetType, list[Path]]:
+    """
+    从 bundle 文件提取指定类型的资源到工作目录（内部函数）。
+    
+    Args:
+        bundle_paths: bundle 文件路径列表
+        work_dir: 工作目录（临时目录）
+        asset_types_to_extract: 需要提取的资源类型集合（字符串形式）
+        log: 日志记录函数
+    
+    Returns:
+        dict[AssetType, list[Path]]: 按类型分类的提取文件路径字典
+            例如: {AssetType.TextAsset: [...], AssetType.Texture2D: [...], AssetType.Mesh: [...]}
+    """
+    extracted_files: dict[AssetType, list[Path]] = {
+        AssetType.TextAsset: [],
+        AssetType.Texture2D: [],
+        AssetType.Mesh: []
+    }
+    
+    for bundle_file in bundle_paths:
+        bundle = Bundle.load(bundle_file, log)
+        if not bundle:
+            continue
+        
+        for obj in bundle.env.objects:
+            if obj.type.name not in asset_types_to_extract:
+                continue
+            if obj.type not in REPLACEABLE_ASSET_TYPES:
+                continue
+            
+            try:
+                data = obj.read()
+                resource_name: str = getattr(data, 'm_Name', None)
+                if not resource_name:
+                    log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                    continue
+                
+                dest_path = None
+                
+                if obj.type == AssetType.TextAsset:
+                    dest_path = work_dir / resource_name
+                    asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+                    dest_path.write_bytes(asset_bytes)
+                elif obj.type == AssetType.Texture2D:
+                    dest_path = work_dir / f"{resource_name}.png"
+                    data.image.convert("RGBA").save(dest_path)
+                elif obj.type == AssetType.Mesh:
+                    dest_path = work_dir / f"{resource_name}.mesh.bytes"
+                    mesh_bytes = obj.get_raw_data()
+                    dest_path.write_bytes(mesh_bytes)
+                
+                if dest_path:
+                    log(f"  - {dest_path.name}")
+                    if obj.type in extracted_files:
+                        extracted_files[obj.type].append(dest_path)
+                    
+            except Exception as e:
+                log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
+    
+    return extracted_files
+
 def process_asset_packing(
     target_bundle_path: Path | list[Path],
     assets: Path | list[Path],
@@ -247,43 +314,13 @@ def process_asset_extraction(
 
             # ========== 阶段 1: 提取资源 ==========
             log(f'\n--- {t("log.section.extract_to_temp")} ---')
-            extraction_count = 0
+            extracted_files = _extract_assets_from_bundle(
+                bundle_paths, work_dir, asset_types_to_extract, log
+            )
             
-            for bundle_file in bundle_paths:
-                bundle = Bundle.load(bundle_file, log)
-                if not bundle:
-                    continue
-                
-                for obj in bundle.env.objects:
-                    if obj.type.name not in asset_types_to_extract:
-                        continue
-                    # 确保类型在白名单中
-                    if obj.type not in REPLACEABLE_ASSET_TYPES:
-                        continue
-                    try:
-                        data = obj.read()
-                        resource_name: str = getattr(data, 'm_Name', None)
-                        if not resource_name:
-                            log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
-                            continue
-
-                        if obj.type == AssetType.TextAsset:
-                            dest_path = work_dir / resource_name
-                            asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
-                            dest_path.write_bytes(asset_bytes)
-                        elif obj.type == AssetType.Texture2D:
-                            dest_path = work_dir / f"{resource_name}.png"
-                            data.image.convert("RGBA").save(dest_path)
-                        elif obj.type == AssetType.Mesh:
-                            dest_path = work_dir / f"{resource_name}.mesh.bytes"
-                            mesh_bytes = obj.get_raw_data()
-                            dest_path.write_bytes(mesh_bytes)
-                        
-                        log(f"  - {dest_path.name}")
-                        extraction_count += 1
-                    except Exception as e:
-                        log(f"  ❌ {t('log.extractor.extraction_failed', name=getattr(data, 'm_Name', 'N/A'), error=e)}")
-
+            # 统计提取数量
+            extraction_count = sum(len(files) for files in extracted_files.values())
+            
             if extraction_count == 0:
                 msg = t("message.extractor.no_assets_found")
                 log(f"⚠️ {msg}")
