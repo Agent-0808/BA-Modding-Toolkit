@@ -73,29 +73,33 @@ class ColumnDef(NamedTuple):
     default_visible: bool = True
 
 
-COLUMNS: list[ColumnDef] = [
-    ColumnDef(ColumnId.filename, t("ui.file_list.column.filename"), 500),
-    ColumnDef(ColumnId.directory, t("ui.file_list.column.directory"), 80),
-    ColumnDef(ColumnId.file_size, t("ui.file_list.column.file_size"), 80),
-    ColumnDef(ColumnId.modified_time, t("ui.file_list.column.modified_time"), 100),
-    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
-    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
-    ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
-    ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
-    ColumnDef(ColumnId.crc, t("ui.file_list.column.crc"), 80, default_visible=False),
-    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column.crc_actual"), 80, default_visible=False),
-]
+def _get_columns() -> list[ColumnDef]:
+    """延迟初始化列定义，确保在语言设置后获取翻译"""
+    return [
+        ColumnDef(ColumnId.filename, t("ui.file_list.column.filename"), 500),
+        ColumnDef(ColumnId.directory, t("ui.file_list.column.directory"), 80),
+        ColumnDef(ColumnId.file_size, t("ui.file_list.column.file_size"), 80),
+        ColumnDef(ColumnId.modified_time, t("ui.file_list.column.modified_time"), 100),
+        ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
+        ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
+        ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
+        ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
+        ColumnDef(ColumnId.crc, t("ui.file_list.column.crc"), 80, default_visible=False),
+        ColumnDef(ColumnId.crc_actual, t("ui.file_list.column.crc_actual"), 80, default_visible=False),
+    ]
 
 class AnalyzerOption(NamedTuple):
     """分析器选项定义"""
     key: str
     text: str
 
-ANALYZER_OPTIONS: list[AnalyzerOption] = [
-    AnalyzerOption("trailing", t("ui.file_list.analyze_trailing")),
-    AnalyzerOption("naming", t("ui.file_list.analyze_naming")),
-    AnalyzerOption("crc", t("ui.file_list.analyze_crc")),
-]
+def _get_analyzer_options() -> list[AnalyzerOption]:
+    """延迟初始化分析器选项，确保在语言设置后获取翻译"""
+    return [
+        AnalyzerOption("trailing", t("ui.file_list.analyze_trailing")),
+        AnalyzerOption("naming", t("ui.file_list.analyze_naming")),
+        AnalyzerOption("crc", t("ui.file_list.analyze_crc")),
+    ]
 
 ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "trailing": [ColumnId.trailing_bytes, ColumnId.trailing_content],
@@ -103,21 +107,24 @@ ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
-FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
+def _get_filters() -> dict[str, tuple[str, Callable[[BundleFileInfo], bool]]]:
     """要排除的文件类型，返回 True 表示排除"""
-    "trailing_zero": (t("ui.file_list.filter.trailing_zero"), lambda item: item.trailing_bytes == 0),
-    "crc_match": (t("ui.file_list.filter.crc_match"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
-    "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
-}
+    return {
+        "trailing_zero": (t("ui.file_list.filter.trailing_zero"), lambda item: item.trailing_bytes == 0),
+        "crc_match": (t("ui.file_list.filter.crc_match"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
+        "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
+    }
 
 # 批量选中操作符定义
-SELECT_OPERATORS: list[tuple[str, str]] = [
-    ("contains", t("ui.file_list.op.contains")),
-    ("equals", t("ui.file_list.op.equals")),
-    ("starts_with", t("ui.file_list.op.starts_with")),
-    ("ends_with", t("ui.file_list.op.ends_with")),
-    ("regex", t("ui.file_list.op.regex")),
-]
+def _get_select_operators() -> list[tuple[str, str]]:
+    """操作符定义"""
+    return [
+        ("contains", t("ui.file_list.op.contains")),
+        ("equals", t("ui.file_list.op.equals")),
+        ("starts_with", t("ui.file_list.op.starts_with")),
+        ("ends_with", t("ui.file_list.op.ends_with")),
+        ("regex", t("ui.file_list.op.regex")),
+    ]
 
 
 class BatchSelectDialog(tb.Toplevel):
@@ -158,7 +165,7 @@ class BatchSelectDialog(tb.Toplevel):
 
         tb.Label(row1, text=t("ui.file_list.select.operator")).pack(side=tk.LEFT, padx=(0, 5))
         self._operator_var = tk.StringVar()
-        operator_values = [op[1] for op in SELECT_OPERATORS]
+        operator_values = [op[1] for op in _get_select_operators()]
         operator_combo = tb.Combobox(
             row1, textvariable=self._operator_var,
             values=operator_values, width=15, state="readonly",
@@ -203,7 +210,7 @@ class BatchSelectDialog(tb.Toplevel):
     def _get_operator_key(self) -> str | None:
         """根据选择的操作符文本获取操作符键"""
         selected_text = self._operator_var.get()
-        for key, text in SELECT_OPERATORS:
+        for key, text in _get_select_operators():
             if text == selected_text:
                 return key
         return None
@@ -295,7 +302,7 @@ class FileListWindow(tb.Toplevel):
         tb.Label(row2, text=t("ui.file_list.analyze_label")).pack(side=tk.LEFT, padx=(0, 5))
 
         self._analyzer_vars: dict[str, tk.BooleanVar] = {}
-        for opt in ANALYZER_OPTIONS:
+        for opt in _get_analyzer_options():
             var = tk.BooleanVar(value=False)
             self._analyzer_vars[opt.key] = var
             tb.Checkbutton(
@@ -311,7 +318,7 @@ class FileListWindow(tb.Toplevel):
         tb.Label(row2, text=t("ui.file_list.filter_label")).pack(side=tk.LEFT, padx=(0, 5))
 
         self._filter_var = tk.StringVar(value="")
-        filter_options = [""] + [label for key, (label, _) in FILTERS.items()]
+        filter_options = [""] + [label for key, (label, _) in _get_filters().items()]
         filter_combo = tb.Combobox(
             row2, textvariable=self._filter_var,
             values=filter_options, width=20, state="readonly",
@@ -320,9 +327,10 @@ class FileListWindow(tb.Toplevel):
         filter_combo.bind("<<ComboboxSelected>>", self._apply_filter)
 
     def _create_tableview(self):
+        columns = _get_columns()
         coldata = [
             {"text": col.text, "width": col.width, "stretch": False}
-            for col in COLUMNS
+            for col in columns
         ] + [
             {"text": "_path", "width": 0, "stretch": False, "minwidth": 0}
         ]
@@ -375,17 +383,17 @@ class FileListWindow(tb.Toplevel):
             self.table.view.configure(xscrollcommand=self.table.hbar.set)
 
         # 默认隐藏非默认可见列和 _path 列
-        for i, col in enumerate(COLUMNS):
+        for i, col in enumerate(columns):
             if not col.default_visible:
                 self.table.get_column(index=i, visible=False).hide()
-        self.table.get_column(index=len(COLUMNS), visible=False).hide()
+        self.table.get_column(index=len(columns), visible=False).hide()
 
         # monkey-patch reset_column_filters 以确保 _path 列在重置过滤器后仍保持隐藏
         # "Show All" 会显示所有业务列，但不应暴露技术列 _path
         _orig_reset_column_filters = self.table.reset_column_filters
         def _patched_reset_column_filters(*args, **kwargs):
             _orig_reset_column_filters(*args, **kwargs)
-            self.table.get_column(index=len(COLUMNS), visible=False).hide()
+            self.table.get_column(index=len(columns), visible=False).hide()
         self.table.reset_column_filters = _patched_reset_column_filters
 
         # 在内置右键菜单中追加应用专属操作
@@ -422,10 +430,11 @@ class FileListWindow(tb.Toplevel):
         """从表头右键菜单调用批量选中"""
         column_index = self._header_click_column
 
-        if column_index is None or column_index >= len(COLUMNS):
+        columns = _get_columns()
+        if column_index is None or column_index >= len(columns):
             return
 
-        col_def = COLUMNS[column_index]
+        col_def = columns[column_index]
         self._show_select_dialog(col_def.id, col_def.text)
 
     def _create_status_bar(self):
@@ -581,7 +590,7 @@ class FileListWindow(tb.Toplevel):
             return
 
         filter_func = None
-        for key, (label, func) in FILTERS.items():
+        for key, (label, func) in _get_filters().items():
             if label == selected_label:
                 filter_func = func
                 break
