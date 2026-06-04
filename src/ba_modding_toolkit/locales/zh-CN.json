@@ -24,6 +24,7 @@
 		"browse_folder": "浏览文件夹...",
 		"select": "选择",
 		"open": "打开",
+		"download": "下载",
 		"add_files": "添加文件",
 		"add_folder": "添加文件夹",
 		"remove": "移除",
@@ -198,6 +199,8 @@
 			"success": "批量处理完成！\n成功: {success}，失败: {fail}"
 		},
 		"3rd_party": {
+			"download_guide": "是否前往下载 {program}？\n{url}",
+			"skel_converter_not_configured": "SpineSkeletonDataConverter 未配置。\n请在设置页面配置 SpineSkeletonDataConverter 的路径。",
 			"skel_converter_required": "SpineSkeletonDataConverter 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineSkeletonDataConverter 程序，并遵守其协议\n\n是否要在浏览器中打开下载页面？\n{url}",
 			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。"
 		}

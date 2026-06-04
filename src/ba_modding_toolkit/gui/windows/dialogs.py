@@ -183,7 +183,8 @@ class SettingsDialog(tb.Toplevel):
             label=t("option.skel_converter_path"),
             path_var=self.app.spine_converter_path_var,
             select_cmd=self.select_spine_converter_path,
-            tooltip=t("option.skel_converter_path_info")
+            tooltip=t("option.skel_converter_path_info"),
+            download_guide_cmd=self.app.show_spine_converter_download_guide
         )
 
         meta = self.app._config_specs.get("enable_spine_conversion_var")
@@ -194,7 +195,7 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.spine_conversion_info"),
             app=self.app,
             depends_on=meta.depends_on if meta else None,
-            on_click_disabled=self.app.show_spine_converter_download_guide
+            on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
         meta_version = self.app._config_specs.get("target_spine_version_var")
@@ -205,8 +206,10 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.spine_target_version_info"),
             app=self.app,
             depends_on=meta_version.depends_on if meta_version else None,
-            on_click_disabled=self.app.show_spine_converter_download_guide
+            on_click_disabled=self.app.show_spine_converter_not_configured
         )
+
+        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
 
         # SpineViewerCLI 路径设置
         SettingRow.create_path_selector(
@@ -214,7 +217,8 @@ class SettingsDialog(tb.Toplevel):
             label=t("option.spine_viewer_path"),
             path_var=self.app.spine_viewer_path_var,
             select_cmd=self.select_spine_viewer_path,
-            tooltip=t("option.spine_viewer_path_info")
+            tooltip=t("option.spine_viewer_path_info"),
+            download_guide_cmd=self.app.show_spine_viewer_download_guide
         )
 
     def _init_footer_buttons(self):

@@ -572,9 +572,20 @@ class SettingRow:
         path_var: tk.StringVar,
         select_cmd: Callable[[], None],
         open_cmd: Callable[[], None] | None = None,
-        tooltip: str | None = None
+        tooltip: str | None = None,
+        download_guide_cmd: Callable[[], None] | None = None
     ) -> tb.Frame:
-        """创建路径选择行"""
+        """创建路径选择行
+        
+        Args:
+            parent: 父组件
+            label: 标签文本
+            path_var: 路径变量
+            select_cmd: 选择路径命令
+            open_cmd: 打开路径命令（可选）
+            tooltip: 提示文本（可选）
+            download_guide_cmd: 下载引导命令（可选），当路径不合法时显示下载按钮
+        """
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         
@@ -582,13 +593,34 @@ class SettingRow:
         right_frame = tb.Frame(container)
         right_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(50, 0))
         
-        # 按钮在最右
+        # 下载按钮（如果提供了下载引导命令）
+        if download_guide_cmd:
+            UIComponents.create_button(
+                right_frame,
+                t("action.download"),
+                download_guide_cmd,
+                bootstyle="warning",
+                style="compact"
+            ).pack(side=tk.RIGHT, padx=(5, 0))
+        
+        # 打开按钮
         if open_cmd:
-            UIComponents.create_button(right_frame, t("action.open"), open_cmd, bootstyle="info", style="compact"
-            ).pack(side=tk.RIGHT, padx=(5,0))
-            
-        UIComponents.create_button(right_frame, t("action.select"), select_cmd, bootstyle="primary", style="compact"
-        ).pack(side=tk.RIGHT, padx=(5,0))
+            UIComponents.create_button(
+                right_frame,
+                t("action.open"),
+                open_cmd,
+                bootstyle="info",
+                style="compact"
+            ).pack(side=tk.RIGHT, padx=(5, 0))
+        
+        # 选择按钮
+        UIComponents.create_button(
+            right_frame,
+            t("action.select"),
+            select_cmd,
+            bootstyle="primary",
+            style="compact"
+        ).pack(side=tk.RIGHT, padx=(5, 0))
         
         # 输入框填充剩余中间区域
         entry = tb.Entry(right_frame, textvariable=path_var)

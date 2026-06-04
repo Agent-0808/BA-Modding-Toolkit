@@ -225,18 +225,43 @@ class App(tk.Frame, ConfigMixin):
             return self.is_spine_converter_available()
         return True
 
+    def show_download_guide(self, program_name: str, url: str, parent: tk.Widget | None = None) -> None:
+        """显示通用下载引导对话框"""
+        result = messagebox.askyesno(
+            t("common.3rd_party"),
+            t("message.3rd_party.download_guide",
+              program=program_name,
+              url=url),
+            parent=parent or self.master
+        )
+        if result:
+            import webbrowser
+            webbrowser.open(url)
+
+    def show_spine_converter_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineConverter未配置提示"""
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.3rd_party.skel_converter_not_configured"),
+            parent=parent or self.master
+        )
+
     def show_spine_converter_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineConverter下载引导对话框"""
-        url = "https://github.com/wang606/SpineSkeletonDataConverter"
-        result = messagebox.askyesno(
-                t("common.3rd_party"),
-                t("message.3rd_party.skel_converter_required",
-                  url=url),
-                parent=parent or self.master
-            )
-        import webbrowser
-        if result:
-            webbrowser.open(url)
+        self.show_download_guide(
+            "SpineSkeletonDataConverter",
+            "https://github.com/wang606/SpineSkeletonDataConverter",
+            parent
+        )
+
+    def show_spine_viewer_download_guide(self):
+        """显示SpineViewer下载引导对话框"""
+        self.show_download_guide(
+            "SpineViewerCLI",
+            "https://github.com/ww-rm/SpineViewer",
+            parent=self
+        )
+
 
     def select_game_resource_directory(self):
         select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
