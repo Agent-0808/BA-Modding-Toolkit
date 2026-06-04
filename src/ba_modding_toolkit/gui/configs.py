@@ -66,7 +66,10 @@ class ConfigMixin:
     enable_atlas_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
     spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75", depends_on="spine_converter_path_var")]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False)]
-    
+
+    # SpineViewer
+    spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
+
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]

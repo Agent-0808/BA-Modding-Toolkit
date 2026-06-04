@@ -177,6 +177,7 @@ class SettingsDialog(tb.Toplevel):
         """初始化Spine设置"""
         section = self._create_section(t("ui.settings.group_spine"))
 
+        # Spine 转换器路径设置
         SettingRow.create_path_selector(
             section,
             label=t("option.skel_converter_path"),
@@ -205,6 +206,15 @@ class SettingsDialog(tb.Toplevel):
             app=self.app,
             depends_on=meta_version.depends_on if meta_version else None,
             on_click_disabled=self.app.show_spine_converter_download_guide
+        )
+
+        # SpineViewerCLI 路径设置
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.spine_viewer_path"),
+            path_var=self.app.spine_viewer_path_var,
+            select_cmd=self.select_spine_viewer_path,
+            tooltip=t("option.spine_viewer_path_info")
         )
 
     def _init_footer_buttons(self):
@@ -265,6 +275,18 @@ class SettingsDialog(tb.Toplevel):
             callback=lambda path: (
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
+            ),
+            log=self.app.logger.log
+        )
+
+    def select_spine_viewer_path(self):
+        """选择SpineViewerCLI路径"""
+        select_file(
+            title=t("ui.dialog.select", type=t("file_type.spine_viewer")),
+            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
+            callback=lambda path: (
+                self.app.spine_viewer_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.spine_viewer_set", path=path))
             ),
             log=self.app.logger.log
         )

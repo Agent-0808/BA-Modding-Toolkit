@@ -18,6 +18,7 @@ from ...naming import parse_filename
 from ...searching import list_bundle_files
 from ...bundle import analyze_bundles, BUNDLE_ANALYZERS
 from ...models import BundleFileInfo
+from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
 from ..utils import open_directory, select_directory
 
@@ -245,6 +246,7 @@ class FileListWindow(tb.Toplevel):
             (t("action.open_in_explorer"), self._ctx_open_in_explorer),
             (t("action.copy_filename"), self._ctx_copy_filename),
             (t("action.check_crc"), self._ctx_check_crc),
+            (t("action.render_preview"), self._ctx_render_preview),
         ]
 
         self._setup_window()
@@ -753,6 +755,72 @@ class FileListWindow(tb.Toplevel):
             self.table.get_column(index=col_id.value, visible=False).show()
 
         messagebox.showinfo(t("action.check_crc"), "\n\n".join(results))
+
+    def _ctx_render_preview(self):
+        """渲染选中 bundle 文件的 Spine 预览图"""
+        items = self._get_selected_items()
+        if not items:
+            return
+
+        # 检查 SpineViewerCLI 路径
+        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
+        if not viewer_path_str:
+            messagebox.showwarning(
+                t("common.warning"),
+                t("message.3rd_party.spine_viewer_required")
+            )
+            return
+
+        viewer_path = Path(viewer_path_str)
+        if not viewer_path.exists():
+            messagebox.showwarning(
+                t("common.warning"),
+                t("log.file.not_exist", path=viewer_path)
+            )
+            return
+
+        # 获取输出目录
+        output_dir_str = self.app.output_dir_var.get().strip()
+        if not output_dir_str:
+            messagebox.showwarning(
+                t("common.warning"),
+                t("message.output_dir_not_set")
+            )
+            return
+
+        output_dir = Path(output_dir_str)
+
+        # 准备 bundle 路径列表
+        bundle_paths = [item.path for item in items]
+
+        self._status_label.config(text=t("status.processing"))
+        self._progress["value"] = 0
+
+        def _run():
+            success, message = render_spine_preview_from_bundle(
+                bundle_path=bundle_paths,
+                output_dir=output_dir,
+                viewer_path=viewer_path,
+                log=self.app.logger.log
+            )
+            if not self._closed:
+                self.after(0, lambda: self._on_render_preview_complete(success, message))
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+    def _on_render_preview_complete(self, success: bool, message: str):
+        """渲染预览图完成"""
+        if self._closed:
+            return
+
+        self._progress["value"] = 0
+        self._status_label.config(text=t("status.done") if success else t("status.failed"))
+
+        if success:
+            messagebox.showinfo(t("action.render_preview"), message)
+        else:
+            messagebox.showerror(t("common.error"), message)
 
     # -------- 生命周期 --------
 

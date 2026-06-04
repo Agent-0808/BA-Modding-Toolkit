@@ -569,6 +569,197 @@ class SpineUtils:
 
 
     @staticmethod
+    def query_spine_info(
+        skel_path: Path,
+        viewer_path: Path,
+        atlas_path: Path | None = None,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, dict]:
+        """
+        查询 Spine skel 文件中的动画和皮肤信息。
+
+        Args:
+            skel_path: skel 文件路径
+            viewer_path: SpineViewerCLI 可执行文件路径
+            atlas_path: atlas 文件路径（可选）
+            log: 日志记录函数
+
+        Returns:
+            tuple[bool, dict]: (是否成功, 包含 animations 和 skins 的字典)
+        """
+        if not skel_path.exists():
+            log(f'  ❌ {t("log.file.not_exist", path=skel_path)}')
+            return False, {}
+
+        if not viewer_path.exists():
+            log(f'  ❌ {t("log.file.not_exist", path=viewer_path)}')
+            return False, {}
+
+        try:
+            command = [
+                str(viewer_path),
+                "query",
+                "--all",
+                str(skel_path)
+            ]
+
+            if atlas_path and atlas_path.exists():
+                command.extend(["--atlas", str(atlas_path)])
+
+            log(f'  > {t("log.spine.querying_info", name=skel_path.name)}')
+
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+            )
+
+            if result.returncode != 0:
+                log(f'  ✗ {t("log.spine.query_failed")}: {result.stderr.strip()}')
+                return False, {}
+
+            # 解析输出
+            info = {
+                'animations': [],
+                'skins': []
+            }
+
+            lines = result.stdout.strip().split('\n')
+            current_section = None
+
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                # 检测区块开始标记
+                if '>>>>>>>>>>>>>>> Animations >>>>>>>>>>>>>>>' in line:
+                    current_section = 'animations'
+                    continue
+                elif '>>>>>>>>>>>>>>> Skins >>>>>>>>>>>>>>>' in line:
+                    current_section = 'skins'
+                    continue
+                # 检测区块结束标记
+                elif '<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<' in line:
+                    current_section = None
+                    continue
+                # 跳过表头
+                elif current_section and ('Name' in line or 'Duration' in line):
+                    continue
+                # 解析数据行
+                elif current_section:
+                    # Animations 格式: "Name    Duration"
+                    # Skins 格式: "Name"
+                    parts = line.split()
+                    if parts:
+                        # 提取名称（第一列）
+                        name = parts[0]
+                        if name and name not in ['Name', 'Duration']:
+                            info[current_section].append(name)
+
+            log(f'  > {t("log.spine.query_success", anim_count=len(info["animations"]), skin_count=len(info["skins"]))}')
+            return True, info
+
+        except Exception as e:
+            log(f'  ❌ {t("log.error_detail", error=e)}')
+            return False, {}
+
+    @staticmethod
+    def render_spine_preview(
+        skel_path: Path,
+        output_path: Path,
+        viewer_path: Path,
+        atlas_path: Path | None = None,
+        animation: str = "Idle_01",
+        skin: str = "",
+        scale: float = 1.0,
+        background: str = "#00000000",
+        fmt: str = "png",
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]:
+        """
+        渲染 Spine 预览图。
+
+        Args:
+            skel_path: skel 文件路径
+            output_path: 输出图片路径
+            viewer_path: SpineViewerCLI 可执行文件路径
+            animation: 动画名称
+            skin: 皮肤名称（空字符串表示默认皮肤）
+            atlas_path: atlas 文件路径（可选）
+            scale: 缩放比例
+            background: 背景颜色（默认透明）
+            fmt: 输出格式
+            log: 日志记录函数
+
+        Returns:
+            tuple[bool, str]: (是否成功, 状态消息)
+        """
+        if not skel_path.exists():
+            msg = t("log.file.not_exist", path=skel_path)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+        if not viewer_path.exists():
+            msg = t("log.file.not_exist", path=viewer_path)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+        try:
+            command = [
+                str(viewer_path),
+                "export",
+                str(skel_path),
+                "-f", fmt,
+                "-o", str(output_path),
+                "-a", animation,
+                "--scale", str(scale),
+                "--color", background,
+                "--margin", "0",
+                "--max-resolution", "8888",
+                "--time", "0",
+                "--quality", "100",
+                "--no-progress"
+            ]
+
+            if skin:
+                command.extend(["--skins", skin])
+
+            if atlas_path and atlas_path.exists():
+                command.extend(["--atlas", str(atlas_path)])
+
+            log(f'  > {t("log.spine.rendering_preview", name=skel_path.name, anim=animation)}')
+
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                errors='ignore',
+            )
+
+            if result.returncode != 0:
+                msg = t("log.spine.render_failed", error=result.stderr.strip())
+                log(f'  ✗ {msg}')
+                return False, msg
+
+            if output_path.exists():
+                msg = t("log.spine.render_success", path=output_path)
+                log(f'  ✓ {msg}')
+                return True, msg
+            else:
+                msg = t("log.spine.render_file_not_found")
+                log(f'  ✗ {msg}')
+                return False, msg
+
+        except Exception as e:
+            msg = t("log.error_detail", error=e)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+    @staticmethod
     def normalize_legacy_spine_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
         """
         修正旧版 Spine 3.8 文件名格式
