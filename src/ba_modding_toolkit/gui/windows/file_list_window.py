@@ -413,7 +413,7 @@ class FileListWindow(tb.Toplevel):
             head_menu = self.table._rightclickmenu_head
             head_menu.add_separator()
             head_menu.add_command(
-                label=t("ui.file_list.select"),
+                label=t("ui.file_list.select.label"),
                 command=self._on_header_select
             )
 
@@ -627,7 +627,7 @@ class FileListWindow(tb.Toplevel):
 
     def _apply_select(self, column_id: ColumnId, operator: str, value: str, invert: bool, do_filter: bool):
         """根据条件批量选中行"""
-        matched_iids = []
+        selected_iids = []
         all_iids = []
 
         # 只处理当前可见的行（分页模式下其他行被 detach）
@@ -635,14 +635,9 @@ class FileListWindow(tb.Toplevel):
             iid = row.iid
             all_iids.append(iid)
             cell_value = str(row.values[column_id.value])
-            if self._match_condition(cell_value, operator, value):
-                matched_iids.append(iid)
-
-        # 如果反选，选中不匹配的行
-        if invert:
-            selected_iids = [iid for iid in all_iids if iid not in matched_iids]
-        else:
-            selected_iids = matched_iids
+            is_match = self._match_condition(cell_value, operator, value)
+            if is_match ^ invert:
+                selected_iids.append(iid)
 
         if selected_iids:
             self.table.view.selection_set(selected_iids)
