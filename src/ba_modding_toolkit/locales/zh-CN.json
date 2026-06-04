@@ -499,18 +499,19 @@
 		"status_label": "状态：",
 		"file_list": {
 			"window_title": "Bundle 文件列表",
-			"column_filename": "文件名",
-			"column_directory": "目录",
-			"column_file_size": "大小",
-			"column_modified_time": "修改时间",
-			"column_trailing_bytes": "尾部字节",
-			"column_trailing_content": "尾部内容",
-			"column_core": "Core",
-			"column_res_type": "资源类型",
-			"column_crc": "文件名CRC",
-			"column_crc_actual": "实际CRC",
+			"column": {
+				"filename": "文件名",
+				"directory": "目录",
+				"file_size": "大小",
+				"modified_time": "修改时间",
+				"trailing_bytes": "尾部字节",
+				"trailing_content": "尾部内容",
+				"core": "Core",
+				"res_type": "资源类型",
+				"crc": "文件名CRC",
+				"crc_actual": "实际CRC"
+			},
 			"analyze_label": "分析:",
-			"exclude_filter_label": "排除筛选:",
 			"column_label": "列",
 			"analyze_trailing": "尾部字节",
 			"analyze_naming": "文件名解析",
@@ -530,16 +531,31 @@
 			"no_dirs_found": "未找到有效的搜索目录",
 			"scan_complete": "扫描完成",
 			"analyze_complete": "分析完成",
-			"batch_select": "批量选中",
-			"batch_select_dialog_title": "批量选中条件",
-			"batch_select_column": "目标列",
-			"batch_select_operator": "操作符",
-			"batch_select_value": "匹配值",
-			"batch_select_action": "选中",
-			"batch_select_action_filter": "选中并筛选",
-			"batch_select_invert": "反选",
-			"batch_select_no_match": "未找到匹配的行",
-			"batch_select_matched": "已选中 {count} 行"
+			"filter_label": "筛选:",
+			"select": {
+				"label": "批量选中",
+				"dialog_title": "批量选中条件",
+				"column": "目标列",
+				"operator": "操作符",
+				"value": "匹配值",
+				"action": "选中",
+				"action_filter": "选中并筛选",
+				"invert": "反选",
+				"no_match": "未找到匹配的行",
+				"matched": "已选中 {count} 行"
+			},
+			"filter": {
+				"trailing_zero": "排除尾部字节为 0",
+				"crc_match": "排除 CRC 匹配",
+				"crc_mismatch": "排除 CRC 不匹配"
+			},
+			"op": {
+				"contains": "包含",
+				"equals": "等于",
+				"starts_with": "开头是",
+				"ends_with": "结尾是",
+				"regex": "正则匹配"
+			}
 		}
 	}
 }

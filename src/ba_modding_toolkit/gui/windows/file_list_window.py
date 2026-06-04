@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, NamedTuple, Callable
 from enum import Enum
 
 import ttkbootstrap as tb
-from ttkbootstrap.tableview import Tableview as TBTableview
+from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 
 from ...i18n import t
 from ...utils import CRCUtils
@@ -73,24 +73,23 @@ class ColumnDef(NamedTuple):
     default_visible: bool = True
 
 
+COLUMNS: list[ColumnDef] = [
+    ColumnDef(ColumnId.filename, t("ui.file_list.column.filename"), 500),
+    ColumnDef(ColumnId.directory, t("ui.file_list.column.directory"), 80),
+    ColumnDef(ColumnId.file_size, t("ui.file_list.column.file_size"), 80),
+    ColumnDef(ColumnId.modified_time, t("ui.file_list.column.modified_time"), 100),
+    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
+    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
+    ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
+    ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
+    ColumnDef(ColumnId.crc, t("ui.file_list.column.crc"), 80, default_visible=False),
+    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column.crc_actual"), 80, default_visible=False),
+]
+
 class AnalyzerOption(NamedTuple):
     """分析器选项定义"""
     key: str
     text: str
-
-
-COLUMNS: list[ColumnDef] = [
-    ColumnDef(ColumnId.filename, t("ui.file_list.column_filename"), 300),
-    ColumnDef(ColumnId.directory, t("ui.file_list.column_directory"), 80),
-    ColumnDef(ColumnId.file_size, t("ui.file_list.column_file_size"), 80),
-    ColumnDef(ColumnId.modified_time, t("ui.file_list.column_modified_time"), 100),
-    ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column_trailing_bytes"), 80, default_visible=False),
-    ColumnDef(ColumnId.trailing_content, t("ui.file_list.column_trailing_content"), 150, default_visible=False),
-    ColumnDef(ColumnId.core, t("ui.file_list.column_core"), 150, default_visible=False),
-    ColumnDef(ColumnId.res_type, t("ui.file_list.column_res_type"), 80, default_visible=False),
-    ColumnDef(ColumnId.crc, t("ui.file_list.column_crc"), 80, default_visible=False),
-    ColumnDef(ColumnId.crc_actual, t("ui.file_list.column_crc_actual"), 80, default_visible=False),
-]
 
 ANALYZER_OPTIONS: list[AnalyzerOption] = [
     AnalyzerOption("trailing", t("ui.file_list.analyze_trailing")),
@@ -104,19 +103,20 @@ ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
-EXCLUDE_FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
-    "trailing_zero": ("排除尾部字节为 0", lambda item: item.trailing_bytes == 0),
-    "crc_match": ("排除 CRC 匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
-    "crc_mismatch": ("排除 CRC 不匹配", lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
+FILTERS: dict[str, tuple[str, Callable[[BundleFileInfo], bool]]] = {
+    """要排除的文件类型，返回 True 表示排除"""
+    "trailing_zero": (t("ui.file_list.filter.trailing_zero"), lambda item: item.trailing_bytes == 0),
+    "crc_match": (t("ui.file_list.filter.crc_match"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
+    "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
 }
 
 # 批量选中操作符定义
 SELECT_OPERATORS: list[tuple[str, str]] = [
-    ("contains", "包含"),
-    ("equals", "等于"),
-    ("starts_with", "开头是"),
-    ("ends_with", "结尾是"),
-    ("regex", "正则匹配"),
+    ("contains", t("ui.file_list.op.contains")),
+    ("equals", t("ui.file_list.op.equals")),
+    ("starts_with", t("ui.file_list.op.starts_with")),
+    ("ends_with", t("ui.file_list.op.ends_with")),
+    ("regex", t("ui.file_list.op.regex")),
 ]
 
 
@@ -136,7 +136,7 @@ class BatchSelectDialog(tb.Toplevel):
         self.grab_set()
 
     def _setup_window(self):
-        self.title(t("ui.file_list.batch_select_dialog_title"))
+        self.title(t("ui.file_list.select.dialog_title"))
         self.geometry("350x170")
         self.transient(self.master)
         self.resizable(False, False)
@@ -148,7 +148,7 @@ class BatchSelectDialog(tb.Toplevel):
         # 显示目标列名称
         tb.Label(
             main_frame,
-            text=f"{t('ui.file_list.batch_select_column')}: {self.column_name}",
+            text=f"{t('ui.file_list.select.column')}: {self.column_name}",
             bootstyle="info"
         ).pack(fill=tk.X, pady=(0, 5))
 
@@ -156,7 +156,7 @@ class BatchSelectDialog(tb.Toplevel):
         row1 = tb.Frame(main_frame)
         row1.pack(fill=tk.X, pady=(0, 5))
 
-        tb.Label(row1, text=t("ui.file_list.batch_select_operator")).pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(row1, text=t("ui.file_list.select.operator")).pack(side=tk.LEFT, padx=(0, 5))
         self._operator_var = tk.StringVar()
         operator_values = [op[1] for op in SELECT_OPERATORS]
         operator_combo = tb.Combobox(
@@ -171,26 +171,26 @@ class BatchSelectDialog(tb.Toplevel):
         row2 = tb.Frame(main_frame)
         row2.pack(fill=tk.X, pady=(0, 5))
 
-        tb.Label(row2, text=t("ui.file_list.batch_select_value")).pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(row2, text=t("ui.file_list.select.value")).pack(side=tk.LEFT, padx=(0, 5))
         self._value_var = tk.StringVar()
         value_entry = tb.Entry(row2, textvariable=self._value_var, width=20)
         value_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
 
         self._invert_var = tk.BooleanVar(value=False)
-        tb.Checkbutton(row2, text=t("ui.file_list.batch_select_invert"), variable=self._invert_var).pack(side=tk.LEFT)
+        tb.Checkbutton(row2, text=t("ui.file_list.select.invert"), variable=self._invert_var).pack(side=tk.LEFT)
 
         # 按钮
         btn_frame = tb.Frame(main_frame)
         btn_frame.pack(fill=tk.X, pady=(5, 0))
 
         UIComponents.create_button(
-            btn_frame, t("ui.file_list.batch_select_action"),
+            btn_frame, t("ui.file_list.select.action"),
             lambda: self._on_submit(filter_rows=False),
             bootstyle="primary", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
 
         UIComponents.create_button(
-            btn_frame, t("ui.file_list.batch_select_action_filter"),
+            btn_frame, t("ui.file_list.select.action_filter"),
             lambda: self._on_submit(filter_rows=True),
             bootstyle="success", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 5))
@@ -308,16 +308,16 @@ class FileListWindow(tb.Toplevel):
             self._analyze, bootstyle="warning", style="compact"
         ).pack(side=tk.LEFT, padx=(0, 10))
 
-        tb.Label(row2, text=t("ui.file_list.exclude_filter_label")).pack(side=tk.LEFT, padx=(0, 5))
+        tb.Label(row2, text=t("ui.file_list.filter_label")).pack(side=tk.LEFT, padx=(0, 5))
 
-        self._exclude_filter_var = tk.StringVar(value="")
-        exclude_options = [""] + [label for key, (label, _) in EXCLUDE_FILTERS.items()]
-        exclude_combo = tb.Combobox(
-            row2, textvariable=self._exclude_filter_var,
-            values=exclude_options, width=20, state="readonly",
+        self._filter_var = tk.StringVar(value="")
+        filter_options = [""] + [label for key, (label, _) in FILTERS.items()]
+        filter_combo = tb.Combobox(
+            row2, textvariable=self._filter_var,
+            values=filter_options, width=20, state="readonly",
         )
-        exclude_combo.pack(side=tk.LEFT, padx=(0, 5))
-        exclude_combo.bind("<<ComboboxSelected>>", self._apply_exclude_filter)
+        filter_combo.pack(side=tk.LEFT, padx=(0, 5))
+        filter_combo.bind("<<ComboboxSelected>>", self._apply_filter)
 
     def _create_tableview(self):
         coldata = [
@@ -337,7 +337,7 @@ class FileListWindow(tb.Toplevel):
             searchable=True,
             yscrollbar=True,
             autoalign=True,
-            autofit=True,
+            autofit=False,
             bootstyle="primary",
             stripecolor=(colors.light, None),
             height=15,
@@ -405,8 +405,8 @@ class FileListWindow(tb.Toplevel):
             head_menu = self.table._rightclickmenu_head
             head_menu.add_separator()
             head_menu.add_command(
-                label=t("ui.file_list.batch_select"),
-                command=self._on_header_batch_select
+                label=t("ui.file_list.select"),
+                command=self._on_header_select
             )
 
     def _capture_header_column(self, event):
@@ -418,7 +418,7 @@ class FileListWindow(tb.Toplevel):
             if column_id:
                 self._header_click_column = int(column_id.replace("#", "")) - 1
 
-    def _on_header_batch_select(self):
+    def _on_header_select(self):
         """从表头右键菜单调用批量选中"""
         column_index = self._header_click_column
 
@@ -426,7 +426,7 @@ class FileListWindow(tb.Toplevel):
             return
 
         col_def = COLUMNS[column_index]
-        self._show_batch_select_dialog(col_def.id, col_def.text)
+        self._show_select_dialog(col_def.id, col_def.text)
 
     def _create_status_bar(self):
         status_frame = tb.Frame(self)
@@ -574,14 +574,14 @@ class FileListWindow(tb.Toplevel):
 
         self.app.logger.log(t("ui.file_list.analyze_complete"))
 
-    def _apply_exclude_filter(self, event=None):
-        selected_label = self._exclude_filter_var.get()
+    def _apply_filter(self, event=None):
+        selected_label = self._filter_var.get()
         if not selected_label:
             self.table.reset_row_filters()
             return
 
         filter_func = None
-        for key, (label, func) in EXCLUDE_FILTERS.items():
+        for key, (label, func) in FILTERS.items():
             if label == selected_label:
                 filter_func = func
                 break
@@ -602,7 +602,7 @@ class FileListWindow(tb.Toplevel):
         self.table._rowindex.set(0)
         self.table.load_table_data()
 
-    def _show_batch_select_dialog(self, column_id: ColumnId, column_name: str):
+    def _show_select_dialog(self, column_id: ColumnId, column_name: str):
         """显示批量选中对话框"""
         dialog = BatchSelectDialog(self, column_id, column_name)
         self.wait_window(dialog)
@@ -614,9 +614,9 @@ class FileListWindow(tb.Toplevel):
         operator, value, invert, do_filter = result
 
         # 执行批量选中
-        self._apply_batch_select(column_id, operator, value, invert, do_filter)
+        self._apply_select(column_id, operator, value, invert, do_filter)
 
-    def _apply_batch_select(self, column_id: ColumnId, operator: str, value: str, invert: bool, do_filter: bool):
+    def _apply_select(self, column_id: ColumnId, operator: str, value: str, invert: bool, do_filter: bool):
         """根据条件批量选中行"""
         matched_iids = []
         all_iids = []
@@ -639,9 +639,9 @@ class FileListWindow(tb.Toplevel):
             self.table.view.selection_set(selected_iids)
             if do_filter:
                 self.table.filter_to_selected_rows()
-            self._status_label.config(text=t("ui.file_list.batch_select_matched", count=len(selected_iids)))
+            self._status_label.config(text=t("ui.file_list.select.matched", count=len(selected_iids)))
         else:
-            messagebox.showinfo(t("common.tip"), t("ui.file_list.batch_select_no_match"))
+            messagebox.showinfo(t("common.tip"), t("ui.file_list.select.no_match"))
 
     def _match_condition(self, cell_value: str, operator: str, pattern: str) -> bool:
         """判断单元格值是否匹配条件"""
