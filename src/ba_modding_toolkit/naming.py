@@ -5,6 +5,11 @@ from .models import ParsedFilename
 
 # -------- 文件名解析常量 --------
 
+PRELOAD_PREFIX = [
+    "prologgroup-",
+    "prologdepengroup-"
+]
+
 FIXED_PREFIX = [
     "assets-_mx-",
 ]
@@ -22,7 +27,7 @@ RESOURCE_TYPES_NUM = {
 # -------- 预编译正则（避免 per-call 编译开销）--------
 _RE_CRC = re.compile(r'_(\d+)\.[^.]+$')
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
-_RE_TYPE = re.compile(r'[-_](?:mxdependency|mxload)-([a-zA-Z0-9]+)')
+_RE_TYPE = re.compile(r'[-_](?:mxdependency|mxload|mxprolog)-([a-zA-Z0-9]+)')
 _RE_MODERN = re.compile(r'\d{4}-\d{2}-\d{2}_([0-9]{3})_')
 _RE_YEAR = re.compile(r'^\d{4}$')
 
@@ -93,7 +98,11 @@ def parse_filename(filename: str) -> ParsedFilename:
     else:
         core_part = filename.rsplit('.', 1)[0]
 
-    # 去除固定前缀
+    # 去除前缀
+    for preload_prefix in PRELOAD_PREFIX:
+        if core_part.startswith(preload_prefix):
+            core_part = core_part[len(preload_prefix):]
+            break
     for fixed_prefix in FIXED_PREFIX:
         if core_part.startswith(fixed_prefix):
             core_part = core_part[len(fixed_prefix):]
