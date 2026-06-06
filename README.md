@@ -12,6 +12,7 @@
 
 # BA Modding Toolkit
 
+> [!NOTE]
 > English Translations are available now. If you find any errors or have any suggestions, please feel free to submit an issue or pull request.
 
 [简体中文](README_zh-CN.md) | English
@@ -37,7 +38,10 @@ You can download the latest version of the executable file from the [Releases](h
 
 ## Program Functionalities
 
-The program contains multiple functional tabs:
+> [!TIP]
+> Check out the [Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/Usage) Page for detailed instructions.
+
+The program contains multiple functionalities:
 
 - **Mod Update**: Update or port Mod files between different platforms
 - **Batch Update**: Batch process multiple Mod files
@@ -47,34 +51,40 @@ The program contains multiple functional tabs:
 - **Legacy Conversion**: Convert between Legacy format(old global version) and Modern format(JP and new global version)
 - **Batch Legacy**: Batch convert Legacy format to Modern format
 
-Check the [Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/Usage) Page for detailed instructions.
+- **File List**: View and manage all Bundle files in the specified directory.
 
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-en.png)
 
-## Extended Features
+## Add-Ons
 
-The extended features mentioned in this section are optional, and you can choose whether to enable them according to your needs.
+The add-ons mentioned in this section are optional, and you can choose whether to enable them according to your needs.
 
-The following extended features are independent third-party programs. Please comply with their licenses when downloading and using them. The BA Modding Toolkit repository does not contain or distribute any code or files of these programs, nor is it responsible for any issues that may arise during their use.
+> [!WARNING]
+> The following add-ons are independent third-party programs. Please comply with their licenses when downloading and using them.
+> BA-Modding-Toolkit only invokes the programs through `subprocess` module. It does not contain or distribute any code or files of these programs, nor is it responsible for any issues that may arise during their use.
 
-### Spine Converter
+### Spine Skeleton Data Converter
 
 **[wang606/SpineSkeletonDataConverter](https://github.com/wang606/SpineSkeletonDataConverter)**
 
-This program provides an interface to call the Skel conversion tool. Based on the SpineSkeletonDataConverter project, it can convert Spine 3 format `.skel` files used in some older Mods to the Spine 4 format supported by the current game version. Additionally, it can convert Spine 4 format files to Spine 3 format in the "Asset Extractor" feature.
+This tool can convert Spine 3 format `.skel` files used in some older Mods to the Spine 4 format supported by the current game version. 
+Additionally, it can convert Spine 4 format files to Spine 3 format in the "Asset Extractor" feature.
 
-- Please download the corresponding program yourself. BAMT only provides the function to call the program for conversion and does not include the program itself.
-- Configure the path of the `SpineSkeletonDataConverter.exe` program in the settings interface and check the "Enable Spine Conversion" option.
+Configure the path of the `SpineSkeletonDataConverter.exe` program in the settings interface and check the "Enable Spine Conversion" option.
 
-#### Reminder
-
-- This is an experimental feature and cannot guarantee that all mods can be successfully upgraded. There may be inconsistencies before and after conversion.
+- There may be inconsistencies before and after conversion.
 - Even if `SpineSkeletonDataConverter.exe` is not configured, you can still use this program normally to update Mods that *use Spine files compatible with the current version (4.2.xx)*.
 - If the Mod you want to update was made in 2025 or later, it already uses the Spine 4 format, so you can update it normally without configuring this option.
 
+### Spine Viewer
+
+**[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
+
+This tool can preview and render Spine skeleton animation files. You can configure the path of the `SpineViewerCLI.exe` program in the settings interface and preview the Spine animation in the "File List" window.
+
 ## Command Line Interface (CLI)
 
-In addition to the graphical interface, this project provides a Command Line Interface (CLI) version `cli/`.
+In addition to the graphical interface, this project provides a Command Line Interface (CLI) version `cli/main.py`.
 
 You can download the precompiled executable file `BAMT-CLI.exe` from the [Releases](https://github.com/Agent-0808/BA-Modding-Toolkit/releases) page or use the `uv run bamt-cli` command to run the source code.
 
@@ -100,7 +110,8 @@ bamt-cli crc -h
 bamt-cli env
 ```
 
-> Note: Due to the technical limitation of the `Tap` library, the compiled binary file cannot display parameter variable annotations. When running the source code, the parameter variable annotations will be displayed in the help information.
+> [!NOTE]
+> Due to the technical limitation of the `Tap` library, the compiled binary file cannot display parameter variable annotations. When running the source code, the parameter variable annotations will be displayed in the help information.
 
 Check the [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) Page for Complete Usage Instructions.
 
@@ -138,7 +149,7 @@ python -m ba_modding_toolkit
 
 The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
 
-You can add `BA-Modding-Toolkit` code (mainly `core.py` and `utils.py`) to your project or modify the existing code to implement custom Mod creation and update functionality.
+You can add `BA-Modding-Toolkit` code to your project or modify the existing code to implement custom Mod creation and update functionality.
 
 `cli/main.py` is a command-line interface (CLI) version of the main program, which you can refer to for calling processing functions.
 
@@ -171,8 +182,11 @@ BA-Modding-Toolkit/
 │ │ ├── base_tab.py     # TabFrame base class
 │ │ ├── components.py   # UI components, themes, logging
 │ │ ├── configs.py      # Configuration definitions
-│ │ ├── dialogs.py      # Settings dialogs
 │ │ ├── utils.py        # UI related utility functions
+│ │ ├── windows/        # Individual windows
+│ │ │ ├── __init__.py
+│ │ │ ├── dialogs.py            # Settings dialogs 
+│ │ │ └── file_list_window.py   # File List window
 │ │ └── tabs/           # Feature tabs
 │ │   ├── __init__.py
 │ │   ├── mod_update_tab.py        # Mod Update tab
@@ -228,7 +242,6 @@ Some useful related repositories:
 
 - [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：Search for character names and internal file IDs
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
-- [SpineViewer](https://github.com/ww-rm/SpineViewer)：Preview Spine animation files
 
 ### Disclaimer
 
