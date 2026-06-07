@@ -16,7 +16,7 @@ from ...i18n import t
 from ...utils import CRCUtils
 from ...naming import parse_filename
 from ...searching import list_bundle_files, search_prefix, get_search_dirs
-from ...bundle import analyze_bundles, BUNDLE_ANALYZERS
+from ...bundle import analyze_bundles
 from ...models import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents

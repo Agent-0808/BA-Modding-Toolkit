@@ -2,6 +2,7 @@
 
 import tkinter as tk
 import ttkbootstrap as tb
+from ttkbootstrap.widgets.tooltip import ToolTip
 from tkinterdnd2 import DND_FILES
 from pathlib import Path
 from typing import Callable, Any, TYPE_CHECKING
@@ -72,10 +73,6 @@ class Theme:
     STATUS_BAR_FONT = ("Microsoft YaHei", 9)
     LOG_FONT = ("Consolas", 9)
     TOOLTIP_FONT = ("Microsoft YaHei", 9)
-    
-    # Tooltip 颜色
-    TOOLTIP_BG = '#ffffe0'
-    TOOLTIP_FG = '#080808'
 
 
 # --- UI 组件工厂 ---
@@ -259,11 +256,10 @@ class UIComponents:
         label = tb.Label(
             parent,
             text="ⓘ",
-            font=Theme.TOOLTIP_FONT,
             style="info",
             cursor="question_arrow"
         )
-        Tooltip(label, text)
+        ToolTip(label, text=text, padding=5, wraplength=600)
         return label
 
 class DropZone(tb.Labelframe):
@@ -1100,69 +1096,3 @@ class FileListbox:
     def get_listbox(self):
         """获取列表框控件,用于直接操作"""
         return self.listbox
-
-
-class Tooltip:
-    """悬浮提示组件,鼠标悬停时显示提示信息"""
-    
-    def __init__(self, widget, text: str, delay: int = 500):
-        """
-        初始化悬浮提示
-        
-        Args:
-            widget: 要绑定提示的控件
-            text: 提示文本
-            delay: 延迟显示时间(毫秒)
-        """
-        self.widget = widget
-        self.text = text
-        self.delay = delay
-        self.tip_window = None
-        self.tip_id = None
-        
-        self.widget.bind("<Enter>", self._show_tip)
-        self.widget.bind("<Leave>", self._hide_tip)
-    
-    def _show_tip(self, event=None):
-        """显示提示框"""
-        if self.tip_id:
-            self.widget.after_cancel(self.tip_id)
-            self.tip_id = None
-        
-        self.tip_id = self.widget.after(self.delay, self._create_tip_window)
-    
-    def _hide_tip(self, event=None):
-        """隐藏提示框"""
-        if self.tip_id:
-            self.widget.after_cancel(self.tip_id)
-            self.tip_id = None
-        
-        if self.tip_window:
-            self.tip_window.destroy()
-            self.tip_window = None
-    
-    def _create_tip_window(self):
-        """创建提示窗口"""
-        if self.tip_window:
-            return
-        
-        x, y, _, _ = self.widget.bbox("insert")
-        x += self.widget.winfo_rootx() + 25
-        y += self.widget.winfo_rooty() + 25
-        
-        self.tip_window = tk.Toplevel(self.widget)
-        self.tip_window.wm_overrideredirect(True)
-        self.tip_window.wm_geometry(f"+{x}+{y}")
-        
-        label = tb.Label(
-            self.tip_window,
-            text=self.text,
-            justify=tk.LEFT,
-            background=Theme.TOOLTIP_BG,
-            foreground=Theme.TOOLTIP_FG,
-            relief=tk.SOLID,
-            borderwidth=1,
-            font=Theme.TOOLTIP_FONT,
-            padding=(5, 3)
-        )
-        label.pack(ipadx=1)
