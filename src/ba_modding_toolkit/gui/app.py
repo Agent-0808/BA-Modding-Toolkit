@@ -225,6 +225,13 @@ class App(tk.Frame, ConfigMixin):
             return self.is_spine_converter_available()
         return True
 
+    def get_depends_on_from_var(self, variable: tk.Variable) -> str | None:
+        """从变量对象自动推导其依赖项"""
+        for var_name, meta in self._config_specs.items():
+            if getattr(self, var_name) == variable:
+                return meta.depends_on
+        return None
+
     def show_download_guide(self, program_name: str, url: str, parent: tk.Widget | None = None) -> None:
         """显示通用下载引导对话框"""
         result = messagebox.askyesno(

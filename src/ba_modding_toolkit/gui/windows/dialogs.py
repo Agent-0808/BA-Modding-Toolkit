@@ -187,25 +187,21 @@ class SettingsDialog(tb.Toplevel):
             download_guide_cmd=self.app.show_spine_converter_download_guide
         )
 
-        meta = self.app._config_specs.get("enable_spine_conversion_var")
         SettingRow.create_switch(
             section,
             label=t("option.spine_conversion"),
             variable=self.app.enable_spine_conversion_var,
             tooltip=t("option.spine_conversion_info"),
             app=self.app,
-            depends_on=meta.depends_on if meta else None,
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
-        meta_version = self.app._config_specs.get("target_spine_version_var")
         SettingRow.create_entry_row(
             section,
             label=t("option.spine_target_version"),
             text_var=self.app.target_spine_version_var,
             tooltip=t("option.spine_target_version_info"),
             app=self.app,
-            depends_on=meta_version.depends_on if meta_version else None,
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 

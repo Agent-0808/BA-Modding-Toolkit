@@ -508,10 +508,8 @@ class SettingRow:
     ) -> None:
         """设置依赖管理：当依赖无效时禁用控件，点击时显示下载引导"""
         def update_status():
-            # 检查控件是否仍然存在
-            try:
-                widget.winfo_exists()
-            except tk.TclError:
+            # 检查控件是否仍然存在（对话框关闭后 widget 可能已销毁）
+            if not widget.winfo_exists():
                 return
             
             available = app.check_dependency(depends_on)
@@ -549,6 +547,10 @@ class SettingRow:
             text=""
         )
         chk.pack(side=tk.RIGHT)
+        
+        # 自动从 variable 推导 depends_on（如果未手动指定）
+        if app and depends_on is None:
+            depends_on = app.get_depends_on_from_var(variable)
         
         if app and depends_on:
             SettingRow._setup_dependency(
@@ -664,6 +666,10 @@ class SettingRow:
             entry.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
         else:
             entry.pack(side=tk.RIGHT, padx=(10, 0))
+        
+        # 自动从 variable 推导 depends_on（如果未手动指定）
+        if app and depends_on is None:
+            depends_on = app.get_depends_on_from_var(text_var)
         
         if app and depends_on:
             SettingRow._setup_dependency(

@@ -45,26 +45,22 @@ class AssetExtractorTab(TabFrame):
         
         
         # Spine 降级选项
-        meta_downgrade = self.app._config_specs.get("enable_atlas_downgrade_var")
         SettingRow.create_switch(
             options_frame,
             label=t("option.spine_downgrade"),
             variable=self.app.enable_atlas_downgrade_var,
             tooltip=t("option.spine_downgrade_info"),
             app=self.app,
-            depends_on=meta_downgrade.depends_on if meta_downgrade else None,
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
         
         # Spine 降级版本输入框
-        meta_version = self.app._config_specs.get("spine_downgrade_version_var")
         SettingRow.create_entry_row(
             options_frame,
             label=t("option.spine_downgrade_target_version"),
             text_var=self.app.spine_downgrade_version_var,
             tooltip=t("option.spine_downgrade_target_version_info"),
             app=self.app,
-            depends_on=meta_version.depends_on if meta_version else None,
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
         
