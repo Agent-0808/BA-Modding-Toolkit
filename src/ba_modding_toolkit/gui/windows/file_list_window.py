@@ -15,7 +15,7 @@ from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 from ...i18n import t
 from ...utils import CRCUtils
 from ...naming import parse_filename
-from ...searching import list_bundle_files
+from ...searching import list_bundle_files, search_prefix, get_search_dirs
 from ...bundle import analyze_bundles, BUNDLE_ANALYZERS
 from ...models import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
@@ -442,7 +442,7 @@ class FileListWindow(tb.Toplevel):
         status_frame.pack(fill=tk.X, side=tk.BOTTOM)
 
         self._progress = tb.Progressbar(
-            status_frame, mode="determinate", length=200, bootstyle="primary",
+            status_frame, mode="determinate", length=200, bootstyle="success-striped",
         )
         self._progress.pack(side=tk.LEFT, padx=(5, 0), pady=2)
 
@@ -794,15 +794,23 @@ class FileListWindow(tb.Toplevel):
 
         output_dir = Path(output_dir_str)
 
-        # 准备 bundle 路径列表
-        bundle_paths = [item.path for item in items]
+        # 获取同组所有文件，支持只选中texture文件，自动寻找textassets的情况
+        selected = [item.path for item in items]
+        search_dirs = get_search_dirs(Path(self.app.game_resource_dir_var.get()))
 
         self._status_label.config(text=t("status.processing"))
         self._progress["value"] = 0
 
         def _run():
+            # 在后台线程中搜索同组所有文件
+            bundle_paths_set: set[Path] = set()
+            for file in selected:
+                candidates, _ = search_prefix(file, search_dirs)
+                bundle_paths_set.update(candidates)
+
+            # 渲染预览
             success, message = render_spine_preview_from_bundle(
-                bundle_path=bundle_paths,
+                bundle_path=list(bundle_paths_set),
                 output_dir=output_dir,
                 viewer_path=viewer_path,
                 log=self.app.logger.log
