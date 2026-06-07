@@ -9,16 +9,17 @@ from .models import LogFunc, AssetKey, AssetType, BundleFileInfo, ProgressCallba
 from .bundle import Bundle, analyze_bundles, BUNDLE_ANALYZERS
 
 
-def collect_candidates_by_prefix(
-    source_paths: list[Path],
+def search_prefix(
+    source_path: Path,
     search_dirs: list[Path],
     log: LogFunc = no_log,
 ) -> tuple[list[Path], str]:
     """
     通过文件名前缀(prefix)匹配，在搜索目录中收集候选目标文件。
+    使用与源文件相同的后缀名进行匹配。如果源文件后缀为 .backup，则去掉 .backup 后匹配。
 
     Args:
-        source_paths: 源文件路径列表
+        source_path: 源文件路径
         search_dirs: 搜索目录列表
         log: 日志记录函数
 
@@ -27,7 +28,11 @@ def collect_candidates_by_prefix(
         - 成功时: (candidates, "")
         - 失败时: ([], 错误消息)
     """
-    prefix = parse_filename(str(source_paths[0].name)).prefix
+    prefix = parse_filename(str(source_path.name)).prefix
+    # 如果后缀是 .backup，去掉它获取实际后缀（如 .bundle.backup → .bundle）
+    extension = source_path.suffix
+    if extension == '.backup':
+        extension = Path(source_path.stem).suffix
 
     if not prefix:
         msg = t("message.search.filename_parse_failed")
@@ -35,13 +40,12 @@ def collect_candidates_by_prefix(
         return [], msg
 
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
-    extension_backup = '.backup'
 
     candidates = [
         file for dir in search_dirs
         if dir.exists() and dir.is_dir()
         for file in dir.iterdir()
-        if file.is_file() and file.name.startswith(prefix) and file.suffix != extension_backup
+        if file.is_file() and file.name.startswith(prefix) and file.suffix == extension
     ]
 
     if not candidates:
@@ -53,14 +57,15 @@ def collect_candidates_by_prefix(
     return candidates, ""
 
 
-def collect_candidates_by_core(
-    source_paths: list[Path],
+def search_core(
+    source_path: Path,
     search_dirs: list[Path],
     log: LogFunc = no_log,
 ) -> tuple[list[Path], str]:
     """
     通过文件名核心部分(core)匹配，在搜索目录中收集候选目标文件。
     先通过字符串包含匹配进行初筛，再通过 parse_filename 确认 core 相同。
+    使用与源文件相同的后缀名进行匹配。如果源文件后缀为 .backup，则去掉 .backup 后匹配。
 
     Args:
         source_paths: 源文件路径列表
@@ -70,8 +75,12 @@ def collect_candidates_by_core(
     Returns:
         tuple[list[Path], str]: (候选文件路径列表, 错误消息)
     """
-    parsed = parse_filename(str(source_paths[0].name))
+    parsed = parse_filename(str(source_path.name))
     core = parsed.core
+    # 如果后缀是 .backup，去掉它获取实际后缀（如 .bundle.backup → .bundle）
+    extension = source_path.suffix
+    if extension == '.backup':
+        extension = Path(source_path.stem).suffix
 
     if not core:
         msg = t("message.search.filename_parse_failed")
@@ -79,7 +88,6 @@ def collect_candidates_by_core(
         return [], msg
 
     log(f"  > {t('log.search.file_core', core=core)}")
-    extension_backup = '.backup'
 
     # 字符串包含匹配，粗筛
     core_lower = core.lower()
@@ -89,7 +97,7 @@ def collect_candidates_by_core(
         if dir.exists() and dir.is_dir()
         for file in dir.iterdir()
         if file.is_file() and file.name.startswith(search_prefix)
-        and core_lower in file.name.lower() and file.suffix != extension_backup
+        and core_lower in file.name.lower() and file.suffix == extension
     ]
 
     # 第二轮：parse_filename 确认 core 相同（大小写不敏感）
@@ -165,7 +173,8 @@ def find_target_bundles(
     log: LogFunc = no_log,
 ) -> tuple[list[Path], str]:
     """
-    根据源文件组，在游戏资源目录中智能查找对应的目标文件组（通过前缀匹配）。
+    根据源文件组，在游戏资源目录中智能查找对应的目标文件组。
+    通过第一个文件的前缀匹配。
 
     Returns:
         tuple[list[Path], str]: (找到的目标路径列表, 状态消息)
@@ -177,7 +186,7 @@ def find_target_bundles(
 
     search_dirs = [game_resource_dir] if isinstance(game_resource_dir, Path) else game_resource_dir
 
-    candidates, err_msg = collect_candidates_by_prefix(source_paths, search_dirs, log)
+    candidates, err_msg = search_prefix(source_paths[0], search_dirs, log)
     if not candidates:
         return [], err_msg
 

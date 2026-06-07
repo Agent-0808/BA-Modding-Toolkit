@@ -20,7 +20,7 @@ from .models import (
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
-from .searching import find_target_bundles
+from .searching import find_target_bundles, search_prefix
 
 
 # ====== 资源处理相关 ======
@@ -882,7 +882,7 @@ def process_batch_legacy_batch(
         log("\n" + "=" * 50)
         log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-        new_global_files = find_all_jp_counterparts(legacy_file_path, search_paths, log)
+        new_global_files, _ = search_prefix(legacy_file_path, search_paths, log)
 
         if not new_global_files:
             log(f'  ❌ {t("log.search.no_found")}')
@@ -935,56 +935,6 @@ def process_batch_legacy_batch(
     return success_count, fail_count, failed_tasks, file_pairs
 
 # ====== 日服处理相关 ======
-
-# TODO: 名字不太对
-def find_all_jp_counterparts(
-    global_bundle_path: Path,
-    search_dirs: list[Path],
-    log: LogFunc = no_log,
-) -> list[Path]:
-    """
-    根据国际服bundle文件，查找所有相关的日服 bundle 文件。
-    日服文件通常包含额外的类型标识（如 -materials-, -timelines- 等）。
-
-    Args:
-        global_bundle_path: 国际服bundle文件的路径。
-        search_dirs: 用于查找的目录列表。
-        log: 日志记录函数。
-
-    Returns:
-        找到的日服文件路径列表。
-    """
-    log(t("log.legacy_convert.searching_jp_counterparts", name=global_bundle_path.name))
-
-    # 1. 从国际服文件名提取前缀
-    prefix = parse_filename(global_bundle_path.name).prefix
-    if not prefix:
-        log(f'  > ❌ {t("log.search.find_failed")}: {t("message.search.filename_parse_failed")}')
-        return []
-    
-    log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
-
-    jp_files: list[Path] = []
-    seen_names = set()
-
-    # 2. 在搜索目录中查找匹配前缀的所有文件
-    for search_dir in search_dirs:
-        if not (search_dir.exists() and search_dir.is_dir()):
-            continue
-        
-        for file_path in search_dir.iterdir():
-            # 排除自身
-            if file_path.name == global_bundle_path.name:
-                continue
-                
-            # 检查文件是否以通用前缀开头，且是 bundle 文件
-            if file_path.is_file() and file_path.name.startswith(prefix) and file_path.suffix == '.bundle':
-                if file_path.name not in seen_names:
-                    jp_files.append(file_path)
-                    seen_names.add(file_path.name)
-                    log(f"  > {t('log.legacy_convert.found_match', path=file_path.name)}")
-
-    return jp_files
 
 def process_modern_to_legacy_conversion(
     legacy_bundle_path: Path,

@@ -8,7 +8,7 @@ from enum import IntEnum
 
 from ...i18n import t
 from ... import core
-from ...searching import get_search_dirs, find_target_bundles
+from ...searching import get_search_dirs, find_target_bundles, search_prefix
 from ..base_tab import TabFrame
 from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
 from ..windows import FileSelectionDialog
@@ -131,7 +131,7 @@ class LegacyConversionTab(TabFrame):
         game_search_dirs = get_search_dirs(base_game_dir)
 
         # 搜索日服文件
-        modern_files = core.find_all_jp_counterparts(
+        modern_files, _ = search_prefix(
             self.legacy_zone.path, game_search_dirs, self.logger.log
         )
 

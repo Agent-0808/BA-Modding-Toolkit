@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ...i18n import t
 from ... import core
-from ...searching import collect_candidates_by_core, get_search_dirs
+from ...searching import search_core, get_search_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents, FileListbox
 from ..utils import confirm_and_replace
@@ -88,7 +88,7 @@ class AssetPackerTab(TabFrame):
         self.logger.status(t("status.processing_detailed"))
 
         search_dirs = get_search_dirs(Path(self.app.game_resource_dir_var.get()))
-        candidates, _ = collect_candidates_by_core(self.asset_paths, search_dirs, self.logger.log)
+        candidates, _ = search_core(self.asset_paths[0], search_dirs, self.logger.log)
 
         self.master.after(0, lambda: self._handle_search_result(candidates))
 

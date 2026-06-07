@@ -5,9 +5,8 @@ import sys
 from pathlib import Path
 
 from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap
-from ..searching import find_target_bundles
+from ..searching import find_target_bundles, search_prefix
 from ..core import (
-    find_all_jp_counterparts,
     SaveOptions,
     SpineOptions,
     process_mod_update,
@@ -268,9 +267,9 @@ def _get_modern_files(args: SplitTap | MergeTap, logger) -> list[Path] | None:
         if not dir_path.is_dir():
             logger.log(f"❌ Error: Resource directory not found: {dir_path}")
             return None
-        # 使用 find_all_jp_counterparts 智能查找相关文件
-        files = find_all_jp_counterparts(
-            global_bundle_path=Path(args.legacy),
+        # 使用 collect_candidates_by_prefix 智能查找相关文件
+        files, _ = search_prefix(
+            source_path=Path(args.legacy),
             search_dirs=[dir_path],
             log=logger.log
         )
