@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 
 from ...i18n import t
+from ...models import FileType
 from ...utils import CRCUtils
 from ...searching import get_search_dirs
 from ...naming import parse_filename
@@ -21,7 +22,7 @@ class CrcToolTab(TabFrame):
             self, title=t("ui.label.modified_file"),
             placeholder_text=t("ui.crc_tool.placeholder_modified"),
             on_files_selected=self.on_modified_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=False,
             logger=self.logger
         )
@@ -42,7 +43,7 @@ class CrcToolTab(TabFrame):
             self, title=t("ui.label.original_file"),
             placeholder_text=t("ui.crc_tool.placeholder_origin"),
             on_files_selected=self.on_original_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             search_path_var=self.app.game_resource_dir_var,
             allow_multiple=False,
             logger=self.logger

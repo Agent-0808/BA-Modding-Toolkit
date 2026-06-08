@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
+from ...models import FileType
 from ...utils import get_environment_info
 from ..components import Theme, UIComponents, SettingRow
 from ..utils import select_file
@@ -271,7 +272,7 @@ class SettingsDialog(tb.Toplevel):
         """选择Spine转换器路径"""
         select_file(
             title=t("ui.dialog.select", type=t("file_type.skel_converter")),
-            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
             callback=lambda path: (
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
@@ -283,7 +284,7 @@ class SettingsDialog(tb.Toplevel):
         """选择SpineViewerCLI路径"""
         select_file(
             title=t("ui.dialog.select", type=t("file_type.spine_viewer")),
-            filetypes=[(t("file_type.executable"), "*.exe"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
             callback=lambda path: (
                 self.app.spine_viewer_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.spine_viewer_set", path=path))

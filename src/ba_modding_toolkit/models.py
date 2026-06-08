@@ -2,6 +2,7 @@
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Callable, Literal, NamedTuple
+from enum import StrEnum
 from PIL import Image
 
 
@@ -163,3 +164,10 @@ REPLACEABLE_ASSET_TYPES: set[AssetType] = {
     # 其他资源类
     AssetType.PhysicMaterial, AssetType.ComputeShader, AssetType.Flare, AssetType.LensFlare,
 }
+
+class FileType(StrEnum):
+    """文件类型常量，用于 DropZone 的 file_types 参数"""
+    BUNDLE = ".bundle"
+    BUNDLE_BACKUP = ".bundle.backup"
+    ALL = "_all"
+    EXECUTABLE = ".exe"

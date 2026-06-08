@@ -6,6 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
+from ...models import FileType
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles
 from ..base_tab import TabFrame
@@ -29,7 +30,7 @@ class ModUpdateTab(TabFrame):
             self, title=t("ui.label.mod_file"),
             placeholder_text=t("ui.mod_update.placeholder_old"),
             on_files_selected=self.on_old_mod_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             logger=self.logger
         )
         
@@ -38,7 +39,7 @@ class ModUpdateTab(TabFrame):
             self, title=t("ui.label.target_resource_bundle"),
             placeholder_text=t("ui.mod_update.placeholder_new"),
             on_files_selected=self.on_new_mod_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.ALL],
             search_path_var=self.app.game_resource_dir_var,
             logger=self.logger
         )

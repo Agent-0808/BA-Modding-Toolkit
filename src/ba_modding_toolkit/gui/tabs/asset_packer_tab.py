@@ -6,6 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
+from ...models import FileType
 from ... import core
 from ...searching import search_core, get_search_dirs
 from ..base_tab import TabFrame
@@ -35,7 +36,7 @@ class AssetPackerTab(TabFrame):
             self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.packer.placeholder_bundle"),
             on_files_selected=self.on_bundles_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.ALL],
             logger=self.logger
         )
         

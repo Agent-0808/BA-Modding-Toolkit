@@ -103,6 +103,7 @@
 		"executable": "可执行文件",
 		"all_files": "所有文件",
 		"bundle": "AssetBundle 文件",
+		"bundle_backup": "AssetBundle 备份",
 		"folder": "文件夹",
 		"skel_converter": "SpineSkeletonConverter.exe",
 		"spine_viewer": "SpineViewerCLI.exe"

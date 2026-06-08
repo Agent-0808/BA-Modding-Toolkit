@@ -7,6 +7,7 @@ from pathlib import Path
 from enum import IntEnum
 
 from ...i18n import t
+from ...models import FileType
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, search_prefix
 from ..base_tab import TabFrame
@@ -68,7 +69,7 @@ class LegacyConversionTab(TabFrame):
             title=t("ui.legacy_conversion.role_legacy_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_legacy_bundle"),
             on_files_selected=self.on_legacy_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=False,
             logger=self.logger
         )
@@ -80,7 +81,7 @@ class LegacyConversionTab(TabFrame):
             title=t("ui.legacy_conversion.role_modern_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_modern_bundles"),
             on_files_selected=self._on_modern_files_selected,
-            filetypes=[(t("file_type.bundle"), "*.bundle"), (t("file_type.all_files"), "*.*")],
+            file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=True,
             logger=self.logger
         )

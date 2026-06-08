@@ -10,9 +10,10 @@ from typing import Callable, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import select_file, select_directory, open_directory
+from .utils import select_file, select_directory, open_directory, build_filetypes
 from ..i18n import t
 from ..naming import parse_filename
+from ..models import FileType
 
 # --- 日志管理类 ---
 class Logger:
@@ -269,7 +270,7 @@ class DropZone(tb.Labelframe):
         self, parent,
         title: str, placeholder_text: str,
         on_files_selected: Callable[[list[Path] | Path], None] | None = None,
-        filetypes: list[tuple[str, str]] | None = None,
+        file_types: list[FileType | str] = [FileType.BUNDLE, FileType.ALL],
         search_path_var=None,
         clear_cmd: Callable[[], None] | None = None,
         allow_folder: bool = False,
@@ -283,13 +284,16 @@ class DropZone(tb.Labelframe):
         self.placeholder_text = placeholder_text
         self._on_files_selected = on_files_selected
         self._clear_cmd = clear_cmd
-        self._filetypes = filetypes
         self._allow_folder = allow_folder
         self._allow_multiple = allow_multiple
         self._logger = logger
         self._paths: list[Path] = []
         self._open_btn = None  # "打开"按钮引用
         self._clear_btn = None  # "清除"按钮引用
+        
+        # 内部存储：转换为 tkinter 需要的 tuple 格式
+        self._tk_filetypes: list[tuple[str, str]] = build_filetypes(file_types)
+        self._allowed_extensions: set[str] = set(file_types) - {FileType.ALL}
 
         if search_path_var is not None:
             search_frame = tb.Frame(self)
@@ -359,6 +363,23 @@ class DropZone(tb.Labelframe):
             else:
                 self._on_files_selected(paths[0])
 
+    def _is_valid_file(self, path: Path) -> bool:
+        """检查是否是有效的文件（根据 filetypes 参数）"""
+        if not path.is_file():
+            return False
+        
+        # 检查后缀名
+        suffix = path.suffix
+        if suffix in self._allowed_extensions:
+            return True
+        
+        # 特殊处理 .bundle.backup（后缀是 .backup，但实际是 bundle）
+        if FileType.BUNDLE_BACKUP in self._allowed_extensions and suffix == '.backup':
+            stem_suffix = Path(path.stem).suffix
+            return stem_suffix == '.bundle'
+        
+        return False
+
     def _update_display(self) -> None:
         """根据当前文件列表更新 UI 显示"""
         if not self._paths:
@@ -422,7 +443,7 @@ class DropZone(tb.Labelframe):
             path = Path(p_str.strip('{}'))
             if self._allow_folder and path.is_dir():
                 paths_to_add.append(path)
-            elif path.is_file() and path.suffix == '.bundle':
+            elif self._is_valid_file(path):
                 paths_to_add.append(path)
         
         if not paths_to_add:
@@ -444,13 +465,13 @@ class DropZone(tb.Labelframe):
             )
             if path:
                 dir_path = Path(path)
-                bundle_files = sorted(f for f in dir_path.iterdir() if f.is_file() and f.suffix == '.bundle')
+                bundle_files = sorted(f for f in dir_path.iterdir() if self._is_valid_file(f))
                 if bundle_files:
                     self.set_files(bundle_files[:1] if not self._allow_multiple else bundle_files)
         else:
             select_file(
                 title=t("ui.dialog.select", type=self.cget("text")),
-                filetypes=self._filetypes,
+                file_types=self._tk_filetypes,
                 multiple=self._allow_multiple,
                 callback=self._handle_browse_callback,
                 log=self._logger.log if self._logger else None
@@ -1027,7 +1048,7 @@ class FileListbox:
         ft.append((t("file_type.all_files"), "*.*"))
         select_file(
             title=t("action.add_files"),
-            filetypes=ft,
+            file_types=ft,
             multiple=True,
             callback=lambda paths: self.add_files(paths),
             log=self.logger.log if self.logger else None

@@ -12,7 +12,30 @@ import ttkbootstrap as tb
 
 from ..utils import no_log
 from ..i18n import t
-from ..models import FilePair
+from ..models import FilePair, FileType
+
+
+# --- 文件类型映射表 ---
+FILE_TYPE_MAP: dict[FileType, tuple[str, str]] = {
+    # 类型 -> (语言键, glob模式)
+    FileType.BUNDLE: ("file_type.bundle", "*.bundle"),
+    FileType.BUNDLE_BACKUP: ("file_type.bundle_backup", "*.bundle.backup"),
+    FileType.ALL: ("file_type.all_files", "*.*"),
+    FileType.EXECUTABLE: ("file_type.executable", "*.exe"),
+}
+
+
+def build_filetypes(file_types: list[FileType | str]) -> list[tuple[str, str]]:
+    """根据文件类型列表构造 filetypes tuple 列表"""
+    result = []
+    for type in file_types:
+        if type in FILE_TYPE_MAP:
+            lang_key, pattern = FILE_TYPE_MAP[type]
+            result.append((t(lang_key), pattern))
+        else:
+            # 未知类型，直接使用扩展名
+            result.append((type, f"*{type}"))
+    return result
 
 def is_multiple_drop(data: str) -> bool:
     """
@@ -356,7 +379,7 @@ def select_directory(var: tk.Variable = None, title="", log=no_log):
         return None
 
 def select_file(title: str, 
-                filetypes: list[tuple[str, str]] | None = None, 
+                file_types: list[FileType | str] | list[tuple[str, str]] | None = None, 
                 multiple: bool = False,
                 callback: Callable[[Path | list[Path]], None] | None = None,
                 log = no_log) -> Path | list[Path] | None:
@@ -365,7 +388,7 @@ def select_file(title: str,
     
     Args:
         title: 对话框标题
-        filetypes: 文件类型过滤器，如 [("Bundle文件", "*.bundle"), ("所有文件", "*.*")]
+        file_types: 文件类型过滤器，支持 FileType 列表或 tkinter tuple 格式
         multiple: 是否支持多选
         callback: 选择文件后的回调函数，接收Path或Path列表作为参数
         log: 日志函数，用于记录操作
@@ -374,11 +397,18 @@ def select_file(title: str,
         单选时返回Path或None，多选时返回Path列表或空列表
     """
     try:
-        if filetypes is None:
-            filetypes = [(t("file_type.all_files"), "*.*")]
+        # 转换 file_types 为 tkinter 需要的格式
+        if file_types is None:
+            tk_filetypes = [(t("file_type.all_files"), "*.*")]
+        elif file_types and isinstance(file_types[0], (FileType, str)):
+            # FileType 列表，需要转换
+            tk_filetypes = build_filetypes(file_types)
+        else:
+            # 已经是 tuple 格式，直接使用
+            tk_filetypes = file_types
             
         if multiple:
-            filepaths = filedialog.askopenfilenames(title=title, filetypes=filetypes)
+            filepaths = filedialog.askopenfilenames(title=title, filetypes=tk_filetypes)
             if filepaths:
                 paths = [Path(p) for p in filepaths]
                 log(t("log.file.loaded", path=f"{len(paths)} files"))
@@ -387,7 +417,7 @@ def select_file(title: str,
                 return paths
             return []
         else:
-            filepath = filedialog.askopenfilename(title=title, filetypes=filetypes)
+            filepath = filedialog.askopenfilename(title=title, filetypes=tk_filetypes)
             if filepath:
                 path = Path(filepath)
                 log(t("log.file.loaded", path=path))
