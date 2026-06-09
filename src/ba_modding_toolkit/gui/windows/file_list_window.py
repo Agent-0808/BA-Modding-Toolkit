@@ -144,7 +144,7 @@ class BatchSelectDialog(tb.Toplevel):
 
     def _setup_window(self):
         self.title(t("ui.file_list.select.dialog_title"))
-        self.geometry("350x170")
+        self.geometry("400x200")
         self.transient(self.master)
         self.resizable(False, False)
 
@@ -267,7 +267,7 @@ class FileListWindow(tb.Toplevel):
 
     def _setup_window(self):
         self.title(t("ui.file_list.window_title"))
-        self.geometry("1200x600")
+        self.geometry("1400x750")
         self.transient(self.master)
 
         icon_path = self.app.root_path / "assets" / "eligma.ico"
@@ -355,31 +355,34 @@ class FileListWindow(tb.Toplevel):
         self.table.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
         # 替换内置滚动条为 ttkbootstrap 风格
-        if hasattr(self.table, 'ybar'):
+        if hasattr(self.table, 'ybar') and hasattr(self.table, 'hbar'):
             ybar_master = self.table.ybar.master
+            hbar_master = self.table.hbar.master
             
-            # 暂时解除 view 的 pack 布局，以便重新调整装箱顺序
+            # 暂时解除所有布局
             self.table.view.pack_forget()
+            self.table.ybar.pack_forget()
+            self.table.hbar.pack_forget()
             
+            # 销毁旧滚动条
             self.table.ybar.destroy()
+            self.table.hbar.destroy()
+            
+            # 创建新滚动条
             self.table.ybar = tb.Scrollbar(
                 ybar_master, command=self.table.view.yview, orient=tk.VERTICAL,
             )
+            self.table.hbar = tb.Scrollbar(
+                hbar_master, command=self.table.view.xview, orient=tk.HORIZONTAL,
+            )
             
-            # 先 pack 滚动条（抢占右侧固定宽度）
+            # 重新布局：hbar 在底部，ybar 在右侧，view 填满剩余空间
+            self.table.hbar.pack(fill=tk.X, side=tk.BOTTOM)
             self.table.ybar.pack(fill=tk.Y, side=tk.RIGHT)
-            
-            # 再重新 pack view（占满左侧剩余的全部空间）
             self.table.view.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
             
+            # 配置滚动条联动
             self.table.view.configure(yscrollcommand=self.table.ybar.set)
-
-        if hasattr(self.table, 'hbar'):
-            self.table.hbar.destroy()
-            self.table.hbar = tb.Scrollbar(
-                self.table.hbar.master, command=self.table.view.xview, orient=tk.HORIZONTAL,
-            )
-            self.table.hbar.pack(fill=tk.X)
             self.table.view.configure(xscrollcommand=self.table.hbar.set)
 
         # 默认隐藏非默认可见列和 _path 列

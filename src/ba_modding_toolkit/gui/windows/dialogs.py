@@ -38,7 +38,7 @@ class SettingsDialog(tb.Toplevel):
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.settings.title"))
-        self.geometry("600x700")
+        self.geometry("800x888")
         # 设置窗口图标
         icon_path = self.app.root_path / "assets" / "eligma.ico"
         if icon_path.exists():

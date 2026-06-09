@@ -14,6 +14,15 @@ from ..utils import no_log
 from ..i18n import t
 from ..models import FilePair, FileType
 
+from tkinterdnd2.TkinterDnD import DnDWrapper, _require
+from ttkbootstrap.window import Window as tbWindow
+
+class tbDnDWindow(tbWindow, DnDWrapper):
+    """结合 ttkbootstrap.Window 与 TkinterDnD 拖放功能的窗口类"""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.TkdndVersion = _require(self)
 
 # --- 文件类型映射表 ---
 FILE_TYPE_MAP: dict[FileType, tuple[str, str]] = {

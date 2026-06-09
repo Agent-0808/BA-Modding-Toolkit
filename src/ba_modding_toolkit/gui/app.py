@@ -19,7 +19,7 @@ from .windows import SettingsDialog, FileListWindow
 from .base_tab import TabFrame
 from .tabs import *
 
-class App(tk.Frame, ConfigMixin):
+class App(tb.Frame, ConfigMixin):
     def __init__(self, master: tk.Tk):
         super().__init__(master)
         self.master: tk.Tk = master
@@ -33,7 +33,7 @@ class App(tk.Frame, ConfigMixin):
 
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
-        self.master.geometry("600x789")
+        self.master.geometry("800x1000")
         
         # 设置 root_path
         if hasattr(sys, 'frozen'):
@@ -329,7 +329,7 @@ class App(tk.Frame, ConfigMixin):
         parent.pack_propagate(False)
         
         # 左侧侧边栏 - 使用Frame并设置bootstyle="dark"实现深色背景
-        self.sidebar_frame = tb.Frame(parent, bootstyle="dark", width=140)
+        self.sidebar_frame = tb.Frame(parent, bootstyle="dark", width=160)
         self.sidebar_frame.pack(side=tk.LEFT, fill=tk.Y)
         self.sidebar_frame.pack_propagate(False)  # 固定宽度
         
