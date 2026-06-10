@@ -127,7 +127,7 @@ class BatchLegacyTab(TabFrame):
             progress_callback=lambda current, total, filename: self.logger.status(
                 t("status.processing_batch", current=current, total=total, filename=filename)
             ),
-            skip_unchanged=True
+            skip_unchanged=self.app.skip_unchanged_var.get()
         )
 
         self.current_file_pairs = file_pairs

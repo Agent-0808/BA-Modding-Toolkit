@@ -162,7 +162,7 @@ class ModUpdateTab(TabFrame):
             save_options=save_options,
             spine_options=spine_options,
             match_strategy=self.match_strategy_var.get(),
-            skip_unchanged=True, # TODO: 添加设置
+            skip_unchanged=self.app.skip_unchanged_var.get(),
             log=self.logger.log,
         )
         

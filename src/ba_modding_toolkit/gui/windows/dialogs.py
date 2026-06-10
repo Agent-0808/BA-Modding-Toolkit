@@ -106,8 +106,8 @@ class SettingsDialog(tb.Toplevel):
         )
 
     def _init_global_options(self):
-        """初始化全局选项"""
-        section = self._create_section(t("ui.settings.group_global"))
+        """初始化保存选项"""
+        section = self._create_section(t("ui.settings.group_save"))
 
         SettingRow.create_radiobutton_row(
             section,
@@ -138,6 +138,13 @@ class SettingsDialog(tb.Toplevel):
             text_var=self.app.compression_method_var,
             values=["lzma", "lz4", "original", "none"],
             tooltip=t("option.compression_method_info")
+        )
+
+        SettingRow.create_switch(
+            section,
+            label=t("option.skip_unchanged"),
+            variable=self.app.skip_unchanged_var,
+            tooltip=t("option.skip_unchanged_info")
         )
 
     def _init_asset_options(self):

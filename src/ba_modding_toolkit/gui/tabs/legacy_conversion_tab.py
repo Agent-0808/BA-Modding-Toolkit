@@ -281,7 +281,7 @@ class LegacyConversionTab(TabFrame):
                 save_options=save_options,
                 asset_types_to_replace=asset_types_to_replace,
                 log=self.logger.log,
-                skip_unchanged=True
+                skip_unchanged=self.app.skip_unchanged_var.get()
             )
 
             if success and file_pairs:

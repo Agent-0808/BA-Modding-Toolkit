@@ -183,7 +183,7 @@ class BatchUpdateTab(TabFrame):
             max_workers=self.workers_var.get(),
             log=self.logger.log,
             progress_callback=progress_callback,
-            skip_unchanged=True,
+            skip_unchanged=self.app.skip_unchanged_var.get(),
             match_strategy=self.match_strategy_var.get(),
         )
 
