@@ -269,10 +269,7 @@ class FileListWindow(tb.Toplevel):
         self.title(t("ui.file_list.window_title"))
         self.geometry("1400x750")
         self.transient(self.master)
-
-        icon_path = self.app.root_path / "assets" / "eligma.ico"
-        if icon_path.exists():
-            self.iconbitmap(icon_path)
+        self.app.setup_icon(self)
 
     def _create_toolbar(self):
         toolbar_container = tb.Frame(self)

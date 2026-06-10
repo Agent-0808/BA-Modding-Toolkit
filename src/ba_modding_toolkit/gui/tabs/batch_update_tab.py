@@ -33,7 +33,7 @@ class BatchUpdateTab(TabFrame):
             t("ui.label.mod_file"),
             self.mod_file_list,
             t("ui.mod_update.placeholder_batch"),
-            height=10,
+            height=5,
             logger=self.logger,
             display_formatter=lambda p: f"{p.parent.name} / {p.name}"
         )

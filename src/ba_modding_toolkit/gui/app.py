@@ -33,7 +33,7 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
-        self.master.geometry("800x1000")
+        self.master.geometry("700x888")
         
         # 设置 root_path
         if hasattr(sys, 'frozen'):
@@ -46,11 +46,13 @@ class App(tb.Frame, ConfigMixin):
 
         # 设置窗口图标
         print(f"root_path: {self.root_path}")
+        self.setup_icon(self.master)
+
+    def setup_icon(self, window: tk.Toplevel):
+        """设置窗口图标"""
         icon_path = self.root_path / "assets" / "eligma.ico"
-        print(f"icon_path: {icon_path}")
         if icon_path.exists():
-            print(f"Setting icon to {icon_path}")
-            self.master.iconbitmap(icon_path)
+            window.iconbitmap(icon_path)
 
     def init_shared_variables(self):
         """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""

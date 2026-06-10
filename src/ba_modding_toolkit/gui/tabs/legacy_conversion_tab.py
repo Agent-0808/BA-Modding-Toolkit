@@ -86,10 +86,6 @@ class LegacyConversionTab(TabFrame):
             logger=self.logger
         )
         
-        # --- 选项设置区域 ---
-        options_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
-        options_frame.pack(fill=tk.X)
-        
         # --- 操作按钮 ---
         action_button_frame = tb.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=10)
