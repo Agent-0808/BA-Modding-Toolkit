@@ -109,14 +109,6 @@ ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
-def _get_filters() -> dict[str, tuple[str, Callable[[BundleFileInfo], bool]]]:
-    """要排除的文件类型，返回 True 表示排除"""
-    return {
-        "trailing_zero": (t("ui.file_list.filter.trailing_zero"), lambda item: item.trailing_bytes == 0),
-        "crc_match": (t("ui.file_list.filter.crc_match"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual == int(item.parsed_name.crc or 0)),
-        "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
-    }
-
 # 批量选中操作符定义
 def _get_select_operators() -> list[tuple[str, str]]:
     """操作符定义"""
@@ -319,7 +311,7 @@ class FileListWindow(tb.Toplevel):
         tb.Label(row2, text=t("ui.file_list.filter_label")).pack(side=tk.LEFT, padx=(0, 5))
 
         self._filter_var = tk.StringVar(value="")
-        filter_options = [""] + [label for key, (label, _) in _get_filters().items()]
+        filter_options = [""] + [label for key, (label, _) in self._get_filters().items()]
         filter_combo = tb.Combobox(
             row2, textvariable=self._filter_var,
             values=filter_options, width=20, state="readonly",
@@ -489,7 +481,7 @@ class FileListWindow(tb.Toplevel):
         """根据 core 值查找角色名称，未找到则回退为 core 本身"""
         if core == _UNSET:
             return core
-        return self._char_map.lookup(core, field=self.app.character_name_field_var.get())
+        return self._char_map.lookup(core, field=self.app.character_name_field_var.get()) or core
 
     def _on_character_field_changed(self, event=None):
         """角色名称字段下拉框变化时的处理"""
@@ -639,6 +631,14 @@ class FileListWindow(tb.Toplevel):
 
         self.app.logger.log(t("ui.file_list.analyze_complete"))
 
+    def _get_filters(self) -> dict[str, tuple[str, Callable[[BundleFileInfo], bool]]]:
+        """获取所有过滤器，返回 True 表示保留"""
+        return {
+            "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes > 0),
+            "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
+            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self._char_map.lookup(item.parsed_name.core, field="full_name") is not None),
+        }
+
     def _apply_filter(self, event=None):
         selected_label = self._filter_var.get()
         if not selected_label:
@@ -646,7 +646,7 @@ class FileListWindow(tb.Toplevel):
             return
 
         filter_func = None
-        for key, (label, func) in _get_filters().items():
+        for key, (label, func) in self._get_filters().items():
             if label == selected_label:
                 filter_func = func
                 break
@@ -661,7 +661,7 @@ class FileListWindow(tb.Toplevel):
         for row in self.table.tablerows:
             path = row.values[ColumnId._path.value]
             item = self._items_by_path.get(path)
-            if item and not filter_func(item):
+            if item and filter_func(item):
                 self.table.tablerows_filtered.append(row)
 
         self.table._rowindex.set(0)

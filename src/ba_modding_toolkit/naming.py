@@ -185,7 +185,7 @@ class CharacterInternalIDMap:
         """映射表是否已加载"""
         return bool(self._map)
 
-    def lookup(self, core: str, field: str = "full_name") -> str:
+    def lookup(self, core: str, field: str = "full_name") -> str | None:
         """根据 core 值查找角色名称
 
         Args:
@@ -193,10 +193,8 @@ class CharacterInternalIDMap:
             field: 映射字段名（如 full_name, name_cn 等）
         
         Returns:
-            角色名称或回退值
+            角色名称，未找到则返回 None
         """
-        if not self._map:
-            return core
         core_lower = core.lower()
         # 先尝试原值匹配
         entry = self._map.get(core_lower)
@@ -207,6 +205,6 @@ class CharacterInternalIDMap:
                     entry = self._map.get(core_lower.removesuffix(suffix))
                     break
         if entry is None:
-            return core
+            return None
         name = entry.get(field, "")
-        return name if name else core
+        return name if name else None

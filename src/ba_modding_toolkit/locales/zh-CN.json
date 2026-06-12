@@ -541,9 +541,9 @@
 				"matched": "已选中 {count} 行"
 			},
 			"filter": {
-				"trailing_zero": "排除尾部字节为 0",
-				"crc_match": "排除 CRC 匹配",
-				"crc_mismatch": "排除 CRC 不匹配"
+				"has_trailing": "含有尾部字节",
+				"crc_mismatch": "CRC 不匹配",
+				"has_character": "角色名已映射"
 			},
 			"op": {
 				"contains": "包含",
