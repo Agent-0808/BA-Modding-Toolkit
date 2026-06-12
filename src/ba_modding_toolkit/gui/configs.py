@@ -44,6 +44,7 @@ class ConfigMixin:
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
     output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", _get_default_output_dir)]
+    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "full_name")]
     
     # SaveOptions (原 GlobalOptions)
     extra_bytes_var: Annotated[tk.StringVar, ConfigMeta("SaveOptions", "0x08080808")]

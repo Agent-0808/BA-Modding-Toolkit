@@ -14,7 +14,7 @@ from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 
 from ...i18n import t
 from ...utils import CRCUtils
-from ...naming import parse_filename
+from ...naming import parse_filename, CharacterInternalIDMap
 from ...searching import list_bundle_files, search_prefix, get_search_dirs
 from ...bundle import analyze_bundles
 from ...models import BundleFileInfo
@@ -52,17 +52,18 @@ _UNSET = "—"
 
 class ColumnId(Enum):
     """Tableview 列索引"""
-    filename = 0
-    directory = 1
-    file_size = 2
-    modified_time = 3
-    trailing_bytes = 4
-    trailing_content = 5
-    core = 6
-    res_type = 7
-    crc = 8
-    crc_actual = 9
-    _path = 10  # 隐藏列，用于 iid
+    _path = 0           # 隐藏列，用于 iid
+    filename = 1
+    directory = 2
+    file_size = 3
+    modified_time = 4
+    trailing_bytes = 5
+    trailing_content = 6
+    core = 7
+    char_name = 8       # 角色名称（通过映射表从 core 转换）
+    res_type = 9
+    crc = 10
+    crc_actual = 11
 
 
 class ColumnDef(NamedTuple):
@@ -83,6 +84,7 @@ def _get_columns() -> list[ColumnDef]:
         ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
         ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
         ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
+        ColumnDef(ColumnId.char_name, t("ui.file_list.column.character"), 150, default_visible=False),
         ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
         ColumnDef(ColumnId.crc, t("ui.file_list.column.crc"), 80, default_visible=False),
         ColumnDef(ColumnId.crc_actual, t("ui.file_list.column.crc_actual"), 80, default_visible=False),
@@ -103,7 +105,7 @@ def _get_analyzer_options() -> list[AnalyzerOption]:
 
 ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "trailing": [ColumnId.trailing_bytes, ColumnId.trailing_content],
-    "naming": [ColumnId.core, ColumnId.res_type],
+    "naming": [ColumnId.core, ColumnId.char_name, ColumnId.res_type],
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
@@ -247,6 +249,7 @@ class FileListWindow(tb.Toplevel):
         self._all_items: list[BundleFileInfo] = []
         self._items_by_path: dict[str, BundleFileInfo] = {}
         self._closed: bool = False
+        self._char_map = CharacterInternalIDMap()  # 角色ID映射表
 
         self.ctx_list: list[tuple[str, Callable[[], None]]] = [
             (t("action.analyze"), self._ctx_analyze),
@@ -257,6 +260,7 @@ class FileListWindow(tb.Toplevel):
         ]
 
         self._setup_window()
+        self._load_character_mapping()
         self._create_toolbar()
         self._create_status_bar()
         self._create_tableview()
@@ -323,13 +327,31 @@ class FileListWindow(tb.Toplevel):
         filter_combo.pack(side=tk.LEFT, padx=(0, 5))
         filter_combo.bind("<<ComboboxSelected>>", self._apply_filter)
 
+        # 角色名称字段选择
+        char_label_frame = tb.Frame(row2)
+        char_label_frame.pack(side=tk.LEFT, padx=(10, 5))
+        tb.Label(char_label_frame, text=t("option.character_name_field")).pack(side=tk.LEFT)
+        UIComponents.create_tooltip_icon(char_label_frame, t("option.character_name_field_info")).pack(side=tk.LEFT, padx=(3, 0))
+
+        char_field_values = CharacterInternalIDMap.NAME_FIELDS
+        self._char_field_var = tk.StringVar(
+            value=self.app.character_name_field_var.get() or char_field_values[0]
+        )
+        char_field_combo = tb.Combobox(
+            row2, textvariable=self._char_field_var,
+            values=char_field_values, width=10, state="readonly",
+        )
+        char_field_combo.pack(side=tk.LEFT, padx=(0, 5))
+        char_field_combo.bind("<<ComboboxSelected>>", self._on_character_field_changed)
+
     def _create_tableview(self):
         columns = _get_columns()
+        # _path 列放在第一个位置，作为 iid_field
         coldata = [
+            {"text": "_path", "width": 0, "stretch": False, "minwidth": 0}
+        ] + [
             {"text": col.text, "width": col.width, "stretch": False}
             for col in columns
-        ] + [
-            {"text": "_path", "width": 0, "stretch": False, "minwidth": 0}
         ]
 
         colors = tb.Style().colors
@@ -382,18 +404,18 @@ class FileListWindow(tb.Toplevel):
             self.table.view.configure(yscrollcommand=self.table.ybar.set)
             self.table.view.configure(xscrollcommand=self.table.hbar.set)
 
-        # 默认隐藏非默认可见列和 _path 列
+        # 默认隐藏 _path 列（索引 0）和非默认可见列
+        self.table.get_column(index=0, visible=False).hide()
         for i, col in enumerate(columns):
             if not col.default_visible:
-                self.table.get_column(index=i, visible=False).hide()
-        self.table.get_column(index=len(columns), visible=False).hide()
+                self.table.get_column(index=i + 1, visible=False).hide()
 
         # monkey-patch reset_column_filters 以确保 _path 列在重置过滤器后仍保持隐藏
         # "Show All" 会显示所有业务列，但不应暴露技术列 _path
         _orig_reset_column_filters = self.table.reset_column_filters
         def _patched_reset_column_filters(*args, **kwargs):
             _orig_reset_column_filters(*args, **kwargs)
-            self.table.get_column(index=len(columns), visible=False).hide()
+            self.table.get_column(index=0, visible=False).hide()
         self.table.reset_column_filters = _patched_reset_column_filters
 
         # 在内置右键菜单中追加应用专属操作
@@ -454,6 +476,37 @@ class FileListWindow(tb.Toplevel):
 
     # -------- 数据操作 --------
 
+    def _get_addons_dir(self) -> Path:
+        """获取 Addons 目录路径"""
+        return self.app.root_path.parent.parent / "Addons"
+
+    def _load_character_mapping(self):
+        """加载角色ID映射表 CSV"""
+        csv_path = self._get_addons_dir() / "BA-Characters-Internal-ID.csv"
+        self._char_map.load(csv_path)
+
+    def _lookup_character_name(self, core: str) -> str:
+        """根据 core 值查找角色名称，未找到则回退为 core 本身"""
+        if core == _UNSET:
+            return core
+        return self._char_map.lookup(core, field=self.app.character_name_field_var.get())
+
+    def _on_character_field_changed(self, event=None):
+        """角色名称字段下拉框变化时的处理"""
+        self.app.character_name_field_var.set(self._char_field_var.get())
+        self._refresh_character_column()
+
+    def _refresh_character_column(self):
+        """刷新角色名称列"""
+        for row in self.table.tablerows:
+            path = row.values[ColumnId._path.value]
+            item = self._items_by_path.get(path)
+            if item and item.parsed_name:
+                core_display = item.parsed_name.core
+                row.values[ColumnId.char_name.value] = self._lookup_character_name(core_display)
+                # 通过 setter 触发 refresh() 同步到 Treeview
+                row.values = row.values
+
     def _select_directory(self):
         select_directory(self._dir_var, t("option.game_root_dir"), self.app.logger.log)
 
@@ -471,6 +524,7 @@ class FileListWindow(tb.Toplevel):
         self._status_label.config(text=t("ui.file_list.scanning"))
         self._progress["value"] = 0
         self.table.delete_rows()
+        self._load_character_mapping()
 
         def _scan():
             items = list_bundle_files(base_dir)
@@ -524,6 +578,7 @@ class FileListWindow(tb.Toplevel):
             _format_hex(item.trailing_content) if item.trailing_content is not None else _UNSET
         )
         core_display = item.parsed_name.core if item.parsed_name else _UNSET
+        character_display = self._lookup_character_name(core_display) if item.parsed_name else _UNSET
         res_type_display = item.parsed_name.res_type if item.parsed_name and item.parsed_name.res_type else _UNSET
         crc_display = (
             f"{int(item.parsed_name.crc):08X}" if item.parsed_name and item.parsed_name.crc else _UNSET
@@ -536,17 +591,18 @@ class FileListWindow(tb.Toplevel):
         display_dir = parent_dir.parent if parent_dir.name in ["Windows", "Android"] else parent_dir
 
         return [
-            item.path.name,
-            display_dir.name,
-            _format_file_size(item.file_size),
-            _format_time(item.modified_time),
-            trailing_display,
-            trailing_content_display,
-            core_display,
-            res_type_display,
-            crc_display,
-            crc_actual_display,
-            str(item.path),
+            str(item.path),           # 0: _path
+            item.path.name,           # 1: filename
+            display_dir.name,         # 2: directory
+            _format_file_size(item.file_size),  # 3: file_size
+            _format_time(item.modified_time),   # 4: modified_time
+            trailing_display,         # 5: trailing_bytes
+            trailing_content_display, # 6: trailing_content
+            core_display,             # 7: core
+            character_display,        # 8: character
+            res_type_display,         # 9: res_type
+            crc_display,              # 10: crc
+            crc_actual_display,       # 11: crc_actual
         ]
 
     def _on_scan_complete(self, items: list[BundleFileInfo]):

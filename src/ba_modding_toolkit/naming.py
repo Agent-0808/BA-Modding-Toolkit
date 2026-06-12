@@ -1,6 +1,8 @@
 # naming.py
 
+import csv
 import re
+from pathlib import Path
 from .models import ParsedFilename
 
 # -------- 文件名解析常量 --------
@@ -136,3 +138,75 @@ def parse_filename(filename: str) -> ParsedFilename:
         crc=crc,
         prefix=prefix
     )
+
+
+# -------- 角色ID映射 --------
+
+# core 值中需要剥离的已知后缀
+_CORE_SUFFIXES = ("_spr", "_home", "_original")
+
+
+class CharacterInternalIDMap:
+    """角色ID映射表，从 CSV 加载 core → 角色名称的映射"""
+
+    # 可用的名称字段
+    NAME_FIELDS = ["full_name", "name_cn", "name_jp", "name_tw", "name_en", "name_kr"]
+
+    def __init__(self):
+        self._map: dict[str, dict[str, str]] = {}
+
+    def load(self, csv_path: Path) -> bool:
+        """从 CSV 文件加载映射表，返回是否成功"""
+        self._map.clear()
+        if not csv_path.exists():
+            return False
+        try:
+            with open(csv_path, 'r', encoding='utf-8-sig') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    file_id = row.get("file_id", "").strip()
+                    if not file_id:
+                        continue
+                    self._map[file_id.lower()] = {
+                        "full_name": row.get("full_name", ""),
+                        "name_cn": row.get("name_cn", ""),
+                        "name_jp": row.get("name_jp", ""),
+                        "name_tw": row.get("name_tw", ""),
+                        "name_en": row.get("name_en", ""),
+                        "name_kr": row.get("name_kr", ""),
+                    }
+            return True
+        except Exception as e:
+            print(f"Failed to load BACII: {e}")
+            return False
+
+    @property
+    def loaded(self) -> bool:
+        """映射表是否已加载"""
+        return bool(self._map)
+
+    def lookup(self, core: str, field: str = "full_name") -> str:
+        """根据 core 值查找角色名称
+
+        Args:
+            core: 解析后的 core 值（如 ch0808_spr）
+            field: 映射字段名（如 full_name, name_cn 等）
+        
+        Returns:
+            角色名称或回退值
+        """
+        if not self._map:
+            return core
+        core_lower = core.lower()
+        # 先尝试原值匹配
+        entry = self._map.get(core_lower)
+        # 未找到则尝试剥离后缀
+        if entry is None:
+            for suffix in _CORE_SUFFIXES:
+                if core_lower.endswith(suffix):
+                    entry = self._map.get(core_lower.removesuffix(suffix))
+                    break
+        if entry is None:
+            return core
+        name = entry.get(field, "")
+        return name if name else core

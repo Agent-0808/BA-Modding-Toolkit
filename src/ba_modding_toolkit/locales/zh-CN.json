@@ -99,7 +99,11 @@
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
 		"max_workers": "并行线程数",
-		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。"
+		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
+		"character_id_map": "角色ID映射表",
+		"character_id_map_info": "角色内部ID与名称的映射表，用于在文件列表中显示角色名称",
+		"character_name_field": "角色名称",
+		"character_name_field_info": "选择角色名称的显示字段：\nfull_name: 基沃托斯古书馆（最完整）\nname_cn: 国服名称\nname_jp: 日语名称\nname_tw: 繁體中文\nname_en: 英语名称\nname_kr: 韩语名称"
 	},
 	"file_type": {
 		"executable": "可执行文件",
@@ -201,7 +205,8 @@
 			"download_guide": "是否前往下载 {program}？\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter 未配置。\n请在设置页面配置 SpineSkeletonDataConverter 的路径。",
 			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。"
-		}
+		},
+		"download_confirm": "将从此地址下载文件：\n{url}\n\n保存至：{path}"
 	},
 	"status": {
 		"ready": "准备就绪",
@@ -236,6 +241,7 @@
 			"added_count": "已添加 {count} 个文件",
 			"removed_count": "已移除 {count} 个文件",
 			"list_cleared": "列表已清空",
+			"downloaded": "已下载: {path}",
 			"no_files_found_in_folder": "该文件夹中未找到 {type} 文件",
 			"no_changes_made": "该文件未进行任何修改，未保存。",
 			"not_exist": "文件不存在: {path}",
@@ -502,6 +508,7 @@
 				"trailing_bytes": "尾部字节",
 				"trailing_content": "尾部内容",
 				"core": "Core",
+				"character": "角色名称",
 				"res_type": "资源类型",
 				"crc": "文件名CRC",
 				"crc_actual": "实际CRC"

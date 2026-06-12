@@ -3,6 +3,7 @@
 import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
+import urllib.request
 from ttkbootstrap.widgets.scrolled import ScrolledFrame
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -223,6 +224,18 @@ class SettingsDialog(tb.Toplevel):
             download_guide_cmd=self.app.show_spine_viewer_download_guide
         )
 
+        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
+
+        # 角色ID映射表
+        SettingRow.create_button_row(
+            section,
+            label=t("option.character_id_map"),
+            button_text=t("action.download"),
+            command=self.download_BACII_map,
+            bootstyle="warning",
+            tooltip=t("option.character_id_map_info")
+        )
+
     def _init_footer_buttons(self):
         """初始化底部按钮栏"""
         footer_frame = tb.Frame(self)
@@ -296,6 +309,28 @@ class SettingsDialog(tb.Toplevel):
             ),
             log=self.app.logger.log
         )
+
+    def download_BACII_map(self):
+        """下载角色ID映射表"""
+        url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
+        addons_dir = self.app.root_path.parent.parent / "Addons"
+        save_path = addons_dir / "BA-Characters-Internal-ID.csv"
+
+        if not messagebox.askyesno(
+            t("common.3rd_party"),
+            t("message.download_confirm", url=url, path=save_path),
+            parent=self
+        ):
+            return
+
+        try:
+            addons_dir.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve(url, save_path)
+            self.app.logger.log(t("log.file.downloaded", path=save_path))
+            messagebox.showinfo(t("common.success"), t("message.save_success"), parent=self)
+        except Exception as e:
+            self.app.logger.log(t("log.error_detail", error=e))
+            messagebox.showerror(t("common.error"), t("message.save_error", error=e), parent=self)
 
     def print_environment_info(self):
         """打印环境信息"""
