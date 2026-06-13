@@ -291,6 +291,11 @@ def get_environment_info(ignore_tk: bool = False):
                 return False
         return False # 在非Windows系统上不是管理员
 
+    def _exe_dir() -> str | None:
+        if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
+            return str(Path(__compiled__.containing_dir).resolve())
+        return None
+
     lines: list[str] = []
     lines.append("======== Environment Information ========")
 
@@ -313,6 +318,7 @@ def get_environment_info(ignore_tk: bool = False):
     lines.append(f"Python Version:      {sys.version.splitlines()[0]}")
     lines.append(f"Python Executable:   {sys.executable}")
     lines.append(f"Working Directory:   {Path.cwd()}")
+    lines.append(f"EXE Directory:       {_exe_dir() or 'N/A'}")
     lines.append(f"Running as Admin:    {_is_admin()}")
 
     # --- Library Versions ---

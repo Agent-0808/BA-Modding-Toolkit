@@ -329,8 +329,8 @@ class SettingsDialog(tb.Toplevel):
     def download_BACII_map(self):
         """下载角色ID映射表"""
         url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
-        # 下载到默认路径
-        save_path = self.app.root_path.parent.parent / "Addons" / "BA-Characters-Internal-ID.csv"
+        # 下载到 exe 同级目录下的 Addons 子目录
+        save_path = self.app.exe_dir / "Addons" / "BA-Characters-Internal-ID.csv"
 
         if not messagebox.askyesno(
             t("common.3rd_party"),

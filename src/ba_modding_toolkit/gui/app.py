@@ -24,7 +24,7 @@ class App(tb.Frame, ConfigMixin):
         super().__init__(master)
         self.master: tk.Tk = master
         self.setup_main_window()
-        self.config_manager = ConfigManager("config.toml")
+        self.config_manager = ConfigManager(self.exe_dir / "config.toml")
         self.init_shared_variables()
         # 在创建UI组件前加载配置，确保语言设置正确
         self.load_config_on_startup()  # 启动时加载配置
@@ -34,17 +34,23 @@ class App(tb.Frame, ConfigMixin):
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
         self.master.geometry("700x888")
-        
-        # 设置 root_path
-        if hasattr(sys, 'frozen'):
-            # 打包环境：使用 exe 同级目录
-            # 根据 build.yml 配置，资源文件被打包到 ba_modding_toolkit 子目录
+
+        # 设置路径
+        if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
+            # 打包环境（nuitka onefile）
+            # __compiled__.containing_dir 为原始 exe 所在目录
+            self.exe_dir = Path(__compiled__.containing_dir).resolve()
+            # root_path: nuitka 解压的资源目录（temp 目录下）
             self.root_path = Path(sys.executable).parent / "ba_modding_toolkit"
         else:
-            # 开发环境：src/ba_modding_toolkit/gui/app.py -> src/ba_modding_toolkit/
+            # 开发环境
+            # exe_dir: 项目根目录 BA-Modding-Toolkit/
+            self.exe_dir = Path(__file__).parents[3]
+            # root_path：src/ba_modding_toolkit/
             self.root_path = Path(__file__).parents[1]
 
         # 设置窗口图标
+        print(f"exe_dir: {self.exe_dir}")
         print(f"root_path: {self.root_path}")
         self.setup_icon(self.master)
 

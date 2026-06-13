@@ -468,10 +468,6 @@ class FileListWindow(tb.Toplevel):
 
     # -------- 数据操作 --------
 
-    def _get_addons_dir(self) -> Path:
-        """获取 Addons 目录路径"""
-        return self.app.root_path.parent.parent / "Addons"
-
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
         path = self.app.bacii_map_path_var.get().strip()
