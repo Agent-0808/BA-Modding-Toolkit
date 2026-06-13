@@ -72,6 +72,9 @@ class ConfigMixin:
     # SpineViewer
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
 
+    # CharacterMap
+    bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "")]
+
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]

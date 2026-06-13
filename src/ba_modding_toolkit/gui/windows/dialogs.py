@@ -191,7 +191,8 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.spine_converter_path_var,
             select_cmd=self.select_spine_converter_path,
             tooltip=t("option.skel_converter_path_info"),
-            download_guide_cmd=self.app.show_spine_converter_download_guide
+            download_guide_cmd=self.app.show_spine_converter_download_guide,
+            status_check=lambda: Path(self.app.spine_converter_path_var.get()).is_file()
         )
 
         SettingRow.create_switch(
@@ -221,19 +222,22 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.spine_viewer_path_var,
             select_cmd=self.select_spine_viewer_path,
             tooltip=t("option.spine_viewer_path_info"),
-            download_guide_cmd=self.app.show_spine_viewer_download_guide
+            download_guide_cmd=self.app.show_spine_viewer_download_guide,
+            status_check=lambda: Path(self.app.spine_viewer_path_var.get()).is_file()
         )
 
         tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
 
         # 角色ID映射表
-        SettingRow.create_button_row(
+        SettingRow.create_path_selector(
             section,
             label=t("option.character_id_map"),
-            button_text=t("action.download"),
-            command=self.download_BACII_map,
-            bootstyle="warning",
-            tooltip=t("option.character_id_map_info")
+            path_var=self.app.bacii_map_path_var,
+            select_cmd=self.select_character_map_path,
+            open_cmd=None,
+            tooltip=t("option.character_id_map_info"),
+            download_guide_cmd=self.download_BACII_map,
+            status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
         )
 
     def _init_footer_buttons(self):
@@ -310,11 +314,23 @@ class SettingsDialog(tb.Toplevel):
             log=self.app.logger.log
         )
 
+    def select_character_map_path(self):
+        """选择角色ID映射表路径"""
+        select_file(
+            title=t("ui.dialog.select", type=t("option.character_id_map")),
+            file_types=[FileType.CSV, FileType.ALL],
+            callback=lambda path: (
+                self.app.bacii_map_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.character_map_set", path=path))
+            ),
+            log=self.app.logger.log
+        )
+
     def download_BACII_map(self):
         """下载角色ID映射表"""
         url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
-        addons_dir = self.app.root_path.parent.parent / "Addons"
-        save_path = addons_dir / "BA-Characters-Internal-ID.csv"
+        # 下载到默认路径
+        save_path = self.app.root_path.parent.parent / "Addons" / "BA-Characters-Internal-ID.csv"
 
         if not messagebox.askyesno(
             t("common.3rd_party"),
@@ -324,8 +340,9 @@ class SettingsDialog(tb.Toplevel):
             return
 
         try:
-            addons_dir.mkdir(parents=True, exist_ok=True)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
             urllib.request.urlretrieve(url, save_path)
+            self.app.bacii_map_path_var.set(str(save_path))
             self.app.logger.log(t("log.file.downloaded", path=save_path))
             messagebox.showinfo(t("common.success"), t("message.save_success"), parent=self)
         except Exception as e:

@@ -171,3 +171,4 @@ class FileType(StrEnum):
     BUNDLE_BACKUP = ".bundle.backup"
     ALL = "_all"
     EXECUTABLE = ".exe"
+    CSV = ".csv"

@@ -503,19 +503,43 @@ class SettingRow:
         return frame
 
     @staticmethod
-    def _add_label_area(parent: tb.Frame, text: str, tooltip_text: str | None) -> None:
-        """私有辅助：添加左侧标签和提示图标"""
+    def _add_label_area(parent: tb.Frame, text: str, tooltip_text: str | None, status_check: Callable[[], bool] | None = None) -> Callable[[], None] | None:
+        """私有辅助：添加左侧标签和提示图标
+
+        Args:
+            status_check: 可选的状态检查函数，返回 True 表示已配置（绿色指示器）
+
+        Returns:
+            如果提供了 status_check，返回一个刷新指示器状态的函数；否则返回 None
+        """
         # 使用 Frame 包裹 Label 和 Tooltip，确保它们靠左紧挨
         left_frame = tb.Frame(parent)
         left_frame.pack(side=tk.LEFT, anchor="w")
         
         lbl = tb.Label(left_frame, text=text)
         lbl.pack(side=tk.LEFT)
-        
+
+        refresh_fn = None
+
+        if status_check:
+            indicator = tb.Label(left_frame, text="●", font=("", 8))
+            indicator.pack(side=tk.LEFT, padx=(5, 0))
+
+            def _refresh():
+                if not indicator.winfo_exists():
+                    return
+                color = "green" if status_check() else "gray"
+                indicator.config(foreground=color)
+
+            refresh_fn = _refresh
+            _refresh()
+
         if tooltip_text:
             # 复用原本的 Tooltip 逻辑，但图标稍微调小或改色
             tip_label = UIComponents.create_tooltip_icon(left_frame, tooltip_text)
             tip_label.pack(side=tk.LEFT, padx=(5, 0))
+
+        return refresh_fn
 
     @staticmethod
     def _setup_dependency(
@@ -592,7 +616,8 @@ class SettingRow:
         select_cmd: Callable[[], None],
         open_cmd: Callable[[], None] | None = None,
         tooltip: str | None = None,
-        download_guide_cmd: Callable[[], None] | None = None
+        download_guide_cmd: Callable[[], None] | None = None,
+        status_check: Callable[[], bool] | None = None
     ) -> tb.Frame:
         """创建路径选择行
         
@@ -604,9 +629,10 @@ class SettingRow:
             open_cmd: 打开路径命令（可选）
             tooltip: 提示文本（可选）
             download_guide_cmd: 下载引导命令（可选），当路径不合法时显示下载按钮
+            status_check: 状态检查函数（可选），返回 True 显示绿色指示器
         """
         container = SettingRow.create_container(parent)
-        SettingRow._add_label_area(container, label, tooltip)
+        refresh_indicator = SettingRow._add_label_area(container, label, tooltip, status_check)
         
         # 右侧区域容器
         right_frame = tb.Frame(container)
@@ -644,7 +670,11 @@ class SettingRow:
         # 输入框填充剩余中间区域
         entry = tb.Entry(right_frame, textvariable=path_var)
         entry.pack(side=tk.RIGHT, fill=tk.X, expand=True)
-        
+
+        # 路径变化时刷新状态指示器
+        if refresh_indicator:
+            path_var.trace_add('write', lambda *_: refresh_indicator())
+
         return container
 
     @staticmethod
@@ -787,14 +817,19 @@ class SettingRow:
         button_text: str,
         command: Callable[[], None],
         tooltip: str | None = None,
-        bootstyle: str = "info"
+        bootstyle: str = "info",
+        status_check: Callable[[], bool] | None = None
     ) -> tb.Frame:
         """创建按钮行"""
         container = SettingRow.create_container(parent)
-        SettingRow._add_label_area(container, label, tooltip)
+        refresh_indicator = SettingRow._add_label_area(container, label, tooltip, status_check)
 
         button = UIComponents.create_button(container, button_text, command, bootstyle=bootstyle, style="compact")
         button.pack(side=tk.RIGHT)
+
+        # 保存刷新函数，供外部调用
+        if refresh_indicator:
+            container._refresh_indicator = refresh_indicator
 
         return container
 

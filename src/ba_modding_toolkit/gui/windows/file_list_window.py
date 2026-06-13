@@ -474,8 +474,9 @@ class FileListWindow(tb.Toplevel):
 
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
-        csv_path = self._get_addons_dir() / "BA-Characters-Internal-ID.csv"
-        self._char_map.load(csv_path)
+        path = self.app.bacii_map_path_var.get().strip()
+        if path:
+            self._char_map.load(Path(path))
 
     def _lookup_character_name(self, core: str) -> str:
         """根据 core 值查找角色名称，未找到则回退为 core 本身"""
