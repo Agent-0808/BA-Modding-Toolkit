@@ -40,6 +40,15 @@ _CORE_SUFFIX_PREFIX: dict[str, str] = {
 }
 _DEFAULT_SEARCH_PREFIX = 'assets-_mx-characters-'
 
+# 常见 mod 类型文件名前缀
+COMMON_MOD_PREFIXES: list[str] = [
+    'assets-_mx-spinelobbies-',
+    'assets-_mx-spinecharacters-',
+    'assets-_mx-characters-',
+    'assets-_mx-npcs-',
+    'assets-_mx-spinebackground-',
+]
+
 
 def get_category_prefix(core: str) -> str:
     """根据 core 后缀返回对应的搜索前缀"""

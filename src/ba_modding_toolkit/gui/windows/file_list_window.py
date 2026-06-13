@@ -14,7 +14,7 @@ from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 
 from ...i18n import t
 from ...utils import CRCUtils
-from ...naming import parse_filename, CharacterInternalIDMap
+from ...naming import parse_filename, CharacterInternalIDMap, COMMON_MOD_PREFIXES
 from ...searching import list_bundle_files, search_prefix, get_search_dirs
 from ...bundle import analyze_bundles
 from ...models import BundleFileInfo
@@ -637,6 +637,7 @@ class FileListWindow(tb.Toplevel):
             "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes > 0),
             "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
             "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self._char_map.lookup(item.parsed_name.core, field="full_name") is not None),
+            "common_mod": (t("ui.file_list.filter.common_mod"), lambda item: any(item.path.name.startswith(p) for p in COMMON_MOD_PREFIXES)),
         }
 
     def _apply_filter(self, event=None):

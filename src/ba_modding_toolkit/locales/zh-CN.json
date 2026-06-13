@@ -543,7 +543,8 @@
 			"filter": {
 				"has_trailing": "含有尾部字节",
 				"crc_mismatch": "CRC 不匹配",
-				"has_character": "角色名已映射"
+				"has_character": "角色名已映射",
+				"common_mod": "常见 mod 前缀名"
 			},
 			"op": {
 				"contains": "包含",
