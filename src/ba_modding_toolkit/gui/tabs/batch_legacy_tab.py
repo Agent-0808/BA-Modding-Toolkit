@@ -77,17 +77,11 @@ class BatchLegacyTab(TabFrame):
 
     def _run_batch_conversion(self):
         """批量处理旧版到新版国际服的转换"""
-        output_dir = Path(self.app.output_dir_var.get())
-
         if not self.legacy_file_list:
             messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
 
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            self.logger.log(f'❌ {t("message.create_dir_failed_detail",path=output_dir, error=e)}')
-            return
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
 
         # 重置输出文件路径列表和按钮状态
         self.current_file_pairs = []

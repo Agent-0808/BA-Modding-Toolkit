@@ -229,9 +229,7 @@ class LegacyConversionTab(TabFrame):
 
     def run_conversion(self):
         # 1. 验证输入
-        output_dir = Path(self.app.output_dir_var.get())
         modern_files = self.modern_zone.paths
-
         if not self.legacy_zone.path:
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
@@ -239,11 +237,7 @@ class LegacyConversionTab(TabFrame):
             messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
 
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            self.logger.log(f'❌ {t("message.create_dir_failed_detail",path=output_dir, error=e)}')
-            return
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
         
         # 重置输出文件路径列表和按钮状态
         self.current_file_pairs = []

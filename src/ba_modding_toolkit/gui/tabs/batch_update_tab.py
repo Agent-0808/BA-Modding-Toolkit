@@ -137,16 +137,9 @@ class BatchUpdateTab(TabFrame):
         self.logger.log(t("log.batch.start"))
         self.logger.status(t("status.batch_starting"))
 
-        output_dir = Path(self.app.output_dir_var.get())
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
         base_game_dir = Path(self.app.game_resource_dir_var.get())
         search_paths = get_search_dirs(base_game_dir)
-
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
-            self.logger.status(t("status.error", error=e))
-            return
 
         self.current_file_pairs = []
         self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))

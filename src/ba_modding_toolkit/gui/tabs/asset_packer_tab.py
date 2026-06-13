@@ -120,22 +120,13 @@ class AssetPackerTab(TabFrame):
         self.current_file_pairs = []
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
 
-        output_dir = Path(self.app.output_dir_var.get())
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.create_dir_failed_detail", path=output_dir, error=e))
-            return
-
         self.logger.log("\n" + "="*50)
         self.logger.log(t("log.packer.start_packing"))
         self.logger.status(t("common.processing"))
         
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
         perform_crc = self.app.resolve_crc_setting(self.bundle_paths[0])
-        
-        # 创建 SaveOptions 和 SpineOptions 对象
         save_options = self.app.build_save_options(perform_crc)
-
         spine_options = self.app.build_spine_options()
         
         success, message, file_pairs = core.process_asset_packing(

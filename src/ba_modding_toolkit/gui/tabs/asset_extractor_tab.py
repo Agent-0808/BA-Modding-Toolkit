@@ -85,11 +85,6 @@ class AssetExtractorTab(TabFrame):
 
     def select_output_dir(self):
         """选择输出子目录"""
-        # 默认路径为输出目录
-        default_dir = Path(self.app.output_dir_var.get())
-        if not default_dir.exists():
-            default_dir = Path.home()
-            
         selected_dir = select_directory(
             var=None,
             title=t("ui.dialog.select", type=t("option.output_dir")),
@@ -97,10 +92,9 @@ class AssetExtractorTab(TabFrame):
         )
         
         if selected_dir:
-            # 计算相对于输出目录的路径
-            output_dir = Path(self.app.output_dir_var.get())
+            output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_EXTRACT)
             selected_path = Path(selected_dir)
-            
+
             try:
                 # 尝试获取相对路径
                 rel_path = selected_path.relative_to(output_dir)
@@ -112,7 +106,7 @@ class AssetExtractorTab(TabFrame):
     def open_output_dir(self):
         """打开输出子目录"""
         subdir_name = self.subdir_var.get().strip()
-        base_path = Path(self.app.output_dir_var.get())
+        base_path = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_EXTRACT)
         
         # 绝对路径直接使用，否则拼接到全局输出目录
         if subdir_name and Path(subdir_name).is_absolute():
@@ -128,7 +122,7 @@ class AssetExtractorTab(TabFrame):
             messagebox.showerror(t("common.error"), t("message.no_file_selected"))
             return
             
-        output_path = Path(self.app.output_dir_var.get())
+        output_path = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_EXTRACT)
         
         # 获取子目录名
         subdir_name = self.subdir_var.get().strip()

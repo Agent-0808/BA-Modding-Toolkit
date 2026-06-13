@@ -154,9 +154,7 @@ class CrcToolTab(TabFrame):
                 self.logger.status(t("status.failed"))
                 return False
             
-            # 创建输出目录（如果不存在）
-            output_dir = Path(self.app.output_dir_var.get())
-            output_dir.mkdir(parents=True, exist_ok=True)
+            output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
             
             # 获取目标 CRC
             target_crc = self._validate_target_crc()

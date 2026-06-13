@@ -841,15 +841,7 @@ class FileListWindow(tb.Toplevel):
             return
 
         # 获取输出目录
-        output_dir_str = self.app.output_dir_var.get().strip()
-        if not output_dir_str:
-            messagebox.showwarning(
-                t("common.warning"),
-                t("message.output_dir_not_set")
-            )
-            return
-
-        output_dir = Path(output_dir_str)
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_PREVIEW)
 
         # 获取同组所有文件，支持只选中texture文件，自动寻找textassets的情况
         selected = [item.path for item in items]

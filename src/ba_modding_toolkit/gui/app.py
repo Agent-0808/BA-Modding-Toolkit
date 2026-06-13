@@ -284,6 +284,17 @@ class App(tb.Frame, ConfigMixin):
     def open_output_dir_in_explorer(self):
         open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
 
+    # 输出子目录常量
+    OUTPUT_SUBDIR_BUNDLES = "bundles"
+    OUTPUT_SUBDIR_EXTRACT = "extract"
+    OUTPUT_SUBDIR_PREVIEW = "preview"
+
+    def get_output_subdir(self, subdir: str) -> Path:
+        """获取输出目录下的子目录路径，自动创建"""
+        path = Path(self.output_dir_var.get()) / subdir
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
     
     def load_config_on_startup(self):
         """应用启动时自动加载配置"""

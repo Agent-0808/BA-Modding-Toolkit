@@ -129,13 +129,6 @@ class ModUpdateTab(TabFrame):
         self.current_file_pairs = []
         self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
 
-        output_dir = Path(self.app.output_dir_var.get())
-        try:
-            output_dir.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
-            return
-
         self.logger.log("\n" + "="*50)
         self.logger.log(t("log.mod_update.updating"))
         self.logger.log(f"  > {t('log.mod_update.source_files', count=len(self.source_paths))}")
@@ -146,12 +139,10 @@ class ModUpdateTab(TabFrame):
             self.logger.log(f"    - {tgt.name}")
         self.logger.status(t("status.processing_detailed", filename=self.source_paths[0].name))
         
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
         asset_types_to_replace = self.app.get_asset_types()
-        
         perform_crc = self.app.resolve_crc_setting(self.target_paths[0])
-        
         save_options = self.app.build_save_options(perform_crc)
-
         spine_options = self.app.build_spine_options()
 
         success, message, file_pairs = core.process_mod_update(
