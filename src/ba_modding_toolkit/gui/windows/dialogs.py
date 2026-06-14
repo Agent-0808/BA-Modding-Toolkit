@@ -4,6 +4,7 @@ import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
 import urllib.request
+import webbrowser
 from ttkbootstrap.widgets.scrolled import ScrolledFrame
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable
@@ -96,6 +97,14 @@ class SettingsDialog(tb.Toplevel):
             select_cmd=self.app.select_output_directory,
             open_cmd=self.app.open_output_dir_in_explorer,
             tooltip=t("option.output_dir_info")
+        )
+
+        SettingRow.create_button_row(
+            section,
+            label=t("ui.label.github"),
+            button_text=t("action.open"),
+            command=lambda: webbrowser.open("https://github.com/Agent-0808/BA-Modding-Toolkit"),
+            bootstyle="info"
         )
 
         SettingRow.create_button_row(

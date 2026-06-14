@@ -494,6 +494,7 @@
 			"original_file": "原始文件",
 			"modified_file": "待修正文件",
 			"environment": "运行环境",
+			"github": "GitHub",
 			"options": "选项",
 			"target_crc": "目标 CRC"
 		},
