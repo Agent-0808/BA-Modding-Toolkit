@@ -99,12 +99,17 @@
 		"enable_spine38_name_fix": "Rename Old Spine Filenames",
 		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png",
 		"max_workers": "Max Workers",
-		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage."
+		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage.",
+		"character_id_map": "Character ID Map",
+		"character_id_map_info": "Character ID to name mapping table, used to display character names in the file list.",
+		"character_name_field": "Character Name",
+		"character_name_field_info": "Select the display field for character names:\nfull_name: KivoWiki (Chinese, Most Complete)\nname_cn: Chinese Mainland Server\nname_jp: Japanese\nname_tw: Traditional Chinese\nname_en: English\nname_kr: Korean"
 	},
 	"file_type": {
 		"executable": "Executable File",
 		"all_files": "All Files",
 		"bundle": "AssetBundle File",
+		"bundle_backup": "AssetBundle Backup",
 		"folder": "Folder",
 		"skel_converter": "SpineSkeletonConverter.exe",
 		"spine_viewer": "SpineViewerCLI.exe"
@@ -200,7 +205,8 @@
 			"download_guide": "Download {program}?\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter not configured.\nPlease configure the path in the settings page for SpineSkeletonDataConverter.",
 			"spine_viewer_required": "SpineViewerCLI program not set or path is invalid.\n\nPlease configure the path in the settings page for SpineViewerCLI."
-		}
+		},
+		"download_confirm": "Download file from:\n{url}\n\nAnd save to: {path}"
 	},
 	"status": {
 		"ready": "Ready",
@@ -235,6 +241,7 @@
 			"added_count": "Added {count} files",
 			"removed_count": "Removed {count} files",
 			"list_cleared": "List cleared",
+			"downloaded": "Downloaded: {path}",
 			"no_files_found_in_folder": "No {type} files found in this folder",
 			"no_changes_made": "No changes were made to this file. Not saved.",
 			"not_exist": "File does not exist: {path}",
@@ -252,6 +259,7 @@
 		"spine": {
 			"skel_converter_set": "Skel Converter set: {path}",
 			"spine_viewer_set": "SpineViewerCLI set: {path}",
+			"character_map_set": "Character ID Map set: {path}",
 			"skel_version_detection_failed": "Failed to detect current .skel file version",
 			"converting_skel": "Converting .skel file: {name}",
 			"version_conversion": "Current Version: {current} -> Target Version: {target}",
@@ -486,6 +494,7 @@
 			"original_file": "Original File",
 			"modified_file": "File to Correct",
 			"environment": "Environment",
+			"github": "GitHub",
 			"options": "Options",
 			"target_crc": "Target CRC Value"
 		},
@@ -501,6 +510,7 @@
 				"trailing_bytes": "Trailing Bytes",
 				"trailing_content": "Trailing Content",
 				"core": "Core",
+				"character": "Character Name",
 				"res_type": "Resource Type",
 				"crc": "Filename CRC",
 				"crc_actual": "Actual CRC"
@@ -533,9 +543,10 @@
 				"matched": "Selected {count} row(s)"
 			},
 			"filter": {
-				"trailing_zero": "Exclude trailing zero bytes",
-				"crc_match": "Exclude CRC match",
-				"crc_mismatch": "Exclude CRC mismatch"
+				"has_trailing": "Has Trailing Bytes",
+				"crc_mismatch": "Exclude CRC Mismatch",
+				"has_character": "Has Character Name",
+				"common_mod": "Common Mod Prefix"
 			},
 			"op": {
 				"contains": "contains",
