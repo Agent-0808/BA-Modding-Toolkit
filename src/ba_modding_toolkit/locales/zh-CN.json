@@ -183,7 +183,7 @@
 			"extraction_complete": "提取完成，共输出 {count} 个文件。"
 		},
 		"mod_update": {
-			"success": "一键更新成功！",
+			"success": "更新成功！",
 			"no_assets_extracted": "没有资源被提取",
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"

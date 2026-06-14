@@ -183,7 +183,7 @@
 			"extraction_complete": "Extraction complete. Output {count} files."
 		},
 		"mod_update": {
-			"success": "One-click update successful!",
+			"success": "Update successful!",
 			"no_assets_extracted": "No assets were extracted from source files",
 			"no_targets_processed": "No target files were successfully processed",
 			"all_targets_unchanged": "All target files are unchanged, no update needed"
