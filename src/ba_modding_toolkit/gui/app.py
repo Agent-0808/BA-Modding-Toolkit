@@ -12,6 +12,7 @@ from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
+from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from .components import Theme, Logger, UIComponents
 from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
@@ -280,7 +281,7 @@ class App(tb.Frame, ConfigMixin):
 
     def select_game_resource_directory(self):
         select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
-        
+
     def open_game_resource_in_explorer(self):
         open_directory(self.game_resource_dir_var.get(), self.logger.log)
 
@@ -289,6 +290,71 @@ class App(tb.Frame, ConfigMixin):
 
     def open_output_dir_in_explorer(self):
         open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
+
+    # --- ADB 相关方法 ---
+
+    def _init_adb(self):
+        """延迟初始化 ADB 组件"""
+        if hasattr(self, '_adb_manager') and self._adb_manager is not None:
+            return
+        self._adb_manager = ADBManager(adb_path=self.adb_path_var.get())
+        self._adb_index = ADBFileIndex(self._adb_manager)
+        cache_dir = self.adb_cache_dir_var.get()
+        if not cache_dir:
+            # 默认缓存路径：程序根目录/adb_cache
+            cache_dir = str(self.exe_dir / "adb_cache")
+            self.adb_cache_dir_var.set(cache_dir)
+        self._adb_cache = ADBCache(Path(cache_dir))
+        self._local_source = LocalFileSource()
+        # 尝试恢复上次选择的设备
+        saved_device = self.adb_device_var.get()
+        if saved_device:
+            self._adb_manager.select_device(saved_device)
+
+    def get_adb_manager(self) -> ADBManager:
+        """获取 ADB 管理器（延迟初始化）"""
+        self._init_adb()
+        return self._adb_manager
+
+    def get_adb_file_source(self) -> ADBFileSource:
+        """获取 ADB 文件源适配器（延迟初始化）"""
+        self._init_adb()
+        return ADBFileSource(
+            adb_manager=self._adb_manager,
+            file_index=self._adb_index,
+            cache=self._adb_cache,
+            server_region=self.adb_server_region_var.get(),
+        )
+
+    def get_adb_cache(self) -> ADBCache:
+        """获取 ADB 缓存管理器（延迟初始化）"""
+        self._init_adb()
+        return self._adb_cache
+
+    def get_local_file_source(self) -> LocalFileSource:
+        """获取本地文件源适配器"""
+        self._init_adb()
+        return self._local_source
+
+    def get_file_source(self, source: str = "local") -> FileSourceAdapter:
+        """根据来源标识获取文件源适配器"""
+        if source == "adb":
+            return self.get_adb_file_source()
+        return self.get_local_file_source()
+
+    def is_adb_available(self) -> bool:
+        """检查 ADB 是否可用（已连接设备）"""
+        self._init_adb()
+        return self._adb_manager.is_connected
+
+    def refresh_adb_connection(self):
+        """刷新 ADB 连接状态"""
+        self._init_adb()
+        # 同步 adb_path 配置
+        self._adb_manager.adb_path = self.adb_path_var.get()
+        saved_device = self.adb_device_var.get()
+        if saved_device:
+            self._adb_manager.try_reconnect(saved_device)
 
     # 输出子目录常量
     OUTPUT_SUBDIR_BUNDLES = "bundles"

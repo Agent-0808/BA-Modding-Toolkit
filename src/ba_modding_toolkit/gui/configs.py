@@ -35,11 +35,23 @@ def _get_default_output_dir() -> str:
     return str(Path.cwd() / "output")
 
 
+def _get_default_android_global_dir() -> str:
+    """获取默认 Android 国际服目录"""
+    return "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/"
+
+
+def _get_default_android_japan_dir() -> str:
+    """获取默认 Android 日服目录"""
+    return "/storage/emulated/0/Android/data/com.Yostar JP.BlueArchive/files/"
+
+
 class ConfigMixin:
     """配置项定义 Mixin"""
     
     # Directories
     game_resource_dir_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir)]
+    game_dir_android_global_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_android_global_dir)]
+    game_dir_android_japan_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_android_japan_dir)]
     
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
@@ -78,6 +90,12 @@ class ConfigMixin:
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+
+    # ADB
+    adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
+    adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
+    adb_server_region_var: Annotated[tk.StringVar, ConfigMeta("ADB", "global")]
+    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
 
 
 class ConfigManager:

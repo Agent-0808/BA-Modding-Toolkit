@@ -47,7 +47,8 @@
 		"analyze": "分析",
 		"open_in_explorer": "打开所在目录",
 		"copy_filename": "复制文件名",
-		"render_preview": "渲染预览图"
+		"render_preview": "渲染预览图",
+		"cache_to_local": "缓存到本地"
 	},
 	"option": {
 		"auto_detect_subdirs": "自动检测标准子目录 (GameData/Preload)",
@@ -84,6 +85,10 @@
 		"auto_search_info": "",
 		"game_root_dir": "游戏根目录",
 		"game_root_dir_info": "设置游戏安装目录，用于自动寻找原版的 Bundle 文件。\n程序能够自动检测以下路径的子目录：\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
+		"game_dir_android_global": "Android(国际服) 目录",
+		"game_dir_android_global_info": "国际服 Android 设备上的游戏资源目录\n如: /storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
+		"game_dir_android_japan": "Android(日服) 目录",
+		"game_dir_android_japan_info": "日服 Android 设备上的游戏资源目录\n如: /storage/emulated/0/Android/data/com.Yostar JP.BlueArchive/files/",
 		"language": "语言 / Language",
 		"language_info": "程序显示的语言。\n更改后需要重启程序才能生效。",
 		"output_dir": "输出目录",
@@ -420,7 +425,80 @@
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
 		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
 		"platform_info": "目标平台: {platform} (Unity {version})",
-		"unnamed_resource": "未命名的 {type} 资源"
+		"unnamed_resource": "未命名的 {type} 资源",
+		"adb": {
+			"connected": "ADB 设备已连接: {device}",
+			"disconnected": "ADB 设备已断开",
+			"cache_hit": "缓存命中: {name}",
+			"cache_miss": "缓存未命中，从设备拉取: {name}",
+			"pull_failed": "拉取失败: {path} - {error}",
+			"push_failed": "推送失败: {path} - {error}",
+			"list_dir_failed": "列出目录失败: {path} - {error}",
+			"timeout": "ADB 命令超时 ({timeout}s)"
+		}
+	},
+	"adb": {
+		"settings": {
+			"title": "ADB 设置"
+		},
+		"path": "ADB 路径",
+		"path_info": "adb.exe 的完整路径，或 \"adb\" 使用系统环境变量",
+		"detect": "检测",
+		"detect_success": "ADB 检测成功: {version}",
+		"detect_failed": "ADB 检测失败，请检查路径是否正确",
+		"device": "设备选择",
+		"device_refresh": "刷新",
+		"device_connected": "设备就绪",
+		"device_unauthorized": "设备未授权，请在手机上允许 USB 调试",
+		"device_offline": "设备离线",
+		"device_none": "未检测到设备",
+		"server_region": "安卓区服",
+		"server_region_info": "选择游戏区服以自动确定资源路径",
+		"server_global": "国际服",
+		"server_japan": "日服",
+		"cache_dir": "缓存路径",
+		"cache_dir_info": "ADB 文件的本地缓存目录",
+		"cache_title": "ADB缓存",
+		"cache_size": "缓存大小: {size}",
+		"clear_cache": "清理缓存",
+		"clear_cache_confirm": "确定要清理所有 ADB 缓存文件吗？",
+		"clear_cache_done": "缓存已清理，释放 {size}",
+		"browser": {
+			"title": "ADB 文件浏览器",
+			"refresh": "刷新",
+			"select": "选择",
+			"cancel": "取消",
+			"loading": "正在加载文件列表...",
+			"no_files": "该目录下没有文件",
+			"error": "加载失败: {error}"
+		},
+		"pull": {
+			"start": "正在从设备拉取: {name}",
+			"success": "拉取成功: {name}",
+			"failed": "拉取失败: {name}"
+		},
+		"push": {
+			"start": "正在推送到设备: {name}",
+			"success": "推送成功: {name}",
+			"failed": "推送失败: {name}",
+			"confirm": "以下文件将被推送到 Android 设备，是否继续？\n{files}"
+		},
+		"index": {
+			"scanning": "正在扫描设备文件...",
+			"found": "扫描完成，共 {count} 个文件",
+			"refreshing": "正在刷新文件索引..."
+		},
+		"not_connected": "ADB 设备未连接",
+		"cache": {
+			"no_adb_items": "未选中 ADB 文件",
+			"caching": "正在缓存 {count} 个文件到本地...",
+			"complete": "缓存完成，成功 {success} 个，失败 {fail} 个"
+		}
+	},
+	"resource_source": {
+		"windows": "Windows(本地)",
+		"android": "Android(ADB)",
+		"label": "资源来源"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",
@@ -442,6 +520,11 @@
 			"group_spine": "Spine 工具设置",
 			"group_app": "应用设置",
 			"group_paths": "路径设置"
+		},
+		"column": {
+			"filename": "文件名",
+			"file_size": "大小",
+			"modified_time": "修改时间"
 		},
 		"mod_update": {
 			"placeholder_old": "拖放待更新或移植的 Mod 文件到此处\n或点击下方按钮选择",

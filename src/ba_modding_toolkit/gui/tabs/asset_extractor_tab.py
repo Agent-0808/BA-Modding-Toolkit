@@ -10,19 +10,33 @@ from ... import core
 from ...models import FileType
 from ...naming import parse_filename
 from ..base_tab import TabFrame
-from ..components import UIComponents, SettingRow, DropZone
+from ..components import UIComponents, SettingRow, DropZone, ModeSwitcher
 from ..utils import select_directory, open_directory
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):
         # 子目录变量
         self.subdir_var: tk.StringVar = tk.StringVar()
+        self.resource_source_var = tk.StringVar(value='local')
 
         # 文件选择回调函数
         def on_files_selected(paths: list[Path]) -> None:
             if paths:
                 core_name = parse_filename(paths[0].stem).core
                 self.subdir_var.set(core_name)
+
+        # 资源来源切换
+        source_frame = tb.Frame(self)
+        source_frame.pack(fill=tk.X, pady=(0, 2))
+        self._source_switcher = ModeSwitcher(
+            source_frame,
+            mode_var=self.resource_source_var,
+            options=[
+                ("local", t("resource_source.windows")),
+                ("adb", t("resource_source.android")),
+            ],
+            command=self._on_resource_source_changed,
+        )
 
         # 目标 Bundle 文件拖放区域
         self.bundle_dropzone = DropZone(
@@ -32,6 +46,8 @@ class AssetExtractorTab(TabFrame):
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             on_files_selected=on_files_selected,
             logger=self.logger,
+            resource_source_var=self.resource_source_var,
+            app=self.app,
         )
         
         # 输出目录
@@ -82,6 +98,14 @@ class AssetExtractorTab(TabFrame):
         run_button = UIComponents.create_button(action_frame, t("action.extract"), self.run_extraction_thread,
                                                  bootstyle="success", style="large")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
+
+    def _on_resource_source_changed(self):
+        """资源来源切换时的处理"""
+        if self.resource_source_var.get() == "adb":
+            adb_source = self.app.get_adb_file_source()
+            if not adb_source.is_available():
+                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                self.resource_source_var.set("local")
 
     def select_output_dir(self):
         """选择输出子目录"""

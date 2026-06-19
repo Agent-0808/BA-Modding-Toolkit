@@ -31,6 +31,7 @@ class SettingsDialog(tb.Toplevel):
 
         self._init_app_settings()
         self._init_path_settings()
+        self._init_adb_settings()
         self._init_global_options()
         self._init_asset_options()
         self._init_spine_settings()
@@ -76,6 +77,240 @@ class SettingsDialog(tb.Toplevel):
             open_cmd=self.app.open_game_resource_in_explorer,
             tooltip=t("option.game_root_dir_info")
         )
+
+        SettingRow.create_entry_row(
+            section,
+            label=t("option.game_dir_android_global"),
+            text_var=self.app.game_dir_android_global_var,
+            tooltip=t("option.game_dir_android_global_info"),
+            expand=True
+        )
+
+        SettingRow.create_entry_row(
+            section,
+            label=t("option.game_dir_android_japan"),
+            text_var=self.app.game_dir_android_japan_var,
+            tooltip=t("option.game_dir_android_japan_info"),
+            expand=True
+        )
+
+    def _init_adb_settings(self):
+        """初始化 ADB 设置"""
+        section = self._create_section(t("adb.settings.title"))
+
+        # ADB 路径
+        SettingRow.create_path_selector(
+            section,
+            label=t("adb.path"),
+            path_var=self.app.adb_path_var,
+            select_cmd=self._select_adb_path,
+            tooltip=t("adb.path_info"),
+            status_check=self._check_adb_available
+        )
+
+        # ADB 检测按钮
+        SettingRow.create_button_row(
+            section,
+            label=t("adb.detect"),
+            button_text=t("adb.detect"),
+            command=self._detect_adb,
+            bootstyle="info"
+        )
+
+        # 设备选择
+        device_container = SettingRow.create_container(section)
+        SettingRow._add_label_area(device_container, t("adb.device"), None)
+
+        right_frame = tb.Frame(device_container)
+        right_frame.pack(side=tk.RIGHT)
+
+        UIComponents.create_button(
+            right_frame,
+            text=t("adb.device_refresh"),
+            command=self._refresh_devices,
+            bootstyle="secondary",
+            style="compact"
+        ).pack(side=tk.RIGHT, padx=(5, 0))
+
+        self._device_combo = tb.Combobox(
+            right_frame,
+            textvariable=self.app.adb_device_var,
+            values=[],
+            state="readonly",
+            width=30
+        )
+        self._device_combo.pack(side=tk.RIGHT, padx=(0, 5))
+
+        # 设备状态标签
+        self._device_status_label = tb.Label(section, text="", font=Theme.INPUT_FONT)
+        self._device_status_label.pack(fill=tk.X, padx=5, pady=(0, 5))
+
+        # 区服选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("adb.server_region"),
+            text_var=self.app.adb_server_region_var,
+            values=["global", "japan"],
+            tooltip=t("adb.server_region_info")
+        )
+
+        # 缓存路径
+        SettingRow.create_path_selector(
+            section,
+            label=t("adb.cache_dir"),
+            path_var=self.app.adb_cache_dir_var,
+            select_cmd=self._select_adb_cache_dir,
+            open_cmd=self._open_adb_cache_dir,
+            tooltip=t("adb.cache_dir_info")
+        )
+
+        # 缓存大小 + 清理按钮
+        cache_container = SettingRow.create_container(section)
+        SettingRow._add_label_area(cache_container, t("adb.cache_title"), None)
+
+        self._cache_size_label = tb.Label(cache_container, text="", font=Theme.INPUT_FONT)
+        self._cache_size_label.pack(side=tk.RIGHT, padx=(10, 0))
+
+        UIComponents.create_button(
+            cache_container,
+            text=t("adb.clear_cache"),
+            command=self._clear_adb_cache,
+            bootstyle="warning",
+            style="compact"
+        ).pack(side=tk.RIGHT)
+
+        # 初始化状态
+        self._update_adb_status()
+
+    def _select_adb_path(self):
+        """选择 ADB 可执行文件路径"""
+        select_file(
+            title=t("ui.dialog.select", type="ADB"),
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
+            callback=lambda path: (
+                self.app.adb_path_var.set(str(path)),
+                self.app.logger.log(t("log.file.loaded", path=path)),
+                self._update_adb_status()
+            ),
+            log=self.app.logger.log
+        )
+
+    def _check_adb_available(self) -> bool:
+        """检查 ADB 是否可用"""
+        adb_path = self.app.adb_path_var.get()
+        if not adb_path:
+            return False
+        if adb_path == "adb":
+            # 系统PATH中的adb，尝试运行检测
+            try:
+                manager = self.app.get_adb_manager()
+                success, _ = manager.detect_adb()
+                return success
+            except Exception:
+                return False
+        return Path(adb_path).is_file()
+
+    def _detect_adb(self):
+        """检测 ADB 是否可用"""
+        self.app.refresh_adb_connection()
+        manager = self.app.get_adb_manager()
+        success, info = manager.detect_adb()
+        if success:
+            self.app.logger.log(t("adb.detect_success", version=info))
+            self._update_adb_status()
+            messagebox.showinfo(t("common.success"), t("adb.detect_success", version=info), parent=self)
+        else:
+            self.app.logger.log(t("adb.detect_failed"))
+            messagebox.showerror(t("common.error"), t("adb.detect_failed"), parent=self)
+
+    def _refresh_devices(self):
+        """刷新设备列表"""
+        self.app.refresh_adb_connection()
+        manager = self.app.get_adb_manager()
+        devices = manager.get_devices()
+
+        # 更新下拉框
+        display_values = [d.display_name for d in devices]
+        self._device_combo.config(values=display_values)
+
+        if devices:
+            # 自动选择第一个就绪的设备
+            for d in devices:
+                if d.is_ready:
+                    self.app.adb_device_var.set(d.serial)
+                    manager.select_device(d.serial)
+                    self._device_status_label.config(
+                        text=t("adb.device_connected"),
+                        bootstyle="success"
+                    )
+                    return
+            # 没有就绪设备
+            first = devices[0]
+            self._device_status_label.config(
+                text=t("adb.device_unauthorized") if first.state == "unauthorized" else t("adb.device_offline"),
+                bootstyle="warning"
+            )
+        else:
+            self.app.adb_device_var.set("")
+            self._device_status_label.config(
+                text=t("adb.device_none"),
+                bootstyle="danger"
+            )
+
+    def _update_adb_status(self):
+        """更新 ADB 状态显示"""
+        self._update_cache_size()
+        # 尝试刷新设备列表
+        try:
+            self._refresh_devices()
+        except Exception:
+            self._device_status_label.config(
+                text=t("adb.device_none"),
+                bootstyle="danger"
+            )
+
+    def _select_adb_cache_dir(self):
+        """选择 ADB 缓存目录"""
+        from ..utils import select_directory
+        select_directory(
+            var=self.app.adb_cache_dir_var,
+            title=t("ui.dialog.select", type=t("adb.cache_dir")),
+            log=self.app.logger.log
+        )
+
+    def _open_adb_cache_dir(self):
+        """打开 ADB 缓存目录"""
+        cache_dir = self.app.adb_cache_dir_var.get()
+        if cache_dir:
+            open_directory(cache_dir, self.app.logger.log, create_if_not_exist=True)
+        else:
+            # 打开默认缓存目录
+            default_dir = self.app.exe_dir / "adb_cache"
+            default_dir.mkdir(parents=True, exist_ok=True)
+            open_directory(default_dir, self.app.logger.log)
+
+    def _update_cache_size(self):
+        """更新缓存大小显示"""
+        try:
+            cache = self.app.get_adb_cache()
+            size_display = cache.get_cache_size_display()
+            self._cache_size_label.config(text=t("adb.cache_size", size=size_display))
+        except Exception:
+            self._cache_size_label.config(text="")
+
+    def _clear_adb_cache(self):
+        """清理 ADB 缓存"""
+        if not messagebox.askyesno(t("common.warning"), t("adb.clear_cache_confirm"), parent=self):
+            return
+        try:
+            cache = self.app.get_adb_cache()
+            success, freed = cache.clear_cache()
+            if success:
+                self.app.logger.log(t("adb.clear_cache_done", size=freed))
+                self._update_cache_size()
+                messagebox.showinfo(t("common.success"), t("adb.clear_cache_done", size=freed), parent=self)
+        except Exception as e:
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e), parent=self)
 
     def _init_app_settings(self):
         """初始化应用设置"""

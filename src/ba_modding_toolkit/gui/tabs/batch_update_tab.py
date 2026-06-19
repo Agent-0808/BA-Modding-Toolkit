@@ -7,10 +7,11 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
+from ...models import FilePair
 from ... import core
-from ...searching import get_search_dirs, find_target_bundles
+from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
 from ..base_tab import TabFrame
-from ..components import FileListbox, UIComponents, SettingRow
+from ..components import FileListbox, UIComponents, SettingRow, ModeSwitcher
 from ..utils import confirm_and_replace
 
 
@@ -18,9 +19,11 @@ class BatchUpdateTab(TabFrame):
     """批量更新标签页，用于批量处理多个 mod 文件"""
 
     def __init__(self, *args, **kwargs):
-        self.current_file_pairs: list[tuple[Path, Path]] = []
+        self.current_file_pairs: list[FilePair] = []
         self.match_strategy_var = tk.StringVar(value='path_id')
         self.workers_var = tk.IntVar(value=min(os.cpu_count() or 4, 8))
+        self.resource_source_var = tk.StringVar(value='local')  # "local" | "adb"
+        self._adb_remote_paths: list[str] = []  # ADB 模式下目标的远程路径
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -38,6 +41,17 @@ class BatchUpdateTab(TabFrame):
             display_formatter=lambda p: f"{p.parent.name} / {p.name}"
         )
         self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
+        # 资源来源切换
+        self._source_switcher = ModeSwitcher(
+            self,
+            mode_var=self.resource_source_var,
+            options=[
+                ("local", t("resource_source.windows")),
+                ("adb", t("resource_source.android")),
+            ],
+            command=self._on_resource_source_changed
+        )
 
         # 匹配策略选择 + 线程数选择
         option_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
@@ -97,23 +111,113 @@ class BatchUpdateTab(TabFrame):
         )
         self.batch_replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
+    def _on_resource_source_changed(self):
+        """资源来源切换时的处理"""
+        self._adb_remote_paths = []
+
+        if self.resource_source_var.get() == "adb":
+            # 检查 ADB 设备是否在线
+            adb_source = self.app.get_adb_file_source()
+            if not adb_source.is_available():
+                from tkinter import messagebox
+                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                self.resource_source_var.set("local")
+                return
+
     def batch_replace_original_thread(self):
         """批量覆盖原文件的线程入口"""
-        confirm_and_replace(
-            file_pairs=self.current_file_pairs,
-            create_backup=self.app.create_backup_var.get(),
-            log=self.logger.log,
-            button_to_disable=self.batch_replace_button,
-            master=self.master,
-        )
+        if self.resource_source_var.get() == "adb":
+            self._replace_original_adb()
+        else:
+            confirm_and_replace(
+                file_pairs=self.current_file_pairs,
+                create_backup=self.app.create_backup_var.get(),
+                log=self.logger.log,
+                button_to_disable=self.batch_replace_button,
+                master=self.master,
+            )
+
+    def _replace_original_adb(self):
+        """ADB 模式下的替换原文件（推送到设备）"""
+        if not self.current_file_pairs:
+            return
+
+        # 构建确认消息
+        files_list = "\n".join([f"  {pair.source.name}" for pair in self.current_file_pairs[:10]])
+        if len(self.current_file_pairs) > 10:
+            files_list += f"\n{t('message.and_more_files', count=len(self.current_file_pairs) - 10)}"
+
+        confirm_message = t("adb.push.confirm", files=files_list)
+        if not messagebox.askyesno(t("common.warning"), confirm_message):
+            return
+
+        adb_source = self.app.get_adb_file_source()
+        if not adb_source.is_available():
+            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            return
+
+        self.run_in_thread(self._push_files_worker, adb_source)
+
+    def _push_files_worker(self, adb_source):
+        """后台推送文件到设备"""
+        success_count = 0
+        fail_count = 0
+
+        for pair in self.current_file_pairs:
+            # 查找对应的远程路径
+            remote_path = self._find_remote_path_for_output(pair)
+            if not remote_path:
+                self.logger.log(t("log.adb.push_failed", path=pair.output.name, error="remote path not found"))
+                fail_count += 1
+                continue
+
+            self.logger.log(t("adb.push.start", name=pair.output.name))
+            if adb_source.push_file(pair.output, remote_path, self.logger.log):
+                self.logger.log(t("adb.push.success", name=pair.output.name))
+                success_count += 1
+            else:
+                self.logger.log(t("adb.push.failed", name=pair.output.name))
+                fail_count += 1
+
+        self.logger.log(t("log.success_fail", success=success_count, fail=fail_count))
+        self.master.after(0, lambda: messagebox.showinfo(
+            t("common.tip"),
+            t("message.replace_result", success=success_count, fail=fail_count)
+        ))
+        self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
+        self.logger.status(t("status.done"))
+
+    def _find_remote_path_for_output(self, pair: FilePair) -> str | None:
+        """根据输出文件对找到对应的远程路径"""
+        output_name = pair.output.name
+        # 在远程路径列表中查找同名文件
+        for remote_path in self._adb_remote_paths:
+            if Path(remote_path).name == output_name:
+                return remote_path
+        # 也尝试用 source 名匹配
+        source_name = pair.source.name
+        for remote_path in self._adb_remote_paths:
+            if Path(remote_path).name == source_name:
+                return remote_path
+        # 最后尝试从缓存 manifest 反查
+        adb_source = self.app.get_adb_file_source()
+        remote = adb_source.cache.find_remote_path(pair.source)
+        if remote:
+            return remote
+        return None
 
     def run_batch_update_thread(self):
         if not self.mod_file_list:
             messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
-        if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
-            messagebox.showerror(t("common.error"), t("message.missing_paths"))
-            return
+        if self.resource_source_var.get() != "adb":
+            if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
+                messagebox.showerror(t("common.error"), t("message.missing_paths"))
+                return
+        else:
+            if not self.app.output_dir_var.get():
+                messagebox.showerror(t("common.error"), t("message.missing_paths"))
+                return
         if not self.app.has_any_asset_type():
             messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
@@ -138,10 +242,36 @@ class BatchUpdateTab(TabFrame):
         self.logger.status(t("status.batch_starting"))
 
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
-        base_game_dir = Path(self.app.game_resource_dir_var.get())
-        search_paths = get_search_dirs(base_game_dir)
+
+        if self.resource_source_var.get() == "adb":
+            # ADB 模式：先远程搜索目标，拉取到本地缓存，再使用本地缓存目录搜索
+            adb_source = self.app.get_adb_file_source()
+            if not adb_source.is_available():
+                self.logger.log(t("adb.device_none"))
+                return
+            # 预搜索：找到所有远程目标并拉取到本地
+            search_path_dirs: set[Path] = set()
+            for mod_file in self.mod_file_list:
+                try:
+                    remote_targets, _ = find_target_bundles_remote([mod_file], adb_source, self.logger.log)
+                    for remote_path in remote_targets:
+                        try:
+                            local_path = adb_source.ensure_local(remote_path)
+                            search_path_dirs.add(local_path.parent)
+                            if remote_path not in self._adb_remote_paths:
+                                self._adb_remote_paths.append(remote_path)
+                        except RuntimeError as e:
+                            self.logger.log(t("log.adb.pull_failed", path=remote_path, error=e))
+                except Exception as e:
+                    self.logger.log(t("log.adb.pull_failed", path=mod_file.name, error=e))
+            search_paths = list(search_path_dirs) if search_path_dirs else []
+        else:
+            # 本地模式
+            base_game_dir = Path(self.app.game_resource_dir_var.get())
+            search_paths = get_search_dirs(base_game_dir)
 
         self.current_file_pairs = []
+        self._adb_remote_paths = []
         self.master.after(0, lambda: self.batch_replace_button.config(state=tk.DISABLED))
 
         asset_types_to_replace = self.app.get_asset_types()
@@ -149,11 +279,23 @@ class BatchUpdateTab(TabFrame):
         crc_setting = self.app.enable_crc_correction_var.get()
 
         if crc_setting == "auto":
-            target_paths, msg = find_target_bundles([self.mod_file_list[0]], search_paths)
-            if not target_paths:
-                self.logger.log(msg)
-                return
-            perform_crc = self.app.resolve_crc_setting(target_paths[0])
+            if self.resource_source_var.get() == "adb":
+                # ADB 模式下使用已拉取的本地缓存文件检查 CRC
+                if self._adb_remote_paths:
+                    adb_source = self.app.get_adb_file_source()
+                    try:
+                        local_path = adb_source.ensure_local(self._adb_remote_paths[0])
+                        perform_crc = self.app.resolve_crc_setting(local_path)
+                    except RuntimeError:
+                        perform_crc = self.app.resolve_crc_setting(None)
+                else:
+                    perform_crc = self.app.resolve_crc_setting(None)
+            else:
+                target_paths, msg = find_target_bundles([self.mod_file_list[0]], search_paths)
+                if not target_paths:
+                    self.logger.log(msg)
+                    return
+                perform_crc = self.app.resolve_crc_setting(target_paths[0])
         else:
             perform_crc = self.app.resolve_crc_setting(None)
 

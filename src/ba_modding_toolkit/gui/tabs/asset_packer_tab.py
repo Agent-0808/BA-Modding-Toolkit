@@ -6,19 +6,20 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ...models import FileType
+from ...models import FileType, FilePair
 from ... import core
 from ...searching import search_core, get_search_dirs
 from ..base_tab import TabFrame
-from ..components import DropZone, SettingRow, UIComponents, FileListbox
+from ..components import DropZone, SettingRow, UIComponents, FileListbox, ModeSwitcher
 from ..utils import confirm_and_replace
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
         self.bundle_paths: list[Path] = []
         self.asset_paths: list[Path] = []
-        self.current_file_pairs: list[tuple[Path, Path]] = []
-        
+        self.current_file_pairs: list[FilePair] = []
+        self.resource_source_var = tk.StringVar(value='local')
+
         # 资源文件列表
         self.assets_listbox = FileListbox(
             self, title=t("ui.label.assets_to_pack"),
@@ -31,13 +32,28 @@ class AssetPackerTab(TabFrame):
         )
         self.assets_listbox.get_frame().pack(fill=tk.X, pady=(0, 10))
 
+        # 资源来源切换
+        source_frame = tb.Frame(self)
+        source_frame.pack(fill=tk.X, pady=(0, 2))
+        self._source_switcher = ModeSwitcher(
+            source_frame,
+            mode_var=self.resource_source_var,
+            options=[
+                ("local", t("resource_source.windows")),
+                ("adb", t("resource_source.android")),
+            ],
+            command=self._on_resource_source_changed,
+        )
+
         # 目标 Bundle 文件
         self.bundle_zone = DropZone(
             self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.packer.placeholder_bundle"),
             on_files_selected=self.on_bundles_selected,
             file_types=[FileType.BUNDLE, FileType.ALL],
-            logger=self.logger
+            logger=self.logger,
+            resource_source_var=self.resource_source_var,
+            app=self.app,
         )
         
         # 旧版 Spine 文件名修正选项
@@ -68,6 +84,14 @@ class AssetPackerTab(TabFrame):
         
         self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled", style="large")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=10)
+
+    def _on_resource_source_changed(self):
+        """资源来源切换时的处理"""
+        if self.resource_source_var.get() == "adb":
+            adb_source = self.app.get_adb_file_source()
+            if not adb_source.is_available():
+                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                self.resource_source_var.set("local")
 
     def on_bundles_selected(self, paths: list[Path]):
         """Bundle 文件选中后的处理"""

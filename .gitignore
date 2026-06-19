@@ -1,4 +1,5 @@
 output/
+adb_cache/
 config.toml
 
 tools/

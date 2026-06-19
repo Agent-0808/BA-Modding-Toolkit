@@ -47,7 +47,8 @@
 		"analyze": "Analyze",
 		"open_in_explorer": "Open in Explorer",
 		"copy_filename": "Copy Filename",
-		"render_preview": "Render Preview"
+		"render_preview": "Render Preview",
+		"cache_to_local": "Cache to Local"
 	},
 	"option": {
 		"auto_detect_subdirs": "Auto-detect Standard Subdirectories (GameData/Preload)",
@@ -84,6 +85,10 @@
 		"auto_search_info": "",
 		"game_root_dir": "Game Directory",
 		"game_root_dir_info": "Set the game installation directory to automatically locate original bundle files.\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
+		"game_dir_android_global": "Android (Global) Directory",
+		"game_dir_android_global_info": "Game resource directory on Android device (Global server)\ne.g.: /storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
+		"game_dir_android_japan": "Android (Japan) Directory",
+		"game_dir_android_japan_info": "Game resource directory on Android device (Japan server)\ne.g.: /storage/emulated/0/Android/data/com.Yostar JP.BlueArchive/files/",
 		"language": "Language / 语言",
 		"language_info": "Program language.\nRestart the program after changing to take effect.",
 		"output_dir": "Output Directory",
@@ -420,7 +425,80 @@
 		"replace_resource_failed": "Error replacing resource [{type}] {name}: {error}",
 		"replace_skipped_same_content": "Skipped replacement for [{type}] {name}: content identical to original",
 		"platform_info": "Target Platform: {platform} (Unity {version})",
-		"unnamed_resource": "Unnamed {type} asset"
+		"unnamed_resource": "Unnamed {type} asset",
+		"adb": {
+			"connected": "ADB device connected: {device}",
+			"disconnected": "ADB device disconnected",
+			"cache_hit": "Cache hit: {name}",
+			"cache_miss": "Cache miss, pulling from device: {name}",
+			"pull_failed": "Pull failed: {path} - {error}",
+			"push_failed": "Push failed: {path} - {error}",
+			"list_dir_failed": "List directory failed: {path} - {error}",
+			"timeout": "ADB command timed out ({timeout}s)"
+		}
+	},
+	"adb": {
+		"settings": {
+			"title": "ADB Settings"
+		},
+		"path": "ADB Path",
+		"path_info": "Full path to adb.exe, or \"adb\" to use system PATH",
+		"detect": "Detect",
+		"detect_success": "ADB detected successfully: {version}",
+		"detect_failed": "ADB detection failed. Please check the path.",
+		"device": "Device Selection",
+		"device_refresh": "Refresh",
+		"device_connected": "Device ready",
+		"device_unauthorized": "Device unauthorized. Please allow USB debugging on your phone.",
+		"device_offline": "Device offline",
+		"device_none": "No device detected",
+		"server_region": "Server Region",
+		"server_region_info": "Select game server region to auto-determine resource paths",
+		"server_global": "Global",
+		"server_japan": "Japan",
+		"cache_dir": "Cache Directory",
+		"cache_dir_info": "Local cache directory for ADB files",
+		"cache_title": "ADB Cache",
+		"cache_size": "Cache size: {size}",
+		"clear_cache": "Clear Cache",
+		"clear_cache_confirm": "Are you sure you want to clear all ADB cache files?",
+		"clear_cache_done": "Cache cleared, freed {size}",
+		"browser": {
+			"title": "ADB File Browser",
+			"refresh": "Refresh",
+			"select": "Select",
+			"cancel": "Cancel",
+			"loading": "Loading file list...",
+			"no_files": "No files in this directory",
+			"error": "Loading failed: {error}"
+		},
+		"pull": {
+			"start": "Pulling from device: {name}",
+			"success": "Pull successful: {name}",
+			"failed": "Pull failed: {name}"
+		},
+		"push": {
+			"start": "Pushing to device: {name}",
+			"success": "Push successful: {name}",
+			"failed": "Push failed: {name}",
+			"confirm": "The following files will be pushed to the Android device. Continue?\n{files}"
+		},
+		"index": {
+			"scanning": "Scanning device files...",
+			"found": "Scan complete, {count} files found",
+			"refreshing": "Refreshing file index..."
+		},
+		"not_connected": "ADB device not connected",
+		"cache": {
+			"no_adb_items": "No ADB files selected",
+			"caching": "Caching {count} files to local...",
+			"complete": "Cache complete, {success} succeeded, {fail} failed"
+		}
+	},
+	"resource_source": {
+		"windows": "Windows (Local)",
+		"android": "Android (ADB)",
+		"label": "Resource Source"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",
@@ -442,6 +520,11 @@
 			"group_spine": "Spine Tool Settings",
 			"group_app": "App Settings",
 			"group_paths": "Path Settings"
+		},
+		"column": {
+			"filename": "Filename",
+			"file_size": "Size",
+			"modified_time": "Modified"
 		},
 		"mod_update": {
 			"placeholder_old": "Drag and drop the old Mod file to update or port here\nOr click the button below to select",

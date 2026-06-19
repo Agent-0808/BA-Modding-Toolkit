@@ -276,11 +276,13 @@ class DropZone(tb.Labelframe):
         allow_folder: bool = False,
         allow_multiple: bool = True,
         logger: Logger | None = None,
+        resource_source_var: tk.StringVar | None = None,
+        app: "App | None" = None,
         **kwargs
     ):
         super().__init__(parent, text=title, padding=(15, 12), **kwargs)
         self.pack(fill=tk.X, pady=(0, 5))
-        
+
         self.placeholder_text = placeholder_text
         self._on_files_selected = on_files_selected
         self._clear_cmd = clear_cmd
@@ -290,6 +292,9 @@ class DropZone(tb.Labelframe):
         self._paths: list[Path] = []
         self._open_btn = None  # "打开"按钮引用
         self._clear_btn = None  # "清除"按钮引用
+        self._resource_source_var = resource_source_var  # 资源来源变量
+        self._app = app  # App 引用（ADB 模式需要）
+        self._adb_remote_paths: list[str] = []  # ADB 模式下的远程路径
         
         # 内部存储：转换为 tkinter 需要的 tuple 格式
         self._tk_filetypes: list[tuple[str, str]] = build_filetypes(file_types)
@@ -458,6 +463,12 @@ class DropZone(tb.Labelframe):
 
     def _handle_browse(self) -> None:
         """内部处理浏览按钮，支持多文件选择"""
+        # ADB 模式
+        if self._is_adb_mode():
+            self._browse_adb()
+            return
+
+        # 本地模式
         if self._allow_folder:
             path = select_directory(
                 title=t("ui.dialog.select", type=self.cget("text")),
@@ -476,6 +487,48 @@ class DropZone(tb.Labelframe):
                 callback=self._handle_browse_callback,
                 log=self._logger.log if self._logger else None
             )
+
+    def _is_adb_mode(self) -> bool:
+        """检查是否为 ADB 模式"""
+        return (self._resource_source_var is not None
+                and self._resource_source_var.get() == "adb")
+
+    def _browse_adb(self) -> None:
+        """ADB 模式下的浏览操作"""
+        if not self._app:
+            return
+        from .windows.adb_browser import ADBFileBrowser
+        adb_source = self._app.get_adb_file_source()
+        if not adb_source.is_available():
+            from tkinter import messagebox
+            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            return
+
+        browser = ADBFileBrowser(
+            self.winfo_toplevel(),
+            adb_source=adb_source,
+            multiple=self._allow_multiple,
+            log=self._logger.log if self._logger else None
+        )
+
+        if browser.selected_paths:
+            # 将远程路径缓存到本地
+            local_paths: list[Path] = []
+            self._adb_remote_paths = browser.selected_paths
+            for remote_path in browser.selected_paths:
+                try:
+                    local_path = adb_source.ensure_local(remote_path)
+                    local_paths.append(local_path)
+                except Exception as e:
+                    if self._logger:
+                        self._logger.log(t("log.adb.pull_failed", path=remote_path, error=e))
+            if local_paths:
+                self.set_files(local_paths[:1] if not self._allow_multiple else local_paths)
+
+    @property
+    def adb_remote_paths(self) -> list[str]:
+        """获取 ADB 模式下的远程路径列表"""
+        return self._adb_remote_paths
 
     def _handle_browse_callback(self, paths: list[Path]) -> None:
         """浏览选择后的回调处理"""

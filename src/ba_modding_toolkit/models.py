@@ -131,6 +131,14 @@ class BundleFileInfo:
     trailing_content: bytes | None = None
     parsed_name: ParsedFilename | None = None
     crc_actual: int | None = None
+    # ADB 支持
+    local_cache_path: Path | None = None  # ADB 模式下的本地缓存路径
+    source: str = "local"                  # "local" | "adb"
+
+    @property
+    def effective_path(self) -> Path:
+        """获取实际用于文件操作的本地路径"""
+        return self.local_cache_path if self.local_cache_path is not None else self.path
 
 
 # 可替换的资源类型白名单
