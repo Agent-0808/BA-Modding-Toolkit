@@ -465,6 +465,7 @@
 		"clear_cache_done": "缓存已清理，释放 {size}",
 		"browser": {
 			"title": "ADB 文件浏览器",
+			"title_dir": "选择目标目录",
 			"refresh": "刷新",
 			"select": "选择",
 			"cancel": "取消",
@@ -510,7 +511,8 @@
 			"asset_extractor": "资源提取",
 			"legacy_conversion": "旧版/新版转换",
 			"batch_legacy": "批量处理旧版",
-			"file_list": "文件列表"
+			"file_list": "文件列表",
+			"adb_push": "ADB 文件推送"
 		},
 		"settings": {
 			"title": "设置",
@@ -525,6 +527,16 @@
 			"filename": "文件名",
 			"file_size": "大小",
 			"modified_time": "修改时间"
+		},
+		"adb_push": {
+			"local_files": "本地文件",
+			"placeholder_local": "将文件或文件夹拖放到此处...",
+			"target_dir": "目标目录（设备路径）",
+			"push": "推送到设备",
+			"no_local_files": "请先选择要推送的本地文件",
+			"no_target_dir": "请填写目标目录",
+			"push_start": "开始推送 {count} 个文件到 {dir}",
+			"push_summary": "推送完成：成功 {success} 个，失败 {fail} 个"
 		},
 		"mod_update": {
 			"placeholder_old": "拖放待更新或移植的 Mod 文件到此处\n或点击下方按钮选择",

@@ -465,6 +465,7 @@
 		"clear_cache_done": "Cache cleared, freed {size}",
 		"browser": {
 			"title": "ADB File Browser",
+			"title_dir": "Select Target Directory",
 			"refresh": "Refresh",
 			"select": "Select",
 			"cancel": "Cancel",
@@ -510,7 +511,8 @@
 			"asset_extractor": "Asset Extractor",
 			"legacy_conversion": "Legacy Conversion",
 			"batch_legacy": "Batch Legacy",
-			"file_list": "File List"
+			"file_list": "File List",
+			"adb_push": "ADB File Push"
 		},
 		"settings": {
 			"title": "Settings",
@@ -525,6 +527,16 @@
 			"filename": "Filename",
 			"file_size": "Size",
 			"modified_time": "Modified"
+		},
+		"adb_push": {
+			"local_files": "Local Files",
+			"placeholder_local": "Drag and drop files or folders here...",
+			"target_dir": "Target Directory (device path)",
+			"push": "Push to Device",
+			"no_local_files": "Please select local files to push first",
+			"no_target_dir": "Please specify a target directory",
+			"push_start": "Pushing {count} file(s) to {dir}",
+			"push_summary": "Push complete: {success} succeeded, {fail} failed"
 		},
 		"mod_update": {
 			"placeholder_old": "Drag and drop the old Mod file to update or port here\nOr click the button below to select",

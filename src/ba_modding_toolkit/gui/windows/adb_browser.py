@@ -24,13 +24,14 @@ class ADBFileBrowser(tb.Toplevel):
 
     def __init__(self, master, adb_source: "ADBFileSource",
                  title: str = "", file_types: list[str] | None = None,
-                 multiple: bool = True, log=no_log):
+                 multiple: bool = True, log=no_log, directory_mode: bool = False):
         super().__init__(master)
         self.withdraw()  # 先隐藏窗口，避免空白闪烁
         self.adb_source = adb_source
         self.file_types = file_types or [".bundle"]
         self.multiple = multiple
         self.log = log
+        self.directory_mode = directory_mode  # 目录选择模式
         self.selected_paths: list[str] = []  # 选中的远程路径
         self._current_dir: str = ""
         self._navigation_stack: list[str] = []  # 导航历史
@@ -58,7 +59,9 @@ class ADBFileBrowser(tb.Toplevel):
 
     def _setup_window(self, title: str):
         """设置窗口属性"""
-        self.title(title or t("adb.browser.title"))
+        if not title:
+            title = t("adb.browser.title_dir") if self.directory_mode else t("adb.browser.title")
+        self.title(title)
         self.geometry("800x550")
         self.resizable(True, True)
 
@@ -228,8 +231,8 @@ class ADBFileBrowser(tb.Toplevel):
             # 进入子目录
             self._navigation_stack.append(self._current_dir)
             self._navigate(item_id)
-        else:
-            # 选中文件并确认
+        elif not self.directory_mode:
+            # 选中文件并确认（目录模式下双击文件不做任何操作）
             self._on_confirm()
 
     def _apply_filter(self):
@@ -251,6 +254,14 @@ class ADBFileBrowser(tb.Toplevel):
 
     def _on_confirm(self):
         """确认选择"""
+        # 目录模式：直接选择当前所在目录
+        if self.directory_mode:
+            if not self._current_dir:
+                return
+            self.selected_paths = [self._current_dir]
+            self.destroy()
+            return
+
         selection = self._tree.selection()
         if not selection:
             messagebox.showinfo(t("common.tip"), t("message.no_file_selected"), parent=self)

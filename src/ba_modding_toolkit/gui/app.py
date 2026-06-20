@@ -445,6 +445,7 @@ class App(tb.Frame, ConfigMixin):
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
         legacy_conversion_tab = LegacyConversionTab(self.content_frame, self)
+        adb_push_tab = AdbPushTab(self.content_frame, self)
         
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
@@ -454,6 +455,7 @@ class App(tb.Frame, ConfigMixin):
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
             (legacy_conversion_tab, t("ui.tabs.legacy_conversion")),
             (batch_legacy_tab, t("ui.tabs.batch_legacy")),
+            (adb_push_tab, t("ui.tabs.adb_push")),
         ])
         
         # 将所有Tab放置在content_frame的同一位置

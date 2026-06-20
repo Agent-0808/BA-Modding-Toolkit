@@ -1118,22 +1118,29 @@ class FileListbox:
         raw_paths = event.widget.tk.splitlist(event.data)
         suffixes = self.allowed_suffixes
         paths_to_add = []
-        
+
         for p_str in raw_paths:
             path = Path(p_str)
             if path.is_dir():
-                for suf in suffixes:
-                    paths_to_add.extend(sorted(path.glob(f'*{suf}')))
-            elif path.is_file() and path.suffix.lower() in suffixes:
+                if suffixes:
+                    for suf in suffixes:
+                        paths_to_add.extend(sorted(path.glob(f'*{suf}')))
+                else:
+                    # 空后缀集合：接受目录下所有文件
+                    paths_to_add.extend(sorted(p for p in path.iterdir() if p.is_file()))
+            elif path.is_file() and (not suffixes or path.suffix.lower() in suffixes):
                 paths_to_add.append(path)
-        
+
         if paths_to_add:
             self.add_files(paths_to_add)
-    
+
     def _browse_add_files(self):
         """浏览添加文件"""
-        ft = [(f"*{s}", f"*{s}") for s in sorted(self.allowed_suffixes)]
-        ft.append((t("file_type.all_files"), "*.*"))
+        if self.allowed_suffixes:
+            ft = [(f"*{s}", f"*{s}") for s in sorted(self.allowed_suffixes)]
+            ft.append((t("file_type.all_files"), "*.*"))
+        else:
+            ft = [(t("file_type.all_files"), "*.*")]
         select_file(
             title=t("action.add_files"),
             file_types=ft,
@@ -1141,7 +1148,7 @@ class FileListbox:
             callback=lambda paths: self.add_files(paths),
             log=self.logger.log if self.logger else None
         )
-    
+
     def _browse_add_folder(self):
         """浏览添加文件夹"""
         folder = select_directory(
@@ -1152,15 +1159,22 @@ class FileListbox:
         if folder:
             path = Path(folder)
             files: list[Path] = []
-            for suf in self.allowed_suffixes:
-                files.extend(sorted(path.glob(f'*{suf}')))
+            if self.allowed_suffixes:
+                for suf in self.allowed_suffixes:
+                    files.extend(sorted(path.glob(f'*{suf}')))
+            else:
+                # 空后缀集合：接受目录下所有文件
+                files.extend(sorted(p for p in path.iterdir() if p.is_file()))
             if files:
                 self.add_files(files)
                 if self.logger:
                     self.logger.log(t('log.file.added_count', count=len(files)))
             else:
                 if self.logger:
-                    self.logger.log(t('log.file.no_files_found_in_folder', type=', '.join(sorted(self.allowed_suffixes))))
+                    if self.allowed_suffixes:
+                        self.logger.log(t('log.file.no_files_found_in_folder', type=', '.join(sorted(self.allowed_suffixes))))
+                    else:
+                        self.logger.log(t('log.file.no_files_found_in_folder', type='*'))
     
     def _remove_selected(self):
         """移除选中的文件"""
