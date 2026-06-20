@@ -37,7 +37,7 @@ def _get_default_output_dir() -> str:
 
 def _get_default_android_global_dir() -> str:
     """获取默认 Android 国际服目录"""
-    return "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/"
+    return "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/PUB/Resource/"
 
 
 def _get_default_android_japan_dir() -> str:

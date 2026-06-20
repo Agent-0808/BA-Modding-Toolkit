@@ -34,6 +34,7 @@ class ADBFileBrowser(tb.Toplevel):
         self.selected_paths: list[str] = []  # 选中的远程路径
         self._current_dir: str = ""
         self._navigation_stack: list[str] = []  # 导航历史
+        self._all_items: list[str] = []  # 所有树项的 iid（含被 detach 的）
 
         self._setup_window(title)
         self._create_widgets()
@@ -158,7 +159,17 @@ class ADBFileBrowser(tb.Toplevel):
         self._current_dir = remote_dir
         self._path_var.set(remote_dir)
         self._status_label.config(text=t("adb.browser.loading"))
-        self._tree.delete(*self._tree.get_children())
+
+        # 删除所有项（包括被 detach 的，get_children 不会返回它们）
+        for item_id in self._all_items:
+            try:
+                self._tree.delete(item_id)
+            except tk.TclError:
+                pass
+        self._all_items = []
+
+        # 清空过滤（会触发 _apply_filter，但此时 _all_items 为空，无副作用）
+        self._filter_var.set("")
 
         try:
             files = self.adb_source.file_index.list_files(remote_dir, log=self.log)
@@ -174,6 +185,7 @@ class ADBFileBrowser(tb.Toplevel):
             self._tree.insert("", tk.END, iid=d.path,
                               values=(f"📁 {d.name}", "", ""),
                               tags=("dir",))
+            self._all_items.append(d.path)
 
         for f in files_only:
             size_str = self._format_size(f.size)
@@ -181,6 +193,7 @@ class ADBFileBrowser(tb.Toplevel):
             self._tree.insert("", tk.END, iid=f.path,
                               values=(f.name, size_str, mtime_str),
                               tags=("file",))
+            self._all_items.append(f.path)
 
         total = len(dirs) + len(files_only)
         self._status_label.config(text=t("adb.index.found", count=total))
@@ -222,8 +235,12 @@ class ADBFileBrowser(tb.Toplevel):
     def _apply_filter(self):
         """根据过滤文本筛选显示"""
         filter_text = self._filter_var.get().lower()
-        for item_id in self._tree.get_children():
-            values = self._tree.item(item_id, "values")
+        # 遍历所有项（含被 detach 的），否则一旦 detach 就再也无法 re-attach
+        for item_id in self._all_items:
+            try:
+                values = self._tree.item(item_id, "values")
+            except tk.TclError:
+                continue
             name = values[0] if values else ""
             # 去掉目录图标前缀
             display_name = name.replace("📁 ", "")

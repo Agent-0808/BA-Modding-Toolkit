@@ -18,7 +18,7 @@ ADB_PATHS: dict[str, list[str]] = {
 
 # 各区服的基础路径（用于浏览器起始目录和路径显示）
 ADB_BASE_PATHS: dict[str, str] = {
-    "global": "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
+    "global": "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/PUB/Resource/",
     "japan": "/storage/emulated/0/Android/data/com.Yostar JP.BlueArchive/files/",
 }
 
