@@ -1,16 +1,17 @@
-name: build executable file
+name: PR Build Check (GUI)
 
 on:
-  push:
-    tags:
-      - 'v*' # Trigger when push tag start with v (etc. v0.1.0)
-  workflow_dispatch: # Manual
-  
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
 permissions:
-  contents: write
-  
+  contents: read
+
 jobs:
-  build-windows:
+  build-check-windows:
     runs-on: windows-latest
 
     steps:
@@ -51,26 +52,21 @@ jobs:
           product-name: "BA Modding Toolkit"
           product-version: ${{ steps.get_version.outputs.file_version }}
           file-version: ${{ steps.get_version.outputs.file_version }}
-          file-description: "BA Modding Toolkit"
+          file-description: "BA Modding Toolkit (Test Build)"
           company-name: "Agent-0808"
           copyright: "Copyright ©2025-2026 Agent-0808. Licensed under GPLv3."
           trademarks: "Blue Archive ©NEXON Games Co., Ltd. & Yostar, Inc. This tool is unofficial and not endorsed by them."
 
           clang: true
           low-memory: true
-          # lto: "no"
-          # jobs: 1
           enable-plugins: tk-inter
-          # 包含代码依赖包
           include-package: |
             ba_modding_toolkit
             UnityPy.resources
-          # 包含依赖包的数据文件
           include-package-data: |
             ba_modding_toolkit
             UnityPy
             archspec
-          # 包含资源目录
           include-data-dir: |
             ba_modding_toolkit/assets=ba_modding_toolkit/assets
             ba_modding_toolkit/locales=ba_modding_toolkit/locales
@@ -87,25 +83,9 @@ jobs:
           Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
         shell: powershell
 
-      # 上传 Artifact
-      - name: Upload Artifact
+      # 上传测试版 Artifact
+      - name: Upload Test Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BA-Modding-Toolkit-Windows-Build
+          name: BA-Modding-Toolkit-Test-Build-PR${{ github.event.pull_request.number }}
           path: publish/
-
-      # 打包成 Zip
-      - name: Zip Release Asset (When Trigger With Tag)
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          $tag_name = "${{ github.ref_name }}"
-          cd publish
-          Compress-Archive -Path * -DestinationPath "../BA-Modding-Toolkit-$tag_name.zip"
-        shell: powershell
-
-      # 上传 Zip
-      - name: Upload Release Asset (When Trigger With Tag)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: BA-Modding-Toolkit-${{ github.ref_name }}.zip
