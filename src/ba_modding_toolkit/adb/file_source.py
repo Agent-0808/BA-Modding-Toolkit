@@ -124,7 +124,7 @@ class ADBFileSource(FileSourceAdapter):
         result = self.adb_manager.push_file(local_path, remote_path, log)
         if result:
             self.file_index.invalidate()  # 推送后刷新索引
-            self.cache.invalidate(remote_path)  # 推送后缓存失效
+            self.cache.invalidate(remote_path, log=log)  # 推送后缓存失效
         return result
 
     def get_search_dirs(self, base_dir: str = "") -> list[str]:

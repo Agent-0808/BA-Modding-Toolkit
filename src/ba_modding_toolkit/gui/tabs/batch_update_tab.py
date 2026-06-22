@@ -120,7 +120,7 @@ class BatchUpdateTab(TabFrame):
             adb_source = self.app.get_adb_file_source()
             if not adb_source.is_available():
                 from tkinter import messagebox
-                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
                 self.resource_source_var.set("local")
                 return
 
@@ -147,13 +147,13 @@ class BatchUpdateTab(TabFrame):
         if len(self.current_file_pairs) > 10:
             files_list += f"\n{t('message.and_more_files', count=len(self.current_file_pairs) - 10)}"
 
-        confirm_message = t("adb.push.confirm", files=files_list)
+        confirm_message = t("message.adb.push_confirm", files=files_list)
         if not messagebox.askyesno(t("common.warning"), confirm_message):
             return
 
         adb_source = self.app.get_adb_file_source()
         if not adb_source.is_available():
-            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            messagebox.showerror(t("common.error"), t("message.adb.not_connected"))
             return
 
         self.run_in_thread(self._push_files_worker, adb_source)
@@ -171,12 +171,12 @@ class BatchUpdateTab(TabFrame):
                 fail_count += 1
                 continue
 
-            self.logger.log(t("adb.push.start", name=pair.output.name))
+            self.logger.log(t("log.adb.push_start", name=pair.output.name))
             if adb_source.push_file(pair.output, remote_path, self.logger.log):
-                self.logger.log(t("adb.push.success", name=pair.output.name))
+                self.logger.log(t("log.adb.push_success", name=pair.output.name))
                 success_count += 1
             else:
-                self.logger.log(t("adb.push.failed", name=pair.output.name))
+                self.logger.log(t("log.adb.push_failed", path=pair.output.name, error="push failed"))
                 fail_count += 1
 
         self.logger.log(t("log.success_fail", success=success_count, fail=fail_count))
@@ -247,7 +247,7 @@ class BatchUpdateTab(TabFrame):
             # ADB 模式：先远程搜索目标，拉取到本地缓存，再使用本地缓存目录搜索
             adb_source = self.app.get_adb_file_source()
             if not adb_source.is_available():
-                self.logger.log(t("adb.device_none"))
+                self.logger.log(t("message.adb.not_connected"))
                 return
             # 预搜索：找到所有远程目标并拉取到本地
             search_path_dirs: set[Path] = set()

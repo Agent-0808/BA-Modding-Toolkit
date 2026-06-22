@@ -90,7 +90,7 @@ class AssetPackerTab(TabFrame):
         if self.resource_source_var.get() == "adb":
             adb_source = self.app.get_adb_file_source()
             if not adb_source.is_available():
-                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
                 self.resource_source_var.set("local")
 
     def on_bundles_selected(self, paths: list[Path]):

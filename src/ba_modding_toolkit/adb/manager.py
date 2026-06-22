@@ -225,9 +225,9 @@ class ADBManager:
             )
             return result
         except FileNotFoundError:
-            raise ADBError(t("adb.detect_failed"))
+            raise ADBError(f"ADB executable not found: {self.adb_path}")
         except subprocess.TimeoutExpired:
-            raise ADBError(t("log.adb.timeout", timeout=timeout))
+            raise ADBError(f"ADB command timeout ({timeout}s)")
 
     @staticmethod
     def _parse_ls_line(line: str) -> dict | None:

@@ -48,7 +48,9 @@
 		"open_in_explorer": "Open in Explorer",
 		"copy_filename": "Copy Filename",
 		"render_preview": "Render Preview",
-		"cache_to_local": "Cache to Local"
+		"cache_to_local": "Cache to Local",
+		"detect": "Detect",
+		"clear_cache": "Clear Cache"
 	},
 	"option": {
 		"auto_detect_subdirs": "Auto-detect Standard Subdirectories (GameData/Preload)",
@@ -108,7 +110,13 @@
 		"character_id_map": "Character ID Map",
 		"character_id_map_info": "Character ID to name mapping table, used to display character names in the file list.",
 		"character_name_field": "Character Name",
-		"character_name_field_info": "Select the display field for character names:\nfull_name: KivoWiki (Chinese, Most Complete)\nname_cn: Chinese Mainland Server\nname_jp: Japanese\nname_tw: Traditional Chinese\nname_en: English\nname_kr: Korean"
+		"character_name_field_info": "Select the display field for character names:\nfull_name: KivoWiki (Chinese, Most Complete)\nname_cn: Chinese Mainland Server\nname_jp: Japanese\nname_tw: Traditional Chinese\nname_en: English\nname_kr: Korean",
+		"adb_path": "ADB Path",
+		"adb_path_info": "Full path to adb.exe, or \"adb\" to use system PATH",
+		"adb_server_region": "Server Region",
+		"adb_server_region_info": "Select game server region to auto-determine resource paths",
+		"adb_cache_dir": "Cache Directory",
+		"adb_cache_dir_info": "Local cache directory for ADB files"
 	},
 	"file_type": {
 		"executable": "Executable File",
@@ -211,7 +219,19 @@
 			"skel_converter_not_configured": "SpineSkeletonDataConverter not configured.\nPlease configure the path in the settings page for SpineSkeletonDataConverter.",
 			"spine_viewer_required": "SpineViewerCLI program not set or path is invalid.\n\nPlease configure the path in the settings page for SpineViewerCLI."
 		},
-		"download_confirm": "Download file from:\n{url}\n\nAnd save to: {path}"
+		"download_confirm": "Download file from:\n{url}\n\nAnd save to: {path}",
+		"adb": {
+			"detect_success": "ADB detected successfully: {version}",
+			"detect_failed": "ADB detection failed. Please check the path.",
+			"not_connected": "ADB device not connected",
+			"clear_cache_confirm": "Are you sure you want to clear all ADB cache files?",
+			"clear_cache_done": "Cache cleared, freed {size}",
+			"push_confirm": "The following files will be pushed to the Android device. Continue?\n{files}",
+			"cache_complete": "Cache complete, {success} succeeded, {fail} failed",
+			"no_local_files": "Please select local files to push first",
+			"no_target_dir": "Please specify a target directory",
+			"push_summary": "Push complete: {success} succeeded, {fail} failed"
+		}
 	},
 	"status": {
 		"ready": "Ready",
@@ -427,73 +447,16 @@
 		"platform_info": "Target Platform: {platform} (Unity {version})",
 		"unnamed_resource": "Unnamed {type} asset",
 		"adb": {
-			"connected": "ADB device connected: {device}",
-			"disconnected": "ADB device disconnected",
 			"cache_hit": "Cache hit: {name}",
 			"cache_miss": "Cache miss, pulling from device: {name}",
 			"pull_failed": "Pull failed: {path} - {error}",
 			"push_failed": "Push failed: {path} - {error}",
 			"list_dir_failed": "List directory failed: {path} - {error}",
-			"timeout": "ADB command timed out ({timeout}s)"
-		}
-	},
-	"adb": {
-		"settings": {
-			"title": "ADB Settings"
-		},
-		"path": "ADB Path",
-		"path_info": "Full path to adb.exe, or \"adb\" to use system PATH",
-		"detect": "Detect",
-		"detect_success": "ADB detected successfully: {version}",
-		"detect_failed": "ADB detection failed. Please check the path.",
-		"device": "Device Selection",
-		"device_refresh": "Refresh",
-		"device_connected": "Device ready",
-		"device_unauthorized": "Device unauthorized. Please allow USB debugging on your phone.",
-		"device_offline": "Device offline",
-		"device_none": "No device detected",
-		"server_region": "Server Region",
-		"server_region_info": "Select game server region to auto-determine resource paths",
-		"server_global": "Global",
-		"server_japan": "Japan",
-		"cache_dir": "Cache Directory",
-		"cache_dir_info": "Local cache directory for ADB files",
-		"cache_title": "ADB Cache",
-		"cache_size": "Cache size: {size}",
-		"clear_cache": "Clear Cache",
-		"clear_cache_confirm": "Are you sure you want to clear all ADB cache files?",
-		"clear_cache_done": "Cache cleared, freed {size}",
-		"browser": {
-			"title": "ADB File Browser",
-			"title_dir": "Select Target Directory",
-			"refresh": "Refresh",
-			"select": "Select",
-			"cancel": "Cancel",
-			"loading": "Loading file list...",
-			"no_files": "No files in this directory",
-			"error": "Loading failed: {error}"
-		},
-		"pull": {
-			"start": "Pulling from device: {name}",
-			"success": "Pull successful: {name}",
-			"failed": "Pull failed: {name}"
-		},
-		"push": {
-			"start": "Pushing to device: {name}",
-			"success": "Push successful: {name}",
-			"failed": "Push failed: {name}",
-			"confirm": "The following files will be pushed to the Android device. Continue?\n{files}"
-		},
-		"index": {
-			"scanning": "Scanning device files...",
-			"found": "Scan complete, {count} files found",
-			"refreshing": "Refreshing file index..."
-		},
-		"not_connected": "ADB device not connected",
-		"cache": {
-			"no_adb_items": "No ADB files selected",
-			"caching": "Caching {count} files to local...",
-			"complete": "Cache complete, {success} succeeded, {fail} failed"
+			"push_start": "Pushing to device: {name}",
+			"push_success": "Push successful: {name}",
+			"cache_caching": "Caching {count} files to local...",
+			"cache_delete_failed": "Failed to delete cache file {name}: {error}",
+			"push_start_batch": "Pushing {count} file(s) to {dir}"
 		}
 	},
 	"resource_source": {
@@ -521,7 +484,14 @@
 			"group_assets": "Asset Options",
 			"group_spine": "Spine Tool Settings",
 			"group_app": "App Settings",
-			"group_paths": "Path Settings"
+			"group_paths": "Path Settings",
+			"group_adb": "ADB Settings",
+			"adb_device": "Device Selection",
+			"adb_device_connected": "Device ready",
+			"adb_device_unauthorized": "Device unauthorized. Please allow USB debugging on your phone.",
+			"adb_device_offline": "Device offline",
+			"adb_cache_title": "ADB Cache",
+			"adb_cache_size": "Cache size: {size}"
 		},
 		"column": {
 			"filename": "Filename",
@@ -532,11 +502,7 @@
 			"local_files": "Local Files",
 			"placeholder_local": "Drag and drop files or folders here...",
 			"target_dir": "Target Directory (device path)",
-			"push": "Push to Device",
-			"no_local_files": "Please select local files to push first",
-			"no_target_dir": "Please specify a target directory",
-			"push_start": "Pushing {count} file(s) to {dir}",
-			"push_summary": "Push complete: {success} succeeded, {fail} failed"
+			"push": "Push to Device"
 		},
 		"mod_update": {
 			"placeholder_old": "Drag and drop the old Mod file to update or port here\nOr click the button below to select",
@@ -570,7 +536,9 @@
 			"add": "Add {type}",
 			"select_file": "Select File",
 			"multiple_matches_found": "Found {count} matching files:",
-			"selection_cancelled": "Selection cancelled"
+			"selection_cancelled": "Selection cancelled",
+			"adb_browser": "ADB File Browser",
+			"adb_browser_dir": "Select Target Directory"
 		},
 		"drop_zone": {
 			"file_hint": "Drag and drop files here\nOr click the button below to select",
@@ -650,6 +618,11 @@
 				"ends_with": "ends with",
 				"regex": "regex"
 			}
+		},
+		"adb_browser": {
+			"loading": "Loading file list...",
+			"error": "Loading failed: {error}",
+			"found": "Scan complete, {count} files found"
 		}
 	}
 }

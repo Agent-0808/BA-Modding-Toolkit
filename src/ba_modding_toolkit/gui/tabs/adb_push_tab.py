@@ -68,7 +68,7 @@ class AdbPushTab(TabFrame):
     def _browse_target_dir(self):
         """打开 ADB 文件浏览器选择目标目录"""
         if not self.app.is_adb_available():
-            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            messagebox.showerror(t("common.error"), t("message.adb.not_connected"))
             return
 
         from ..windows.adb_browser import ADBFileBrowser
@@ -85,22 +85,22 @@ class AdbPushTab(TabFrame):
     def _on_push(self):
         """推送按钮回调：校验后在线程中执行推送"""
         if not self.app.is_adb_available():
-            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            messagebox.showerror(t("common.error"), t("message.adb.not_connected"))
             return
 
         files = list(self._file_list)
         if not files:
-            messagebox.showwarning(t("common.warning"), t("ui.adb_push.no_local_files"))
+            messagebox.showwarning(t("common.warning"), t("message.adb.no_local_files"))
             return
 
         target_dir = self.target_dir_var.get().strip().rstrip("/")
         if not target_dir:
-            messagebox.showwarning(t("common.warning"), t("ui.adb_push.no_target_dir"))
+            messagebox.showwarning(t("common.warning"), t("message.adb.no_target_dir"))
             return
 
         # 确认对话框
         file_names = "\n".join(f.name for f in files)
-        confirm_msg = t("adb.push.confirm", files=file_names)
+        confirm_msg = t("message.adb.push_confirm", files=file_names)
         if not messagebox.askyesno(t("common.tip"), confirm_msg):
             return
 
@@ -110,7 +110,7 @@ class AdbPushTab(TabFrame):
     def _push_files(self, files: list[Path], target_dir: str):
         """在后台线程中逐个推送文件"""
         self.logger.log("\n" + "=" * 50)
-        self.logger.log(t("ui.adb_push.push_start", dir=target_dir, count=len(files)))
+        self.logger.log(t("log.adb.push_start_batch", dir=target_dir, count=len(files)))
         self.logger.status(t("common.processing"))
 
         adb_source = self.app.get_adb_file_source()
@@ -119,7 +119,7 @@ class AdbPushTab(TabFrame):
 
         for f in files:
             remote_path = f"{target_dir}/{f.name}"
-            self.logger.log(t("adb.push.start", name=f.name))
+            self.logger.log(t("log.adb.push_start", name=f.name))
             try:
                 ok = adb_source.push_file(f, remote_path, log=self.logger.log)
             except Exception as e:
@@ -128,20 +128,20 @@ class AdbPushTab(TabFrame):
 
             if ok:
                 success_count += 1
-                self.logger.log(t("adb.push.success", name=f.name))
+                self.logger.log(t("log.adb.push_success", name=f.name))
             else:
                 fail_count += 1
-                self.logger.log(t("adb.push.failed", name=f.name))
+                self.logger.log(t("log.adb.push_failed", path=f.name, error="push failed"))
 
         self.logger.log("-" * 50)
-        self.logger.log(t("ui.adb_push.push_summary", success=success_count, fail=fail_count))
+        self.logger.log(t("message.adb.push_summary", success=success_count, fail=fail_count))
         self.logger.status(t("status.done"))
 
         self.master.after(0, lambda: self.push_button.config(state=tk.NORMAL))
 
         if fail_count == 0:
             messagebox.showinfo(t("common.success"),
-                                t("ui.adb_push.push_summary", success=success_count, fail=fail_count))
+                                t("message.adb.push_summary", success=success_count, fail=fail_count))
         else:
             messagebox.showwarning(t("common.warning"),
-                                   t("ui.adb_push.push_summary", success=success_count, fail=fail_count))
+                                   t("message.adb.push_summary", success=success_count, fail=fail_count))

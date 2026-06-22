@@ -74,7 +74,7 @@ class ADBCache:
 
         success = adb_manager.pull_file(remote_path, local_path, log)
         if not success:
-            raise RuntimeError(t("adb.pull.failed", name=Path(remote_path).name))
+            raise RuntimeError(f"Failed to cache file from device: {Path(remote_path).name}")
 
         # 获取远程文件信息用于校验
         remote_size = adb_manager.get_file_size(remote_path) or local_path.stat().st_size
@@ -105,7 +105,7 @@ class ADBCache:
                     return remote_path
         return None
 
-    def invalidate(self, remote_path: str | None = None):
+    def invalidate(self, remote_path: str | None = None, log=no_log):
         """使缓存失效"""
         with self._lock:
             if remote_path is None:
@@ -116,7 +116,12 @@ class ADBCache:
                 if entry:
                     local = self.cache_dir / entry.local_path
                     if local.exists():
-                        local.unlink()
+                        try:
+                            local.unlink()
+                        except Exception as e:
+                            # 文件被占用，忽略删除失败
+                            log(t("log.adb.cache_delete_failed", name=Path(remote_path).name, error=str(e)))
+                            pass
             self._save_manifest()
 
     def get_cache_size(self) -> int:

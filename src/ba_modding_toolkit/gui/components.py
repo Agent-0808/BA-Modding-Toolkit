@@ -501,7 +501,7 @@ class DropZone(tb.Labelframe):
         adb_source = self._app.get_adb_file_source()
         if not adb_source.is_available():
             from tkinter import messagebox
-            messagebox.showerror(t("common.error"), t("adb.device_none"))
+            messagebox.showerror(t("common.error"), t("message.adb.not_connected"))
             return
 
         browser = ADBFileBrowser(

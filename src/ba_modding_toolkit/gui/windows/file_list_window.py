@@ -365,7 +365,7 @@ class FileListWindow(tb.Toplevel):
             adb_source = self.app.get_adb_file_source()
             if not adb_source.is_available():
                 from tkinter import messagebox
-                messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
+                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
                 self.resource_source_var.set("local")
                 return
             # 使用配置中的 Android 目录，若为空则使用 ADB 默认路径
@@ -599,8 +599,8 @@ class FileListWindow(tb.Toplevel):
         adb_source = self.app.get_adb_file_source()
 
         if not adb_source.is_available():
-            messagebox.showwarning(t("common.warning"), t("adb.not_connected"))
-            self._status_label.config(text=t("adb.not_connected"))
+            messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
+            self._status_label.config(text=t("message.adb.not_connected"))
             return
 
         def _scan():
@@ -736,7 +736,7 @@ class FileListWindow(tb.Toplevel):
     def _get_filters(self) -> dict[str, tuple[str, Callable[[BundleFileInfo], bool]]]:
         """获取所有过滤器，返回 True 表示保留"""
         return {
-            "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes > 0),
+            "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes is not None and item.trailing_bytes > 0),
             "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
             "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self._char_map.lookup(item.parsed_name.core, field="full_name") is not None),
             "common_mod": (t("ui.file_list.filter.common_mod"), lambda item: any(item.path.name.startswith(p) for p in COMMON_MOD_PREFIXES)),
@@ -853,7 +853,7 @@ class FileListWindow(tb.Toplevel):
             # ADB 模式下无法在资源管理器中打开，改为打开 ADB 浏览器
             from .adb_browser import ADBFileBrowser
             adb_source = self.app.get_adb_file_source()
-            ADBFileBrowser(self, adb_source, title=t("adb.browser.title"), log=self.app.logger.log)
+            ADBFileBrowser(self, adb_source, title=t("ui.dialog.adb_browser"), log=self.app.logger.log)
             return
         for item in items:
             open_directory(item.path.parent, self.app.logger.log)
@@ -1031,11 +1031,11 @@ class FileListWindow(tb.Toplevel):
         adb_items = [item for item in items if item.local_cache_path is None]
         if not adb_items:
             # 所有文件已缓存
-            messagebox.showinfo(t("common.tip"), t("adb.cache.complete"), parent=self)
+            messagebox.showinfo(t("common.tip"), t("message.adb.cache_complete"), parent=self)
             return
 
         adb_source = self.app.get_adb_file_source()
-        self._status_label.config(text=t("adb.cache.caching"))
+        self._status_label.config(text=t("log.adb.cache_caching"))
         self._progress["value"] = 0
 
         def _run():
@@ -1071,7 +1071,7 @@ class FileListWindow(tb.Toplevel):
         if self._closed:
             return
         self._progress["value"] = 0
-        msg = t("adb.cache.complete", success=success_count, fail=fail_count)
+        msg = t("message.adb.cache_complete", success=success_count, fail=fail_count)
         self._status_label.config(text=msg)
         self.app.logger.log(msg)
 

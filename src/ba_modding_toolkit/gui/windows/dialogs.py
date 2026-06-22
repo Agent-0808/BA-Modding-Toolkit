@@ -32,7 +32,7 @@ class SettingsDialog(tb.Toplevel):
         self._init_app_settings()
         self._init_path_settings()
         self._init_adb_settings()
-        self._init_global_options()
+        self._init_saving_options()
         self._init_asset_options()
         self._init_spine_settings()
 
@@ -96,37 +96,37 @@ class SettingsDialog(tb.Toplevel):
 
     def _init_adb_settings(self):
         """初始化 ADB 设置"""
-        section = self._create_section(t("adb.settings.title"))
+        section = self._create_section(t("ui.settings.group_adb"))
 
         # ADB 路径
         SettingRow.create_path_selector(
             section,
-            label=t("adb.path"),
+            label=t("option.adb_path"),
             path_var=self.app.adb_path_var,
             select_cmd=self._select_adb_path,
-            tooltip=t("adb.path_info"),
+            tooltip=t("option.adb_path_info"),
             status_check=self._check_adb_available
         )
 
         # ADB 检测按钮
         SettingRow.create_button_row(
             section,
-            label=t("adb.detect"),
-            button_text=t("adb.detect"),
+            label=t("action.detect"),
+            button_text=t("action.detect"),
             command=self._detect_adb,
             bootstyle="info"
         )
 
         # 设备选择
         device_container = SettingRow.create_container(section)
-        SettingRow._add_label_area(device_container, t("adb.device"), None)
+        SettingRow._add_label_area(device_container, t("ui.settings.adb_device"), None)
 
         right_frame = tb.Frame(device_container)
         right_frame.pack(side=tk.RIGHT)
 
         UIComponents.create_button(
             right_frame,
-            text=t("adb.device_refresh"),
+            text=t("action.refresh"),
             command=self._refresh_devices,
             bootstyle="secondary",
             style="compact"
@@ -148,32 +148,32 @@ class SettingsDialog(tb.Toplevel):
         # 区服选择
         SettingRow.create_combobox_row(
             section,
-            label=t("adb.server_region"),
+            label=t("option.adb_server_region"),
             text_var=self.app.adb_server_region_var,
             values=["global", "japan"],
-            tooltip=t("adb.server_region_info")
+            tooltip=t("option.adb_server_region_info")
         )
 
         # 缓存路径
         SettingRow.create_path_selector(
             section,
-            label=t("adb.cache_dir"),
+            label=t("option.adb_cache_dir"),
             path_var=self.app.adb_cache_dir_var,
             select_cmd=self._select_adb_cache_dir,
             open_cmd=self._open_adb_cache_dir,
-            tooltip=t("adb.cache_dir_info")
+            tooltip=t("option.adb_cache_dir_info")
         )
 
         # 缓存大小 + 清理按钮
         cache_container = SettingRow.create_container(section)
-        SettingRow._add_label_area(cache_container, t("adb.cache_title"), None)
+        SettingRow._add_label_area(cache_container, t("ui.settings.adb_cache_title"), None)
 
         self._cache_size_label = tb.Label(cache_container, text="", font=Theme.INPUT_FONT)
         self._cache_size_label.pack(side=tk.RIGHT, padx=(10, 0))
 
         UIComponents.create_button(
             cache_container,
-            text=t("adb.clear_cache"),
+            text=t("action.clear_cache"),
             command=self._clear_adb_cache,
             bootstyle="warning",
             style="compact"
@@ -216,12 +216,12 @@ class SettingsDialog(tb.Toplevel):
         manager = self.app.get_adb_manager()
         success, info = manager.detect_adb()
         if success:
-            self.app.logger.log(t("adb.detect_success", version=info))
+            self.app.logger.log(t("message.adb.detect_success", version=info))
             self._update_adb_status()
-            messagebox.showinfo(t("common.success"), t("adb.detect_success", version=info), parent=self)
+            messagebox.showinfo(t("common.success"), t("message.adb.detect_success", version=info), parent=self)
         else:
-            self.app.logger.log(t("adb.detect_failed"))
-            messagebox.showerror(t("common.error"), t("adb.detect_failed"), parent=self)
+            self.app.logger.log(t("message.adb.detect_failed"))
+            messagebox.showerror(t("common.error"), t("message.adb.detect_failed"), parent=self)
 
     def _refresh_devices(self):
         """刷新设备列表"""
@@ -240,20 +240,20 @@ class SettingsDialog(tb.Toplevel):
                     self.app.adb_device_var.set(d.serial)
                     manager.select_device(d.serial)
                     self._device_status_label.config(
-                        text=t("adb.device_connected"),
+                        text=t("ui.settings.adb_device_connected"),
                         bootstyle="success"
                     )
                     return
             # 没有就绪设备
             first = devices[0]
             self._device_status_label.config(
-                text=t("adb.device_unauthorized") if first.state == "unauthorized" else t("adb.device_offline"),
+                text=t("ui.settings.adb_device_unauthorized") if first.state == "unauthorized" else t("ui.settings.adb_device_offline"),
                 bootstyle="warning"
             )
         else:
             self.app.adb_device_var.set("")
             self._device_status_label.config(
-                text=t("adb.device_none"),
+                text=t("message.adb.not_connected"),
                 bootstyle="danger"
             )
 
@@ -265,7 +265,7 @@ class SettingsDialog(tb.Toplevel):
             self._refresh_devices()
         except Exception:
             self._device_status_label.config(
-                text=t("adb.device_none"),
+                text=t("message.adb.not_connected"),
                 bootstyle="danger"
             )
 
@@ -274,7 +274,7 @@ class SettingsDialog(tb.Toplevel):
         from ..utils import select_directory
         select_directory(
             var=self.app.adb_cache_dir_var,
-            title=t("ui.dialog.select", type=t("adb.cache_dir")),
+            title=t("ui.dialog.select", type=t("option.adb_cache_dir")),
             log=self.app.logger.log
         )
 
@@ -294,21 +294,21 @@ class SettingsDialog(tb.Toplevel):
         try:
             cache = self.app.get_adb_cache()
             size_display = cache.get_cache_size_display()
-            self._cache_size_label.config(text=t("adb.cache_size", size=size_display))
+            self._cache_size_label.config(text=t("ui.settings.adb_cache_size", size=size_display))
         except Exception:
             self._cache_size_label.config(text="")
 
     def _clear_adb_cache(self):
         """清理 ADB 缓存"""
-        if not messagebox.askyesno(t("common.warning"), t("adb.clear_cache_confirm"), parent=self):
+        if not messagebox.askyesno(t("common.warning"), t("message.adb.clear_cache_confirm"), parent=self):
             return
         try:
             cache = self.app.get_adb_cache()
             success, freed = cache.clear_cache()
             if success:
-                self.app.logger.log(t("adb.clear_cache_done", size=freed))
+                self.app.logger.log(t("message.adb.clear_cache_done", size=freed))
                 self._update_cache_size()
-                messagebox.showinfo(t("common.success"), t("adb.clear_cache_done", size=freed), parent=self)
+                messagebox.showinfo(t("common.success"), t("message.adb.clear_cache_done", size=freed), parent=self)
         except Exception as e:
             messagebox.showerror(t("common.error"), t("message.process_failed", error=e), parent=self)
 
@@ -350,7 +350,7 @@ class SettingsDialog(tb.Toplevel):
             bootstyle="info"
         )
 
-    def _init_global_options(self):
+    def _init_saving_options(self):
         """初始化保存选项"""
         section = self._create_section(t("ui.settings.group_save"))
 

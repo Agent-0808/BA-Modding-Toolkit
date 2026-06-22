@@ -60,7 +60,7 @@ class ADBFileBrowser(tb.Toplevel):
     def _setup_window(self, title: str):
         """设置窗口属性"""
         if not title:
-            title = t("adb.browser.title_dir") if self.directory_mode else t("adb.browser.title")
+            title = t("ui.dialog.adb_browser_dir") if self.directory_mode else t("ui.dialog.adb_browser")
         self.title(title)
         self.geometry("800x550")
         self.resizable(True, True)
@@ -93,7 +93,7 @@ class ADBFileBrowser(tb.Toplevel):
         self._path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
         UIComponents.create_button(
-            nav_frame, text=t("adb.browser.refresh"), command=self._refresh,
+            nav_frame, text=t("action.refresh"), command=self._refresh,
             bootstyle="secondary", style="compact"
         ).pack(side=tk.RIGHT)
 
@@ -153,7 +153,7 @@ class ADBFileBrowser(tb.Toplevel):
         ).pack(side=tk.RIGHT, padx=(5, 0))
 
         UIComponents.create_button(
-            btn_frame, text=t("adb.browser.select"), command=self._on_confirm,
+            btn_frame, text=t("action.select"), command=self._on_confirm,
             bootstyle="success"
         ).pack(side=tk.RIGHT)
 
@@ -161,7 +161,7 @@ class ADBFileBrowser(tb.Toplevel):
         """导航到指定远程目录"""
         self._current_dir = remote_dir
         self._path_var.set(remote_dir)
-        self._status_label.config(text=t("adb.browser.loading"))
+        self._status_label.config(text=t("ui.adb_browser.loading"))
 
         # 删除所有项（包括被 detach 的，get_children 不会返回它们）
         for item_id in self._all_items:
@@ -177,7 +177,7 @@ class ADBFileBrowser(tb.Toplevel):
         try:
             files = self.adb_source.file_index.list_files(remote_dir, log=self.log)
         except Exception as e:
-            self._status_label.config(text=t("adb.browser.error", error=e))
+            self._status_label.config(text=t("ui.adb_browser.error", error=e))
             return
 
         # 排序：目录在前，文件在后
@@ -199,7 +199,7 @@ class ADBFileBrowser(tb.Toplevel):
             self._all_items.append(f.path)
 
         total = len(dirs) + len(files_only)
-        self._status_label.config(text=t("adb.index.found", count=total))
+        self._status_label.config(text=t("ui.adb_browser.found", count=total))
 
     def _go_back(self):
         """返回上级目录"""
