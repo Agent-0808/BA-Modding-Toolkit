@@ -39,15 +39,19 @@ class CrcToolTab(TabFrame):
         )
 
         # 原始文件
+        self._search_path_var = tk.StringVar(value=self.app.get_current_resource_dir())
         self.original_zone = DropZone(
             self, title=t("ui.label.original_file"),
             placeholder_text=t("ui.crc_tool.placeholder_origin"),
             on_files_selected=self.on_original_selected,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
-            search_path_var=self.app.game_resource_dir_var,
+            search_path_var=self._search_path_var,
             allow_multiple=False,
             logger=self.logger
         )
+
+        # 绑定文件来源变化事件（使用 bind_all 让所有 widget 都能接收）
+        self.bind_all("<<FileSourceChanged>>", self._on_file_source_changed, add=True)
 
         # 操作按钮
         action_button_frame = tb.Frame(self)
@@ -66,6 +70,10 @@ class CrcToolTab(TabFrame):
         self.logger.log(t("log.crc.loaded_original", file=path))
         self.logger.status(t("status.loaded", type="original"))
 
+    def _on_file_source_changed(self, event=None):
+        """文件来源变化时更新搜索路径"""
+        self._search_path_var.set(self.app.get_current_resource_dir())
+
     def on_modified_selected(self, path: Path):
         """待修正文件选中后的处理"""
         self.logger.log(t("log.crc.loaded_modified", file=path))
@@ -80,7 +88,7 @@ class CrcToolTab(TabFrame):
         self.original_zone.clear()
         
         # 自动搜索 original 文件
-        game_dir_str = self.app.game_resource_dir_var.get()
+        game_dir_str = self.app.get_current_resource_dir()
         if not game_dir_str:
             self.logger.log(f'⚠️ {t("log.game_dir_not_set")}')
             return

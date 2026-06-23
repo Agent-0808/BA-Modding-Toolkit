@@ -34,7 +34,7 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
-        self.master.geometry("700x888")
+        self.master.geometry("800x1000")
 
         # 设置路径
         if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
@@ -278,6 +278,35 @@ class App(tb.Frame, ConfigMixin):
             parent=self
         )
 
+    # --- 文件来源相关方法 ---
+
+    def get_current_resource_dir(self) -> str:
+        """根据文件来源获取当前资源目录"""
+        source = self.file_source_var.get()
+        if source == "windows_global":
+            return self.game_resource_dir_var.get()
+        elif source == "windows_japan":
+            return self.game_resource_dir_japan_var.get()
+        elif source == "adb_global":
+            return self.game_dir_android_global_var.get()
+        elif source == "adb_japan":
+            return self.game_dir_android_japan_var.get()
+        return ""
+
+    def get_current_server_region(self) -> str:
+        """根据文件来源获取区服"""
+        source = self.file_source_var.get()
+        if source in ("windows_global", "adb_global"):
+            return "global"
+        elif source in ("windows_japan", "adb_japan"):
+            return "japan"
+        return "global"
+
+    def is_adb_mode(self) -> bool:
+        """判断是否为ADB模式"""
+        source = self.file_source_var.get()
+        return source.startswith("adb_")
+
 
     def select_game_resource_directory(self):
         select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
@@ -323,7 +352,7 @@ class App(tb.Frame, ConfigMixin):
             adb_manager=self._adb_manager,
             file_index=self._adb_index,
             cache=self._adb_cache,
-            server_region=self.adb_server_region_var.get(),
+            server_region=self.get_current_server_region(),
         )
 
     def get_adb_cache(self) -> ADBCache:
@@ -384,11 +413,17 @@ class App(tb.Frame, ConfigMixin):
             self.language_var.set(default_language)
             print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
             
-            # 尝试从注册表检测 Blue Archive 游戏路径
-            ba_path = get_BA_path()
-            if ba_path:
-                self.game_resource_dir_var.set(ba_path)
-                print(f"从注册表检测到 Blue Archive 安装路径: {ba_path}")
+            # 尝试从注册表检测 Blue Archive 游戏路径（国际服）
+            ba_path_global = get_BA_path("global")
+            if ba_path_global:
+                self.game_resource_dir_var.set(ba_path_global)
+                print(f"从注册表检测到 Blue Archive 国际服安装路径: {ba_path_global}")
+            
+            # 尝试从注册表检测 Blue Archive 游戏路径（日服）
+            ba_path_japan = get_BA_path("japan")
+            if ba_path_japan:
+                self.game_resource_dir_japan_var.set(ba_path_japan)
+                print(f"从注册表检测到 Blue Archive 日服安装路径: {ba_path_japan}")
         
         # 设置语言
         language = self.language_var.get()

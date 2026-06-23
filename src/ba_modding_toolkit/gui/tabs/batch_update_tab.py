@@ -11,7 +11,7 @@ from ...models import FilePair
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
 from ..base_tab import TabFrame
-from ..components import FileListbox, UIComponents, SettingRow, ModeSwitcher
+from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
 
 
@@ -22,7 +22,6 @@ class BatchUpdateTab(TabFrame):
         self.current_file_pairs: list[FilePair] = []
         self.match_strategy_var = tk.StringVar(value='path_id')
         self.workers_var = tk.IntVar(value=min(os.cpu_count() or 4, 8))
-        self.resource_source_var = tk.StringVar(value='local')  # "local" | "adb"
         self._adb_remote_paths: list[str] = []  # ADB 模式下目标的远程路径
         super().__init__(*args, **kwargs)
 
@@ -41,17 +40,6 @@ class BatchUpdateTab(TabFrame):
             display_formatter=lambda p: f"{p.parent.name} / {p.name}"
         )
         self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-
-        # 资源来源切换
-        self._source_switcher = ModeSwitcher(
-            self,
-            mode_var=self.resource_source_var,
-            options=[
-                ("local", t("resource_source.windows")),
-                ("adb", t("resource_source.android")),
-            ],
-            command=self._on_resource_source_changed
-        )
 
         # 匹配策略选择 + 线程数选择
         option_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
@@ -111,22 +99,9 @@ class BatchUpdateTab(TabFrame):
         )
         self.batch_replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
 
-    def _on_resource_source_changed(self):
-        """资源来源切换时的处理"""
-        self._adb_remote_paths = []
-
-        if self.resource_source_var.get() == "adb":
-            # 检查 ADB 设备是否在线
-            adb_source = self.app.get_adb_file_source()
-            if not adb_source.is_available():
-                from tkinter import messagebox
-                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
-                self.resource_source_var.set("local")
-                return
-
     def batch_replace_original_thread(self):
         """批量覆盖原文件的线程入口"""
-        if self.resource_source_var.get() == "adb":
+        if self.app.is_adb_mode():
             self._replace_original_adb()
         else:
             confirm_and_replace(
@@ -210,8 +185,8 @@ class BatchUpdateTab(TabFrame):
         if not self.mod_file_list:
             messagebox.showerror(t("common.error"), t("message.list_empty"))
             return
-        if self.resource_source_var.get() != "adb":
-            if not all([self.app.game_resource_dir_var.get(), self.app.output_dir_var.get()]):
+        if not self.app.is_adb_mode():
+            if not all([self.app.get_current_resource_dir(), self.app.output_dir_var.get()]):
                 messagebox.showerror(t("common.error"), t("message.missing_paths"))
                 return
         else:
@@ -243,7 +218,7 @@ class BatchUpdateTab(TabFrame):
 
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
 
-        if self.resource_source_var.get() == "adb":
+        if self.app.is_adb_mode():
             # ADB 模式：先远程搜索目标，拉取到本地缓存，再使用本地缓存目录搜索
             adb_source = self.app.get_adb_file_source()
             if not adb_source.is_available():
@@ -267,7 +242,7 @@ class BatchUpdateTab(TabFrame):
             search_paths = list(search_path_dirs) if search_path_dirs else []
         else:
             # 本地模式
-            base_game_dir = Path(self.app.game_resource_dir_var.get())
+            base_game_dir = Path(self.app.get_current_resource_dir())
             search_paths = get_search_dirs(base_game_dir)
 
         self.current_file_pairs = []
@@ -279,7 +254,7 @@ class BatchUpdateTab(TabFrame):
         crc_setting = self.app.enable_crc_correction_var.get()
 
         if crc_setting == "auto":
-            if self.resource_source_var.get() == "adb":
+            if self.app.is_adb_mode():
                 # ADB 模式下使用已拉取的本地缓存文件检查 CRC
                 if self._adb_remote_paths:
                     adb_source = self.app.get_adb_file_source()

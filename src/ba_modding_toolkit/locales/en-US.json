@@ -53,8 +53,8 @@
 		"clear_cache": "Clear Cache"
 	},
 	"option": {
-		"auto_detect_subdirs": "Auto-detect Standard Subdirectories (GameData/Preload)",
-		"auto_detect_subdirs_info": "",
+		"file_source": "File Source",
+		"file_source_info": "Select game resource source platform and server region",
 		"crc_correction": "CRC Correction",
 		"crc_correction_info": "Corrects the CRC checksum of bundle files to prevent the 'Abnormal Client' error after modification.\nThis option must be enabled for the Steam version; it is not required for mobile versions.\nWhen set to 'Auto', the tool will determine if it's needed based on the target bundle's platform info.",
 		"extra_bytes": "Extra Bytes",
@@ -82,11 +82,13 @@
 		"spine_downgrade_target_version": "Target Version",
 		"spine_downgrade_target_version_info": "Format should be \"A.B.C\".",
 		"unpack_atlas": "Unpack Atlas",
-		"unpack_atlas_info": "Unpacks Atlas into individual PNG frames.\nUnpacked frames are saved in an images/ subdirectory.",
+		"unpack_atlas_info": "Unpacks Atlas into individual PNG frames.\nUnpacked frames will be saved in an images/ subdirectory.",
 		"auto_search": "Auto Search for Corresponding Files",
 		"auto_search_info": "",
-		"game_root_dir": "Game Directory",
+		"game_root_dir": "Game Directory (Global)",
 		"game_root_dir_info": "Set the game installation directory to automatically locate original bundle files.\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
+		"game_root_dir_japan": "Game Directory (Japan)",
+		"game_root_dir_japan_info": "Installation directory for the Japan server PC client",
 		"game_dir_android_global": "Android (Global) Directory",
 		"game_dir_android_global_info": "Game resource directory on Android device (Global server)\ne.g.: /storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
 		"game_dir_android_japan": "Android (Japan) Directory",
@@ -113,8 +115,6 @@
 		"character_name_field_info": "Select the display field for character names:\nfull_name: KivoWiki (Chinese, Most Complete)\nname_cn: Chinese Mainland Server\nname_jp: Japanese\nname_tw: Traditional Chinese\nname_en: English\nname_kr: Korean",
 		"adb_path": "ADB Path",
 		"adb_path_info": "Full path to adb.exe, or \"adb\" to use system PATH",
-		"adb_server_region": "Server Region",
-		"adb_server_region_info": "Select game server region to auto-determine resource paths",
 		"adb_cache_dir": "Cache Directory",
 		"adb_cache_dir_info": "Local cache directory for ADB files"
 	},
@@ -458,11 +458,6 @@
 			"cache_delete_failed": "Failed to delete cache file {name}: {error}",
 			"push_start_batch": "Pushing {count} file(s) to {dir}"
 		}
-	},
-	"resource_source": {
-		"windows": "Windows (Local)",
-		"android": "Android (ADB)",
-		"label": "Resource Source"
 	},
 	"ui": {
 		"app_title": "BA Modding Toolkit",

@@ -25,18 +25,25 @@ def _get_path_from_registry(key_path: str) -> str | None:
             return install_path
             
     except Exception as e:
-        print(f"读取注册表出错: {e}")
+        print(f"读取注册表 {key_path} 时出错: {e}")
 
     return None
 
-def get_BA_path() -> str | None:
-    BA_STEAM_APPID = 3557620
-    GL_path = _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
-
-    # TODO: JP_path
-    # JP_path = get_path_from_registry(fr"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
-
-    return GL_path
+def get_BA_path(region: str = "global") -> str | None:
+    """获取游戏安装路径
+    
+    Args:
+        region: 区服，"global" 或 "japan"
+    
+    Returns:
+        游戏安装路径，如果未找到则返回 None
+    """
+    if region == "global":
+        BA_STEAM_APPID = 3557620
+        return _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
+    elif region == "japan":
+        return _get_path_from_registry(r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
+    return None
 
 def get_version() -> str:
     """从 pyproject.toml 读取版本号"""

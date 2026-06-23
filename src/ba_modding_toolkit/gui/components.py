@@ -276,7 +276,6 @@ class DropZone(tb.Labelframe):
         allow_folder: bool = False,
         allow_multiple: bool = True,
         logger: Logger | None = None,
-        resource_source_var: tk.StringVar | None = None,
         app: "App | None" = None,
         **kwargs
     ):
@@ -292,7 +291,6 @@ class DropZone(tb.Labelframe):
         self._paths: list[Path] = []
         self._open_btn = None  # "打开"按钮引用
         self._clear_btn = None  # "清除"按钮引用
-        self._resource_source_var = resource_source_var  # 资源来源变量
         self._app = app  # App 引用（ADB 模式需要）
         self._adb_remote_paths: list[str] = []  # ADB 模式下的远程路径
         
@@ -490,8 +488,9 @@ class DropZone(tb.Labelframe):
 
     def _is_adb_mode(self) -> bool:
         """检查是否为 ADB 模式"""
-        return (self._resource_source_var is not None
-                and self._resource_source_var.get() == "adb")
+        if self._app is not None:
+            return self._app.is_adb_mode()
+        return False
 
     def _browse_adb(self) -> None:
         """ADB 模式下的浏览操作"""
@@ -670,10 +669,11 @@ class SettingRow:
         open_cmd: Callable[[], None] | None = None,
         tooltip: str | None = None,
         download_guide_cmd: Callable[[], None] | None = None,
-        status_check: Callable[[], bool] | None = None
+        status_check: Callable[[], bool] | None = None,
+        extra_button: tuple[str, Callable[[], None], str] | None = None
     ) -> tb.Frame:
         """创建路径选择行
-        
+
         Args:
             parent: 父组件
             label: 标签文本
@@ -683,6 +683,7 @@ class SettingRow:
             tooltip: 提示文本（可选）
             download_guide_cmd: 下载引导命令（可选），当路径不合法时显示下载按钮
             status_check: 状态检查函数（可选），返回 True 显示绿色指示器
+            extra_button: 额外按钮 (text, command, bootstyle)（可选）
         """
         container = SettingRow.create_container(parent)
         refresh_indicator = SettingRow._add_label_area(container, label, tooltip, status_check)
@@ -690,7 +691,18 @@ class SettingRow:
         # 右侧区域容器
         right_frame = tb.Frame(container)
         right_frame.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(50, 0))
-        
+
+        # 额外按钮
+        if extra_button:
+            text, cmd, style = extra_button
+            UIComponents.create_button(
+                right_frame,
+                text,
+                cmd,
+                bootstyle=style,
+                style="compact"
+            ).pack(side=tk.RIGHT, padx=(5, 0))
+
         # 下载按钮（如果提供了下载引导命令）
         if download_guide_cmd:
             UIComponents.create_button(

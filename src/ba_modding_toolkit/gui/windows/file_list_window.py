@@ -19,7 +19,7 @@ from ...searching import list_bundle_files, list_bundle_files_remote, search_pre
 from ...bundle import analyze_bundles
 from ...models import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
-from ..components import Theme, UIComponents, ModeSwitcher
+from ..components import Theme, UIComponents
 from ..utils import open_directory, select_directory
 
 if TYPE_CHECKING:
@@ -243,7 +243,6 @@ class FileListWindow(tb.Toplevel):
         self._items_by_path: dict[str, BundleFileInfo] = {}
         self._closed: bool = False
         self._char_map = CharacterInternalIDMap()  # 角色ID映射表
-        self.resource_source_var = tk.StringVar(value='local')
         self._scan_version: int = 0  # 扫描版本号，用于丢弃过期的扫描结果
 
         self.ctx_list: list[tuple[str, Callable[[], None]]] = [
@@ -277,22 +276,7 @@ class FileListWindow(tb.Toplevel):
         row1 = tb.Frame(toolbar_container, padding=5)
         row1.pack(fill=tk.X)
 
-        # 资源来源切换
-        self._source_switcher = ModeSwitcher(
-            row1,
-            mode_var=self.resource_source_var,
-            options=[
-                ("local", t("resource_source.windows")),
-                ("adb", t("resource_source.android")),
-            ],
-            command=self._on_resource_source_changed,
-        )
-        self._source_switcher.frame.pack(side=tk.LEFT, padx=(0, 10), pady=0)
-        # ModeSwitcher 默认有 pady=(0, 10)，这里需要覆盖
-        self._source_switcher.frame.pack_forget()
-        self._source_switcher.frame.pack(side=tk.LEFT, padx=(0, 10), pady=0)
-
-        self._dir_var = tk.StringVar(value=self.app.game_resource_dir_var.get())
+        self._dir_var = tk.StringVar(value=self.app.get_current_resource_dir())
 
         self._dir_entry = tb.Entry(row1, textvariable=self._dir_var, width=50)
         self._dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
@@ -356,35 +340,12 @@ class FileListWindow(tb.Toplevel):
         char_field_combo.pack(side=tk.LEFT, padx=(0, 5))
         char_field_combo.bind("<<ComboboxSelected>>", self._on_character_field_changed)
 
-    def _on_resource_source_changed(self):
-        """资源来源切换时的处理"""
-        is_adb = self.resource_source_var.get() == "adb"
+        # 绑定文件来源变化事件（使用 bind_all 让所有 widget 都能接收）
+        self.bind_all("<<FileSourceChanged>>", self._on_file_source_changed, add=True)
 
-        if is_adb:
-            # 检查 ADB 设备是否在线
-            adb_source = self.app.get_adb_file_source()
-            if not adb_source.is_available():
-                from tkinter import messagebox
-                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
-                self.resource_source_var.set("local")
-                return
-            # 使用配置中的 Android 目录，若为空则使用 ADB 默认路径
-            region = self.app.adb_server_region_var.get()
-            if region == "japan":
-                android_dir = self.app.game_dir_android_japan_var.get()
-            else:
-                android_dir = self.app.game_dir_android_global_var.get()
-            if not android_dir:
-                android_dir = adb_source.get_base_path() or ""
-            self._dir_var.set(android_dir)
-            self._dir_entry.config(state="readonly")
-            self._select_btn.config(state="disabled")
-        else:
-            # 恢复 Windows 游戏目录
-            self._dir_var.set(self.app.game_resource_dir_var.get())
-            self._dir_entry.config(state="normal")
-            self._select_btn.config(state="normal")
-
+    def _on_file_source_changed(self, event=None):
+        """文件来源变化时更新目录"""
+        self._dir_var.set(self.app.get_current_resource_dir())
         self._refresh()
 
     def _create_tableview(self):
@@ -549,11 +510,16 @@ class FileListWindow(tb.Toplevel):
                 row.values = row.values
 
     def _select_directory(self):
-        select_directory(self._dir_var, t("option.game_root_dir"), self.app.logger.log)
+        if self._is_adb_mode():
+            from .adb_browser import ADBFileBrowser
+            adb_source = self.app.get_adb_file_source()
+            ADBFileBrowser(self, adb_source, title=t("ui.dialog.adb_browser"), log=self.app.logger.log)
+        else:
+            select_directory(self._dir_var, t("option.game_root_dir"), self.app.logger.log)
 
     def _is_adb_mode(self) -> bool:
         """当前是否为 ADB 模式"""
-        return self.resource_source_var.get() == "adb"
+        return self.app.is_adb_mode()
 
     def _refresh(self):
         if self._is_adb_mode():

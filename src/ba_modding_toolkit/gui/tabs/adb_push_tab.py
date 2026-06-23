@@ -39,7 +39,7 @@ class AdbPushTab(TabFrame):
 
         self.target_dir_var = tk.StringVar()
         # 预填充区服基础路径
-        region = self.app.adb_server_region_var.get()
+        region = self.app.get_current_server_region()
         base = get_adb_base_path(region)
         if base:
             self.target_dir_var.set(base)
