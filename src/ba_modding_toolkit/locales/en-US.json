@@ -54,7 +54,11 @@
 	},
 	"option": {
 		"file_source": "File Source",
-		"file_source_info": "Select game resource source platform and server region",
+		"file_source_info": "Select game resource source platform and server region \n- Windows Global (Local) \n- Windows Japan (Local) \n- Android Global (ADB) \n- Android Japan (ADB)",
+		"file_source_windows_global": "Windows Global (Local)",
+		"file_source_windows_japan": "Windows Japan (Local)",
+		"file_source_adb_global": "Android Global (ADB)",
+		"file_source_adb_japan": "Android Japan (ADB)",
 		"crc_correction": "CRC Correction",
 		"crc_correction_info": "Corrects the CRC checksum of bundle files to prevent the 'Abnormal Client' error after modification.\nThis option must be enabled for the Steam version; it is not required for mobile versions.\nWhen set to 'Auto', the tool will determine if it's needed based on the target bundle's platform info.",
 		"extra_bytes": "Extra Bytes",
@@ -85,10 +89,10 @@
 		"unpack_atlas_info": "Unpacks Atlas into individual PNG frames.\nUnpacked frames will be saved in an images/ subdirectory.",
 		"auto_search": "Auto Search for Corresponding Files",
 		"auto_search_info": "",
-		"game_root_dir": "Game Directory (Global)",
-		"game_root_dir_info": "Set the game installation directory to automatically locate original bundle files.\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
-		"game_root_dir_japan": "Game Directory (Japan)",
-		"game_root_dir_japan_info": "Installation directory for the Japan server PC client",
+		"game_dir_windows_global": "Steam Game Directory (Global)",
+		"game_dir_windows_global_info": "Installation directory for the Steam version (Global server)\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows",
+		"game_dir_windows_japan": "PC Game Directory (Japan)",
+		"game_dir_windows_japan_info": "Installation directory for the PC version (Japan server)",
 		"game_dir_android_global": "Android (Global) Directory",
 		"game_dir_android_global_info": "Game resource directory on Android device (Global server)\ne.g.: /storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
 		"game_dir_android_japan": "Android (Japan) Directory",
@@ -532,8 +536,8 @@
 			"select_file": "Select File",
 			"multiple_matches_found": "Found {count} matching files:",
 			"selection_cancelled": "Selection cancelled",
-			"adb_browser": "ADB File Browser",
-			"adb_browser_dir": "Select Target Directory"
+			"adb_browser": "ADB File Selector",
+			"adb_browser_dir": "ADB Directory Selector"
 		},
 		"drop_zone": {
 			"file_hint": "Drag and drop files here\nOr click the button below to select",

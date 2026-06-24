@@ -11,7 +11,7 @@ from ..models import BundleFileInfo
 from .manager import ADBManager
 from .index import ADBFileIndex, RemoteFileInfo
 from .cache import ADBCache
-from .paths import get_adb_search_dirs, get_adb_base_path
+from .paths import get_adb_search_dirs, get_adb_base_path, derive_search_dirs
 
 
 class FileSourceAdapter(ABC):
@@ -91,11 +91,13 @@ class ADBFileSource(FileSourceAdapter):
     """ADB 文件源适配器"""
 
     def __init__(self, adb_manager: ADBManager, file_index: ADBFileIndex,
-                 cache: ADBCache, server_region: str = "global"):
+                 cache: ADBCache, server_region: str = "global",
+                 custom_base_path: str = ""):
         self.adb_manager = adb_manager
         self.file_index = file_index
         self.cache = cache
         self.server_region = server_region
+        self.custom_base_path = custom_base_path
 
     def list_files(self, directory: str, suffix: str = ".bundle",
                    log=no_log) -> list[BundleFileInfo]:
@@ -128,11 +130,21 @@ class ADBFileSource(FileSourceAdapter):
         return result
 
     def get_search_dirs(self, base_dir: str = "") -> list[str]:
-        """根据区服返回 Android 资源目录"""
+        """根据区服返回 Android 资源目录。
+
+        优先使用用户配置的自定义基础路径推导搜索目录，否则回退到硬编码常量。
+        """
+        if self.custom_base_path:
+            return derive_search_dirs(self.custom_base_path, self.server_region)
         return get_adb_search_dirs(self.server_region)
 
     def get_base_path(self) -> str:
-        """根据区服返回 ADB 基础路径（浏览器起始目录）"""
+        """根据区服返回 ADB 基础路径（浏览器起始目录）。
+
+        优先使用用户配置的自定义基础路径，否则回退到硬编码常量。
+        """
+        if self.custom_base_path:
+            return self.custom_base_path
         return get_adb_base_path(self.server_region)
 
     def is_available(self) -> bool:

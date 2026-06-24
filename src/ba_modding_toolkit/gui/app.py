@@ -309,7 +309,7 @@ class App(tb.Frame, ConfigMixin):
 
 
     def select_game_resource_directory(self):
-        select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
+        select_directory(self.game_resource_dir_var, t("option.game_dir_windows_global"), self.logger.log)
 
     def open_game_resource_in_explorer(self):
         open_directory(self.game_resource_dir_var.get(), self.logger.log)
@@ -345,14 +345,26 @@ class App(tb.Frame, ConfigMixin):
         self._init_adb()
         return self._adb_manager
 
-    def get_adb_file_source(self) -> ADBFileSource:
-        """获取 ADB 文件源适配器（延迟初始化）"""
+    def get_adb_file_source(self, server_region: str | None = None) -> ADBFileSource:
+        """获取 ADB 文件源适配器（延迟初始化）。
+
+        Args:
+            server_region: 指定区服；为 None 时使用当前文件来源对应的区服。
+                设置页中浏览 ADB 目录时需显式指定区服，不受当前文件来源影响。
+        """
         self._init_adb()
+        region = server_region or self.get_current_server_region()
+        # 读取用户配置的 ADB 目录，传递给 ADBFileSource 使其生效
+        if region == "japan":
+            custom_base = self.game_dir_android_japan_var.get()
+        else:
+            custom_base = self.game_dir_android_global_var.get()
         return ADBFileSource(
             adb_manager=self._adb_manager,
             file_index=self._adb_index,
             cache=self._adb_cache,
-            server_region=self.get_current_server_region(),
+            server_region=region,
+            custom_base_path=custom_base,
         )
 
     def get_adb_cache(self) -> ADBCache:

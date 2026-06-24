@@ -54,7 +54,11 @@
 	},
 	"option": {
 		"file_source": "文件来源",
-		"file_source_info": "选择游戏资源来源平台和区服",
+		"file_source_info": "选择游戏资源来源平台和区服 \n- Windows 国际服 (本地) \n- Windows 日服 (本地) \n- Android 国际服 (ADB) \n- Android 日服 (ADB)",
+		"file_source_windows_global": "Windows 国际服 (本地)",
+		"file_source_windows_japan": "Windows 日服 (本地)",
+		"file_source_adb_global": "Android 国际服 (ADB)",
+		"file_source_adb_japan": "Android 日服 (ADB)",
 		"crc_correction": "CRC修正",
 		"crc_correction_info": "修正 Bundle 文件的 CRC 校验值，防止文件被修改后出现“不正常的客户端”提示。\nSteam 版本必须开启此选项，手机端无需开启。\n选择“自动”时，会根据目标 Bundle 文件的平台信息自动判断是否需要开启。",
 		"extra_bytes": "额外字节",
@@ -85,10 +89,10 @@
 		"unpack_atlas_info": "将 Atlas 解包为单独的 PNG 帧。\n解包后的帧保存在 images/ 子目录中。",
 		"auto_search": "自动搜索对应文件",
 		"auto_search_info": "",
-		"game_root_dir": "游戏根目录",
-		"game_root_dir_info": "设置游戏安装目录，用于自动寻找原版的 Bundle 文件。\n程序能够自动检测以下路径的子目录：\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows\n- GameData/Android\n- Preload/Android",
-		"game_root_dir_japan": "日服PC版路径",
-		"game_root_dir_japan_info": "日服PC客户端的安装目录",
+		"game_dir_windows_global": "国际服Steam游戏目录",
+		"game_dir_windows_global_info": "国际服 Steam 版游戏的安装目录\n程序能够自动检测以下路径的子目录：\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows",
+		"game_dir_windows_japan": "日服PC游戏目录",
+		"game_dir_windows_japan_info": "日服 PC 版游戏的安装目录",
 		"game_dir_android_global": "Android(国际服) 目录",
 		"game_dir_android_global_info": "国际服 Android 设备上的游戏资源目录\n如: /storage/emulated/0/Android/data/com.nexon.bluearchive/files/",
 		"game_dir_android_japan": "Android(日服) 目录",
@@ -532,8 +536,8 @@
 			"select_file": "选择文件",
 			"multiple_matches_found": "找到 {count} 个匹配的文件：",
 			"selection_cancelled": "已取消选择",
-			"adb_browser": "ADB 文件浏览器",
-			"adb_browser_dir": "选择目标目录"
+			"adb_browser": "ADB 文件选择器",
+			"adb_browser_dir": "ADB 目录选择器"
 		},
 		"drop_zone": {
 			"file_hint": "将文件拖放到此处\n或点击下方按钮选择",

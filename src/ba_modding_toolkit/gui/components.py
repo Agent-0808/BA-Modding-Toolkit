@@ -803,19 +803,68 @@ class SettingRow:
         parent: tk.Widget,
         label: str,
         text_var: tk.StringVar,
-        values: list[str],
+        values: list[str] | list[tuple[str, str]],
         tooltip: str | None = None,
         width: int | None = None,
     ) -> tb.Combobox:
-        """创建下拉框行"""
+        """创建下拉框行
+
+        Args:
+            values: 选项列表。可以是纯字符串列表，或 (实际值, 显示值) 元组列表。
+                    使用元组时，combobox 显示本地化文本，但 text_var 存储原始值。
+        """
+        # 处理 values 格式：支持 (value, display) 元组
+        if values and isinstance(values[0], tuple):
+            actual_values = [v[0] for v in values]
+            display_values = [v[1] for v in values]
+            value_to_display = dict(values)
+            display_to_value = {d: v for v, d in values}
+        else:
+            actual_values = values
+            display_values = values
+            value_to_display = None
+            display_to_value = None
+
         if width is None:
-            width = max((len(str(v)) for v in values), default=0) + 2
+            width = max((len(str(v)) for v in display_values), default=0) + 2
+
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
-        
-        combobox = tb.Combobox(container, textvariable=text_var, values=values, width=width)
-        combobox.pack(side=tk.RIGHT, padx=(10, 0))
-        return combobox
+
+        # 如果有映射，需要创建一个临时变量来存储显示值
+        if value_to_display:
+            # 创建显示值变量
+            display_var = tk.StringVar()
+            # 初始化显示值
+            current_actual = text_var.get()
+            if current_actual in value_to_display:
+                display_var.set(value_to_display[current_actual])
+
+            combobox = tb.Combobox(container, textvariable=display_var, values=display_values, width=width)
+            combobox.pack(side=tk.RIGHT, padx=(10, 0))
+
+            # 当选择改变时，同步实际值
+            def _on_select(event):
+                selected_display = display_var.get()
+                if selected_display in display_to_value:
+                    text_var.set(display_to_value[selected_display])
+
+            combobox.bind("<<ComboboxSelected>>", _on_select)
+
+            # 当实际值改变时（如加载配置），同步显示值
+            def _sync_display(*args):
+                actual = text_var.get()
+                if actual in value_to_display:
+                    display_var.set(value_to_display[actual])
+
+            text_var.trace_add("write", _sync_display)
+
+            return combobox
+        else:
+            # 无映射，直接使用 text_var
+            combobox = tb.Combobox(container, textvariable=text_var, values=values, width=width)
+            combobox.pack(side=tk.RIGHT, padx=(10, 0))
+            return combobox
 
     @staticmethod
     def create_radiobutton_row(

@@ -69,8 +69,13 @@ class SettingsDialog(tb.Toplevel):
         """初始化路径设置"""
         section = self._create_section(t("ui.settings.group_paths"))
 
-        # 文件来源选择
-        file_source_values = ["windows_global", "windows_japan", "adb_global", "adb_japan"]
+        # 文件来源选择（使用本地化显示文本）
+        file_source_values = [
+            ("windows_global", t("option.file_source_windows_global")),
+            ("windows_japan", t("option.file_source_windows_japan")),
+            ("adb_global", t("option.file_source_adb_global")),
+            ("adb_japan", t("option.file_source_adb_japan")),
+        ]
         SettingRow.create_combobox_row(
             section,
             label=t("option.file_source"),
@@ -90,39 +95,39 @@ class SettingsDialog(tb.Toplevel):
         # Windows 国际服路径
         SettingRow.create_path_selector(
             path_config_frame,
-            label=t("option.game_root_dir"),
+            label=t("option.game_dir_windows_global"),
             path_var=self.app.game_resource_dir_var,
             select_cmd=self.app.select_game_resource_directory,
             open_cmd=self.app.open_game_resource_in_explorer,
-            tooltip=t("option.game_root_dir_info")
+            tooltip=t("option.game_dir_windows_global_info")
         )
 
         # Windows 日服路径
         SettingRow.create_path_selector(
             path_config_frame,
-            label=t("option.game_root_dir_japan"),
+            label=t("option.game_dir_windows_japan"),
             path_var=self.app.game_resource_dir_japan_var,
             select_cmd=self._select_game_resource_directory_japan,
             open_cmd=self._open_game_resource_japan_in_explorer,
-            tooltip=t("option.game_root_dir_japan_info")
+            tooltip=t("option.game_dir_windows_japan_info")
         )
 
         # ADB 国际服路径
-        SettingRow.create_entry_row(
+        SettingRow.create_path_selector(
             path_config_frame,
             label=t("option.game_dir_android_global"),
-            text_var=self.app.game_dir_android_global_var,
+            path_var=self.app.game_dir_android_global_var,
+            select_cmd=self._select_android_global_dir,
             tooltip=t("option.game_dir_android_global_info"),
-            expand=True
         )
 
         # ADB 日服路径
-        SettingRow.create_entry_row(
+        SettingRow.create_path_selector(
             path_config_frame,
             label=t("option.game_dir_android_japan"),
-            text_var=self.app.game_dir_android_japan_var,
+            path_var=self.app.game_dir_android_japan_var,
+            select_cmd=self._select_android_japan_dir,
             tooltip=t("option.game_dir_android_japan_info"),
-            expand=True
         )
 
     def _on_file_source_changed(self, *args):
@@ -143,11 +148,35 @@ class SettingsDialog(tb.Toplevel):
 
     def _select_game_resource_directory_japan(self):
         """选择日服游戏资源目录"""
-        select_directory(self.app.game_resource_dir_japan_var, t("option.game_root_dir_japan"), self.app.logger.log)
+        select_directory(self.app.game_resource_dir_japan_var, t("option.game_dir_windows_japan"), self.app.logger.log)
 
     def _open_game_resource_japan_in_explorer(self):
         """打开日服游戏资源目录"""
         open_directory(self.app.game_resource_dir_japan_var.get(), self.app.logger.log)
+
+    def _select_android_global_dir(self):
+        """通过 ADB 浏览器选择国际服 Android 目录"""
+        self._select_android_dir("global", self.app.game_dir_android_global_var)
+
+    def _select_android_japan_dir(self):
+        """通过 ADB 浏览器选择日服 Android 目录"""
+        self._select_android_dir("japan", self.app.game_dir_android_japan_var)
+
+    def _select_android_dir(self, region: str, path_var: tk.StringVar):
+        """打开 ADB 文件浏览器选择 Android 设备上的资源目录"""
+        if not self.app.is_adb_available():
+            messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"), parent=self)
+            return
+        from .adb_browser import ADBFileBrowser
+        adb_source = self.app.get_adb_file_source(server_region=region)
+        browser = ADBFileBrowser(
+            self,
+            adb_source=adb_source,
+            directory_mode=True,
+            log=self.app.logger.log,
+        )
+        if browser.selected_paths:
+            path_var.set(browser.selected_paths[0])
 
     def _init_adb_settings(self):
         """初始化 ADB 设置"""

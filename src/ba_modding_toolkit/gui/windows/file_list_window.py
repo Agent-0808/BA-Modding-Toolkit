@@ -345,6 +345,9 @@ class FileListWindow(tb.Toplevel):
 
     def _on_file_source_changed(self, event=None):
         """文件来源变化时更新目录"""
+        # 检查窗口是否仍然存在，避免在窗口关闭后访问已销毁的 widget
+        if not self.winfo_exists():
+            return
         self._dir_var.set(self.app.get_current_resource_dir())
         self._refresh()
 
@@ -513,15 +516,25 @@ class FileListWindow(tb.Toplevel):
         if self._is_adb_mode():
             from .adb_browser import ADBFileBrowser
             adb_source = self.app.get_adb_file_source()
-            ADBFileBrowser(self, adb_source, title=t("ui.dialog.adb_browser"), log=self.app.logger.log)
+            browser = ADBFileBrowser(
+                self, adb_source,
+                title=t("ui.dialog.adb_browser_dir"),
+                directory_mode=True,
+                log=self.app.logger.log
+            )
+            if browser.selected_paths:
+                self._dir_var.set(browser.selected_paths[0])
         else:
-            select_directory(self._dir_var, t("option.game_root_dir"), self.app.logger.log)
+            select_directory(self._dir_var, t("option.game_dir_windows_global"), self.app.logger.log)
 
     def _is_adb_mode(self) -> bool:
         """当前是否为 ADB 模式"""
         return self.app.is_adb_mode()
 
     def _refresh(self):
+        # 检查窗口是否仍然存在
+        if not self.winfo_exists():
+            return
         if self._is_adb_mode():
             self._refresh_adb()
         else:
