@@ -189,6 +189,7 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.adb_path_var,
             select_cmd=self._select_adb_path,
             tooltip=t("option.adb_path_info"),
+            download_guide_cmd=self.app.show_adb_download_guide,
             status_check=self._check_adb_available,
             extra_button=(t("action.detect"), self._detect_adb, "info")
         )
@@ -244,7 +245,7 @@ class SettingsDialog(tb.Toplevel):
         ).pack(side=tk.RIGHT)
 
         self._cache_size_label = tb.Label(cache_container, text="", font=Theme.INPUT_FONT)
-        self._cache_size_label.pack(side=tk.RIGHT, padx=(10, 0))
+        self._cache_size_label.pack(side=tk.RIGHT, padx=(0, 10))
 
         # 初始化状态
         self._update_adb_status()

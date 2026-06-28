@@ -270,12 +270,20 @@ class App(tb.Frame, ConfigMixin):
             parent
         )
 
-    def show_spine_viewer_download_guide(self):
+    def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineViewer下载引导对话框"""
         self.show_download_guide(
             "SpineViewerCLI",
             "https://github.com/ww-rm/SpineViewer",
-            parent=self
+            parent
+        )
+
+    def show_adb_download_guide(self, parent: tk.Widget | None = None) -> None:
+        """显示ADB下载引导对话框"""
+        self.show_download_guide(
+            "ADB (Android Debug Bridge)",
+            "https://developer.android.com/studio/releases/platform-tools",
+            parent
         )
 
     # --- 文件来源相关方法 ---

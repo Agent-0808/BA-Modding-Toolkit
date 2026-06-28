@@ -668,7 +668,7 @@ class SettingRow:
         select_cmd: Callable[[], None],
         open_cmd: Callable[[], None] | None = None,
         tooltip: str | None = None,
-        download_guide_cmd: Callable[[], None] | None = None,
+        download_guide_cmd: Callable[[tk.Widget | None], None] | None = None,
         status_check: Callable[[], bool] | None = None,
         extra_button: tuple[str, Callable[[], None], str] | None = None
     ) -> tb.Frame:
@@ -681,7 +681,7 @@ class SettingRow:
             select_cmd: 选择路径命令
             open_cmd: 打开路径命令（可选）
             tooltip: 提示文本（可选）
-            download_guide_cmd: 下载引导命令（可选），当路径不合法时显示下载按钮
+            download_guide_cmd: 下载引导命令（可选），接收顶层窗口作为参数
             status_check: 状态检查函数（可选），返回 True 显示绿色指示器
             extra_button: 额外按钮 (text, command, bootstyle)（可选）
         """
@@ -705,10 +705,12 @@ class SettingRow:
 
         # 下载按钮（如果提供了下载引导命令）
         if download_guide_cmd:
+            # 获取顶层窗口作为 parent 传递给下载引导命令
+            toplevel = parent.winfo_toplevel()
             UIComponents.create_button(
                 right_frame,
                 t("action.download"),
-                download_guide_cmd,
+                lambda: download_guide_cmd(toplevel),
                 bootstyle="warning",
                 style="compact"
             ).pack(side=tk.RIGHT, padx=(5, 0))
