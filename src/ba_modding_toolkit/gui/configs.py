@@ -23,28 +23,53 @@ class ConfigMeta:
 
 
 def _get_default_game_dir() -> str:
-    """获取默认游戏目录"""
-    ba_path = get_BA_path()
+    """获取默认游戏目录（国际服）"""
+    ba_path = get_BA_path("global")
     if ba_path:
-        return str(Path(ba_path))
-    return r"C:\Program Files (x86)\Steam\steamapps\common\BlueArchive"
+        return ba_path
+    return ""
+
+
+def _get_default_game_dir_japan() -> str:
+    """获取默认游戏目录（日服）"""
+    ba_path = get_BA_path("japan")
+    if ba_path:
+        return ba_path
+    return ""
 
 
 def _get_default_output_dir() -> str:
     """获取默认输出目录"""
     return str(Path.cwd() / "output")
 
+def _get_default_adb_cache_dir() -> str:
+    """获取默认ADB缓存目录"""
+    return str(Path.cwd() / "adb_cache")
+
+
+def _get_default_android_global_dir() -> str:
+    """获取默认 Android 国际服目录"""
+    return "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/PUB/Resource/"
+
+
+def _get_default_android_japan_dir() -> str:
+    """获取默认 Android 日服目录"""
+    return "/storage/emulated/0/Android/data/com.Yostar JP.BlueArchive/files/"
+
 
 class ConfigMixin:
     """配置项定义 Mixin"""
     
     # Directories
+    file_source_var: Annotated[tk.StringVar, ConfigMeta("Directories", "windows_global")]
     game_resource_dir_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir)]
+    game_resource_dir_japan_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir_japan)]
+    game_dir_android_global_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_android_global_dir)]
+    game_dir_android_japan_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_android_japan_dir)]
     
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
     output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", _get_default_output_dir)]
-    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "full_name")]
     
     # SaveOptions (原 GlobalOptions)
     extra_bytes_var: Annotated[tk.StringVar, ConfigMeta("SaveOptions", "0x08080808")]
@@ -74,10 +99,16 @@ class ConfigMixin:
 
     # CharacterMap
     bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "")]
+    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
 
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+
+    # ADB
+    adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
+    adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
+    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", _get_default_adb_cache_dir)]
 
 
 class ConfigManager:

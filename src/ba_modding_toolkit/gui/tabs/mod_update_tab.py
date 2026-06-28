@@ -6,9 +6,9 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ...models import FileType
+from ...models import FileType, FilePair
 from ... import core
-from ...searching import get_search_dirs, find_target_bundles
+from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
 from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import confirm_and_replace
@@ -20,8 +20,10 @@ class ModUpdateTab(TabFrame):
     def __init__(self, *args, **kwargs):
         self.source_paths: list[Path] = []
         self.target_paths: list[Path] = []
-        self.current_file_pairs: list[tuple[Path, Path]] = []
+        self.current_file_pairs: list[FilePair] = []
         self.match_strategy_var = tk.StringVar(value='path_id')
+        self._adb_remote_target_paths: list[str] = []  # ADB 模式下目标的远程路径
+        self._search_path_var = None  # 延迟初始化，在 create_widgets 中绑定
         super().__init__(*args, **kwargs)
 
     def create_widgets(self):
@@ -33,21 +35,24 @@ class ModUpdateTab(TabFrame):
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             logger=self.logger
         )
-        
+
         # 2. 目标资源文件组
+        self._search_path_var = tk.StringVar(value=self.app.get_current_resource_dir())
+
         self.new_mod_zone = DropZone(
             self, title=t("ui.label.target_resource_bundle"),
             placeholder_text=t("ui.mod_update.placeholder_new"),
             on_files_selected=self.on_new_mod_selected,
             file_types=[FileType.BUNDLE, FileType.ALL],
-            search_path_var=self.app.game_resource_dir_var,
-            logger=self.logger
+            search_path_var=self._search_path_var,
+            logger=self.logger,
+            app=self.app,
         )
 
         # 匹配策略选择
         strategy_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         strategy_frame.pack(fill=tk.X, pady=(5, 0))
-        
+
         self.strategy_combo = SettingRow.create_combobox_row(
             strategy_frame, t("option.match_strategy"),
             self.match_strategy_var,
@@ -62,9 +67,20 @@ class ModUpdateTab(TabFrame):
 
         self.run_button = UIComponents.create_button(action_button_frame, t("action.update"), self.run_update_thread, bootstyle="success", style="large")
         self.run_button.grid(row=0, column=0, sticky="ew", padx=(0, 5), pady=2)
-        
+
         self.replace_button = UIComponents.create_button(action_button_frame, t("action.replace_original"), self.replace_original_thread, bootstyle="danger", state="disabled", style="large")
         self.replace_button.grid(row=0, column=1, sticky="ew", padx=(5, 0), pady=2)
+
+        # 绑定文件来源变化事件（使用 bind_all 让所有 widget 都能接收）
+        self.bind_all("<<FileSourceChanged>>", self._on_file_source_changed, add=True)
+
+    def _on_file_source_changed(self, event=None):
+        """文件来源变化时更新搜索路径"""
+        self._search_path_var.set(self.app.get_current_resource_dir())
+        # 清空已选择的目标文件
+        self.target_paths = []
+        self._adb_remote_target_paths = []
+        self.new_mod_zone.clear()
 
     def on_old_mod_selected(self, paths: list[Path]):
         """源文件组选中后的处理"""
@@ -73,12 +89,18 @@ class ModUpdateTab(TabFrame):
         for p in paths:
             self.logger.log(f"  - {p.name}")
         self.target_paths = []
+        self._adb_remote_target_paths = []
         self.new_mod_zone.clear()
         self.run_in_thread(self._find_target_bundles_worker)
 
     def on_new_mod_selected(self, paths: list[Path]):
         """目标资源文件组选中后的处理"""
         self.target_paths = paths
+        # 保存 ADB 远程路径（如果有）
+        if self.app.is_adb_mode():
+            self._adb_remote_target_paths = self.new_mod_zone.adb_remote_paths
+        else:
+            self._adb_remote_target_paths = []
         self.logger.log(t("log.file.selected_num", count=len(paths)))
         for p in paths:
             self.logger.log(f"  - {p.name}")
@@ -87,8 +109,15 @@ class ModUpdateTab(TabFrame):
     def _find_target_bundles_worker(self):
         self.new_mod_zone.set_searching()
         self.logger.status(t("status.processing_detailed"))
-        
-        base_game_dir = Path(self.app.game_resource_dir_var.get())
+
+        if self.app.is_adb_mode():
+            self._find_target_bundles_adb_worker()
+        else:
+            self._find_target_bundles_local_worker()
+
+    def _find_target_bundles_local_worker(self):
+        """本地模式搜索目标文件"""
+        base_game_dir = Path(self.app.get_current_resource_dir())
         search_paths = get_search_dirs(base_game_dir)
 
         found_paths, message = find_target_bundles(
@@ -96,9 +125,38 @@ class ModUpdateTab(TabFrame):
             search_paths,
             self.logger.log
         )
-        
+
         self.master.after(0, lambda: self._handle_search_result(found_paths, message))
-    
+
+    def _find_target_bundles_adb_worker(self):
+        """ADB 模式搜索目标文件"""
+        adb_source = self.app.get_adb_file_source()
+        if not adb_source.is_available():
+            self.master.after(0, lambda: self.new_mod_zone.set_error(t("message.adb.not_connected")))
+            return
+
+        found_remote_paths, message = find_target_bundles_remote(
+            self.source_paths,
+            adb_source,
+            self.logger.log
+        )
+
+        if not found_remote_paths:
+            self.master.after(0, lambda: self._handle_search_result([], message))
+            return
+
+        # 将远程路径缓存到本地
+        local_paths: list[Path] = []
+        for remote_path in found_remote_paths:
+            try:
+                local_path = adb_source.ensure_local(remote_path)
+                local_paths.append(local_path)
+            except Exception as e:
+                self.logger.log(t("log.adb.pull_failed", path=remote_path, error=e))
+
+        self._adb_remote_target_paths = found_remote_paths
+        self.master.after(0, lambda: self._handle_search_result(local_paths, message))
+
     def _handle_search_result(self, found_paths: list[Path], message: str):
         """处理搜索结果"""
         if not found_paths:
@@ -118,7 +176,7 @@ class ModUpdateTab(TabFrame):
         if not self.app.output_dir_var.get():
             messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
-        
+
         if not self.app.has_any_asset_type():
             messagebox.showerror(t("common.error"), t("message.missing_asset_type"))
             return
@@ -138,7 +196,7 @@ class ModUpdateTab(TabFrame):
         for tgt in self.target_paths:
             self.logger.log(f"    - {tgt.name}")
         self.logger.status(t("status.processing_detailed", filename=self.source_paths[0].name))
-        
+
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES)
         asset_types_to_replace = self.app.get_asset_types()
         perform_crc = self.app.resolve_crc_setting(self.target_paths[0])
@@ -156,13 +214,13 @@ class ModUpdateTab(TabFrame):
             skip_unchanged=self.app.skip_unchanged_var.get(),
             log=self.logger.log,
         )
-        
+
         self.current_file_pairs = file_pairs
-        
+
         if not success:
             messagebox.showerror(t("common.error"), message)
             return
-        
+
         # 处理所有目标都被跳过的情况
         if message == "all_targets_unchanged":
             self.logger.log(t("log.mod_update.all_targets_unchanged"))
@@ -186,14 +244,87 @@ class ModUpdateTab(TabFrame):
             self.logger.log(t("log.generated_file_not_found"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
             messagebox.showinfo(t("common.success"), t("message.process_success"))
-        
+
         self.logger.status(t("status.done"))
 
     def replace_original_thread(self):
-        confirm_and_replace(
-            file_pairs=self.current_file_pairs,
-            create_backup=self.app.create_backup_var.get(),
-            log=self.logger.log,
-            button_to_disable=self.replace_button,
-            master=self.master,
-        )
+        """替换原文件（支持 ADB 推送）"""
+        if self.app.is_adb_mode():
+            self._replace_original_adb()
+        else:
+            confirm_and_replace(
+                file_pairs=self.current_file_pairs,
+                create_backup=self.app.create_backup_var.get(),
+                log=self.logger.log,
+                button_to_disable=self.replace_button,
+                master=self.master,
+            )
+
+    def _replace_original_adb(self):
+        """ADB 模式下的替换原文件（推送到设备）"""
+        if not self.current_file_pairs:
+            return
+
+        # 构建确认消息
+        files_list = "\n".join([f"  {pair.source.name}" for pair in self.current_file_pairs[:10]])
+        if len(self.current_file_pairs) > 10:
+            files_list += f"\n{t('message.and_more_files', count=len(self.current_file_pairs) - 10)}"
+
+        confirm_message = t("message.adb.push_confirm", files=files_list)
+        if not messagebox.askyesno(t("common.warning"), confirm_message):
+            return
+
+        adb_source = self.app.get_adb_file_source()
+        if not adb_source.is_available():
+            messagebox.showerror(t("common.error"), t("message.adb.not_connected"))
+            return
+
+        self.run_in_thread(self._push_files_worker, adb_source)
+
+    def _push_files_worker(self, adb_source):
+        """后台推送文件到设备"""
+        success_count = 0
+        fail_count = 0
+
+        for pair in self.current_file_pairs:
+            # 查找对应的远程路径
+            remote_path = self._find_remote_path_for_output(pair)
+            if not remote_path:
+                self.logger.log(t("log.adb.push_failed", path=pair.output.name, error="remote path not found"))
+                fail_count += 1
+                continue
+
+            self.logger.log(t("log.adb.push_start", name=pair.output.name))
+            if adb_source.push_file(pair.output, remote_path, self.logger.log):
+                self.logger.log(t("log.adb.push_success", name=pair.output.name))
+                success_count += 1
+            else:
+                self.logger.log(t("log.adb.push_failed", path=pair.output.name, error="push failed"))
+                fail_count += 1
+
+        self.logger.log(t("log.success_fail", success=success_count, fail=fail_count))
+        self.master.after(0, lambda: messagebox.showinfo(
+            t("common.tip"),
+            t("message.replace_result", success=success_count, fail=fail_count)
+        ))
+        self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
+        self.logger.status(t("status.done"))
+
+    def _find_remote_path_for_output(self, pair: FilePair) -> str | None:
+        """根据输出文件对找到对应的远程路径"""
+        output_name = pair.output.name
+        # 在远程路径列表中查找同名文件
+        for remote_path in self._adb_remote_target_paths:
+            if Path(remote_path).name == output_name:
+                return remote_path
+        # 也尝试用 source 名匹配
+        source_name = pair.source.name
+        for remote_path in self._adb_remote_target_paths:
+            if Path(remote_path).name == source_name:
+                return remote_path
+        # 最后尝试从缓存 manifest 反查
+        adb_source = self.app.get_adb_file_source()
+        remote = adb_source.cache.find_remote_path(pair.source)
+        if remote:
+            return remote
+        return None

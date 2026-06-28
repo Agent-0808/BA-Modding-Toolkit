@@ -12,6 +12,7 @@ from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
+from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from .components import Theme, Logger, UIComponents
 from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
@@ -33,7 +34,7 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_main_window(self):
         self.master.title(t("ui.app_title"))
-        self.master.geometry("700x888")
+        self.master.geometry("800x1000")
 
         # 设置路径
         if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
@@ -269,18 +270,55 @@ class App(tb.Frame, ConfigMixin):
             parent
         )
 
-    def show_spine_viewer_download_guide(self):
+    def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineViewer下载引导对话框"""
         self.show_download_guide(
             "SpineViewerCLI",
             "https://github.com/ww-rm/SpineViewer",
-            parent=self
+            parent
         )
+
+    def show_adb_download_guide(self, parent: tk.Widget | None = None) -> None:
+        """显示ADB下载引导对话框"""
+        self.show_download_guide(
+            "ADB (Android Debug Bridge)",
+            "https://developer.android.com/studio/releases/platform-tools",
+            parent
+        )
+
+    # --- 文件来源相关方法 ---
+
+    def get_current_resource_dir(self) -> str:
+        """根据文件来源获取当前资源目录"""
+        source = self.file_source_var.get()
+        if source == "windows_global":
+            return self.game_resource_dir_var.get()
+        elif source == "windows_japan":
+            return self.game_resource_dir_japan_var.get()
+        elif source == "adb_global":
+            return self.game_dir_android_global_var.get()
+        elif source == "adb_japan":
+            return self.game_dir_android_japan_var.get()
+        return ""
+
+    def get_current_server_region(self) -> str:
+        """根据文件来源获取区服"""
+        source = self.file_source_var.get()
+        if source in ("windows_global", "adb_global"):
+            return "global"
+        elif source in ("windows_japan", "adb_japan"):
+            return "japan"
+        return "global"
+
+    def is_adb_mode(self) -> bool:
+        """判断是否为ADB模式"""
+        source = self.file_source_var.get()
+        return source.startswith("adb_")
 
 
     def select_game_resource_directory(self):
-        select_directory(self.game_resource_dir_var, t("option.game_root_dir"), self.logger.log)
-        
+        select_directory(self.game_resource_dir_var, t("option.game_dir_windows_global"), self.logger.log)
+
     def open_game_resource_in_explorer(self):
         open_directory(self.game_resource_dir_var.get(), self.logger.log)
 
@@ -289,6 +327,83 @@ class App(tb.Frame, ConfigMixin):
 
     def open_output_dir_in_explorer(self):
         open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
+
+    # --- ADB 相关方法 ---
+
+    def _init_adb(self):
+        """延迟初始化 ADB 组件"""
+        if hasattr(self, '_adb_manager') and self._adb_manager is not None:
+            return
+        self._adb_manager = ADBManager(adb_path=self.adb_path_var.get())
+        self._adb_index = ADBFileIndex(self._adb_manager)
+        cache_dir = self.adb_cache_dir_var.get()
+        if not cache_dir:
+            # 默认缓存路径：程序根目录/adb_cache
+            cache_dir = str(self.exe_dir / "adb_cache")
+            self.adb_cache_dir_var.set(cache_dir)
+        self._adb_cache = ADBCache(Path(cache_dir))
+        self._local_source = LocalFileSource()
+        # 尝试恢复上次选择的设备
+        saved_device = self.adb_device_var.get()
+        if saved_device:
+            self._adb_manager.select_device(saved_device)
+
+    def get_adb_manager(self) -> ADBManager:
+        """获取 ADB 管理器（延迟初始化）"""
+        self._init_adb()
+        return self._adb_manager
+
+    def get_adb_file_source(self, server_region: str | None = None) -> ADBFileSource:
+        """获取 ADB 文件源适配器（延迟初始化）。
+
+        Args:
+            server_region: 指定区服；为 None 时使用当前文件来源对应的区服。
+                设置页中浏览 ADB 目录时需显式指定区服，不受当前文件来源影响。
+        """
+        self._init_adb()
+        region = server_region or self.get_current_server_region()
+        # 读取用户配置的 ADB 目录，传递给 ADBFileSource 使其生效
+        if region == "japan":
+            custom_base = self.game_dir_android_japan_var.get()
+        else:
+            custom_base = self.game_dir_android_global_var.get()
+        return ADBFileSource(
+            adb_manager=self._adb_manager,
+            file_index=self._adb_index,
+            cache=self._adb_cache,
+            server_region=region,
+            custom_base_path=custom_base,
+        )
+
+    def get_adb_cache(self) -> ADBCache:
+        """获取 ADB 缓存管理器（延迟初始化）"""
+        self._init_adb()
+        return self._adb_cache
+
+    def get_local_file_source(self) -> LocalFileSource:
+        """获取本地文件源适配器"""
+        self._init_adb()
+        return self._local_source
+
+    def get_file_source(self, source: str = "local") -> FileSourceAdapter:
+        """根据来源标识获取文件源适配器"""
+        if source == "adb":
+            return self.get_adb_file_source()
+        return self.get_local_file_source()
+
+    def is_adb_available(self) -> bool:
+        """检查 ADB 是否可用（已连接设备）"""
+        self._init_adb()
+        return self._adb_manager.is_connected
+
+    def refresh_adb_connection(self):
+        """刷新 ADB 连接状态"""
+        self._init_adb()
+        # 同步 adb_path 配置
+        self._adb_manager.adb_path = self.adb_path_var.get()
+        saved_device = self.adb_device_var.get()
+        if saved_device:
+            self._adb_manager.try_reconnect(saved_device)
 
     # 输出子目录常量
     OUTPUT_SUBDIR_BUNDLES = "bundles"
@@ -318,11 +433,17 @@ class App(tb.Frame, ConfigMixin):
             self.language_var.set(default_language)
             print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
             
-            # 尝试从注册表检测 Blue Archive 游戏路径
-            ba_path = get_BA_path()
-            if ba_path:
-                self.game_resource_dir_var.set(ba_path)
-                print(f"从注册表检测到 Blue Archive 安装路径: {ba_path}")
+            # 尝试从注册表检测 Blue Archive 游戏路径（国际服）
+            ba_path_global = get_BA_path("global")
+            if ba_path_global:
+                self.game_resource_dir_var.set(ba_path_global)
+                print(f"从注册表检测到 Blue Archive 国际服安装路径: {ba_path_global}")
+            
+            # 尝试从注册表检测 Blue Archive 游戏路径（日服）
+            ba_path_japan = get_BA_path("japan")
+            if ba_path_japan:
+                self.game_resource_dir_japan_var.set(ba_path_japan)
+                print(f"从注册表检测到 Blue Archive 日服安装路径: {ba_path_japan}")
         
         # 设置语言
         language = self.language_var.get()
@@ -379,6 +500,7 @@ class App(tb.Frame, ConfigMixin):
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
         legacy_conversion_tab = LegacyConversionTab(self.content_frame, self)
+        adb_push_tab = AdbPushTab(self.content_frame, self)
         
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
@@ -388,6 +510,7 @@ class App(tb.Frame, ConfigMixin):
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
             (legacy_conversion_tab, t("ui.tabs.legacy_conversion")),
             (batch_legacy_tab, t("ui.tabs.batch_legacy")),
+            (adb_push_tab, t("ui.tabs.adb_push")),
         ])
         
         # 将所有Tab放置在content_frame的同一位置

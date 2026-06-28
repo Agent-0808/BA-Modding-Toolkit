@@ -1,12 +1,16 @@
 # searching.py
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .i18n import t
 from .utils import no_log
 from .naming import parse_filename, get_category_prefix
 from .models import LogFunc, AssetKey, AssetType, BundleFileInfo
 from .bundle import Bundle
+
+if TYPE_CHECKING:
+    from .adb.file_source import ADBFileSource
 
 
 def search_prefix(
@@ -248,5 +252,129 @@ def list_bundle_files(base_dir: Path) -> list[BundleFileInfo]:
                 file_size=stat.st_size,
                 modified_time=stat.st_mtime,
             ))
+
+    return results
+
+
+# ========== ADB 远程搜索函数 ==========
+
+def search_prefix_remote(
+    source_path: Path,
+    search_dirs: list[str],
+    file_source: "ADBFileSource",
+    log: LogFunc = no_log,
+) -> tuple[list[str], str]:
+    """在 ADB 远程目录中按前缀搜索文件
+
+    Args:
+        source_path: 源文件路径（本地）
+        search_dirs: 远程搜索目录列表
+        file_source: ADB 文件源适配器
+        log: 日志函数
+
+    Returns:
+        tuple[list[str], str]: (匹配的远程路径列表, 状态消息)
+    """
+    prefix = parse_filename(str(source_path.name)).prefix
+    extension = source_path.suffix
+    if extension == '.backup':
+        extension = Path(source_path.stem).suffix
+
+    if not prefix:
+        msg = t("message.search.filename_parse_failed")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
+
+    candidates: list[str] = []
+    for remote_dir in search_dirs:
+        found = file_source.find_files_by_prefix(remote_dir, prefix, extension, log=log)
+        candidates.extend([f.path for f in found])
+
+    if not candidates:
+        msg = t("message.search.no_matching_files_in_dir")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
+    return candidates, ""
+
+
+def find_target_bundles_remote(
+    source_paths: list[Path],
+    file_source: "ADBFileSource",
+    log: LogFunc = no_log,
+) -> tuple[list[str], str]:
+    """在 ADB 远程设备上查找目标文件
+
+    Args:
+        source_paths: 源文件路径列表（本地）
+        file_source: ADB 文件源适配器
+        log: 日志函数
+
+    Returns:
+        tuple[list[str], str]: (匹配的远程路径列表, 状态消息)
+    """
+    if not source_paths:
+        return [], t("message.search.check_file_exists", path="[]")
+
+    log(t("log.search.searching_for_file_group", count=len(source_paths)))
+
+    search_dirs = file_source.get_search_dirs()
+
+    candidates, err_msg = search_prefix_remote(source_paths[0], search_dirs, file_source, log)
+    if not candidates:
+        return [], err_msg
+
+    # 指纹比对需要将候选文件拉取到本地
+    local_candidates: list[Path] = []
+    for remote_path in candidates:
+        try:
+            local_path = file_source.ensure_local(remote_path)
+            local_candidates.append(local_path)
+        except Exception as e:
+            log(t("log.adb.pull_failed", path=remote_path, error=e))
+            continue
+
+    if not local_candidates:
+        msg = t("message.search.no_matching_asset_found")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    matched_local, msg = _asset_match(source_paths, local_candidates, log)
+
+    # 将本地路径映射回远程路径
+    local_to_remote = dict(zip(local_candidates, candidates))
+    matched_remote = [local_to_remote[p] for p in matched_local if p in local_to_remote]
+
+    return matched_remote, msg
+
+
+def list_bundle_files_remote(
+    file_source: "ADBFileSource",
+    log: LogFunc = no_log,
+) -> list[BundleFileInfo]:
+    """扫描 ADB 远程设备上的 bundle 文件
+
+    Args:
+        file_source: ADB 文件源适配器
+        log: 日志函数
+
+    Returns:
+        BundleFileInfo 列表
+    """
+    search_dirs = file_source.get_search_dirs()
+    results: list[BundleFileInfo] = []
+    seen: set[str] = set()
+
+    for remote_dir in search_dirs:
+        items = file_source.list_files(remote_dir, suffix=".bundle", log=log)
+        for item in items:
+            remote_path_str = str(item.path)
+            if remote_path_str in seen:
+                continue
+            seen.add(remote_path_str)
+            results.append(item)
 
     return results

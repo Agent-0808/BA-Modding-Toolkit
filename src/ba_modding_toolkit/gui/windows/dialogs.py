@@ -15,7 +15,7 @@ from ...i18n import t
 from ...models import FileType
 from ...utils import get_environment_info
 from ..components import Theme, UIComponents, SettingRow
-from ..utils import select_file
+from ..utils import select_file, select_directory, open_directory
 
 class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
@@ -31,7 +31,8 @@ class SettingsDialog(tb.Toplevel):
 
         self._init_app_settings()
         self._init_path_settings()
-        self._init_global_options()
+        self._init_adb_settings()
+        self._init_saving_options()
         self._init_asset_options()
         self._init_spine_settings()
 
@@ -40,7 +41,7 @@ class SettingsDialog(tb.Toplevel):
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.settings.title"))
-        self.geometry("700x888")
+        self.geometry("800x1000")
         # 设置窗口图标
         self.app.setup_icon(self)
 
@@ -68,14 +69,315 @@ class SettingsDialog(tb.Toplevel):
         """初始化路径设置"""
         section = self._create_section(t("ui.settings.group_paths"))
 
-        SettingRow.create_path_selector(
+        # 文件来源选择（使用本地化显示文本）
+        file_source_values = [
+            ("windows_global", t("option.file_source_windows_global")),
+            ("windows_japan", t("option.file_source_windows_japan")),
+            ("adb_global", t("option.file_source_adb_global")),
+            ("adb_japan", t("option.file_source_adb_japan")),
+        ]
+        SettingRow.create_combobox_row(
             section,
-            label=t("option.game_root_dir"),
+            label=t("option.file_source"),
+            text_var=self.app.file_source_var,
+            values=file_source_values,
+            tooltip=t("option.file_source_info")
+        )
+        # 保存之前的文件来源值，用于回退
+        self._prev_file_source = self.app.file_source_var.get()
+        # 监听文件来源变化，切换到ADB时检查可用性
+        self.app.file_source_var.trace_add("write", self._on_file_source_changed)
+
+        # 路径配置区域
+        path_config_frame = tb.Frame(section)
+        path_config_frame.pack(fill=tk.X, pady=(5, 0))
+
+        # Windows 国际服路径
+        SettingRow.create_path_selector(
+            path_config_frame,
+            label=t("option.game_dir_windows_global"),
             path_var=self.app.game_resource_dir_var,
             select_cmd=self.app.select_game_resource_directory,
             open_cmd=self.app.open_game_resource_in_explorer,
-            tooltip=t("option.game_root_dir_info")
+            tooltip=t("option.game_dir_windows_global_info")
         )
+
+        # Windows 日服路径
+        SettingRow.create_path_selector(
+            path_config_frame,
+            label=t("option.game_dir_windows_japan"),
+            path_var=self.app.game_resource_dir_japan_var,
+            select_cmd=self._select_game_resource_directory_japan,
+            open_cmd=self._open_game_resource_japan_in_explorer,
+            tooltip=t("option.game_dir_windows_japan_info")
+        )
+
+        # ADB 国际服路径
+        SettingRow.create_path_selector(
+            path_config_frame,
+            label=t("option.game_dir_android_global"),
+            path_var=self.app.game_dir_android_global_var,
+            select_cmd=self._select_android_global_dir,
+            tooltip=t("option.game_dir_android_global_info"),
+        )
+
+        # ADB 日服路径
+        SettingRow.create_path_selector(
+            path_config_frame,
+            label=t("option.game_dir_android_japan"),
+            path_var=self.app.game_dir_android_japan_var,
+            select_cmd=self._select_android_japan_dir,
+            tooltip=t("option.game_dir_android_japan_info"),
+        )
+
+    def _on_file_source_changed(self, *args):
+        """文件来源变化时的处理"""
+        source = self.app.file_source_var.get()
+        # 切换到ADB模式时检查ADB可用性
+        if source.startswith("adb_"):
+            adb_source = self.app.get_adb_file_source()
+            if not adb_source.is_available():
+                from tkinter import messagebox
+                messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"))
+                # 回退到之前的设置
+                self.app.file_source_var.set(self._prev_file_source)
+                return
+        self._prev_file_source = source
+        # 发送事件通知各tab更新
+        self.app.event_generate("<<FileSourceChanged>>")
+
+    def _select_game_resource_directory_japan(self):
+        """选择日服游戏资源目录"""
+        select_directory(self.app.game_resource_dir_japan_var, t("option.game_dir_windows_japan"), self.app.logger.log)
+
+    def _open_game_resource_japan_in_explorer(self):
+        """打开日服游戏资源目录"""
+        open_directory(self.app.game_resource_dir_japan_var.get(), self.app.logger.log)
+
+    def _select_android_global_dir(self):
+        """通过 ADB 浏览器选择国际服 Android 目录"""
+        self._select_android_dir("global", self.app.game_dir_android_global_var)
+
+    def _select_android_japan_dir(self):
+        """通过 ADB 浏览器选择日服 Android 目录"""
+        self._select_android_dir("japan", self.app.game_dir_android_japan_var)
+
+    def _select_android_dir(self, region: str, path_var: tk.StringVar):
+        """打开 ADB 文件浏览器选择 Android 设备上的资源目录"""
+        if not self.app.is_adb_available():
+            messagebox.showwarning(t("common.warning"), t("message.adb.not_connected"), parent=self)
+            return
+        from .adb_browser import ADBFileBrowser
+        adb_source = self.app.get_adb_file_source(server_region=region)
+        browser = ADBFileBrowser(
+            self,
+            adb_source=adb_source,
+            directory_mode=True,
+            log=self.app.logger.log,
+        )
+        if browser.selected_paths:
+            path_var.set(browser.selected_paths[0])
+
+    def _init_adb_settings(self):
+        """初始化 ADB 设置"""
+        section = self._create_section(t("ui.settings.group_adb"))
+
+        # ADB 路径 + 检测按钮
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.adb_path"),
+            path_var=self.app.adb_path_var,
+            select_cmd=self._select_adb_path,
+            tooltip=t("option.adb_path_info"),
+            download_guide_cmd=self.app.show_adb_download_guide,
+            status_check=self._check_adb_available,
+            extra_button=(t("action.detect"), self._detect_adb, "info")
+        )
+
+        # 设备选择
+        device_container = SettingRow.create_container(section)
+        SettingRow._add_label_area(device_container, t("ui.settings.adb_device"), None)
+
+        right_frame = tb.Frame(device_container)
+        right_frame.pack(side=tk.RIGHT)
+
+        UIComponents.create_button(
+            right_frame,
+            text=t("action.refresh"),
+            command=self._refresh_devices,
+            bootstyle="secondary",
+            style="compact"
+        ).pack(side=tk.RIGHT, padx=(5, 0))
+
+        self._device_combo = tb.Combobox(
+            right_frame,
+            textvariable=self.app.adb_device_var,
+            values=[],
+            state="readonly",
+            width=30
+        )
+        self._device_combo.pack(side=tk.RIGHT, padx=(0, 5))
+
+        # 设备状态标签
+        self._device_status_label = tb.Label(section, text="", font=Theme.INPUT_FONT)
+        self._device_status_label.pack(fill=tk.X, padx=5, pady=(0, 5))
+
+        # 缓存路径
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.adb_cache_dir"),
+            path_var=self.app.adb_cache_dir_var,
+            select_cmd=self._select_adb_cache_dir,
+            open_cmd=self._open_adb_cache_dir,
+            tooltip=t("option.adb_cache_dir_info")
+        )
+
+        # 缓存大小 + 清理按钮
+        cache_container = SettingRow.create_container(section)
+        SettingRow._add_label_area(cache_container, t("ui.settings.adb_cache_title"), None)
+
+        UIComponents.create_button(
+            cache_container,
+            text=t("action.clear_cache"),
+            command=self._clear_adb_cache,
+            bootstyle="warning",
+            style="compact"
+        ).pack(side=tk.RIGHT)
+
+        self._cache_size_label = tb.Label(cache_container, text="", font=Theme.INPUT_FONT)
+        self._cache_size_label.pack(side=tk.RIGHT, padx=(0, 10))
+
+        # 初始化状态
+        self._update_adb_status()
+
+    def _select_adb_path(self):
+        """选择 ADB 可执行文件路径"""
+        select_file(
+            title=t("ui.dialog.select", type="ADB"),
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
+            callback=lambda path: (
+                self.app.adb_path_var.set(str(path)),
+                self._update_adb_status()
+            ),
+            log=self.app.logger.log
+        )
+
+    def _check_adb_available(self) -> bool:
+        """检查 ADB 是否可用"""
+        adb_path = self.app.adb_path_var.get()
+        if not adb_path:
+            return False
+        if adb_path == "adb":
+            # 系统PATH中的adb，尝试运行检测
+            try:
+                manager = self.app.get_adb_manager()
+                success, _ = manager.detect_adb()
+                return success
+            except Exception:
+                return False
+        return Path(adb_path).is_file()
+
+    def _detect_adb(self):
+        """检测 ADB 是否可用"""
+        self.app.refresh_adb_connection()
+        manager = self.app.get_adb_manager()
+        success, info = manager.detect_adb()
+        if success:
+            self.app.logger.log(t("message.adb.detect_success", version=info))
+            self._update_adb_status()
+            messagebox.showinfo(t("common.success"), t("message.adb.detect_success", version=info), parent=self)
+        else:
+            self.app.logger.log(t("message.adb.detect_failed"))
+            messagebox.showerror(t("common.error"), t("message.adb.detect_failed"), parent=self)
+
+    def _refresh_devices(self):
+        """刷新设备列表"""
+        self.app.refresh_adb_connection()
+        manager = self.app.get_adb_manager()
+        devices = manager.get_devices()
+
+        # 更新下拉框
+        display_values = [d.display_name for d in devices]
+        self._device_combo.config(values=display_values)
+
+        if devices:
+            # 自动选择第一个就绪的设备
+            for d in devices:
+                if d.is_ready:
+                    self.app.adb_device_var.set(d.serial)
+                    manager.select_device(d.serial)
+                    self._device_status_label.config(
+                        text=t("ui.settings.adb_device_connected"),
+                        bootstyle="success"
+                    )
+                    return
+            # 没有就绪设备
+            first = devices[0]
+            self._device_status_label.config(
+                text=t("ui.settings.adb_device_unauthorized") if first.state == "unauthorized" else t("ui.settings.adb_device_offline"),
+                bootstyle="warning"
+            )
+        else:
+            self.app.adb_device_var.set("")
+            self._device_status_label.config(
+                text=t("message.adb.not_connected"),
+                bootstyle="danger"
+            )
+
+    def _update_adb_status(self):
+        """更新 ADB 状态显示"""
+        self._update_cache_size()
+        # 尝试刷新设备列表
+        try:
+            self._refresh_devices()
+        except Exception:
+            self._device_status_label.config(
+                text=t("message.adb.not_connected"),
+                bootstyle="danger"
+            )
+
+    def _select_adb_cache_dir(self):
+        """选择 ADB 缓存目录"""
+
+        select_directory(
+            var=self.app.adb_cache_dir_var,
+            title=t("ui.dialog.select", type=t("option.adb_cache_dir")),
+            log=self.app.logger.log
+        )
+
+    def _open_adb_cache_dir(self):
+        """打开 ADB 缓存目录"""
+        cache_dir = self.app.adb_cache_dir_var.get()
+        if cache_dir:
+            open_directory(cache_dir, self.app.logger.log, create_if_not_exist=True)
+        else:
+            # 打开默认缓存目录
+            default_dir = self.app.exe_dir / "adb_cache"
+            default_dir.mkdir(parents=True, exist_ok=True)
+            open_directory(default_dir, self.app.logger.log)
+
+    def _update_cache_size(self):
+        """更新缓存大小显示"""
+        try:
+            cache = self.app.get_adb_cache()
+            size_display = cache.get_cache_size_display()
+            self._cache_size_label.config(text=t("ui.settings.adb_cache_size", size=size_display))
+        except Exception:
+            self._cache_size_label.config(text="")
+
+    def _clear_adb_cache(self):
+        """清理 ADB 缓存"""
+        if not messagebox.askyesno(t("common.warning"), t("message.adb.clear_cache_confirm"), parent=self):
+            return
+        try:
+            cache = self.app.get_adb_cache()
+            success, freed = cache.clear_cache()
+            if success:
+                self.app.logger.log(t("message.adb.clear_cache_done", size=freed))
+                self._update_cache_size()
+                messagebox.showinfo(t("common.success"), t("message.adb.clear_cache_done", size=freed), parent=self)
+        except Exception as e:
+            messagebox.showerror(t("common.error"), t("message.process_failed", error=e), parent=self)
 
     def _init_app_settings(self):
         """初始化应用设置"""
@@ -115,7 +417,7 @@ class SettingsDialog(tb.Toplevel):
             bootstyle="info"
         )
 
-    def _init_global_options(self):
+    def _init_saving_options(self):
         """初始化保存选项"""
         section = self._create_section(t("ui.settings.group_save"))
 

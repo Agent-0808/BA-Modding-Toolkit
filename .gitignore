@@ -1,12 +1,7 @@
 output/
 Addons/
+adb_cache/
 config.toml
-
-tools/
-test/
-testbundle/
-old/
-SpineConverter/
 
 locales/
 src/ba_modding_toolkit/locales/tmp/
