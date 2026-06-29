@@ -20,7 +20,7 @@ def search_prefix(
 ) -> tuple[list[Path], str]:
     """
     通过文件名前缀(prefix)匹配，在搜索目录中收集候选目标文件。
-    使用与源文件相同的后缀名进行匹配。如果源文件后缀为 .backup，则去掉 .backup 后匹配。
+    目标文件后缀固定为 .bundle。
 
     Args:
         source_path: 源文件路径
@@ -33,10 +33,6 @@ def search_prefix(
         - 失败时: ([], 错误消息)
     """
     prefix = parse_filename(str(source_path.name)).prefix
-    # 如果后缀是 .backup，去掉它获取实际后缀（如 .bundle.backup → .bundle）
-    extension = source_path.suffix
-    if extension == '.backup':
-        extension = Path(source_path.stem).suffix
 
     if not prefix:
         msg = t("message.search.filename_parse_failed")
@@ -49,7 +45,7 @@ def search_prefix(
         file for dir in search_dirs
         if dir.exists() and dir.is_dir()
         for file in dir.iterdir()
-        if file.is_file() and file.name.startswith(prefix) and file.suffix == extension
+        if file.is_file() and file.name.startswith(prefix) and file.suffix == '.bundle'
     ]
 
     if not candidates:
@@ -69,10 +65,10 @@ def search_core(
     """
     通过文件名核心部分(core)匹配，在搜索目录中收集候选目标文件。
     先通过字符串包含匹配进行初筛，再通过 parse_filename 确认 core 相同。
-    使用与源文件相同的后缀名进行匹配。如果源文件后缀为 .backup，则去掉 .backup 后匹配。
+    目标文件后缀固定为 .bundle。
 
     Args:
-        source_paths: 源文件路径列表
+        source_path: 源文件路径
         search_dirs: 搜索目录列表
         log: 日志记录函数
 
@@ -81,10 +77,6 @@ def search_core(
     """
     parsed = parse_filename(str(source_path.name))
     core = parsed.core
-    # 如果后缀是 .backup，去掉它获取实际后缀（如 .bundle.backup → .bundle）
-    extension = source_path.suffix
-    if extension == '.backup':
-        extension = Path(source_path.stem).suffix
 
     if not core:
         msg = t("message.search.filename_parse_failed")
@@ -101,7 +93,7 @@ def search_core(
         if dir.exists() and dir.is_dir()
         for file in dir.iterdir()
         if file.is_file() and file.name.startswith(search_prefix)
-        and core_lower in file.name.lower() and file.suffix == extension
+        and core_lower in file.name.lower() and file.suffix == '.bundle'
     ]
 
     # 第二轮：parse_filename 确认 core 相同（大小写不敏感）
