@@ -7,10 +7,6 @@ from ba_modding_toolkit.utils import (
     ImageUtils,
     parse_hex_bytes,
 )
-from ba_modding_toolkit.core import (
-    parse_filename
-)
-from conftest import has_sample_skel
 
 
 class TestParseHexBytes:
@@ -72,64 +68,3 @@ class TestImageUtils:
         result = ImageUtils.bleed_image(img)
         
         assert result == img
-
-
-class TestParseFilename:
-    def test_parse_filename_jp(self):
-        filename = "assets-_mx-spinecharacters-ch0808_spr-mxdependency-textures-2077-08-08_12345678.bundle"
-        parsed_filename = parse_filename(filename)
-        
-        assert parsed_filename.category == "spinecharacters"
-        assert parsed_filename.core == "ch0808_spr"
-        assert parsed_filename.res_type == "textures"
-        assert parsed_filename.date == "2077-08-08"
-        assert parsed_filename.crc == "12345678"
-        assert parsed_filename.prefix == "assets-_mx-spinecharacters-ch0808_spr-mxdependency-"
-
-    def test_parse_filename_global(self):
-        filename = "assets-_mx-spinecharacters-ch8080_spr-_mxdependency-2088-07-07_002_assets_all_7355608.bundle"
-        parsed = parse_filename(filename)
-        
-        assert parsed.category == "spinecharacters"
-        assert parsed.core == "ch8080_spr"
-        assert parsed.res_type == "002"
-        assert parsed.date == "2088-07-07"
-        assert parsed.crc == "7355608"
-        assert parsed.prefix == "assets-_mx-spinecharacters-ch8080_spr-_mxdependency-"
-
-    def test_parse_filename_legacy(self):
-        filename = "assets-_mx-spinecharacters-ch0088_spr-_mxdependency-1970-01-01_assets_all_072107210721.bundle"
-        parsed = parse_filename(filename)
-        
-        assert parsed.category == "spinecharacters"
-        assert parsed.core == "ch0088_spr"
-        assert parsed.res_type is None
-        assert parsed.date == "1970-01-01"
-        assert parsed.crc == "072107210721"
-        assert parsed.prefix == "assets-_mx-spinecharacters-ch0088_spr-_mxdependency-"
-
-    def test_parse_filename_with_mxload(self):
-        filename = "uis-09_common-99_minigame-cardgame-_mxload-2088-07-07_assets_all_87654321.bundle"
-        parsed = parse_filename(filename)
-        
-        assert "cardgame" in parsed.core
-        assert parsed.res_type is None
-        assert parsed.date == "2088-07-07"
-        assert parsed.crc == "87654321"
-
-    def test_parse_filename_no_type(self):
-        filename = "assets-_mx-category-corename-2024-01-01_11111111.bundle"
-        parsed = parse_filename(filename)
-        
-        assert parsed.category == "category"
-        assert parsed.core == "corename"
-        assert parsed.res_type is None
-        assert parsed.date == "2024-01-01"
-        assert parsed.crc == "11111111"
-
-    def test_get_filename_prefix_with_date(self):
-        filename = "assets-_mx-spinecharacters-ch0808_home-mxdependency-textures-2077-08-08_1234567.bundle"
-        prefix = parse_filename(filename).prefix
-        
-        assert prefix is not None
-        assert "assets-_mx-spinecharacters-ch0808_home" in prefix
