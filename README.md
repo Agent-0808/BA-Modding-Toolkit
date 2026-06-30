@@ -27,10 +27,10 @@ Supports Steam version (PC) and other versions (Global/JP server, PC/Android/iOS
 
 - Downloaded a mod from the internet, replaced the corresponding file in the game directory, but the game shows "Abnormal Client" and cannot login?
 - Downloaded a mod released a long time ago, but the filename is different from the latest version? Even after replacement, the character image doesn't change/doesn't display at all/game freezes?
-- Want to create your own mod to replace character illustrations, but don't have Unity knowledge?
-- Want to unpack game resources and extract character illustrations or other assets?
+- Want to create your own mod to replace character illustrations, but don't know how to operate?
+- Want to extract character illustrations or other assets?
 
-BA Modding Toolkit can help you solve the above problems, with completely foolproof operations, no need to manually manipulate bundle files.
+BA Modding Toolkit can help you solve the above problems, with foolproof operations, no need to manually manipulate bundle files.
 
 ## Getting Started
 
@@ -50,7 +50,7 @@ The program contains multiple functionalities:
 - **Asset Extractor**: Extract specified types of assets from Bundle files
 - **Legacy Conversion**: Convert between Legacy format(old global version) and Modern format(JP and new global version)
 - **Batch Legacy**: Batch convert Legacy format to Modern format
-
+- **ADB File Push**: Push local files to Android devices using ADB commands.
 - **File List**: View and manage all Bundle files in the specified directory.
 
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-en.png)
@@ -61,6 +61,7 @@ The add-ons mentioned in this section are optional, and you can choose whether t
 
 > [!WARNING]
 > The following add-ons are independent third-party programs. Please comply with their licenses when downloading and using them.
+> 
 > BA-Modding-Toolkit only invokes the programs through `subprocess` module. It does not contain or distribute any code or files of these programs, nor is it responsible for any issues that may arise during their use.
 
 ### Spine Skeleton Data Converter
@@ -81,6 +82,24 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
 This tool can preview and render Spine skeleton animation files. You can configure the path of the `SpineViewerCLI.exe` program in the settings interface and preview the Spine animation in the "File List" window.
+
+### ADB (Android Debug Bridge)
+
+**[Android Debug Bridge](https://developer.android.com/tools/releases/platform-tools)**
+
+This tool can communicate with Android devices. You can configure the path of `adb.exe` in the settings interface to directly read and write files on Android devices in the same way as local files on Windows, without manually exporting or importing files from Android devices.
+
+- This feature requires an Android device to be connected and authorized for this program to access.
+- After setting the path to `adb.exe`, select the target Android device and corresponding file source in the "Settings" window.
+
+### BA-characters-internal-id
+
+**[Agent-0808/BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id)**
+
+A reference table that records the mapping between in-game character names and their corresponding internal file IDs (e.g., `CH0288` → Utsumi Aoba).
+
+- In the "File List" window, after parsing the internal ID from a Bundle file name, the actual character name can be displayed according to this reference table.
+- Support in more features is planned for future updates.
 
 ## Command Line Interface (CLI)
 
@@ -170,6 +189,7 @@ BA-Modding-Toolkit/
 │ ├── models.py      # Data models
 │ ├── i18n.py        # Internationalization functionality
 │ ├── utils.py       # Utility classes and helper functions
+│ ├── adb/           # ADB related modules
 │ ├── cli/           # Command Line Interface (CLI) package
 │ │ ├── __main__.py     # CLI Entry Point
 │ │ ├── main.py         # CLI Main Program
@@ -185,6 +205,7 @@ BA-Modding-Toolkit/
 │ │ ├── utils.py        # UI related utility functions
 │ │ ├── windows/        # Individual windows
 │ │ │ ├── __init__.py
+│ │ │ ├── adb_browser.py        # ADB Browser window
 │ │ │ ├── dialogs.py            # Settings dialogs 
 │ │ │ └── file_list_window.py   # File List window
 │ │ └── tabs/           # Feature tabs
@@ -240,7 +261,6 @@ This project uses the following excellent 3rd-party libraries:
 
 Some useful related repositories:
 
-- [BA-characters-internal-id](https://github.com/Agent-0808/BA-characters-internal-id) ：Search for character names and internal file IDs
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
 
 ### Disclaimer
