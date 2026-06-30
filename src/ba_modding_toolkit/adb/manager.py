@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+import sys
 
 from ..i18n import t
 from ..utils import no_log
@@ -214,6 +215,9 @@ class ADBManager:
             full_args += ["-s", self._device]
         full_args += args
 
+        # Windows 下隐藏子进程的控制台窗口（避免Nuitka打包后弹出terminal）
+        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
         try:
             result = subprocess.run(
                 full_args,
@@ -222,6 +226,7 @@ class ADBManager:
                 timeout=timeout,
                 encoding="utf-8",
                 errors="replace",
+                creationflags=creationflags,
             )
             return result
         except FileNotFoundError:
