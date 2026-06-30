@@ -247,8 +247,8 @@ class SettingsDialog(tb.Toplevel):
         self._cache_size_label = tb.Label(cache_container, text="", font=Theme.INPUT_FONT)
         self._cache_size_label.pack(side=tk.RIGHT, padx=(0, 10))
 
-        # 初始化状态
-        self._update_adb_status()
+        # 初始化状态显示（不主动检测ADB，等用户点击刷新按钮）
+        self._device_status_label.config(text="")
 
     def _select_adb_path(self):
         """选择 ADB 可执行文件路径"""
@@ -292,6 +292,9 @@ class SettingsDialog(tb.Toplevel):
 
     def _refresh_devices(self):
         """刷新设备列表"""
+        # 更新缓存大小
+        self._update_cache_size()
+
         self.app.refresh_adb_connection()
         manager = self.app.get_adb_manager()
         devices = manager.get_devices()
