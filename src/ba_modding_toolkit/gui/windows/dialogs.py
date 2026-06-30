@@ -3,6 +3,7 @@
 import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
+import threading
 import urllib.request
 import webbrowser
 from ttkbootstrap.widgets.scrolled import ScrolledFrame
@@ -196,7 +197,7 @@ class SettingsDialog(tb.Toplevel):
 
         # 设备选择
         device_container = SettingRow.create_container(section)
-        SettingRow._add_label_area(device_container, t("ui.settings.adb_device"), None)
+        SettingRow._add_label_area(device_container, t("ui.settings.adb.device"), None)
 
         right_frame = tb.Frame(device_container)
         right_frame.pack(side=tk.RIGHT)
@@ -234,7 +235,7 @@ class SettingsDialog(tb.Toplevel):
 
         # 缓存大小 + 清理按钮
         cache_container = SettingRow.create_container(section)
-        SettingRow._add_label_area(cache_container, t("ui.settings.adb_cache_title"), None)
+        SettingRow._add_label_area(cache_container, t("ui.label.adb_cache"), None)
 
         UIComponents.create_button(
             cache_container,
@@ -291,13 +292,38 @@ class SettingsDialog(tb.Toplevel):
             messagebox.showerror(t("common.error"), t("message.adb.detect_failed"), parent=self)
 
     def _refresh_devices(self):
-        """刷新设备列表"""
-        # 更新缓存大小
+        """刷新设备列表（异步执行）"""
+        # 显示正在检测状态
+        self._device_status_label.config(
+            text=t("ui.settings.adb.detecting"),
+            bootstyle="info"
+        )
+        # 更新缓存大小（在主线程中执行）
         self._update_cache_size()
 
-        self.app.refresh_adb_connection()
-        manager = self.app.get_adb_manager()
-        devices = manager.get_devices()
+        # 启动后台线程执行ADB检测
+        thread = threading.Thread(target=self._fetch_devices_bg, daemon=True)
+        thread.start()
+
+    def _fetch_devices_bg(self):
+        """后台线程：获取设备列表"""
+        try:
+            self.app.refresh_adb_connection()
+            manager = self.app.get_adb_manager()
+            devices = manager.get_devices()
+            # 使用 after 在主线程中更新UI
+            self.after(0, lambda: self._update_devices_ui(devices, manager))
+        except Exception:
+            # 检测失败，在主线程中更新状态
+            self.after(0, lambda: self._device_status_label.config(
+                text=t("message.adb.not_connected"),
+                bootstyle="danger"
+            ))
+
+    def _update_devices_ui(self, devices, manager):
+        """主线程：更新设备列表UI"""
+        if not self.winfo_exists():
+            return
 
         # 更新下拉框
         display_values = [d.display_name for d in devices]
@@ -310,14 +336,14 @@ class SettingsDialog(tb.Toplevel):
                     self.app.adb_device_var.set(d.serial)
                     manager.select_device(d.serial)
                     self._device_status_label.config(
-                        text=t("ui.settings.adb_device_connected"),
+                        text=t("ui.settings.adb.device_connected"),
                         bootstyle="success"
                     )
                     return
             # 没有就绪设备
             first = devices[0]
             self._device_status_label.config(
-                text=t("ui.settings.adb_device_unauthorized") if first.state == "unauthorized" else t("ui.settings.adb_device_offline"),
+                text=t("ui.settings.adb.device_unauthorized") if first.state == "unauthorized" else t("ui.settings.adb.device_offline"),
                 bootstyle="warning"
             )
         else:
@@ -364,7 +390,7 @@ class SettingsDialog(tb.Toplevel):
         try:
             cache = self.app.get_adb_cache()
             size_display = cache.get_cache_size_display()
-            self._cache_size_label.config(text=t("ui.settings.adb_cache_size", size=size_display))
+            self._cache_size_label.config(text=t("ui.settings.adb.cache_size", size=size_display))
         except Exception:
             self._cache_size_label.config(text="")
 

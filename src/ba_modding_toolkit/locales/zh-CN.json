@@ -485,12 +485,14 @@
 			"group_app": "应用设置",
 			"group_paths": "路径设置",
 			"group_adb": "ADB 设置",
-			"adb_device": "设备选择",
-			"adb_device_connected": "设备就绪",
-			"adb_device_unauthorized": "设备未授权，请在手机上允许 USB 调试",
-			"adb_device_offline": "设备离线",
-			"adb_cache_title": "ADB缓存",
-			"adb_cache_size": "缓存大小: {size}"
+			"adb": {
+				"device": "设备选择",
+				"detecting": "正在检测...",
+				"device_connected": "设备就绪",
+				"device_unauthorized": "设备未授权，请在手机上允许 USB 调试",
+				"device_offline": "设备离线",
+				"cache_size": "缓存大小: {size}"
+			}
 		},
 		"column": {
 			"filename": "文件名",
@@ -558,6 +560,7 @@
 			"environment": "运行环境",
 			"github": "GitHub",
 			"options": "选项",
+			"adb_cache": "ADB缓存",
 			"target_crc": "目标 CRC"
 		},
 		"log_area": "日志",

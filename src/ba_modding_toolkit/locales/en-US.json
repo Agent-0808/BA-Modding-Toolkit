@@ -485,12 +485,14 @@
 			"group_app": "App Settings",
 			"group_paths": "Path Settings",
 			"group_adb": "ADB Settings",
-			"adb_device": "Device Selection",
-			"adb_device_connected": "Device ready",
-			"adb_device_unauthorized": "Device unauthorized. Please allow USB debugging on your phone.",
-			"adb_device_offline": "Device offline",
-			"adb_cache_title": "ADB Cache",
-			"adb_cache_size": "Cache size: {size}"
+			"adb": {
+				"device": "Device Selection",
+				"detecting": "Detecting...",
+				"device_connected": "Device ready",
+				"device_unauthorized": "Device unauthorized. Please allow USB debugging on your phone.",
+				"device_offline": "Device offline",
+				"cache_size": "Cache size: {size}"
+			}
 		},
 		"column": {
 			"filename": "Filename",
@@ -558,6 +560,7 @@
 			"environment": "Environment",
 			"github": "GitHub",
 			"options": "Options",
+			"adb_cache": "ADB Cache",
 			"target_crc": "Target CRC Value"
 		},
 		"log_area": "Log Area",
