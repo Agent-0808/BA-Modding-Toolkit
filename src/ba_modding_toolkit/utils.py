@@ -29,8 +29,10 @@ def _get_path_from_registry(key_path: str) -> str | None:
 
     return None
 
+_ba_path_cache: dict[str, str | None] = {}
+
 def get_BA_path(region: str = "global") -> str | None:
-    """获取游戏安装路径
+    """获取游戏安装路径，带缓存机制
     
     Args:
         region: 区服，"global" 或 "japan"
@@ -38,12 +40,19 @@ def get_BA_path(region: str = "global") -> str | None:
     Returns:
         游戏安装路径，如果未找到则返回 None
     """
+    if region in _ba_path_cache:
+        return _ba_path_cache[region]
+
     if region == "global":
         BA_STEAM_APPID = 3557620
-        return _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
+        result = _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
     elif region == "japan":
-        return _get_path_from_registry(r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
-    return None
+        result = _get_path_from_registry(r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
+    else:
+        result = None
+
+    _ba_path_cache[region] = result
+    return result
 
 def get_version() -> str:
     """从 pyproject.toml 读取版本号"""

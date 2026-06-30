@@ -9,7 +9,7 @@ from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
-from ..utils import get_environment_info, get_BA_path, parse_hex_bytes
+from ..utils import get_environment_info, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
@@ -424,8 +424,8 @@ class App(tb.Frame, ConfigMixin):
         # 如果没有配置文件，根据系统语言检测设置默认语言
         if not config_loaded:
             system_lang = get_system_language()
-            # 如果系统语言是中文，使用zh-CN，否则使用debug模式
-            if system_lang and (system_lang.startswith("zh-")):
+            # 如果系统语言是中文，使用zh-CN，否则使用en-US
+            if system_lang and system_lang.startswith("zh-"):
                 default_language = "zh-CN"
             else:
                 default_language = "en-US"
@@ -433,18 +433,6 @@ class App(tb.Frame, ConfigMixin):
             self.language_var.set(default_language)
             print(f"未找到配置文件，根据系统语言检测使用默认语言: {default_language}")
             
-            # 尝试从注册表检测 Blue Archive 游戏路径（国际服）
-            ba_path_global = get_BA_path("global")
-            if ba_path_global:
-                self.game_resource_dir_var.set(ba_path_global)
-                print(f"从注册表检测到 Blue Archive 国际服安装路径: {ba_path_global}")
-            
-            # 尝试从注册表检测 Blue Archive 游戏路径（日服）
-            ba_path_japan = get_BA_path("japan")
-            if ba_path_japan:
-                self.game_resource_dir_japan_var.set(ba_path_japan)
-                print(f"从注册表检测到 Blue Archive 日服安装路径: {ba_path_japan}")
-        
         # 设置语言
         language = self.language_var.get()
         i18n_manager.set_language(language)

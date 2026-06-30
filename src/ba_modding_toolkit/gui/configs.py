@@ -24,18 +24,21 @@ class ConfigMeta:
 
 def _get_default_game_dir() -> str:
     """获取默认游戏目录（国际服）"""
-    ba_path = get_BA_path("global")
-    if ba_path:
-        return ba_path
-    return ""
+    return get_BA_path("global") or ""
 
 
 def _get_default_game_dir_japan() -> str:
     """获取默认游戏目录（日服）"""
-    ba_path = get_BA_path("japan")
-    if ba_path:
-        return ba_path
-    return ""
+    return get_BA_path("japan") or ""
+
+
+def _get_default_file_source() -> str:
+    """获取默认文件源"""
+    if get_BA_path("global"):
+        return "windows_global"
+    if get_BA_path("japan"):
+        return "windows_japan"
+    return "windows_global"
 
 
 def _get_default_output_dir() -> str:
@@ -61,7 +64,7 @@ class ConfigMixin:
     """配置项定义 Mixin"""
     
     # Directories
-    file_source_var: Annotated[tk.StringVar, ConfigMeta("Directories", "windows_global")]
+    file_source_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_file_source)]
     game_resource_dir_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir)]
     game_resource_dir_japan_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_game_dir_japan)]
     game_dir_android_global_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_android_global_dir)]
@@ -92,7 +95,6 @@ class ConfigMixin:
     # SpineDowngrade
     enable_atlas_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
     spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75", depends_on="spine_converter_path_var")]
-    unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False)]
 
     # SpineViewer
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
@@ -104,6 +106,7 @@ class ConfigMixin:
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+    unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
 
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
@@ -148,8 +151,12 @@ class ConfigManager:
                 group_data = data.get(meta.group, {})
                 key = meta.key or var_name.removesuffix("_var")
                 var = getattr(app, var_name)
-                default = meta.default() if callable(meta.default) else meta.default
-                var.set(group_data.get(key, default))
+                if key in group_data:
+                    var.set(group_data[key])
+                elif callable(meta.default):
+                    var.set(meta.default())
+                else:
+                    var.set(meta.default)
             
             return True
         except Exception as e:
