@@ -11,7 +11,8 @@ from UnityPy.environment import Environment as Env
 from PIL import Image
 
 from .i18n import t
-from .utils import CRCUtils, SpineUtils, no_log
+from .utils import CRCUtils, no_log
+from .spine import SpineUtils
 from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
