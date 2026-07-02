@@ -11,6 +11,7 @@ from ... import core
 from ...searching import search_core, get_search_dirs
 from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents, FileListbox
+from ..utils import confirm_and_replace
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):
