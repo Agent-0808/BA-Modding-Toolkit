@@ -25,6 +25,15 @@
 
 用于测试packer功能
 
+### `assets/spine/`
+- `old_assets/*.skel`
+- `old_assets/*.atlas`
+- `old_assets/*.png`
+- `old_assets/*2.png`
+- `new_bundle/*.bundle`
+
+用于测试spine功能的重命名和打包
+
 *注：如果不提供文件，也可以运行不需要这些文件的测试用例，会跳过需要文件的测试用例*
 
 ## 运行

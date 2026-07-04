@@ -11,7 +11,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import ImageUtils, no_log
-from .spine import SkelConverter, SpineViewer, atlas_downgrade, normalize_legacy_assets
+from .spine import SkelConverter, SpineViewer, atlas_downgrade, check_legacy_rename_needed, normalize_legacy_assets
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
@@ -142,15 +142,33 @@ def process_asset_packing(
                 input_files.append(asset_path)
 
         if enable_rename_fix and input_files:
-            # 将所有文件复制到临时目录，应用文件名修正
-            temp_dir = tempfile.mkdtemp(prefix="asset_pack_")
-            temp_path = Path(temp_dir)
-            for f in input_files:
-                shutil.copy2(f, temp_path / f.name)
-            temp_asset_folder = normalize_legacy_assets(temp_path, log)
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            input_files = [f for f in temp_asset_folder.iterdir()
-                          if f.is_file() and f.suffix.lower() in supported_extensions]
+            # 从目标 Bundle 中提取 Texture2D 名称作为重命名参考
+            bundle_png_names: set[str] = set()
+            for bp in bundle_paths:
+                bundle = Bundle.load(bp)
+                if bundle:
+                    for key in bundle.get_asset_keys(asset_types={AssetType.Texture2D}):
+                        if isinstance(key, NameTypeKey) and key.name:
+                            bundle_png_names.add(key.name)
+
+            if bundle_png_names:
+                # 将所有文件复制到临时目录
+                temp_dir = tempfile.mkdtemp(prefix="asset_pack_")
+                temp_path = Path(temp_dir)
+                for f in input_files:
+                    shutil.copy2(f, temp_path / f.name)
+
+                # 检测是否需要重命名
+                if check_legacy_rename_needed(temp_path, bundle_png_names):
+                    log(t('log.spine.legacy_rename_detected'))
+                    temp_asset_folder = normalize_legacy_assets(temp_path, bundle_png_names, log)
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                    input_files = [f for f in temp_asset_folder.iterdir()
+                                  if f.is_file() and f.suffix.lower() in supported_extensions]
+                else:
+                    # 不需要重命名，直接使用临时目录
+                    input_files = [f for f in temp_path.iterdir()
+                                  if f.is_file() and f.suffix.lower() in supported_extensions]
 
         if not input_files:
             msg = t("message.packer.no_supported_files_found", extensions=', '.join(supported_extensions))
@@ -222,7 +240,6 @@ def process_asset_packing(
 
             if not result.is_success:
                 log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')} ({bundle_path.name})")
-                log(t("log.packer.check_files_and_bundle"))
                 continue
 
             log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")

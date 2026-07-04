@@ -444,70 +444,91 @@ def unpack_atlas(
         return False
 
 
-def normalize_legacy_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
+def _build_rename_mapping(
+    bundle_png_names: set[str],
+    existing_png_stems: set[str],
+) -> dict[str, str]:
     """
-    修正旧版 Spine 3.8 文件名格式
-    将类似 CH0808_home2.png 的文件重命名为 CH0808_home_2.png
-    并更新 .atlas 文件中的引用
+    根据Bundle中Texture2D的名称与磁盘PNG文件名的差异，构建重命名映射。
+    遍历 Bundle 中 name_N 模式的名称，检查磁盘上是否存在旧版 nameN，
+    若存在则映射 nameN → name_N。
+    返回 {旧stem: 新stem} 的映射（不含 .png 后缀）
+    """
+    mapping: dict[str, str] = {}
+
+    for bundle_name in bundle_png_names:
+        # 在 Bundle 名称中找 _N 后缀模式（如 CH0808_2、CH0808_home_3）
+        match = re.match(r'^(.+)_(\d+)$', bundle_name)
+        if not match:
+            continue
+        prefix, number = match.group(1), match.group(2)
+        # 旧版导出格式：去掉下划线，如 CH08082、CH0808_home3
+        legacy_stem = f"{prefix}{number}"
+        if legacy_stem in existing_png_stems and legacy_stem not in bundle_png_names:
+            mapping[legacy_stem] = bundle_name
+
+    return mapping
+
+
+def check_legacy_rename_needed(source_folder_path: Path, bundle_png_names: set[str]) -> bool:
+    """
+    检测目录中的资源是否需要旧版文件名修正。
+    通过对比磁盘PNG文件名与Bundle中Texture2D名称来判断。
+    如果检测到需要重命名则返回 True，否则返回 False。
+    """
+    existing_png_stems = {f.stem for f in source_folder_path.iterdir()
+                         if f.is_file() and f.suffix.lower() == '.png'}
+
+    return bool(_build_rename_mapping(bundle_png_names, existing_png_stems))
+
+
+def normalize_legacy_assets(source_folder_path: Path, bundle_png_names: set[str], log: LogFunc = no_log) -> Path:
+    """
+    修正旧版 Spine 3.8 文件名格式。
+    根据Bundle中Texture2D的名称，将磁盘上不匹配的PNG文件重命名，并同步更新Atlas文件中的引用。
     此函数创建一个临时目录,复制所有文件并在其中进行重命名,不修改用户原始文件。
+
+    Args:
+        source_folder_path: 包含待修正文件的目录
+        bundle_png_names: Bundle中Texture2D的名称集合（不含后缀）
+        log: 日志记录函数
 
     Returns:
         临时目录路径,包含修正后的文件
     """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_dir_path = Path(temp_dir)
+    existing_png_stems = {f.stem for f in source_folder_path.iterdir()
+                         if f.is_file() and f.suffix.lower() == '.png'}
 
-        filename_mapping: dict[str, str] = {}
+    stem_mapping = _build_rename_mapping(bundle_png_names, existing_png_stems)
 
-        for source_file in source_folder_path.iterdir():
-            if not source_file.is_file():
-                continue
+    # 构建 PNG 文件名映射 {old_filename: new_filename}
+    png_mapping: dict[str, str] = {f"{old}.png": f"{new}.png" for old, new in stem_mapping.items()}
 
-            dest_file = temp_dir_path / source_file.name
+    # 创建临时目录，复制并重命名
+    final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
+    final_temp_path = Path(final_temp_dir)
 
-            if source_file.suffix.lower() == '.png':
-                old_name = source_file.stem
-                new_name = old_name
+    for source_file in source_folder_path.iterdir():
+        if not source_file.is_file():
+            continue
 
-                # TODO: 修复 [CH0144.png] -> [CH014_4.png]
-                match = re.search(r'^(.*)(\d+)$', old_name)
-                if match:
-                    prefix = match.group(1)
-                    number = match.group(2)
-                    new_name = f"{prefix}_{number}"
+        dest_name = png_mapping.get(source_file.name, source_file.name)
+        shutil.copy2(source_file, final_temp_path / dest_name)
 
-                if new_name != old_name:
-                    old_filename = source_file.name
-                    new_filename = f"{new_name}.png"
-                    dest_file = temp_dir_path / new_filename
-                    filename_mapping[old_filename] = new_filename
-                    log(f"  - {t('log.file.rename', old=old_filename, new=new_filename)}")
+        if dest_name != source_file.name:
+            log(f"  - {t('log.file.rename', old=source_file.name, new=dest_name)}")
 
-            shutil.copy2(source_file, dest_file)
+    # 更新 Atlas 文件中的 PNG 引用
+    for atlas_file in final_temp_path.glob('*.atlas'):
+        content = atlas_file.read_text(encoding='utf-8')
+        modified = False
+        for old_name, new_name in png_mapping.items():
+            if old_name in content:
+                content = content.replace(old_name, new_name)
+                modified = True
+        if modified:
+            atlas_file.write_text(content, encoding='utf-8')
+            log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
 
-        for atlas_file in temp_dir_path.glob('*.atlas'):
-            try:
-                content = atlas_file.read_text(encoding='utf-8')
-                modified = False
-
-                for old_name, new_name in filename_mapping.items():
-                    if old_name in content:
-                        content = content.replace(old_name, new_name)
-                        modified = True
-
-                if modified:
-                    atlas_file.write_text(content, encoding='utf-8')
-                    log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
-
-            except Exception as e:
-                log(f"  ❌ {t('log.error_detail', error=e)}")
-
-        final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
-        final_temp_path = Path(final_temp_dir)
-
-        for item in temp_dir_path.iterdir():
-            if item.is_file():
-                shutil.copy2(item, final_temp_path / item.name)
-
-        return final_temp_path
+    return final_temp_path
 

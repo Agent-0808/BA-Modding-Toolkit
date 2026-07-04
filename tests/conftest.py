@@ -14,6 +14,10 @@ LEGACY_FORMAT_DIR = ASSETS_DIR / "legacy_format"
 LEGACY_FORMAT_LEGACY_DIR = LEGACY_FORMAT_DIR / "legacy"
 LEGACY_FORMAT_MODERN_DIR = LEGACY_FORMAT_DIR / "modern"
 
+SPINE_DIR = ASSETS_DIR / "spine"
+SPINE_OLD_ASSETS_DIR = SPINE_DIR / "old_assets"
+SPINE_NEW_BUNDLE_DIR = SPINE_DIR / "new_bundle"
+
 
 def compare_images_mse(img1: Image.Image, img2: Image.Image) -> float:
     if img1.size != img2.size:
@@ -44,6 +48,12 @@ def find_first_file(directory: Path, extension: str) -> Path | None:
         return None
     files = list(directory.glob(f"*{extension}"))
     return files[0] if files else None
+
+
+def find_all_files(directory: Path, extension: str) -> list[Path]:
+    if not directory.exists():
+        return []
+    return list(directory.glob(f"*{extension}"))
 
 
 def has_file(directory: Path, extension: str) -> bool:
@@ -110,6 +120,10 @@ def has_legacy_format_samples() -> bool:
     return has_file(LEGACY_FORMAT_LEGACY_DIR, ".bundle") and has_file(LEGACY_FORMAT_MODERN_DIR, ".bundle")
 
 
+def has_spine_legacy_samples() -> bool:
+    return has_file(SPINE_OLD_ASSETS_DIR, ".atlas") and has_file(SPINE_NEW_BUNDLE_DIR, ".bundle")
+
+
 @pytest.fixture
 def sample_bundle_path() -> Path | None:
     return find_first_file(PACKER_DIR, ".bundle")
@@ -155,3 +169,18 @@ def modern_bundles_path() -> list[Path]:
     if not LEGACY_FORMAT_MODERN_DIR.exists():
         return []
     return list(LEGACY_FORMAT_MODERN_DIR.glob("*.bundle"))
+
+
+@pytest.fixture
+def spine_old_assets_dir() -> Path:
+    return SPINE_OLD_ASSETS_DIR
+
+
+@pytest.fixture
+def spine_new_bundle_dir() -> Path:
+    return SPINE_NEW_BUNDLE_DIR
+
+
+@pytest.fixture
+def spine_new_bundle_path() -> list[Path]:
+    return find_all_files(SPINE_NEW_BUNDLE_DIR, ".bundle")
