@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from SpineAtlas import Atlas, ReadAtlasFile
 
 from .i18n import t
 from .utils import LogFunc, no_log
@@ -202,120 +203,6 @@ class SkelConverter:
             log(f'    ✗ {t("log.spine.skel_conversion_failed")}')
         return skel_success
 
-    @staticmethod
-    def atlas_downgrade(
-        atlas_path: Path,
-        output_dir: Path,
-        log: LogFunc = no_log,
-    ) -> bool:
-        """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
-        from SpineAtlas import Atlas, ReadAtlasFile
-        try:
-            log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
-
-            atlas: Atlas = ReadAtlasFile(str(atlas_path))
-            atlas.version = False
-
-            atlas.ReScale()
-            atlas.SaveAtlas4_0Scale(outPath=output_dir)
-            log(f'    > {t("log.spine.atlas_downgrade_success")}')
-            return True
-        except Exception as e:
-            log(f'    ✗ {t("log.error_detail", error=e)}')
-            return False
-
-    @staticmethod
-    def unpack_atlas(
-        atlas_path: Path,
-        output_dir: Path,
-        log: LogFunc = no_log,
-    ) -> bool:
-        """将 atlas 文件解包为单独的 PNG 帧图片。"""
-        from SpineAtlas import ReadAtlasFile
-        try:
-            log(f'    > {t("log.spine.unpacking_atlas", name=atlas_path.name)}')
-
-            atlas = ReadAtlasFile(str(atlas_path))
-            atlas.ReScale()
-            frames_output_dir = output_dir / "images"
-            frames_output_dir.mkdir(parents=True, exist_ok=True)
-
-            atlas.SaveFrames(path=str(frames_output_dir), mode='Normal')
-
-            log(f'    > {t("log.spine.atlas_unpack_success", path=frames_output_dir)}')
-            return True
-        except Exception as e:
-            log(f'    ✗ {t("log.spine.atlas_unpack_failed")}: {e}')
-            return False
-
-    @staticmethod
-    def normalize_legacy_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
-        """
-        修正旧版 Spine 3.8 文件名格式
-        将类似 CH0808_home2.png 的文件重命名为 CH0808_home_2.png
-        并更新 .atlas 文件中的引用
-        此函数创建一个临时目录,复制所有文件并在其中进行重命名,不修改用户原始文件。
-
-        Returns:
-            临时目录路径,包含修正后的文件
-        """
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_dir_path = Path(temp_dir)
-
-            filename_mapping: dict[str, str] = {}
-
-            for source_file in source_folder_path.iterdir():
-                if not source_file.is_file():
-                    continue
-
-                dest_file = temp_dir_path / source_file.name
-
-                if source_file.suffix.lower() == '.png':
-                    old_name = source_file.stem
-                    new_name = old_name
-
-                    # TODO: 修复 [CH0144.png] -> [CH014_4.png]
-                    match = re.search(r'^(.*)(\d+)$', old_name)
-                    if match:
-                        prefix = match.group(1)
-                        number = match.group(2)
-                        new_name = f"{prefix}_{number}"
-
-                    if new_name != old_name:
-                        old_filename = source_file.name
-                        new_filename = f"{new_name}.png"
-                        dest_file = temp_dir_path / new_filename
-                        filename_mapping[old_filename] = new_filename
-                        log(f"  - {t('log.file.rename', old=old_filename, new=new_filename)}")
-
-                shutil.copy2(source_file, dest_file)
-
-            for atlas_file in temp_dir_path.glob('*.atlas'):
-                try:
-                    content = atlas_file.read_text(encoding='utf-8')
-                    modified = False
-
-                    for old_name, new_name in filename_mapping.items():
-                        if old_name in content:
-                            content = content.replace(old_name, new_name)
-                            modified = True
-
-                    if modified:
-                        atlas_file.write_text(content, encoding='utf-8')
-                        log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
-
-                except Exception as e:
-                    log(f"  ❌ {t('log.error_detail', error=e)}")
-
-            final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
-            final_temp_path = Path(final_temp_dir)
-
-            for item in temp_dir_path.iterdir():
-                if item.is_file():
-                    shutil.copy2(item, final_temp_path / item.name)
-
-            return final_temp_path
-
 
 class SpineViewer:
     """SpineViewerCLI 工具集成类,用于查询信息和渲染预览。"""
@@ -512,51 +399,115 @@ class SpineViewer:
             return False, msg
 
 
-# 为向后兼容保留的 SpineUtils 类别名
-class SpineUtils:
-    """向后兼容的 SpineUtils 类别名,已弃用,请使用 SkelConverter 或 SpineViewer。"""
+def atlas_downgrade(
+    atlas_path: Path,
+    output_dir: Path,
+    log: LogFunc = no_log,
+) -> bool:
+    """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
 
-    @staticmethod
-    def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
-        """向后兼容方法,请使用独立的 get_skel_version 函数。"""
-        return get_skel_version(source, log)
+    try:
+        log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
 
-    @staticmethod
-    def run_skel_converter(*args, **kwargs) -> tuple[bool, bytes]:
-        """向后兼容方法,请使用 SkelConverter.run()。"""
-        return SkelConverter.run(*args, **kwargs)
+        atlas: Atlas = ReadAtlasFile(str(atlas_path))
+        atlas.version = False
 
-    @staticmethod
-    def handle_skel_upgrade(*args, **kwargs) -> bytes:
-        """向后兼容方法,请使用 SkelConverter.upgrade()。"""
-        return SkelConverter.upgrade(*args, **kwargs)
+        atlas.ReScale()
+        atlas.SaveAtlas4_0Scale(outPath=output_dir)
+        log(f'    > {t("log.spine.atlas_downgrade_success")}')
+        return True
+    except Exception as e:
+        log(f'    ✗ {t("log.error_detail", error=e)}')
+        return False
 
-    @staticmethod
-    def process_skel_downgrade(*args, **kwargs) -> bool:
-        """向后兼容方法,请使用 SkelConverter.downgrade()。"""
-        return SkelConverter.downgrade(*args, **kwargs)
 
-    @staticmethod
-    def process_atlas_downgrade(*args, **kwargs) -> bool:
-        """向后兼容方法,请使用 SkelConverter.atlas_downgrade()。"""
-        return SkelConverter.atlas_downgrade(*args, **kwargs)
+def unpack_atlas(
+    atlas_path: Path,
+    output_dir: Path,
+    log: LogFunc = no_log,
+) -> bool:
+    """将 atlas 文件解包为单独的 PNG 帧图片。"""
+    try:
+        log(f'    > {t("log.spine.unpacking_atlas", name=atlas_path.name)}')
 
-    @staticmethod
-    def unpack_atlas_frames(*args, **kwargs) -> bool:
-        """向后兼容方法,请使用 SkelConverter.unpack_atlas()。"""
-        return SkelConverter.unpack_atlas(*args, **kwargs)
+        atlas = ReadAtlasFile(str(atlas_path))
+        atlas.ReScale()
+        frames_output_dir = output_dir / "images"
+        frames_output_dir.mkdir(parents=True, exist_ok=True)
 
-    @staticmethod
-    def query_spine_info(*args, **kwargs) -> tuple[bool, dict]:
-        """向后兼容方法,请使用 SpineViewer.query()。"""
-        return SpineViewer.query(*args, **kwargs)
+        atlas.SaveFrames(path=str(frames_output_dir), mode='Normal')
 
-    @staticmethod
-    def render_spine_preview(*args, **kwargs) -> tuple[bool, str]:
-        """向后兼容方法,请使用 SpineViewer.render()。"""
-        return SpineViewer.render(*args, **kwargs)
+        log(f'    > {t("log.spine.atlas_unpack_success", path=frames_output_dir)}')
+        return True
+    except Exception as e:
+        log(f'    ✗ {t("log.spine.atlas_unpack_failed")}: {e}')
+        return False
 
-    @staticmethod
-    def normalize_legacy_spine_assets(*args, **kwargs) -> Path:
-        """向后兼容方法,请使用 SkelConverter.normalize_legacy_assets()。"""
-        return SkelConverter.normalize_legacy_assets(*args, **kwargs)
+
+def normalize_legacy_assets(source_folder_path: Path, log: LogFunc = no_log) -> Path:
+    """
+    修正旧版 Spine 3.8 文件名格式
+    将类似 CH0808_home2.png 的文件重命名为 CH0808_home_2.png
+    并更新 .atlas 文件中的引用
+    此函数创建一个临时目录,复制所有文件并在其中进行重命名,不修改用户原始文件。
+
+    Returns:
+        临时目录路径,包含修正后的文件
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_dir_path = Path(temp_dir)
+
+        filename_mapping: dict[str, str] = {}
+
+        for source_file in source_folder_path.iterdir():
+            if not source_file.is_file():
+                continue
+
+            dest_file = temp_dir_path / source_file.name
+
+            if source_file.suffix.lower() == '.png':
+                old_name = source_file.stem
+                new_name = old_name
+
+                # TODO: 修复 [CH0144.png] -> [CH014_4.png]
+                match = re.search(r'^(.*)(\d+)$', old_name)
+                if match:
+                    prefix = match.group(1)
+                    number = match.group(2)
+                    new_name = f"{prefix}_{number}"
+
+                if new_name != old_name:
+                    old_filename = source_file.name
+                    new_filename = f"{new_name}.png"
+                    dest_file = temp_dir_path / new_filename
+                    filename_mapping[old_filename] = new_filename
+                    log(f"  - {t('log.file.rename', old=old_filename, new=new_filename)}")
+
+            shutil.copy2(source_file, dest_file)
+
+        for atlas_file in temp_dir_path.glob('*.atlas'):
+            try:
+                content = atlas_file.read_text(encoding='utf-8')
+                modified = False
+
+                for old_name, new_name in filename_mapping.items():
+                    if old_name in content:
+                        content = content.replace(old_name, new_name)
+                        modified = True
+
+                if modified:
+                    atlas_file.write_text(content, encoding='utf-8')
+                    log(f"  - {t('log.spine.edit_atlas', filename=atlas_file.name)}")
+
+            except Exception as e:
+                log(f"  ❌ {t('log.error_detail', error=e)}")
+
+        final_temp_dir = tempfile.mkdtemp(prefix="spine38_fix_")
+        final_temp_path = Path(final_temp_dir)
+
+        for item in temp_dir_path.iterdir():
+            if item.is_file():
+                shutil.copy2(item, final_temp_path / item.name)
+
+        return final_temp_path
+

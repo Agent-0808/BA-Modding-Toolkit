@@ -3,11 +3,9 @@ from pathlib import Path
 from PIL import Image
 
 from ba_modding_toolkit.utils import (
-    SpineUtils,
     ImageUtils,
     parse_hex_bytes,
 )
-
 
 class TestParseHexBytes:
     def test_parse_hex_bytes_with_prefix(self):
@@ -32,18 +30,6 @@ class TestParseHexBytes:
     def test_parse_hex_bytes_odd_length(self):
         result = parse_hex_bytes("0xABC")
         assert result is None
-
-
-class TestSpineUtils:
-    def test_get_skel_version_from_bytes(self):
-        skel_header = b"spine\x00\x00\x00\x00\x00\x00\x00\x004.2.33\x00"
-        version = SpineUtils.get_skel_version(skel_header)
-        assert version == "4.2.33"
-
-    def test_get_skel_version_no_version(self):
-        data = b"no\x00\x00\x08version\x00\x08\x00\x08string here"
-        version = SpineUtils.get_skel_version(data)
-        assert version is None
 
 
 class TestImageUtils:

@@ -12,7 +12,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import CRCUtils, no_log
-from .spine import SpineUtils
+from .spine import SkelConverter
 from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
@@ -481,7 +481,7 @@ class Bundle:
                 elif obj.type == AssetType.TextAsset:
                     asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
                     if resource_name.lower().endswith('.skel'):
-                        content: bytes = SpineUtils.handle_skel_upgrade(
+                        content: bytes = SkelConverter.upgrade(
                             skel_bytes=asset_bytes,
                             resource_name=resource_name,
                             enabled=spine_options.enabled if spine_options else False,

@@ -11,8 +11,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import ImageUtils, no_log
-from .spine import SpineUtils
-from .naming import parse_filename
+from .spine import SkelConverter, SpineViewer, atlas_downgrade, normalize_legacy_assets
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
@@ -148,7 +147,7 @@ def process_asset_packing(
             temp_path = Path(temp_dir)
             for f in input_files:
                 shutil.copy2(f, temp_path / f.name)
-            temp_asset_folder = SpineUtils.normalize_legacy_spine_assets(temp_path, log)
+            temp_asset_folder = normalize_legacy_assets(temp_path, log)
             shutil.rmtree(temp_dir, ignore_errors=True)
             input_files = [f for f in temp_asset_folder.iterdir()
                           if f.is_file() and f.suffix.lower() in supported_extensions]
@@ -174,7 +173,7 @@ def process_asset_packing(
                     content = f.read()
                 
                 if file_path.suffix.lower() == '.skel':
-                    content = SpineUtils.handle_skel_upgrade(
+                    content = SkelConverter.upgrade(
                         skel_bytes=content,
                         resource_name=asset_key.name,
                         enabled=spine_options.enabled if spine_options else False,
@@ -336,7 +335,7 @@ def process_asset_extraction(
                 # 降级所有 skel 文件（直接覆盖到工作目录）
                 for skel_path in work_dir.glob("*.skel"):
                     log(f"  > {t('log.extractor.processing_file', name=skel_path.name)}")
-                    SpineUtils.process_skel_downgrade(
+                    SkelConverter.downgrade(
                         skel_path, work_dir,
                         spine_options.converter_path, spine_options.target_version, log
                     )
@@ -344,14 +343,14 @@ def process_asset_extraction(
                 # 降级所有 atlas 文件（直接覆盖到工作目录）
                 for atlas_path in work_dir.glob("*.atlas"):
                     log(f"  > {t('log.extractor.processing_file', name=atlas_path.name)}")
-                    SpineUtils.process_atlas_downgrade(atlas_path, work_dir, log)
+                    atlas_downgrade(atlas_path, work_dir, log)
 
             # 2.2 Atlas解包处理
             if unpack_atlas:
                 log(f'\n--- {t("log.section.process_atlas_unpack")} ---')
 
                 for atlas_path in work_dir.glob("*.atlas"):
-                    SpineUtils.unpack_atlas_frames(atlas_path, output_dir, log)
+                    unpack_atlas(atlas_path, output_dir, log)
 
             # ========== 阶段 3: 输出文件 ==========
             # 将工作目录中剩余的文件复制到输出目录
@@ -434,7 +433,7 @@ def render_spine_preview_from_bundle(
                     break
 
             # 查询动画信息
-            success, info = SpineUtils.query_spine_info(skel_path, viewer_path, atlas_path, log)
+            success, info = SpineViewer.query(skel_path, viewer_path, atlas_path, log)
             if not success:
                 continue
 
@@ -455,7 +454,7 @@ def render_spine_preview_from_bundle(
 
             # 渲染预览图
             output_path = output_dir / f"{skel_path.stem}.png"
-            success, msg = SpineUtils.render_spine_preview(
+            success, msg = SpineViewer.render(
                 skel_path=skel_path,
                 output_path=output_path,
                 viewer_path=viewer_path,

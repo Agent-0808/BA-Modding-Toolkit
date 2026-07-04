@@ -7,7 +7,12 @@ from pathlib import Path
 import shutil
 import SpineAtlas
 
-from ba_modding_toolkit.utils import SpineUtils
+from ba_modding_toolkit.spine import (
+        get_skel_version, 
+        atlas_downgrade, 
+        unpack_atlas, 
+        normalize_legacy_assets
+    )
 from conftest import has_sample_skel, has_sample_atlas, file_list
 
 
@@ -19,7 +24,7 @@ class TestNormalizeLegacySpineAssets:
         test_file = tmp_path / "CH0808_home.png"
         test_file.write_bytes(b"fake png data")
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         files = list(result.glob("*.png"))
@@ -31,7 +36,7 @@ class TestNormalizeLegacySpineAssets:
         test_file = tmp_path / "CH0808_home2.png"
         test_file.write_bytes(b"fake png data")
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         files = list(result.glob("*.png"))
@@ -44,7 +49,7 @@ class TestNormalizeLegacySpineAssets:
         (tmp_path / "CH0808_home2.png").write_bytes(b"data2")
         (tmp_path / "CH9999_abc3.png").write_bytes(b"data3")
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         files = sorted([f.name for f in file_list(result)])
@@ -71,7 +76,7 @@ animation
 """
         atlas_file.write_text(atlas_content, encoding="utf-8")
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         result_atlas = result / "test.atlas"
@@ -88,7 +93,7 @@ animation
         original_file = tmp_path / "CH0808_home2.png"
         original_file.write_bytes(b"original data")
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         assert original_file.exists()
@@ -104,7 +109,7 @@ animation
             "CH0808_home2.png\nsize: 256, 256", encoding="utf-8"
         )
 
-        result = SpineUtils.normalize_legacy_spine_assets(tmp_path)
+        result = normalize_legacy_assets(tmp_path)
         assert result.exists()
 
         assert (result / "CH0808_home_2.png").exists()
@@ -123,24 +128,24 @@ class TestGetSkelVersion:
     def test_get_version_from_bytes_with_version(self):
         """测试从字节数据中提取版本号"""
         skel_data = b"spine\x00\x00\x00\x004.2.33\x00rest of data"
-        version = SpineUtils.get_skel_version(skel_data)
+        version = get_skel_version(skel_data)
         assert version == "4.2.33"
 
     def test_get_version_from_bytes_spine_3(self):
         """测试提取 Spine 3.x 版本号"""
         skel_data = b"spine\x00\x00\x00\x003.8.75\x00rest of data"
-        version = SpineUtils.get_skel_version(skel_data)
+        version = get_skel_version(skel_data)
         assert version == "3.8.75"
 
     def test_get_version_no_version_found(self):
         """测试未找到版本号的情况"""
         data = b"no version string here\x00\x00\x00"
-        version = SpineUtils.get_skel_version(data)
+        version = get_skel_version(data)
         assert version is None
 
     def test_get_version_empty_data(self):
         """测试空数据"""
-        version = SpineUtils.get_skel_version(b"")
+        version = get_skel_version(b"")
         assert version is None
 
     @pytest.mark.skipif(
@@ -149,7 +154,7 @@ class TestGetSkelVersion:
     )
     def test_get_version_from_file(self, sample_skel_path: Path):
         """测试从文件中提取版本号"""
-        version = SpineUtils.get_skel_version(sample_skel_path)
+        version = get_skel_version(sample_skel_path)
         assert version is not None
         assert "." in version
         assert len(version.split(".")) == 3
@@ -169,7 +174,7 @@ class TestAtlasOperations:
 
         shutil.copy(sample_atlas_path, output_dir / sample_atlas_path.name)
 
-        SpineUtils.process_atlas_downgrade(
+        atlas_downgrade(
             sample_atlas_path, output_dir
         )
 
@@ -183,7 +188,7 @@ class TestAtlasOperations:
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
-        result = SpineUtils.unpack_atlas_frames(
+        result = unpack_atlas(
             sample_atlas_path, output_dir
         )
         assert result
