@@ -228,6 +228,13 @@ class TestAtlasOperations:
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
+        # 读取 atlas 获取预期的帧名称
+        atlas = SpineAtlas.ReadAtlasFile(str(sample_atlas_path))
+        expected_frame_names: set[str] = set()
+        for tex in atlas.atlas:
+            for frame in tex.frames:
+                expected_frame_names.add(frame.name)
+
         result = unpack_atlas(
             sample_atlas_path, output_dir
         )
@@ -240,6 +247,9 @@ class TestAtlasOperations:
         assert len(files) > 1
         assert all(file.suffix == ".png" for file in files)
 
+        # 验证解包的帧名称与 atlas 记录一致
+        actual_frame_names = {f.stem for f in files}
+        assert actual_frame_names == expected_frame_names
 
 @pytest.mark.skipif(
     not has_spine_legacy_samples(),
