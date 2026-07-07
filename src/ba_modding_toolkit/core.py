@@ -11,7 +11,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import ImageUtils, no_log
-from .spine import SkelConverter, SpineViewer, atlas_downgrade, check_legacy_rename_needed, normalize_legacy_assets
+from .spine import SkelConverter, SpineViewer, atlas_downgrade, check_legacy_rename_needed, normalize_legacy_assets, unpack_atlas
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
@@ -289,7 +289,7 @@ def process_asset_extraction(
     output_dir: Path,
     asset_types_to_extract: set[str],
     spine_options: SpineOptions | None = None,
-    unpack_atlas: bool = False,
+    enable_unpack_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -363,7 +363,7 @@ def process_asset_extraction(
                     atlas_downgrade(atlas_path, work_dir, log)
 
             # 2.2 Atlas解包处理
-            if unpack_atlas:
+            if enable_unpack_atlas:
                 log(f'\n--- {t("log.section.process_atlas_unpack")} ---')
 
                 for atlas_path in work_dir.glob("*.atlas"):

@@ -732,7 +732,7 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
         output_dir=final_output_dir,
         asset_types_to_extract=asset_types,
         spine_options=spine_options,
-        unpack_atlas=args.unpack_atlas,
+        enable_unpack_atlas=args.unpack_atlas,
         log=logger.log
     )
 

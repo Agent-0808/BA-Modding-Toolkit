@@ -413,7 +413,18 @@ def atlas_downgrade(
         atlas.version = False
 
         atlas.ReScale()
-        atlas.SaveAtlas4_0Scale(outPath=output_dir)
+
+        # 复制引用的 PNG 文件到输出目录（原样复制，不缩放）
+        for tex in atlas.atlas:
+            png_name = tex.png
+            src_png = atlas.path / png_name
+            dst_png = output_dir / png_name
+            if src_png.exists() and src_png.resolve() != dst_png.resolve():
+                shutil.copy2(src_png, dst_png)
+
+        # 保存降级后的 atlas 文件
+        atlas.path = output_dir
+        atlas.SaveAtlas(output_dir / atlas_path.name)
         log(f'    > {t("log.spine.atlas_downgrade_success")}')
         return True
     except Exception as e:

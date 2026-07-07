@@ -158,7 +158,7 @@ class AssetExtractorTab(TabFrame):
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
             spine_options=spine_options,
-            unpack_atlas=unpack_atlas,
+            enable_unpack_atlas=unpack_atlas,
             log=self.logger.log
         )
         
