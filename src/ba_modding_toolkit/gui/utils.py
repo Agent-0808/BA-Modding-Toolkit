@@ -10,7 +10,7 @@ import shutil
 from typing import Callable, TYPE_CHECKING
 import ttkbootstrap as tb
 
-from ..utils import no_log
+from ..utils import CREATE_NO_WINDOW, no_log
 from ..i18n import t
 from ..models import FilePair, FileType
 
@@ -136,11 +136,12 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                 # 使用 wslpath -w 将 Linux 路径转换为 Windows 路径
                 result = subprocess.run(
                     ['wslpath', '-w', str(path_obj)], 
-                    capture_output=True, text=True, check=True
+                    capture_output=True, text=True, check=True,
+                    creationflags=CREATE_NO_WINDOW,
                 )
                 windows_path = result.stdout.strip()
 
-                subprocess.run(['explorer.exe', windows_path])
+                subprocess.run(['explorer.exe', windows_path], creationflags=CREATE_NO_WINDOW)
                 path_obj = Path(windows_path)  # 更新路径为Windows路径
                 
             except subprocess.CalledProcessError as e:
@@ -152,9 +153,9 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
             # Linux/macOS
             try:
                 if sys.platform == 'darwin':  # macOS
-                    subprocess.run(['open', str(path_obj)], check=True)
+                    subprocess.run(['open', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
                 else:  # Linux
-                    subprocess.run(['xdg-open', str(path_obj)], check=True)
+                    subprocess.run(['xdg-open', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
                 
             except (subprocess.CalledProcessError, FileNotFoundError):
                 messagebox.showinfo(t("common.tip"), t("message.open_manually", path=path_obj))

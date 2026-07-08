@@ -8,7 +8,7 @@ from pathlib import Path
 from SpineAtlas import Atlas, ReadAtlasFile
 
 from .i18n import t
-from .utils import LogFunc, no_log
+from .utils import CREATE_NO_WINDOW, LogFunc, no_log
 
 
 def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
@@ -116,6 +116,7 @@ class SkelConverter:
                     text=True,
                     encoding='utf-8',
                     errors='ignore',
+                    creationflags=CREATE_NO_WINDOW,
                 )
 
                 if result.returncode == 0:
@@ -253,6 +254,7 @@ class SpineViewer:
                 text=True,
                 encoding='utf-8',
                 errors='ignore',
+                creationflags=CREATE_NO_WINDOW,
             )
 
             if result.returncode != 0:
@@ -377,6 +379,7 @@ class SpineViewer:
                 text=True,
                 encoding='utf-8',
                 errors='ignore',
+                creationflags=CREATE_NO_WINDOW,
             )
 
             if result.returncode != 0:

@@ -1,12 +1,17 @@
 # utils.py
 
 import binascii
+import subprocess
+import sys
 from PIL import Image
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
 from .i18n import i18n_manager, t
+
+# Windows 下隐藏子进程的控制台窗口（避免Nuitka打包后弹出terminal）
+CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
 
 def _get_path_from_registry(key_path: str) -> str | None:
     """从 Windows 注册表获取 Steam 游戏的安装路径。"""
