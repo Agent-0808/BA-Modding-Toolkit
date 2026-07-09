@@ -98,10 +98,6 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
                 logger.log(f"❌ Error: Target file '{t}' does not exist.")
         target_paths = valid_target_paths
 
-        # 如果同时提供了old和target，数量必须一致
-        if len(target_paths) != len(valid_old_paths):
-            logger.log(f"❌ Error: Number of target files ({len(target_paths)}) must match number of old files ({len(valid_old_paths)}).")
-            return
     elif resource_dir:
         logger.log(f"Searching target bundles in '{resource_dir}'...")
         resource_path = Path(resource_dir)

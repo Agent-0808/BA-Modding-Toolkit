@@ -125,8 +125,14 @@ def has_spine_legacy_samples() -> bool:
 
 
 @pytest.fixture
-def sample_bundle_path() -> Path | None:
-    return find_first_file(PACKER_DIR, ".bundle")
+def sample_bundle_paths() -> list[Path]:
+    return find_all_files(PACKER_DIR, ".bundle")
+
+
+@pytest.fixture
+def sample_bundle_path(sample_bundle_paths: list[Path]) -> Path | None:
+    """单文件 fixture，返回 sample_bundle_paths[0]"""
+    return sample_bundle_paths[0] if sample_bundle_paths else None
 
 
 @pytest.fixture
@@ -145,13 +151,25 @@ def sample_atlas_path() -> Path | None:
 
 
 @pytest.fixture
-def old_mod_bundle_path() -> Path | None:
-    return find_first_file(MOD_UPDATE_OLD_DIR, ".bundle")
+def old_mod_bundle_paths() -> list[Path]:
+    return find_all_files(MOD_UPDATE_OLD_DIR, ".bundle")
 
 
 @pytest.fixture
-def new_original_bundle_path() -> Path | None:
-    return find_first_file(MOD_UPDATE_NEW_DIR, ".bundle")
+def old_mod_bundle_path(old_mod_bundle_paths: list[Path]) -> Path | None:
+    """单文件 fixture，返回 old_mod_bundle_paths[0]"""
+    return old_mod_bundle_paths[0] if old_mod_bundle_paths else None
+
+
+@pytest.fixture
+def new_original_bundle_paths() -> list[Path]:
+    return find_all_files(MOD_UPDATE_NEW_DIR, ".bundle")
+
+
+@pytest.fixture
+def new_original_bundle_path(new_original_bundle_paths: list[Path]) -> Path | None:
+    """单文件 fixture，返回 new_original_bundle_paths[0]"""
+    return new_original_bundle_paths[0] if new_original_bundle_paths else None
 
 
 @pytest.fixture

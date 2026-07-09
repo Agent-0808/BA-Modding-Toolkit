@@ -27,7 +27,7 @@ MSE_THRESHOLD = 20.0
 class TestAssetPacking:
     def test_pack_with_bleed(
         self,
-        sample_bundle_path: Path,
+        sample_bundle_paths: list[Path],
         sample_image_path: Path,
         tmp_path: Path,
     ):
@@ -47,8 +47,8 @@ class TestAssetPacking:
         )
         
         success, msg, _ = process_asset_packing(
-            target_bundle_path=sample_bundle_path,
-            assets=asset_folder,
+            target_bundle_path=sample_bundle_paths,
+            assets=[asset_folder],
             output_dir=output_dir,
             save_options=save_options,
             enable_bleed=True
@@ -56,7 +56,7 @@ class TestAssetPacking:
         
         assert success is True, msg
         
-        packed_bundle = output_dir / sample_bundle_path.name
+        packed_bundle = output_dir / sample_bundle_paths[0].name
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
         
@@ -73,7 +73,7 @@ class TestAssetPacking:
 
     def test_pack_textasset(
         self,
-        sample_bundle_path: Path,
+        sample_bundle_paths: list[Path],
         sample_skel_path: Path,
         sample_atlas_path: Path,
         tmp_path: Path,
@@ -95,14 +95,14 @@ class TestAssetPacking:
         )
         
         success, msg, _ = process_asset_packing(
-            target_bundle_path=sample_bundle_path,
-            assets=asset_folder,
+            target_bundle_path=sample_bundle_paths,
+            assets=[asset_folder],
             output_dir=output_dir,
             save_options=save_options
         )
         assert success is True, msg
         
-        packed_bundle = output_dir / sample_bundle_path.name
+        packed_bundle = output_dir / sample_bundle_paths[0].name
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
         
@@ -126,7 +126,7 @@ class TestAssetPacking:
 
     def test_pack_and_extract_roundtrip(
         self,
-        sample_bundle_path: Path,
+        sample_bundle_paths: list[Path],
         sample_image_path: Path,
         sample_skel_path: Path,
         sample_atlas_path: Path,
@@ -151,15 +151,15 @@ class TestAssetPacking:
         )
         
         success, msg, _ = process_asset_packing(
-            target_bundle_path=sample_bundle_path,
-            assets=asset_folder,
+            target_bundle_path=sample_bundle_paths,
+            assets=[asset_folder],
             output_dir=output_dir,
             save_options=save_options
         )
         
         assert success is True, msg
         
-        packed_bundle = output_dir / sample_bundle_path.name
+        packed_bundle = output_dir / sample_bundle_paths[0].name
         assert packed_bundle.exists()
         
         extract_dir = tmp_path / "extracted"
@@ -203,7 +203,7 @@ class TestLegacyRenameAssetPacking:
     def test_pack_assets_with_rename(
         self,
         spine_old_assets_dir: Path,
-        spine_new_bundle_path: Path,
+        spine_new_bundle_path: list[Path],
         tmp_path: Path,
     ):
         """旧版资产通过 enable_rename_fix 打包到新版 Bundle"""
@@ -214,7 +214,7 @@ class TestLegacyRenameAssetPacking:
 
         success, msg, _ = process_asset_packing(
             target_bundle_path=spine_new_bundle_path,
-            assets=spine_old_assets_dir,
+            assets=[spine_old_assets_dir],
             output_dir=output_dir,
             save_options=save_options,
             enable_rename_fix=True,
@@ -252,7 +252,7 @@ class TestLegacyRenameAssetPacking:
     def test_pack_assets_rename_no_png_match(
         self,
         spine_old_assets_dir: Path,
-        spine_new_bundle_path: Path,
+        spine_new_bundle_path: list[Path],
         tmp_path: Path,
     ):
         """不启用 rename_fix 时，旧版 PNG 无法匹配 Bundle 中的 Texture2D"""
@@ -263,7 +263,7 @@ class TestLegacyRenameAssetPacking:
 
         success, msg, file_pairs = process_asset_packing(
             target_bundle_path=spine_new_bundle_path,
-            assets=spine_old_assets_dir,
+            assets=[spine_old_assets_dir],
             output_dir=output_dir,
             save_options=save_options,
             enable_rename_fix=False,
@@ -285,7 +285,7 @@ class TestLegacyRenameAssetPacking:
         original_extract_dir = tmp_path / "original"
         original_extract_dir.mkdir()
         process_asset_extraction(
-            bundle_path=spine_new_bundle_path,
+            bundle_path=spine_new_bundle_path[0],
             output_dir=original_extract_dir,
             asset_types_to_extract={"Texture2D"},
         )
@@ -300,7 +300,7 @@ class TestLegacyRenameAssetPacking:
     def test_atlas_references_correct_after_pack(
         self,
         spine_old_assets_dir: Path,
-        spine_new_bundle_path: Path,
+        spine_new_bundle_path: list[Path],
         tmp_path: Path,
     ):
         """打包后提取的 atlas 中不应包含旧版 PNG 引用"""
@@ -311,7 +311,7 @@ class TestLegacyRenameAssetPacking:
 
         success, msg, _ = process_asset_packing(
             target_bundle_path=spine_new_bundle_path,
-            assets=spine_old_assets_dir,
+            assets=[spine_old_assets_dir],
             output_dir=output_dir,
             save_options=save_options,
             enable_rename_fix=True,

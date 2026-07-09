@@ -18,8 +18,8 @@ MSE_THRESHOLD = 20.0
 class TestModUpdate:
     def test_mod_update_basic(
         self,
-        old_mod_bundle_path: Path,
-        new_original_bundle_path: Path,
+        old_mod_bundle_paths: list[Path],
+        new_original_bundle_paths: list[Path],
         tmp_path: Path,
     ):
         output_dir = tmp_path / "output"
@@ -31,8 +31,8 @@ class TestModUpdate:
         )
         
         success, msg, _ = process_mod_update(
-            source_paths=[old_mod_bundle_path],
-            target_paths=[new_original_bundle_path],
+            source_paths=old_mod_bundle_paths,
+            target_paths=new_original_bundle_paths,
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D", "TextAsset"},
             save_options=save_options,
@@ -40,19 +40,22 @@ class TestModUpdate:
         
         assert success is True, msg
         
-        updated_bundle = output_dir / new_original_bundle_path.name
-        
-        bundle = Bundle.load(updated_bundle)
-        assert not bundle.is_empty()
+        # 验证输出文件数量匹配
+        output_files = list(output_dir.glob("*.bundle"))
+        assert len(output_files) == len(new_original_bundle_paths)
+
+        for output_file in output_files:
+            bundle = Bundle.load(output_file)
+            assert not bundle.is_empty()
 
     def test_mod_update_metadata_consistency(
         self,
-        old_mod_bundle_path: Path,
-        new_original_bundle_path: Path,
+        old_mod_bundle_paths: list[Path],
+        new_original_bundle_paths: list[Path],
         tmp_path: Path,
     ):
         
-        new_original_bundle = Bundle.load(new_original_bundle_path)
+        new_original_bundle = Bundle.load(new_original_bundle_paths[0])
         original_platform, original_version = new_original_bundle.platform_info
         
         output_dir = tmp_path / "output"
@@ -64,8 +67,8 @@ class TestModUpdate:
         )
         
         success, msg, _ = process_mod_update(
-            source_paths=[old_mod_bundle_path],
-            target_paths=[new_original_bundle_path],
+            source_paths=old_mod_bundle_paths,
+            target_paths=new_original_bundle_paths,
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D", "TextAsset"},
             save_options=save_options,
@@ -73,24 +76,28 @@ class TestModUpdate:
         
         assert success is True, msg
         
-        updated_bundle_path = output_dir / new_original_bundle_path.name
-        updated_bundle = Bundle.load(updated_bundle_path)
-        updated_platform, updated_version = updated_bundle.platform_info
-        
-        assert updated_platform == original_platform
-        assert updated_version == original_version
+        output_files = list(output_dir.glob("*.bundle"))
+        assert len(output_files) == len(new_original_bundle_paths)
+
+        for output_file in output_files:
+            updated_bundle = Bundle.load(output_file)
+            updated_platform, updated_version = updated_bundle.platform_info
+
+            assert updated_platform == original_platform
+            assert updated_version == original_version
 
     def test_mod_update_content(
         self,
-        old_mod_bundle_path: Path,
-        new_original_bundle_path: Path,
+        old_mod_bundle_paths: list[Path],
+        new_original_bundle_paths: list[Path],
         tmp_path: Path,
     ):
+        # 提取旧 Mod 的资源用于对比
         old_extract_dir = tmp_path / "old_extracted"
         old_extract_dir.mkdir()
         
         process_asset_extraction(
-            bundle_path=old_mod_bundle_path,
+            bundle_path=old_mod_bundle_paths[0],
             output_dir=old_extract_dir,
             asset_types_to_extract={"Texture2D"},
         )
@@ -104,8 +111,8 @@ class TestModUpdate:
         )
         
         success, msg, _ = process_mod_update(
-            source_paths=[old_mod_bundle_path],
-            target_paths=[new_original_bundle_path],
+            source_paths=old_mod_bundle_paths,
+            target_paths=new_original_bundle_paths,
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D"},
             save_options=save_options,
@@ -113,7 +120,8 @@ class TestModUpdate:
         
         assert success is True, msg
         
-        updated_bundle = output_dir / new_original_bundle_path.name
+        # 提取更新后的资源进行对比
+        updated_bundle = output_dir / new_original_bundle_paths[0].name
         new_extract_dir = tmp_path / "new_extracted"
         new_extract_dir.mkdir()
         
