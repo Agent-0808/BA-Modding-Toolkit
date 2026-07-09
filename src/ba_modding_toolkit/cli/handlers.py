@@ -570,6 +570,7 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
         output_dir=output_dir,
         save_options=save_options,
         spine_options=spine_options,
+        skip_unchanged=not args.save_all,
         log=logger.log
     )
 

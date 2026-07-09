@@ -323,6 +323,7 @@
 			"pack_success_path": "打包成功。文件已输出至: {path}",
 			"found_files_to_process": "找到 {count} 个待处理文件，正在扫描 bundle 并进行替换...",
 			"no_assets_packed": "没有执行任何成功的资源打包。",
+			"no_changes_saved": "未修改资源，保存原始 bundle: {name}",
 			"packing_complete": "打包完成: 成功打包 {success} / {total} 个资源。",
 			"unmatched_files_warning": "以下文件未在bundle中找到对应的资源",
 			"attempted_match": "尝试匹配: \"{key}\"",

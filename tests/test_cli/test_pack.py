@@ -36,6 +36,7 @@ class TestPackCommand:
                 "--output-dir", str(output_dir),
                 "--no-crc",
                 "--compression", "none",
+                "--save-all",
             ]
         )
 
@@ -72,6 +73,7 @@ class TestPackCommand:
                 "--output-dir", str(output_dir),
                 "--no-crc",
                 "--compression", "none",
+                "--save-all",
             ]
         )
 

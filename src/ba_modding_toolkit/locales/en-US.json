@@ -323,6 +323,7 @@
 			"pack_success_path": "Packing successful. File output to: {path}",
 			"found_files_to_process": "Found {count} files to process. Scanning bundle and replacing...",
 			"no_assets_packed": "No successful asset packing performed.",
+			"no_changes_saved": "No changes made, saved original bundle: {name}",
 			"packing_complete": "Packing complete: Successfully packed {success} / {total} assets.",
 			"unmatched_files_warning": "The following files did not match any assets in the bundle",
 			"attempted_match": "Attempted match: \"{key}\"",

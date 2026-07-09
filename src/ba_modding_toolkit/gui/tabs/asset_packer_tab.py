@@ -147,6 +147,7 @@ class AssetPackerTab(TabFrame):
             spine_options = spine_options,
             enable_rename_fix = self.app.enable_spine38_namefix_var.get(),
             enable_bleed = self.app.enable_bleed_var.get(),
+            skip_unchanged = self.app.skip_unchanged_var.get(),
             log = self.logger.log
         )
         

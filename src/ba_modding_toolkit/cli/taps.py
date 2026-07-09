@@ -75,6 +75,7 @@ class PackTap(Tap):
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    save_all: bool = False  # Save all bundles including unchanged ones (default: skip unchanged bundles).
 
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.

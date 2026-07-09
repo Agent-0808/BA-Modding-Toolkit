@@ -51,17 +51,20 @@ class TestAssetPacking:
             assets=[asset_folder],
             output_dir=output_dir,
             save_options=save_options,
-            enable_bleed=True
+            enable_bleed=True,
+            skip_unchanged=False,
         )
-        
+
         assert success is True, msg
+
+        packed_bundles = list(output_dir.glob("*.bundle"))
+        assert len(packed_bundles) == len(sample_bundle_paths), "输出 bundle 数量应与输入数量匹配"
         
-        packed_bundle = output_dir / sample_bundle_paths[0].name
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
-        
+
         process_asset_extraction(
-            bundle_path=packed_bundle,
+            bundle_path=packed_bundles,
             output_dir=extract_dir,
             asset_types_to_extract={"Texture2D"}
         )
@@ -98,16 +101,20 @@ class TestAssetPacking:
             target_bundle_path=sample_bundle_paths,
             assets=[asset_folder],
             output_dir=output_dir,
-            save_options=save_options
+            save_options=save_options,
+            skip_unchanged=False,
         )
         assert success is True, msg
-        
-        packed_bundle = output_dir / sample_bundle_paths[0].name
+
+        # 使用 skip_unchanged=False 时，所有输入 bundle 都应输出
+        packed_bundles = list(output_dir.glob("*.bundle"))
+        assert len(packed_bundles) == len(sample_bundle_paths), "输出 bundle 数量应与输入数量匹配"
+
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
-        
+
         success, msg = process_asset_extraction(
-            bundle_path=packed_bundle,
+            bundle_path=packed_bundles,
             output_dir=extract_dir,
             asset_types_to_extract={"TextAsset", "Texture2D"}
         )
@@ -154,19 +161,20 @@ class TestAssetPacking:
             target_bundle_path=sample_bundle_paths,
             assets=[asset_folder],
             output_dir=output_dir,
-            save_options=save_options
+            save_options=save_options,
+            skip_unchanged=False,
         )
         
         assert success is True, msg
         
-        packed_bundle = output_dir / sample_bundle_paths[0].name
-        assert packed_bundle.exists()
+        packed_bundles = list(output_dir.glob("*.bundle"))
+        assert len(packed_bundles) == len(sample_bundle_paths), "输出 bundle 数量应与输入数量匹配"
         
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
         
         success, msg = process_asset_extraction(
-            bundle_path=packed_bundle,
+            bundle_path=packed_bundles,
             output_dir=extract_dir,
             asset_types_to_extract={"Texture2D", "TextAsset"}
         )

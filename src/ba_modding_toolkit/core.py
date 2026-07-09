@@ -100,6 +100,7 @@ def process_asset_packing(
     spine_options: SpineOptions | None = None,
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
+    skip_unchanged: bool = True,
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
@@ -122,6 +123,7 @@ def process_asset_packing(
         spine_options: Spine资源升级的选项
         enable_rename_fix: 是否启用旧版 Spine 3.8 文件名修正
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
+        skip_unchanged: 是否跳过未变化的文件
         log: 日志记录函数，默认为空函数
     """
     bundle_paths = list(target_bundle_path)
@@ -238,15 +240,21 @@ def process_asset_packing(
 
             result = target_bundle.apply_patch(patch, strategy_name)
 
-            if not result.is_success:
+            # 判断是否应该保存此 bundle
+            should_save = result.is_success or not skip_unchanged
+
+            if not should_save:
                 log(f"⚠️ {t('common.warning')}: {t('log.packer.no_assets_packed')} ({bundle_path.name})")
                 continue
 
-            log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
-            for item in result.applied_logs:
-                log(f"  - {item}")
-
-            log(f'{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
+            if result.is_success:
+                log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
+                for item in result.applied_logs:
+                    log(f"  - {item}")
+                log(f'{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')
+            else:
+                # skip_unchanged=False 但没有匹配资源，保存未修改的 bundle
+                log(f"⏭️ {t('log.packer.no_changes_saved', name=bundle_path.name)}")
 
             all_matched_keys.update(result.matched_keys)
 
