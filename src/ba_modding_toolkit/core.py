@@ -93,8 +93,8 @@ def _extract_assets_from_bundle(
     return extracted_files
 
 def process_asset_packing(
-    target_bundle_path: Path | list[Path],
-    assets: Path | list[Path],
+    target_bundle_path: list[Path],
+    assets: list[Path],
     output_dir: Path,
     save_options: SaveOptions,
     spine_options: SpineOptions | None = None,
@@ -113,10 +113,10 @@ def process_asset_packing(
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
     因为打包资源的操作在原理上是替换目标Bundle内的资源，因此里面可能有混用打包和替换的叫法。
     返回 (是否成功, 状态消息, (输出路径, 原始目标路径) 列表) 的元组。
-    
+
     Args:
-        target_bundle_path: 目标Bundle文件的路径，可以是单个路径或路径列表
-        assets: 包含待打包资源的文件列表，或文件夹
+        target_bundle_path: 目标Bundle文件的路径列表
+        assets: 包含待打包资源的文件夹或文件路径列表
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
@@ -124,8 +124,8 @@ def process_asset_packing(
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
         log: 日志记录函数，默认为空函数
     """
-    bundle_paths = [target_bundle_path] if isinstance(target_bundle_path, Path) else list(target_bundle_path)
-    asset_paths = [assets] if isinstance(assets, Path) else list(assets)
+    bundle_paths = list(target_bundle_path)
+    asset_paths = list(assets)
     temp_asset_folder = None
     try:
         # 1. 从所有资源路径中收集输入文件

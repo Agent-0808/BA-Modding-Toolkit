@@ -66,8 +66,19 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'update' 命令的逻辑。"""
     logger.log("--- Start Mod Update ---")
 
-    old_mod_path = Path(args.old)
+    old_mod_paths = [Path(p) for p in args.old]
     output_dir = Path(args.output_dir)
+
+    # 验证输入文件
+    valid_old_paths = []
+    for p in old_mod_paths:
+        if p.is_file():
+            valid_old_paths.append(p)
+        else:
+            logger.log(f"❌ Error: Old Mod file '{p}' does not exist.")
+    if not valid_old_paths:
+        logger.log("❌ Error: No valid old Mod files provided.")
+        return
 
     # 确保输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -75,25 +86,41 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     # 确定资源目录：优先使用 --resource-dir，否则自动搜寻
     resource_dir = args.resource_dir or get_BA_path()
 
-    new_bundle_path: Path | None = None
+    target_paths: list[Path] = []
     if args.target:
-        new_bundle_path = Path(args.target)
+        target_paths = [Path(t) for t in args.target]
+        # 验证target文件
+        valid_target_paths = []
+        for t in target_paths:
+            if t.is_file():
+                valid_target_paths.append(t)
+            else:
+                logger.log(f"❌ Error: Target file '{t}' does not exist.")
+        target_paths = valid_target_paths
+
+        # 如果同时提供了old和target，数量必须一致
+        if len(target_paths) != len(valid_old_paths):
+            logger.log(f"❌ Error: Number of target files ({len(target_paths)}) must match number of old files ({len(valid_old_paths)}).")
+            return
     elif resource_dir:
-        logger.log(f"Searching target bundle in '{resource_dir}'...")
+        logger.log(f"Searching target bundles in '{resource_dir}'...")
         resource_path = Path(resource_dir)
         if not resource_path.is_dir():
             logger.log(f"❌ Error: Game resource directory '{resource_path}' does not exist or is not a directory.")
             return
 
-        found_paths, message = find_target_bundles([old_mod_path], get_search_dirs(resource_path), logger.log)
+        found_paths, message = find_target_bundles(valid_old_paths, get_search_dirs(resource_path), logger.log)
         if not found_paths:
             logger.log(f"❌ Auto-search failed: {message}")
             return
-        new_bundle_path = found_paths[0]
-
-    if not new_bundle_path:
-        logger.log("❌ Error: Must provide '--target' or '--resource-dir' to determine the target resource file.")
+        target_paths = found_paths
+    else:
+        logger.log("❌ Error: Must provide '--target' or '--resource-dir' to determine the target resource files.")
         return
+
+    logger.log(f"Files to process: {len(valid_old_paths)}")
+    for p in valid_old_paths:
+        logger.log(f"  - {p.name}")
 
     asset_types = set(args.asset_types)
     logger.log(f"Specified asset replacement types: {', '.join(asset_types)}")
@@ -112,8 +139,8 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数
     success, message, file_pairs = process_mod_update(
-        source_paths=[old_mod_path],
-        target_paths=[new_bundle_path],
+        source_paths=valid_old_paths,
+        target_paths=target_paths,
         output_dir=output_dir,
         asset_types_to_replace=asset_types,
         save_options=save_options,
@@ -498,19 +525,34 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'pack' 命令的逻辑。"""
     logger.log("--- Start Asset Packing ---")
 
-    bundle_path = Path(args.bundle)
+    bundle_paths = [Path(b) for b in args.bundle]
     asset_folder = Path(args.folder)
     output_dir = Path(args.output_dir)
+
+    # 验证bundle文件
+    valid_bundle_paths: list[Path] = []
+    for b in bundle_paths:
+        if b.is_file():
+            valid_bundle_paths.append(b)
+        else:
+            logger.log(f"❌ Error: Bundle file '{b}' does not exist.")
+    if not valid_bundle_paths:
+        logger.log("❌ Error: No valid bundle files provided.")
+        return
+
+    # 验证资源文件夹
+    if not asset_folder.is_dir():
+        logger.log(f"❌ Error: Asset folder '{asset_folder}' does not exist.")
+        return
 
     # 确保输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    if not bundle_path.is_file():
-        logger.log(f"❌ Error: Bundle file '{bundle_path}' does not exist.")
-        return
-    if not asset_folder.is_dir():
-        logger.log(f"❌ Error: Asset folder '{asset_folder}' does not exist.")
-        return
+    logger.log(f"Bundle files to process: {len(valid_bundle_paths)}")
+    for b in valid_bundle_paths:
+        logger.log(f"  - {b.name}")
+
+    logger.log(f"Asset folder: {asset_folder}")
 
     # 创建 SaveOptions 和 SpineOptions 对象
     save_options = SaveOptions(
@@ -527,8 +569,8 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 调用核心处理函数
     success, message, file_pairs = process_asset_packing(
-        target_bundle_path=bundle_path,
-        assets=asset_folder,
+        target_bundle_path=valid_bundle_paths,
+        assets=[asset_folder],
         output_dir=output_dir,
         save_options=save_options,
         spine_options=spine_options,
@@ -547,7 +589,6 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
             logger.log(f"  - {pair.output} -> {pair.source}")
     else:
         logger.log("  - No file pairs processed.")
-
 
     logger.log("="*50)
 

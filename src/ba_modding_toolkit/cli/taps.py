@@ -17,17 +17,17 @@ class UpdateTap(Tap):
     """Update命令的参数解析器 - 用于更新或移植Mod。"""
 
     # 基本参数
-    old: Positional[Path]  # Path to the old Mod bundle file.
+    old: Positional[list[Path]]  # Path(s) to the old Mod bundle file(s).
     output_dir: Path = Path('./output/')  # Directory to save the generated Mod file (Default: ./output/).
 
     # 目标文件定位参数
-    target: Path | None = None  # Path to the new game resource bundle file (Overrides --resource-dir if provided).
+    target: list[Path] | None = None  # Path(s) to the new game resource bundle file(s) (Overrides --resource-dir if provided).
     resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
@@ -40,34 +40,36 @@ class UpdateTap(Tap):
     strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy for cross-version migration.
 
     def configure(self) -> None:
-        self.description = '''Update or port a Mod, migrating assets from an old Mod to a specific Bundle.
-        
+        self.description = '''Update or port a Mod, migrating assets from old Mod(s) to new Bundle(s).
 
 Examples:
-  # Automatically search for new file and update
+  # Automatically search for new file and update single Mod
   bamt-cli update "C:\\path\\to\\old_mod.bundle"
+
+  # Update multiple Mods at once
+  bamt-cli update "mod1.bundle" "mod2.bundle" "mod3.bundle"
+
+  # Manually specify target file(s)
+  bamt-cli update "old.bundle" --target "new.bundle"
+  bamt-cli update "old1.bundle" "old2.bundle" --target "new1.bundle" "new2.bundle"
 
   # Disable CRC fixing
   bamt-cli update "old_mod.bundle" --no-crc
-
-  # Manually specify new file and update
-  bamt-cli update "old_mod.bundle" --target "C:\\path\\to\\new_game_file.bundle" --output-dir "C:\\path\\to\\output"
 
   # Enable Spine skeleton conversion
   bamt-cli update "old.bundle" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
 
 
 class PackTap(Tap):
     """Pack命令的参数解析器 - 用于资源打包。"""
 
     # 基本参数
-    bundle: Path  # Path to the target bundle file to modify.
+    bundle: list[Path]  # Path(s) to the target bundle file(s) to modify.
     folder: Path  # Path to the folder containing asset files.
-    output_dir: Path = Path('./output/')  # Directory to save the modified bundle file.
+    output_dir: Path = Path('./output/')  # Directory to save the modified bundle file(s).
 
     # 保存参数
     no_crc: bool = False  # Disable CRC fix function.
@@ -80,10 +82,17 @@ class PackTap(Tap):
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     def configure(self) -> None:
-        self.description = '''Pack contents from an asset folder into a target bundle file.
+        self.description = '''Pack contents from an asset folder into target bundle files.
 
-Example:
-  bamt-cli pack --bundle "C:\\path\\to\\target.bundle" --folder "C:\\path\\to\\assets" --output-dir "C:\\path\\to\\output"
+Examples:
+  # Pack single folder into single bundle
+  bamt-cli pack --bundle "target.bundle" --folder "assets_folder" --output-dir "output"
+
+  # Pack single folder into multiple bundles
+  bamt-cli pack --bundle "b1.bundle" "b2.bundle" --folder "assets_folder"
+
+  # Pack with Spine conversion
+  bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -134,7 +143,7 @@ class ExtractTap(Tap):
     subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
 
     # 资源类型参数
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
 
     # Spine转换参数
     enable_spine_downgrade: bool = False  # Enable Spine skeleton downgrade.
@@ -165,7 +174,6 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
 
 
 class EnvTap(Tap):
@@ -189,7 +197,7 @@ class SplitTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
 
     def configure(self) -> None:
@@ -216,8 +224,6 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
 
 
 class MergeTap(Tap):
@@ -234,7 +240,7 @@ class MergeTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
 
     def configure(self) -> None:
@@ -261,8 +267,6 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
-        self.add_argument('--modern-files', nargs='+', help='One or more modern bundle file paths')
 
 
 class BatchUpdateTap(Tap):
@@ -278,7 +282,7 @@ class BatchUpdateTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
 
     # Spine转换参数
@@ -310,7 +314,6 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
 
 
 class BatchLegacyTap(Tap):
@@ -326,7 +329,7 @@ class BatchLegacyTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[str] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
     compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
 
     def configure(self) -> None:
@@ -347,7 +350,6 @@ Examples:
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
-        self.add_argument('--asset-types', nargs='+', choices=['Texture2D', 'TextAsset', 'Mesh', 'ALL'])
 
 
 class MainTap(BaseTap):
