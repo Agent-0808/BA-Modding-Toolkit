@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  pytest:
     runs-on: windows-latest
 
     steps:

@@ -259,6 +259,7 @@ BA-Modding-Toolkit/
 一些好用的相关仓库：
 
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：下载原版游戏资源
+- [AtlasToolkit](https://github.com/com55/AtlasToolkit)：提取、修改、重新打包 .atlas 文件
 
 ### 免责声明 / Disclaimer
 

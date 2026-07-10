@@ -262,6 +262,7 @@ This project uses the following excellent 3rd-party libraries:
 Some useful related repositories:
 
 - [BA-AD](https://github.com/Deathemonic/BA-AD)：Download original game resources
+- [AtlasToolkit](https://github.com/com55/AtlasToolkit): Extract, modify, and repack atlas sprites
 
 ### Disclaimer
 
