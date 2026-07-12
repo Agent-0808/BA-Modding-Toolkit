@@ -293,6 +293,59 @@ def search_prefix_remote(
     return candidates, ""
 
 
+def search_core_remote(
+    source_path: Path,
+    search_dirs: list[str],
+    file_source: "ADBFileSource",
+    log: LogFunc = no_log,
+) -> tuple[list[str], str]:
+    """在 ADB 远程目录中按文件名核心部分(core)匹配搜索 bundle 文件
+
+    Args:
+        source_path: 源文件路径（本地）
+        search_dirs: 远程搜索目录列表
+        file_source: ADB 文件源适配器
+        log: 日志函数
+
+    Returns:
+        tuple[list[str], str]: (匹配的远程路径列表, 状态消息)
+    """
+    parsed = parse_filename(str(source_path.name))
+    core = parsed.core
+
+    if not core:
+        msg = t("message.search.filename_parse_failed")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    log(f"  > {t('log.search.file_core', core=core)}")
+
+    core_lower = core.lower()
+    search_prefix_str = get_category_prefix(core_lower)
+
+    # 获取所有以分类前缀开头的 bundle 文件，再按 core 过滤
+    candidates: list[str] = []
+    for remote_dir in search_dirs:
+        # 先按前缀粗筛
+        rough_files = file_source.find_files_by_prefix(
+            remote_dir, search_prefix_str, ".bundle", log=log
+        )
+        # 再按 core 过滤（大小写不敏感）
+        for f in rough_files:
+            if core_lower in f.name.lower():
+                file_core = parse_filename(f.name).core
+                if file_core and file_core.lower() == core_lower:
+                    candidates.append(f.path)
+
+    if not candidates:
+        msg = t("message.search.no_matching_files_in_dir")
+        log(f'  > {t("common.fail")}: {msg}')
+        return [], msg
+
+    log(f"  > {t('log.search.found_candidates', count=len(candidates))}")
+    return candidates, ""
+
+
 def find_target_bundles_remote(
     source_paths: list[Path],
     file_source: "ADBFileSource",
