@@ -85,6 +85,8 @@
 		"spine_downgrade_info": "(Optional Extension)\nCalls an external program to export files compatible with older Spine versions (.skel and .atlas).\nRequires configuring the path to the Skel Converter.",
 		"spine_downgrade_target_version": "Target Version",
 		"spine_downgrade_target_version_info": "Format should be \"A.B.C\".",
+		"scale_atlas": "Scale Images",
+		"scale_atlas_info": "Advanced Option\nWhen downgrading Spine, decides whether to scale images according to the scale factor in the Atlas file.\n\nEnable scaling: Automatically resizes images to match dimensions, allowing direct import into Spine, but may cause precision loss and misalignment. In-game rendering will also use the scaled images, resulting in reduced precision.\nDisable scaling (default): Preserves original precision, provides the best in-game rendering, and is recommended for game import. However, when importing into Spine, region attachments will not change size, requiring manual application of the scale factor to the bone's Transform.\n\nThe scaling option affects both in-game rendering and Spine import: when disabled, in-game appears normal and Spine requires manual adjustment; when enabled, images are physically scaled, in-game will also show the scaled effect (with precision loss), and Spine needs no manual adjustment.\nFor importing into Spine, advanced users are recommended to use the no-scaling approach + manually set scale for bones/parts based on the scale factor for the best result.",
 		"unpack_atlas": "Unpack Atlas",
 		"unpack_atlas_info": "Unpacks Atlas into individual PNG frames.\nUnpacked frames will be saved in an images/ subdirectory.",
 		"auto_search": "Auto Search for Corresponding Files",

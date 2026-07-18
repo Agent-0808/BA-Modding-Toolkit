@@ -298,6 +298,7 @@ def process_asset_extraction(
     asset_types_to_extract: set[str],
     spine_options: SpineOptions | None = None,
     enable_unpack_atlas: bool = False,
+    scale_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -368,7 +369,7 @@ def process_asset_extraction(
                 # 降级所有 atlas 文件（直接覆盖到工作目录）
                 for atlas_path in work_dir.glob("*.atlas"):
                     log(f"  > {t('log.extractor.processing_file', name=atlas_path.name)}")
-                    atlas_downgrade(atlas_path, work_dir, log)
+                    atlas_downgrade(atlas_path, work_dir, scale_atlas, log)
 
             # 2.2 Atlas解包处理
             if enable_unpack_atlas:

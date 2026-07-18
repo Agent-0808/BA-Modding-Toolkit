@@ -85,6 +85,8 @@
 		"spine_downgrade_info": "（可选扩展功能）\n调用外部程序，导出支持旧版 Spine 的文件（.skel 与 .atlas）\n需要配置 Skel 转换器的路径。",
 		"spine_downgrade_target_version": "目标版本",
 		"spine_downgrade_target_version_info": "格式应为 \"A.B.C\" 形式",
+		"scale_atlas": "缩放图片",
+		"scale_atlas_info": "高级选项\n在降级 Spine 时，可决定是否根据 Atlas 文件中的 scale 系数缩放图片。\n\n启用缩放：自动将图片调整到匹配尺寸，可直接导入 Spine，但会有精度损失，可能导致各部分对不齐。同时游戏内渲染也会使用缩放后的图片，精度降低。\n不缩放（默认）：保留原始精度，游戏内渲染效果最佳，推荐用于游戏导入。但若导入 Spine，区域 (region) 类型的附件尺寸不会改变，需手动将 scale 系数应用到骨骼的 Transform 中。\n\n缩放选项会同时影响游戏内渲染与 Spine 导入：不缩放时，游戏内表现正常，Spine 需手动调整；启用缩放时，图片被实际缩放，游戏内也会呈现缩放效果（有精度损失），Spine 则无需手动调整。\n对于导入 Spine 的场景，推荐高级用户采用不缩放 + 自行根据 scale 为骨骼/部件设置缩放的方式，效果最佳。",
 		"unpack_atlas": "解包 Atlas",
 		"unpack_atlas_info": "将 Atlas 解包为单独的 PNG 帧。\n解包后的帧保存在 images/ 子目录中。",
 		"auto_search": "自动搜索对应文件",

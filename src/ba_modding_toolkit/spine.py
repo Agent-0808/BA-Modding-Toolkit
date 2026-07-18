@@ -405,9 +405,17 @@ class SpineViewer:
 def atlas_downgrade(
     atlas_path: Path,
     output_dir: Path,
+    scale_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> bool:
-    """使用 SpineAtlas 转换图集数据为 Spine 3 格式。"""
+    """使用 SpineAtlas 转换图集数据为 Spine 3 格式。
+
+    Args:
+        atlas_path: atlas 文件路径
+        output_dir: 输出目录
+        scale_atlas: 是否根据 scale 缩放（True=使用SaveAtlas4_0Scale，False=手动复制PNG）
+        log: 日志函数
+    """
 
     try:
         log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
@@ -417,17 +425,22 @@ def atlas_downgrade(
 
         atlas.ReScale()
 
-        # 复制引用的 PNG 文件到输出目录（原样复制，不缩放）
-        for tex in atlas.atlas:
-            png_name = tex.png
-            src_png = atlas.path / png_name
-            dst_png = output_dir / png_name
-            if src_png.exists() and src_png.resolve() != dst_png.resolve():
-                shutil.copy2(src_png, dst_png)
+        if scale_atlas:
+            # 使用 SaveAtlas4_0Scale，自动缩放 PNG
+            atlas.SaveAtlas4_0Scale(outPath=output_dir)
+        else:
+            # 手动复制 PNG 文件（原样复制，不缩放）
+            for tex in atlas.atlas:
+                png_name = tex.png
+                src_png = atlas.path / png_name
+                dst_png = output_dir / png_name
+                if src_png.exists() and src_png.resolve() != dst_png.resolve():
+                    shutil.copy2(src_png, dst_png)
 
-        # 保存降级后的 atlas 文件
-        atlas.path = output_dir
-        atlas.SaveAtlas(output_dir / atlas_path.name)
+            # 保存降级后的 atlas 文件
+            atlas.path = output_dir
+            atlas.SaveAtlas(output_dir / atlas_path.name)
+
         log(f'    > {t("log.spine.atlas_downgrade_success")}')
         return True
     except Exception as e:

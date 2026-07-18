@@ -66,7 +66,17 @@ class AssetExtractorTab(TabFrame):
             app=self.app,
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
-        
+
+        # Atlas 缩放选项
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.scale_atlas"),
+            variable=self.app.scale_atlas_var,
+            tooltip=t("option.scale_atlas_info"),
+            app=self.app,
+            on_click_disabled=self.app.show_spine_converter_not_configured
+        )
+
         # Atlas 解包帧选项
         SettingRow.create_switch(
             options_frame,
@@ -150,15 +160,17 @@ class AssetExtractorTab(TabFrame):
 
     def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], unpack_atlas=False):
         self.logger.status(t("status.extracting"))
-        
+
         spine_options = self.app.build_spine_options(upgrade_mode=False)
-        
+        scale_atlas = self.app.scale_atlas_var.get()
+
         success, message = core.process_asset_extraction(
             bundle_path=bundle_paths,
             output_dir=output_dir,
             asset_types_to_extract=asset_types,
             spine_options=spine_options,
             enable_unpack_atlas=unpack_atlas,
+            scale_atlas=scale_atlas,
             log=self.logger.log
         )
         
