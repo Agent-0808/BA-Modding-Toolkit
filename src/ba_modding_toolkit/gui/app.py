@@ -216,7 +216,7 @@ class App(tb.Frame, ConfigMixin):
             )
         else:
             return SpineOptions(
-                enabled=self.enable_atlas_downgrade_var.get(),
+                enabled=self.enable_spine_downgrade_var.get(),
                 converter_path=Path(self.spine_converter_path_var.get()),
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
@@ -232,6 +232,12 @@ class App(tb.Frame, ConfigMixin):
         """检查依赖条件是否满足"""
         if depends_on == "spine_converter_path_var":
             return self.is_spine_converter_available()
+        if depends_on == "enable_spine_conversion_var":
+            # 同时检查 Spine 转换器路径和转换功能是否启用
+            return self.is_spine_converter_available() and self.enable_spine_conversion_var.get()
+        if depends_on == "enable_spine_downgrade_var":
+            # 同时检查 Spine 转换器路径和降级功能是否启用
+            return self.is_spine_converter_available() and self.enable_spine_downgrade_var.get()
         return True
 
     def get_depends_on_from_var(self, variable: tk.Variable) -> str | None:

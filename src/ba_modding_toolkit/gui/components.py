@@ -601,18 +601,19 @@ class SettingRow:
         on_disabled: Callable[[], None],
         on_enabled: Callable[[], None],
         parent: tk.Widget,
-        on_click_disabled: Callable[[tk.Widget], None]
+        on_click_disabled: Callable[[tk.Widget], None] | None = None
     ) -> None:
         """设置依赖管理：当依赖无效时禁用控件，点击时显示下载引导"""
         def update_status():
             # 检查控件是否仍然存在（对话框关闭后 widget 可能已销毁）
             if not widget.winfo_exists():
                 return
-            
+
             available = app.check_dependency(depends_on)
             if not available:
                 on_disabled()
-                widget.bind('<Button-1>', lambda e: on_click_disabled(parent))
+                if on_click_disabled:
+                    widget.bind('<Button-1>', lambda e: on_click_disabled(parent))
             else:
                 on_enabled()
                 widget.unbind('<Button-1>')

@@ -51,7 +51,7 @@ class AssetExtractorTab(TabFrame):
         SettingRow.create_switch(
             options_frame,
             label=t("option.spine_downgrade"),
-            variable=self.app.enable_atlas_downgrade_var,
+            variable=self.app.enable_spine_downgrade_var,
             tooltip=t("option.spine_downgrade_info"),
             app=self.app,
             on_click_disabled=self.app.show_spine_converter_not_configured
@@ -63,8 +63,7 @@ class AssetExtractorTab(TabFrame):
             label=t("option.spine_downgrade_target_version"),
             text_var=self.app.spine_downgrade_version_var,
             tooltip=t("option.spine_downgrade_target_version_info"),
-            app=self.app,
-            on_click_disabled=self.app.show_spine_converter_not_configured
+            app=self.app
         )
 
         # Atlas 缩放选项
@@ -73,8 +72,7 @@ class AssetExtractorTab(TabFrame):
             label=t("option.scale_atlas"),
             variable=self.app.scale_atlas_var,
             tooltip=t("option.scale_atlas_info"),
-            app=self.app,
-            on_click_disabled=self.app.show_spine_converter_not_configured
+            app=self.app
         )
 
         # Atlas 解包帧选项

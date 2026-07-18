@@ -550,7 +550,6 @@ class SettingsDialog(tb.Toplevel):
             text_var=self.app.target_spine_version_var,
             tooltip=t("option.spine_target_version_info"),
             app=self.app,
-            on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
         tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)

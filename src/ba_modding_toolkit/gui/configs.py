@@ -90,12 +90,12 @@ class ConfigMixin:
     # SpineConverter
     spine_converter_path_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "")]
     enable_spine_conversion_var: Annotated[tk.BooleanVar, ConfigMeta("SpineConverter", False, depends_on="spine_converter_path_var")]
-    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33", depends_on="spine_converter_path_var")]
+    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33", depends_on="enable_spine_conversion_var")]
     
     # SpineDowngrade
-    enable_atlas_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
-    spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75", depends_on="spine_converter_path_var")]
-    scale_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
+    enable_spine_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
+    spine_downgrade_version_var: Annotated[tk.StringVar, ConfigMeta("SpineDowngrade", "3.8.75", depends_on="enable_spine_downgrade_var")]
+    scale_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="enable_spine_downgrade_var")]
 
     # SpineViewer
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
