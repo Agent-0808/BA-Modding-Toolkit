@@ -8,10 +8,9 @@ from pathlib import Path
 from ...i18n import t
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles
-from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents
 from ..utils import confirm_and_replace
-
+from .base_tab import TabFrame
 
 class BatchLegacyTab(TabFrame):
     """批量处理旧版标签页，用于批量将旧版文件转换为新版国际服格式"""

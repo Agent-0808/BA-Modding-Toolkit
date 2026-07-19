@@ -8,9 +8,8 @@ from pathlib import Path
 
 from ...i18n import t
 from ...adb.paths import get_adb_base_path
-from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents
-
+from .base_tab import TabFrame
 
 class AdbPushTab(TabFrame):
     """ADB 文件推送页面"""

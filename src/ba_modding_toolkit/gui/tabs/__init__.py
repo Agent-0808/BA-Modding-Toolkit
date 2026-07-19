@@ -1,4 +1,5 @@
 # gui/tabs/__init__.py
+from .base_tab import TabFrame
 from .mod_update_tab import ModUpdateTab
 from .batch_update_tab import BatchUpdateTab
 from .asset_packer_tab import AssetPackerTab

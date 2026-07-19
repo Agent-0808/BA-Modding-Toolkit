@@ -11,9 +11,9 @@ from ...models import FileType
 from ...utils import CRCUtils
 from ...searching import get_search_dirs
 from ...naming import parse_filename
-from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import replace_file
+from .base_tab import TabFrame
 
 class CrcToolTab(TabFrame):
     def create_widgets(self):

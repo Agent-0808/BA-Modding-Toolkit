@@ -9,9 +9,9 @@ from ...i18n import t
 from ...models import FileType, FilePair
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
-from ..base_tab import TabFrame
 from ..components import DropZone, UIComponents, SettingRow
 from ..utils import confirm_and_replace
+from .base_tab import TabFrame
 
 
 class ModUpdateTab(TabFrame):

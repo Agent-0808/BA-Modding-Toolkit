@@ -17,7 +17,6 @@ from .components import Theme, Logger, UIComponents
 from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
 from .windows import SettingsDialog, FileListWindow
-from .base_tab import TabFrame
 from .tabs import *
 
 class App(tb.Frame, ConfigMixin):

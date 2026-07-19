@@ -10,10 +10,9 @@ from ...i18n import t
 from ...models import FilePair
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
-from ..base_tab import TabFrame
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import confirm_and_replace
-
+from .base_tab import TabFrame
 
 class BatchUpdateTab(TabFrame):
     """批量更新标签页，用于批量处理多个 mod 文件"""

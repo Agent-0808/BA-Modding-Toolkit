@@ -10,10 +10,10 @@ from ...i18n import t
 from ...models import FileType
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, search_prefix
-from ..base_tab import TabFrame
 from ..components import DropZone, ModeSwitcher, SettingRow, UIComponents
 from ..windows import FileSelectionDialog
 from ..utils import confirm_and_replace
+from .base_tab import TabFrame
 
 class Mode(IntEnum):
     """日服/国际服转换模式"""

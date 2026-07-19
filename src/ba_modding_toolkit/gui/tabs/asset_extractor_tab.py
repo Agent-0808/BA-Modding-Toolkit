@@ -9,9 +9,9 @@ from ...i18n import t
 from ... import core
 from ...models import FileType
 from ...naming import parse_filename
-from ..base_tab import TabFrame
 from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
+from .base_tab import TabFrame
 
 class AssetExtractorTab(TabFrame):
     def create_widgets(self):

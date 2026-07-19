@@ -9,9 +9,9 @@ from ...i18n import t
 from ...models import FileType, FilePair
 from ... import core
 from ...searching import search_core, search_core_remote, get_search_dirs
-from ..base_tab import TabFrame
 from ..components import DropZone, SettingRow, UIComponents, FileListbox
 from ..utils import confirm_and_replace
+from .base_tab import TabFrame
 
 class AssetPackerTab(TabFrame):
     def create_widgets(self):

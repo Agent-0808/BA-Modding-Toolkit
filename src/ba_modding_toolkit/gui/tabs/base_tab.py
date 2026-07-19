@@ -4,7 +4,7 @@ import ttkbootstrap as tb
 import threading
 from typing import Callable, TYPE_CHECKING
 if TYPE_CHECKING:
-    from .app import App
+    from ..app import App
 
 class TabFrame(tb.Frame):
     """所有Tab页面的基类，提供通用功能和结构。"""
