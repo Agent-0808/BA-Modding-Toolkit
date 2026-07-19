@@ -55,58 +55,54 @@ class SkelConverter:
 
     @staticmethod
     def run(
-        input_data: bytes | Path,
-        converter_path: Path,
-        target_version: str,
+        input_path: Path,
         output_path: Path | None = None,
+        converter_path: Path = None,
+        target_version: str = None,
         log: LogFunc = no_log,
-    ) -> tuple[bool, bytes]:
+    ) -> bool:
         """
-        通用的 Spine .skel 文件转换器,支持升级和降级。
+        底层转换函数：文件到文件的转换
 
         Args:
-            input_data: 输入数据,可以是 bytes 或 Path 对象
-            converter_path: 转换器可执行文件的路径
-            target_version: 目标版本号 (例如 "4.2.33" 或 "3.8.75")
-            output_path: 可选的输出文件路径,如果提供则将结果保存到该路径
-            log: 日志记录函数
+            input_path: 输入文件路径
+            output_path: 输出文件路径（None 则覆盖原文件）
+            converter_path: 转换器路径
+            target_version: 目标版本
+            log: 日志函数
 
         Returns:
-            tuple[bool, bytes]: (是否成功, 转换后的数据)
+            bool: 是否成功
         """
-        original_bytes: bytes
-        if isinstance(input_data, Path):
-            try:
-                original_bytes = input_data.read_bytes()
-            except OSError as e:
-                log(f'  > ❌ {t("log.file.read_in_memory_failed", path=input_data, error=e)}')
-                return False, b""
-        else:
-            original_bytes = input_data
-
         try:
+            # 如果未指定输出路径，则覆盖原文件
+            if output_path is None:
+                output_path = input_path
+
+            # 获取版本
+            current_version = get_skel_version(input_path, log)
+            if not current_version:
+                log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
+                return False
+
+            # 统一使用临时目录进行转换
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_dir_path = Path(temp_dir)
+                temp_input = temp_dir_path / input_path.name
+                temp_output = temp_dir_path / f"output_{input_path.name}"
 
-                temp_input_path = temp_dir_path / "input.skel"
-                temp_input_path.write_bytes(original_bytes)
-
-                current_version = get_skel_version(temp_input_path, log)
-                if not current_version:
-                    log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
-                    return False, original_bytes
-
-                temp_output_path = output_path if output_path else temp_dir_path / "output.skel"
+                # 复制输入文件到临时目录
+                shutil.copy2(input_path, temp_input)
 
                 command = [
                     str(converter_path),
-                    str(temp_input_path),
-                    str(temp_output_path),
+                    str(temp_input),
+                    str(temp_output),
                     "-v",
                     target_version
                 ]
 
-                log(f'    > {t("log.spine.converting_skel", name=temp_input_path.name)}')
+                log(f'    > {t("log.spine.converting_skel", name=input_path.name)}')
                 log(f'      > {t("log.spine.version_conversion", current=current_version, target=target_version)}')
                 log(f'      > {t("log.spine.executing_command", command=" ".join(command))}')
 
@@ -120,16 +116,18 @@ class SkelConverter:
                 )
 
                 if result.returncode == 0:
-                    return True, temp_output_path.read_bytes()
+                    # 复制输出文件到目标路径
+                    shutil.copy2(temp_output, output_path)
+                    return True
                 else:
                     log(f'      ✗ {t("log.spine.skel_conversion_failed")}:')
                     log(f"        stdout: {result.stdout.strip()}")
                     log(f"        stderr: {result.stderr.strip()}")
-                    return False, original_bytes
+                    return False
 
         except Exception as e:
             log(f'    ❌ {t("log.error_detail", error=e)}')
-            return False, original_bytes
+            return False
 
     @staticmethod
     def upgrade(
@@ -140,10 +138,7 @@ class SkelConverter:
         target_version: str | None = None,
         log: LogFunc = no_log,
     ) -> bytes:
-        """
-        处理 .skel 文件的版本检查和升级。
-        如果无需升级或升级失败,则返回原始字节。
-        """
+        """处理 .skel 文件的版本检查和升级。"""
         if not enabled or not converter_path or not target_version:
             return skel_bytes
 
@@ -161,17 +156,28 @@ class SkelConverter:
             if current_version and not current_version.startswith(target_major_minor):
                 log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
 
-                skel_success, upgraded_content = SkelConverter.run(
-                    input_data=skel_bytes,
-                    converter_path=converter_path,
-                    target_version=target_version,
-                    log=log
-                )
-                if skel_success:
-                    log(f'  > {t("log.spine.skel_conversion_success")}')
-                    return upgraded_content
-                else:
-                    log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
+                # 创建临时文件进行转换
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_dir_path = Path(temp_dir)
+                    temp_input_path = temp_dir_path / resource_name
+
+                    # 写入临时文件
+                    temp_input_path.write_bytes(skel_bytes)
+
+                    # 调用 run() 进行转换（原地覆盖）
+                    success = SkelConverter.run(
+                        input_path=temp_input_path,
+                        output_path=temp_input_path,
+                        converter_path=converter_path,
+                        target_version=target_version,
+                        log=log
+                    )
+
+                    if success:
+                        log(f'  > {t("log.spine.skel_conversion_success")}')
+                        return temp_input_path.read_bytes()
+                    else:
+                        log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
 
         except Exception as e:
             log(f'    ❌ {t("log.error_detail", error=e)}')
@@ -191,18 +197,18 @@ class SkelConverter:
         log(f"    > {t('log.spine.version_detected_downgrading', version=version or t('common.unknown'))}")
 
         output_skel_path = output_dir / skel_path.name
-        skel_success, _ = SkelConverter.run(
-            input_data=skel_path,
+        success = SkelConverter.run(
+            input_path=skel_path,
+            output_path=output_skel_path,
             converter_path=converter_path,
             target_version=target_version,
-            output_path=output_skel_path,
             log=log
         )
-        if skel_success:
+        if success:
             log(f'    > {t("log.spine.skel_conversion_success", name=skel_path.name)}')
         else:
             log(f'    ✗ {t("log.spine.skel_conversion_failed")}')
-        return skel_success
+        return success
 
 
 class SpineViewer:
