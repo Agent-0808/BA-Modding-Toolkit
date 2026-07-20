@@ -4,7 +4,6 @@ import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
 import threading
-import urllib.request
 import webbrowser
 from ttkbootstrap.widgets.scrolled import ScrolledFrame
 from pathlib import Path
@@ -576,7 +575,7 @@ class SettingsDialog(tb.Toplevel):
             select_cmd=self.select_character_map_path,
             open_cmd=None,
             tooltip=t("option.character_id_map_info"),
-            download_guide_cmd=self.download_BACII_map,
+            download_guide_cmd=self.app.download_BACII_map,
             status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
         )
 
@@ -674,29 +673,6 @@ class SettingsDialog(tb.Toplevel):
             ),
             log=self.app.logger.log
         )
-
-    def download_BACII_map(self):
-        """下载角色ID映射表"""
-        url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
-        # 下载到 exe 同级目录下的 Addons 子目录
-        save_path = self.app.exe_dir / "Addons" / "BA-Characters-Internal-ID.csv"
-
-        if not messagebox.askyesno(
-            t("common.3rd_party"),
-            t("message.download_confirm", url=url, path=save_path),
-            parent=self
-        ):
-            return
-
-        try:
-            save_path.parent.mkdir(parents=True, exist_ok=True)
-            urllib.request.urlretrieve(url, save_path)
-            self.app.bacii_map_path_var.set(str(save_path))
-            self.app.logger.log(t("log.file.downloaded", path=save_path))
-            messagebox.showinfo(t("common.success"), t("message.save_success"), parent=self)
-        except Exception as e:
-            self.app.logger.log(t("log.error_detail", error=e))
-            messagebox.showerror(t("common.error"), t("message.save_error", error=e), parent=self)
 
     def print_environment_info(self):
         """打印环境信息"""

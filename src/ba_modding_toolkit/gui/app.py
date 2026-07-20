@@ -3,6 +3,7 @@
 import sys
 import tkinter as tk
 from tkinter import messagebox
+import urllib.request
 from typing import get_type_hints
 import ttkbootstrap as tb
 from pathlib import Path
@@ -305,6 +306,29 @@ class App(tb.Frame, ConfigMixin):
             "https://developer.android.com/studio/releases/platform-tools",
             parent
         )
+
+    def download_BACII_map(self, parent: tk.Widget | None = None) -> None:
+        """下载角色ID映射表"""
+        url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
+        save_path = self.exe_dir / "Addons" / "BA-Characters-Internal-ID.csv"
+
+        if not messagebox.askyesno(
+            t("common.3rd_party"),
+            t("message.download_confirm", url=url, path=save_path),
+            parent=parent or self.master
+        ):
+            return
+
+        try:
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            urllib.request.urlretrieve(url, save_path)
+            self.bacii_map_path_var.set(str(save_path))
+            self.logger.log(t("log.file.downloaded", path=save_path))
+            self._load_character_mapping()  # 下载后立即加载
+            messagebox.showinfo(t("common.success"), t("message.save_success"), parent=parent or self.master)
+        except Exception as e:
+            self.logger.log(t("log.error_detail", error=e))
+            messagebox.showerror(t("common.error"), t("message.save_error", error=e), parent=parent or self.master)
 
     # --- 文件来源相关方法 ---
 
