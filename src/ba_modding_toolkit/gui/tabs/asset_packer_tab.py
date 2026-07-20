@@ -37,11 +37,11 @@ class AssetPackerTab(TabFrame):
         self.bundle_zone = DropZone(
             self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.packer.placeholder_bundle"),
+            app=self.app,
             on_files_selected=self.on_bundles_selected,
             file_types=[FileType.BUNDLE, FileType.ALL],
             search_path_var=self._search_path_var,
             logger=self.logger,
-            app=self.app,
         )
 
         # 绑定文件来源变化事件

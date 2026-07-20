@@ -68,10 +68,10 @@ class LegacyConversionTab(TabFrame):
             file_frame,
             title=t("ui.legacy_conversion.role_legacy_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_legacy_bundle"),
+            app=self.app,
             on_files_selected=self.on_legacy_selected,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=False,
-            app=self.app,
             logger=self.logger
         )
         self.legacy_zone.pack(fill=tk.X, pady=(0, 3))
@@ -81,10 +81,10 @@ class LegacyConversionTab(TabFrame):
             file_frame,
             title=t("ui.legacy_conversion.role_modern_source"),
             placeholder_text=t("ui.legacy_conversion.placeholder_modern_bundles"),
+            app=self.app,
             on_files_selected=self._on_modern_files_selected,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=True,
-            app=self.app,
             logger=self.logger
         )
         

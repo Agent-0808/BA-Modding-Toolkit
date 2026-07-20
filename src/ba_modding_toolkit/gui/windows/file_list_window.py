@@ -253,7 +253,6 @@ class FileListWindow(tb.Toplevel):
         ]
 
         self._setup_window()
-        self._load_character_mapping()
         self._create_toolbar()
         self._create_status_bar()
         self._create_tableview()
@@ -483,16 +482,11 @@ class FileListWindow(tb.Toplevel):
 
     # -------- 数据操作 --------
 
-    def _load_character_mapping(self):
-        """加载角色ID映射表 CSV"""
-        # 直接使用 App 的映射表实例
-        self.app._load_character_mapping()
-
     def _lookup_character_name(self, core: str) -> str:
         """根据 core 值查找角色名称，未找到则回退为 core 本身"""
         if core == _UNSET:
             return core
-        return self.app._char_map.lookup(core, field=self.app.character_name_field_var.get()) or core
+        return self.app.char_map.lookup(core, field=self.app.character_name_field_var.get()) or core
 
     def _on_character_field_changed(self, event=None):
         """角色名称字段下拉框变化时的处理"""
@@ -552,7 +546,6 @@ class FileListWindow(tb.Toplevel):
         self._status_label.config(text=t("ui.file_list.scanning"))
         self._progress["value"] = 0
         self.table.delete_rows()
-        self._load_character_mapping()
         self._scan_version += 1
         current_version = self._scan_version
 
@@ -569,7 +562,6 @@ class FileListWindow(tb.Toplevel):
         self._status_label.config(text=t("ui.file_list.scanning"))
         self._progress["value"] = 0
         self.table.delete_rows()
-        self._load_character_mapping()
         self._scan_version += 1
         current_version = self._scan_version
 
@@ -715,7 +707,7 @@ class FileListWindow(tb.Toplevel):
         return {
             "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes is not None and item.trailing_bytes > 0),
             "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
-            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self._char_map.lookup(item.parsed_name.core, field="full_name") is not None),
+            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self.app.char_map.lookup(item.parsed_name.core, field="full_name") is not None),
             "common_mod": (t("ui.file_list.filter.common_mod"), lambda item: any(item.path.name.startswith(p) for p in COMMON_MOD_PREFIXES)),
         }
 

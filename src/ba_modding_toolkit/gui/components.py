@@ -269,13 +269,13 @@ class DropZone(tb.Labelframe):
     def __init__(
         self, parent,
         title: str, placeholder_text: str,
+        app: "App",
         on_files_selected: Callable[[list[Path] | Path], None] | None = None,
         file_types: list[FileType | str] = [FileType.BUNDLE, FileType.ALL],
         search_path_var=None,
         clear_cmd: Callable[[], None] | None = None,
         allow_folder: bool = False,
         allow_multiple: bool = True,
-        app: "App | None" = None,
         logger: Logger | None = None,
         **kwargs
     ):
@@ -394,15 +394,13 @@ class DropZone(tb.Labelframe):
             type_str = ", ".join(sorted(set(res_types)))
 
             # 查找角色名（如果映射表可用）
-            char_name = ""
-            if self._app and hasattr(self._app, '_char_map'):
-                field = self._app.character_name_field_var.get()
-                char_name = self._app._char_map.lookup(parsed.core, field) or ""
+            field = self._app.character_name_field_var.get()
+            char_name = self._app.char_map.lookup(parsed.core, field) or ""
 
-            # 格式化显示文本
+            # 格式化显示文本（逐个拼接）
             ui_text = parsed.core
             if char_name:
-                ui_text += f"- {char_name}"
+                ui_text += f"（{char_name}）"
             ui_text += f"\n({t('ui.drop_zone.contains', count=len(self._paths), types=type_str)})"
 
             self.set_success(ui_text)

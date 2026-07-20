@@ -29,10 +29,10 @@ class AssetExtractorTab(TabFrame):
             self,
             title=t("ui.label.bundles_to_extract"),
             placeholder_text=t("ui.extractor.placeholder_bundle"),
+            app=self.app,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             on_files_selected=on_files_selected,
             logger=self.logger,
-            app=self.app,
         )
         
         # 输出目录

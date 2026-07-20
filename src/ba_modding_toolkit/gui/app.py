@@ -28,13 +28,13 @@ class App(tb.Frame, ConfigMixin):
         self.config_manager = ConfigManager(self.exe_dir / "config.toml")
         self.init_shared_variables()
 
-        # 初始化角色映射表（在配置加载前）
-        self._char_map = CharacterInternalIDMap()
+        # 角色映射表（配置加载后自动加载）
+        self.char_map = CharacterInternalIDMap()
 
         # 在创建UI组件前加载配置，确保语言设置正确
-        self.load_config_on_startup()  # 启动时加载配置
+        self.load_config_on_startup()
 
-        # 加载角色映射表（配置加载后）
+        # 加载角色映射表
         self._load_character_mapping()
 
         self.create_widgets()
@@ -108,7 +108,7 @@ class App(tb.Frame, ConfigMixin):
         """加载角色ID映射表 CSV"""
         path = self.bacii_map_path_var.get().strip()
         if path:
-            self._char_map.load(Path(path))
+            self.char_map.load(Path(path))
 
     def create_widgets(self):
         # 使用grid布局确保status_widget固定在底部

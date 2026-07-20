@@ -31,9 +31,9 @@ class ModUpdateTab(TabFrame):
         self.old_mod_zone = DropZone(
             self, title=t("ui.label.mod_file"),
             placeholder_text=t("ui.mod_update.placeholder_old"),
+            app=self.app,
             on_files_selected=self.on_old_mod_selected,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
-            app=self.app,
             logger=self.logger
         )
 
@@ -43,10 +43,10 @@ class ModUpdateTab(TabFrame):
         self.new_mod_zone = DropZone(
             self, title=t("ui.label.target_resource_bundle"),
             placeholder_text=t("ui.mod_update.placeholder_new"),
+            app=self.app,
             on_files_selected=self.on_new_mod_selected,
             file_types=[FileType.BUNDLE, FileType.ALL],
             search_path_var=self._search_path_var,
-            app=self.app,
             logger=self.logger
         )
 
