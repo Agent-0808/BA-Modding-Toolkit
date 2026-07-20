@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from ...i18n import t
 from ...models import FileType
 from ...utils import get_environment_info
+from ...naming import CharacterInternalIDMap
 from ..components import Theme, UIComponents, SettingRow
 from ..utils import select_file, select_directory, open_directory
 
@@ -577,6 +578,15 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.character_id_map_info"),
             download_guide_cmd=self.download_BACII_map,
             status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
+        )
+
+        # 角色名称字段选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("option.character_name_field"),
+            text_var=self.app.character_name_field_var,
+            values=CharacterInternalIDMap.NAME_FIELDS,
+            tooltip=t("option.character_name_field_info")
         )
 
     def _init_footer_buttons(self):
