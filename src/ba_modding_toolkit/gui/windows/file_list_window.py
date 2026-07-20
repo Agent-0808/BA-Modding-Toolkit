@@ -242,7 +242,6 @@ class FileListWindow(tb.Toplevel):
         self._all_items: list[BundleFileInfo] = []
         self._items_by_path: dict[str, BundleFileInfo] = {}
         self._closed: bool = False
-        self._char_map = CharacterInternalIDMap()  # 角色ID映射表
         self._scan_version: int = 0  # 扫描版本号，用于丢弃过期的扫描结果
 
         self.ctx_list: list[tuple[str, Callable[[], None]]] = [
@@ -486,15 +485,14 @@ class FileListWindow(tb.Toplevel):
 
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
-        path = self.app.bacii_map_path_var.get().strip()
-        if path:
-            self._char_map.load(Path(path))
+        # 直接使用 App 的映射表实例
+        self.app._load_character_mapping()
 
     def _lookup_character_name(self, core: str) -> str:
         """根据 core 值查找角色名称，未找到则回退为 core 本身"""
         if core == _UNSET:
             return core
-        return self._char_map.lookup(core, field=self.app.character_name_field_var.get()) or core
+        return self.app._char_map.lookup(core, field=self.app.character_name_field_var.get()) or core
 
     def _on_character_field_changed(self, event=None):
         """角色名称字段下拉框变化时的处理"""

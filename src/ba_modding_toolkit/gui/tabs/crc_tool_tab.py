@@ -24,6 +24,7 @@ class CrcToolTab(TabFrame):
             on_files_selected=self.on_modified_selected,
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             allow_multiple=False,
+            app=self.app,
             logger=self.logger
         )
 
@@ -47,6 +48,7 @@ class CrcToolTab(TabFrame):
             file_types=[FileType.BUNDLE, FileType.BUNDLE_BACKUP, FileType.ALL],
             search_path_var=self._search_path_var,
             allow_multiple=False,
+            app=self.app,
             logger=self.logger
         )
 

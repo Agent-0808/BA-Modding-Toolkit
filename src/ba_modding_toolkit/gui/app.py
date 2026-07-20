@@ -13,6 +13,7 @@ from ..utils import get_environment_info, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
+from ..naming import CharacterInternalIDMap
 from .components import Theme, Logger, UIComponents
 from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
@@ -26,8 +27,16 @@ class App(tb.Frame, ConfigMixin):
         self.setup_main_window()
         self.config_manager = ConfigManager(self.exe_dir / "config.toml")
         self.init_shared_variables()
+
+        # 初始化角色映射表（在配置加载前）
+        self._char_map = CharacterInternalIDMap()
+
         # 在创建UI组件前加载配置，确保语言设置正确
         self.load_config_on_startup()  # 启动时加载配置
+
+        # 加载角色映射表（配置加载后）
+        self._load_character_mapping()
+
         self.create_widgets()
         self.logger.status(t("status.ready"))
 
@@ -94,6 +103,12 @@ class App(tb.Frame, ConfigMixin):
             var = getattr(self, var_name)
             default = meta.default() if callable(meta.default) else meta.default
             var.set(default)
+
+    def _load_character_mapping(self):
+        """加载角色ID映射表 CSV"""
+        path = self.bacii_map_path_var.get().strip()
+        if path:
+            self._char_map.load(Path(path))
 
     def create_widgets(self):
         # 使用grid布局确保status_widget固定在底部
