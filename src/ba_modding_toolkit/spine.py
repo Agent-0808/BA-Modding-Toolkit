@@ -314,6 +314,69 @@ class SpineViewer:
             return False, {}
 
     @staticmethod
+    def render_preview(
+        skel_path: Path,
+        output_path: Path,
+        viewer_path: Path,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]:
+        """
+        从 skel 文件自动选择动画并渲染预览图。
+
+        流程：
+        1. 查询动画信息
+        2. 选择动画（优先 Idle_01 > Dummy > 第一个）
+        3. 查找同目录下的 atlas 文件
+        4. 渲染预览图
+
+        Args:
+            skel_path: skel 文件路径（atlas 和 png 在同目录）
+            output_path: 输出图片路径
+            viewer_path: SpineViewerCLI 路径
+            log: 日志函数
+
+        Returns:
+            tuple[bool, str]: (是否成功, 状态消息)
+        """
+        # 查找同目录下的 atlas 文件
+        atlas_path = None
+        for atlas in skel_path.parent.glob("*.atlas"):
+            if atlas.stem == skel_path.stem:
+                atlas_path = atlas
+                break
+
+        # 查询动画信息
+        success, info = SpineViewer.query(skel_path, viewer_path, atlas_path, log)
+        if not success:
+            return False, t("log.spine.query_failed")
+
+        # 选择动画（优先 Idle_01 > Dummy > 第一个）
+        animation = None
+        animations = info.get('animations', [])
+        if 'Idle_01' in animations:
+            animation = 'Idle_01'
+        elif 'Dummy' in animations:
+            animation = 'Dummy'
+        elif animations:
+            animation = animations[0]
+            log(f'  > {t("log.spine.using_first_animation", anim=animation)}')
+
+        if not animation:
+            log(f'  ⚠️ {t("log.spine.no_animation_found", name=skel_path.name)}')
+            return False, t("log.spine.no_animation_found", name=skel_path.name)
+
+        # 渲染预览图
+        return SpineViewer.render(
+            skel_path=skel_path,
+            output_path=output_path,
+            viewer_path=viewer_path,
+            atlas_path=atlas_path,
+            animation=animation,
+            fmt="png",
+            log=log
+        )
+
+    @staticmethod
     def render(
         skel_path: Path,
         output_path: Path,

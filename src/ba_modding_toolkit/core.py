@@ -401,6 +401,7 @@ def render_spine_preview_from_bundle(
     bundle_path: Path | list[Path],
     output_dir: Path,
     viewer_path: Path,
+    output_filename: str | None = None,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
@@ -410,13 +411,13 @@ def render_spine_preview_from_bundle(
         bundle_path: bundle 文件路径（单个或列表）
         output_dir: 输出目录
         viewer_path: SpineViewerCLI 路径
+        output_filename: 输出文件名（不含扩展名），用于自定义命名。None 则使用 skel 文件名
         log: 日志记录函数
 
     Returns:
         tuple[bool, str]: (是否成功, 状态消息)
     """
-    import tempfile
-    
+
     # 统一处理为列表
     bundle_paths = [bundle_path] if isinstance(bundle_path, Path) else bundle_path
 
@@ -436,10 +437,9 @@ def render_spine_preview_from_bundle(
         extracted_files = _extract_assets_from_bundle(
             bundle_paths, work_dir, {"TextAsset", "Texture2D"}, log
         )
-        
-        # 获取 skel 和 atlas 文件
+
+        # 获取 skel 文件
         skel_files = [f for f in extracted_files[AssetType.TextAsset] if f.suffix == '.skel']
-        atlas_files = [f for f in extracted_files[AssetType.TextAsset] if f.suffix == '.atlas']
 
         if not skel_files:
             msg = t("log.spine.no_skel_found")
@@ -450,43 +450,24 @@ def render_spine_preview_from_bundle(
         log(f'\n--- {t("log.section.render_preview")} ---')
         success_count = 0
 
-        for skel_path in skel_files:
-            # 查找对应的 atlas 文件
-            atlas_path = None
-            for atlas in atlas_files:
-                if atlas.stem == skel_path.stem:
-                    atlas_path = atlas
-                    break
+        for idx, skel_path in enumerate(skel_files):
+            # 确定输出文件名
+            if output_filename:
+                # 如果指定了输出文件名，多个 skel 时添加后缀
+                if len(skel_files) > 1:
+                    filename = f"{output_filename}_{idx}"
+                else:
+                    filename = output_filename
+            else:
+                filename = skel_path.stem
 
-            # 查询动画信息
-            success, info = SpineViewer.query(skel_path, viewer_path, atlas_path, log)
-            if not success:
-                continue
-
-            # 选择动画
-            animation = None
-            animations = info.get('animations', [])
-            if 'Idle_01' in animations:
-                animation = 'Idle_01'
-            elif 'Dummy' in animations:
-                animation = 'Dummy'
-            elif animations:
-                animation = animations[0]
-                log(f'  > {t("log.spine.using_first_animation", anim=animation)}')
-
-            if not animation:
-                log(f'  ⚠️ {t("log.spine.no_animation_found", name=skel_path.name)}')
-                continue
+            output_path = output_dir / f"{filename}.png"
 
             # 渲染预览图
-            output_path = output_dir / f"{skel_path.stem}.png"
-            success, msg = SpineViewer.render(
+            success, msg = SpineViewer.render_preview(
                 skel_path=skel_path,
                 output_path=output_path,
                 viewer_path=viewer_path,
-                atlas_path=atlas_path,
-                animation=animation,
-                fmt="png",
                 log=log
             )
 
