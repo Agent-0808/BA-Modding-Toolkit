@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap, ReportTap
 from ..searching import find_target_bundles, search_prefix
 from ..core import (
     SaveOptions,
@@ -20,7 +20,8 @@ from ..core import (
 from ..models import SaveOptions, SpineOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
-from ..naming import parse_filename
+from ..naming import parse_filename, CharacterInternalIDMap
+from ..report import generate_mod_report
 
 class Logger:
     """日志记录器基类。"""
@@ -779,3 +780,79 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"✅ Operation Successful: {message}")
     else:
         logger.log(f"❌ Operation Failed: {message}")
+
+
+def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'report' 命令的逻辑。"""
+    from datetime import datetime
+
+    logger.log("--- Start Mod Report Generation ---")
+
+    # 确定游戏目录
+    resource_dir = args.resource_dir or get_BA_path()
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确定输出路径
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = output_dir / f"mod_report_{timestamp}.md"
+
+    logger.log(f"Game directory: {game_dir}")
+    logger.log(f"Output path: {output_path}")
+
+    # 加载角色名称映射
+    char_map = None
+    if args.bacii_path:
+        bacii_path = Path(args.bacii_path)
+        if bacii_path.exists():
+            char_map = CharacterInternalIDMap()
+            if char_map.load(bacii_path):
+                logger.log(f"Loaded character mapping from: {bacii_path}")
+            else:
+                logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
+                char_map = None
+
+    # 验证 Spine 渲染器路径
+    viewer_path = None
+    if args.enable_render:
+        if not args.spine_viewer_path:
+            logger.log("❌ Error: --spine-viewer-path is required when --enable-render is set.")
+            return
+        viewer_path = Path(args.spine_viewer_path)
+        if not viewer_path.exists():
+            logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+            return
+        logger.log(f"Spine rendering enabled: {viewer_path}")
+
+    # 进度回调
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Analyzing: {filename}"
+    )
+
+    # 调用核心处理函数
+    success, message = generate_mod_report(
+        game_dir=game_dir,
+        output_path=output_path,
+        char_map=char_map,
+        char_name_field=args.name_field,
+        enable_render=args.enable_render,
+        viewer_path=viewer_path,
+        log=logger.log,
+        progress_callback=progress_callback,
+    )
+
+    logger.log("\n" + "="*50)
+    if success:
+        logger.log(f"✅ Report Generated: {message}")
+        logger.log(f"   Output: {output_path}")
+    else:
+        logger.log(f"❌ Report Generation Failed: {message}")

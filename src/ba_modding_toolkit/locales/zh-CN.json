@@ -345,6 +345,22 @@
 			"modified_file_crc32": "待修正文件 CRC32：{crc}",
 			"original_file_crc32": "原始文件　 CRC32：{crc}"
 		},
+		"report": {
+			"title": "Mod 报告",
+			"generated": "生成时间",
+			"scan_dir": "扫描目录",
+			"total_mods": "总Mod数",
+			"scan_start": "开始扫描",
+			"analyze_trailing": "分析尾部字节",
+			"bundle_count": "扫描到 {count} 个 bundle 文件",
+			"mod_count": "发现 {count} 个 mod 文件",
+			"render_preview": "渲染预览图",
+			"render_count": "渲染完成，共 {count} 个",
+			"no_bundle_found": "未找到 bundle 文件",
+			"no_mod_found": "未找到 mod 文件",
+			"saved": "报告已保存至: {path}",
+			"success": "报告生成成功，共 {count} 个 Mod"
+		},
 		"section": {
 			"extract_to_temp": "提取资源到临时目录",
 			"move_to_output": "移动提取的文件到输出目录",

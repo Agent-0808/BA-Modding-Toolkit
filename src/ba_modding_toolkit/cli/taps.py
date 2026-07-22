@@ -352,6 +352,45 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
 
+class ReportTap(Tap):
+    """Report命令的参数解析器 - 用于生成Mod列表报告。"""
+
+    # 基本参数
+    output_dir: Path = Path('./output/reports/')  # Directory to save the report file.
+
+    # 搜索目录参数
+    resource_dir: Path | None = None  # Path to the game resource directory.
+
+    # Spine渲染参数
+    enable_render: bool = False  # Enable Spine preview rendering.
+    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe.
+
+    # 角色映射参数
+    bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
+    name_field: str = "full_name"  # Character name field to display.
+
+    def configure(self) -> None:
+        self.description = '''Generate a report of all modded bundle files in the game directory.
+
+Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
+      For a game version that CRC check is unnecessary, modded bundles may not be recognized.
+
+Examples:
+  # Generate report with auto-detected game directory
+  bamt-cli report
+
+  # Specify game directory
+  bamt-cli report --resource-dir "C:\\path\\to\\game_data"
+
+  # Generate report with Spine preview images
+  bamt-cli report --enable-render --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Use character name mapping
+  bamt-cli report --bacii-map-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
 
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
@@ -367,4 +406,5 @@ class MainTap(BaseTap):
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
+        self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
