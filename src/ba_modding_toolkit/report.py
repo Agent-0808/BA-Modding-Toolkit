@@ -264,7 +264,7 @@ def _format_entry(entry: ModEntry, output_path: Path, enable_render: bool) -> st
     if entry.char_name:
         parts.append(entry.char_name)
     if entry.core:
-        parts.append(entry.core)
+        parts.append(f"`{entry.core}`")
     if entry.res_types:
         parts.append(", ".join(entry.res_types))
 

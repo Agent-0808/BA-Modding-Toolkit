@@ -453,6 +453,7 @@ class App(tb.Frame, ConfigMixin):
     OUTPUT_SUBDIR_BUNDLES = "bundles"
     OUTPUT_SUBDIR_EXTRACT = "extract"
     OUTPUT_SUBDIR_PREVIEW = "preview"
+    OUTPUT_SUBDIR_REPORTS = "reports"
 
     def get_output_subdir(self, subdir: str) -> Path:
         """获取输出目录下的子目录路径，自动创建"""
@@ -533,7 +534,8 @@ class App(tb.Frame, ConfigMixin):
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
         legacy_conversion_tab = LegacyConversionTab(self.content_frame, self)
         adb_push_tab = AdbPushTab(self.content_frame, self)
-        
+        tools_tab = ToolsTab(self.content_frame, self)
+
         self.tabs.extend([
             (mod_update_tab, t("ui.tabs.mod_update")),
             (batch_update_tab, t("ui.tabs.batch_update")),
@@ -543,6 +545,7 @@ class App(tb.Frame, ConfigMixin):
             (legacy_conversion_tab, t("ui.tabs.legacy_conversion")),
             (batch_legacy_tab, t("ui.tabs.batch_legacy")),
             (adb_push_tab, t("ui.tabs.adb_push")),
+            (tools_tab, t("ui.tabs.tools")),
         ])
         
         # 将所有Tab放置在content_frame的同一位置

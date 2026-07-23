@@ -14,7 +14,8 @@
 		"fail": "失败",
 		"result": "结果",
 		"unknown": "未知",
-		"auto": "自动"
+		"auto": "自动",
+		"options": "选项"
 	},
 	"action": {
 		"browse": "浏览",
@@ -50,7 +51,8 @@
 		"render_preview": "渲染预览图",
 		"cache_to_local": "缓存到本地",
 		"detect": "检测",
-		"clear_cache": "清理缓存"
+		"clear_cache": "清理缓存",
+		"generate": "生成"
 	},
 	"option": {
 		"file_source": "文件来源",
@@ -113,6 +115,8 @@
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
+		"enable_spine_preview": "生成 Spine 预览图",
+		"enable_spine_preview_info": "为 Spine 资源生成预览图（需要配置 SpineViewerCLI 路径）",
 		"max_workers": "并行线程数",
 		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
 		"character_id_map": "角色ID映射表",
@@ -188,6 +192,7 @@
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
 		"spine": {},
+		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
@@ -493,7 +498,11 @@
 			"legacy_conversion": "旧版/新版转换",
 			"batch_legacy": "批量处理旧版",
 			"file_list": "文件列表",
-			"adb_push": "ADB 文件推送"
+			"adb_push": "ADB 文件推送",
+			"tools": "工具"
+		},
+		"report": {
+			"title": "生成 Mod 报告"
 		},
 		"settings": {
 			"title": "设置",
