@@ -52,7 +52,8 @@
 		"cache_to_local": "缓存到本地",
 		"detect": "检测",
 		"clear_cache": "清理缓存",
-		"generate": "生成"
+		"generate": "生成",
+		"fix_all": "修复全部"
 	},
 	"option": {
 		"file_source": "文件来源",
@@ -242,6 +243,11 @@
 			"no_local_files": "请先选择要推送的本地文件",
 			"no_target_dir": "请填写目标目录",
 			"push_summary": "推送完成：成功 {success} 个，失败 {fail} 个"
+		},
+		"abnormal_check": {
+			"no_mismatch": "未发现CRC不匹配的文件",
+			"confirm_fix": "确定修复 {count} 个文件的CRC值？",
+			"fix_complete": "修复完成"
 		}
 	},
 	"status": {
@@ -486,6 +492,14 @@
 			"cache_caching": "正在缓存 {count} 个文件到本地...",
 			"cache_delete_failed": "删除缓存文件 {name} 失败: {error}",
 			"push_start_batch": "开始推送 {count} 个文件到 {dir}"
+		},
+		"abnormal_check": {
+			"found_count": "发现 {count} 个CRC不匹配的文件",
+			"fixing": "正在修复: {filename}",
+			"fix_success": "修复成功: {filename}",
+			"fix_failed": "修复失败: {filename}",
+			"fix_verify_failed": "修复验证失败: {filename}",
+			"fix_error": "修复 {filename} 时发生错误: {error}"
 		}
 	},
 	"ui": {
@@ -504,6 +518,14 @@
 		},
 		"report": {
 			"title": "生成 Mod 报告"
+		},
+		"abnormal_check": {
+			"title": "修复\"不正常的用户端\"",
+			"result_list": "检测结果",
+			"column_filename": "文件名",
+			"column_char_name": "角色名",
+			"column_target_crc": "目标CRC",
+			"column_actual_crc": "实际CRC"
 		},
 		"settings": {
 			"title": "设置",
