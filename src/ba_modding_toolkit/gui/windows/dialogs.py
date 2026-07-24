@@ -17,8 +17,9 @@ from ...utils import get_environment_info
 from ...naming import CharacterInternalIDMap
 from ..components import Theme, UIComponents, SettingRow
 from ..utils import select_file, select_directory, open_directory
+from .base import StoppableDialog
 
-class SettingsDialog(tb.Toplevel):
+class SettingsDialog(StoppableDialog):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance

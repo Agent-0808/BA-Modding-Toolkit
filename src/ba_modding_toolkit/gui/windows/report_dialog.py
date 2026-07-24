@@ -15,9 +15,10 @@ if TYPE_CHECKING:
 from ...i18n import t
 from ...report import generate_mod_report
 from ..components import SettingRow, UIComponents
+from .base import StoppableDialog
 
 
-class ReportDialog(tb.Toplevel):
+class ReportDialog(StoppableDialog):
     """报告生成对话框"""
 
     def __init__(self, master, app_instance: "App"):
@@ -89,6 +90,10 @@ class ReportDialog(tb.Toplevel):
 
     def _update_progress(self, current: int, total: int, filename: str):
         """更新进度"""
+        # 检查窗口是否还存在
+        if not self.winfo_exists():
+            return
+
         self.progress_bar["maximum"] = total
         self.progress_bar["value"] = current
         self.progress_label.config(
@@ -148,6 +153,10 @@ class ReportDialog(tb.Toplevel):
 
     def _on_complete(self, success: bool, message: str, output_path: Path):
         """完成回调"""
+        # 检查窗口是否还存在
+        if not self.winfo_exists():
+            return
+
         if success:
             self.progress_label.config(text=t("status.done"))
 
