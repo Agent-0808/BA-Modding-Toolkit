@@ -360,6 +360,7 @@
 			"bundle_count": "扫描到 {count} 个 bundle 文件",
 			"mod_count": "发现 {count} 个 mod 文件",
 			"render_preview": "渲染预览图",
+			"render_retry": "Mod 内容未包含完整资源，尝试包含原始文件: {prefix}",
 			"render_count": "渲染完成，共 {count} 个",
 			"no_bundle_found": "未找到 bundle 文件",
 			"no_mod_found": "未找到 mod 文件",

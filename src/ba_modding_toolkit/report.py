@@ -127,6 +127,15 @@ def generate_mod_report(
         output_dir = output_path.parent / output_path.stem
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # 构建 prefix → 所有文件 的映射（用于渲染失败时回退）
+        prefix_to_all_files: dict[str, list[Path]] = {}
+        for item in items:
+            if item.parsed_name and item.parsed_name.prefix:
+                prefix = item.parsed_name.prefix
+                if prefix not in prefix_to_all_files:
+                    prefix_to_all_files[prefix] = []
+                prefix_to_all_files[prefix].append(item.path)
+
         render_count = 0
         for cat, cat_entries in categories.items():
             if cat not in RENDER_CATEGORIES:
@@ -135,6 +144,7 @@ def generate_mod_report(
                 if not entry.files:
                     continue
                 
+                # 第一次尝试：只用 mod 文件
                 success, _ = render_spine_preview_from_bundle(
                     bundle_path=entry.files,
                     output_dir=output_dir,
@@ -142,6 +152,20 @@ def generate_mod_report(
                     output_filename=entry.prefix,
                     log=log,
                 )
+                
+                # 如果失败，尝试包含所有同 prefix 的文件（可能有原始 skel/atlas）
+                if not success:
+                    all_files = prefix_to_all_files.get(entry.prefix, [])
+                    if all_files and all_files != entry.files:
+                        log(f"  > {t('log.report.render_retry', prefix=entry.prefix)}")
+                        success, _ = render_spine_preview_from_bundle(
+                            bundle_path=all_files,
+                            output_dir=output_dir,
+                            viewer_path=viewer_path,
+                            output_filename=entry.prefix,
+                            log=log,
+                        )
+                
                 if success:
                     render_count += 1
                 else:

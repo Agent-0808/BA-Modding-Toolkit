@@ -444,7 +444,7 @@ def render_spine_preview_from_bundle(
         if not skel_files:
             msg = t("log.spine.no_skel_found")
             log(f'⚠️ {msg}')
-            return True, msg
+            return False, msg
 
         # 阶段 2: 渲染预览图
         log(f'\n--- {t("log.section.render_preview")} ---')
