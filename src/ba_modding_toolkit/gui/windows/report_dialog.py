@@ -58,15 +58,12 @@ class ReportDialog(StoppableDialog):
         progress_frame = tb.Frame(main_frame)
         progress_frame.pack(fill=tk.X, pady=(0, 10))
 
-        self.progress_label = tb.Label(progress_frame, text="")
-        self.progress_label.pack(fill=tk.X)
-
         self.progress_bar = tb.Progressbar(
             progress_frame,
             mode="determinate",
             bootstyle="success-striped"
         )
-        self.progress_bar.pack(fill=tk.X, pady=(5, 0))
+        self.progress_bar.pack(fill=tk.X, pady=10)
 
         # 按钮区域
         button_frame = tb.Frame(main_frame)
@@ -97,8 +94,8 @@ class ReportDialog(StoppableDialog):
         try:
             self.progress_bar["maximum"] = total
             self.progress_bar["value"] = current
-            self.progress_label.config(
-                text=t("status.processing_batch", current=current, total=total, filename=filename)
+            self.app.logger.status(
+                t("status.processing_batch", current=current, total=total, filename=filename)
             )
             self.update_idletasks()
         except tk.TclError:
@@ -133,7 +130,7 @@ class ReportDialog(StoppableDialog):
                 return
 
         # 输出目录
-        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_PREVIEW)
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_REPORTS)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = output_dir / f"mod_report_{timestamp}.md"
@@ -168,7 +165,7 @@ class ReportDialog(StoppableDialog):
             return
 
         if success:
-            self.progress_label.config(text=t("status.done"))
+            self.app.logger.status(t("status.done"))
 
             # 询问是否打开报告
             if messagebox.askyesno(t("common.success"), t("message.report_open_prompt")):
@@ -177,4 +174,4 @@ class ReportDialog(StoppableDialog):
             # 关闭对话框
             self.destroy()
         else:
-            self.progress_label.config(text=t("status.failed"))
+            self.app.logger.status(t("status.failed"))

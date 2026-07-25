@@ -89,7 +89,7 @@ def generate_mod_report(
 
     log(f"{t('log.report.bundle_count', count=len(items))}")
 
-    # 2. 分析尾部字节
+    # 2. 分析尾部字节（第一轮进度：扫描bundle）
     log(f"--- {t('log.report.analyze_trailing')} ---")
     total = len(items)
     for i, item in enumerate(items):
@@ -173,7 +173,7 @@ def generate_mod_report(
 
         log(f"{t('log.report.render_count', count=render_count)}")
 
-    # 8. 生成报告
+    # 8. 生成报告（第二轮进度：处理mod条目）
     report = ModReport(
         generated_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         game_dir=str(game_dir),
@@ -182,7 +182,7 @@ def generate_mod_report(
         categories=categories,
     )
 
-    _write_report(report, output_path, enable_render)
+    _write_report(report, output_path, enable_render, progress_callback)
     log(f"✓ {t('log.report.saved', path=output_path)}")
 
     return True, t("log.report.success", count=len(entries))
@@ -227,7 +227,12 @@ def _aggregate_mods(
     return list(grouped.values())
 
 
-def _write_report(report: ModReport, output_path: Path, enable_render: bool) -> None:
+def _write_report(
+    report: ModReport,
+    output_path: Path,
+    enable_render: bool,
+    progress_callback: ProgressCallback | None = None,
+) -> None:
     """写入 Markdown 报告"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -253,6 +258,10 @@ def _write_report(report: ModReport, output_path: Path, enable_render: bool) -> 
 
     lines.append("")  # 空行分隔
 
+    # 统计总条目数用于进度
+    total_entries = report.total_count
+    current_entry = 0
+
     # 按 OUTPUT_ORDER 顺序输出详细列表
     for cat in OUTPUT_ORDER:
         if cat not in report.categories:
@@ -264,6 +273,9 @@ def _write_report(report: ModReport, output_path: Path, enable_render: bool) -> 
         for entry in entries:
             line = _format_entry(entry, output_path, enable_render)
             lines.append(line)
+            current_entry += 1
+            if progress_callback:
+                progress_callback(current_entry, total_entries, entry.prefix)
         lines.append("")
 
     # 处理不在输出顺序中的其他分类
@@ -276,6 +288,9 @@ def _write_report(report: ModReport, output_path: Path, enable_render: bool) -> 
         for entry in entries:
             line = _format_entry(entry, output_path, enable_render)
             lines.append(line)
+            current_entry += 1
+            if progress_callback:
+                progress_callback(current_entry, total_entries, entry.prefix)
         lines.append("")
 
     output_path.write_text("\n".join(lines), encoding="utf-8")

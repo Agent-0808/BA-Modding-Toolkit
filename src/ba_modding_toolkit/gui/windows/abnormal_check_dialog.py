@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...searching import list_bundle_files
-from ...naming import parse_filename
 from ...utils import CRCUtils
 from ...bundle import analyze_trailing, analyze_naming
 from .base import StoppableDialog
@@ -58,15 +57,12 @@ class AbnormalCheckDialog(StoppableDialog):
         progress_frame = tb.Frame(main_frame)
         progress_frame.pack(fill=tk.X, pady=(0, 10))
 
-        self.progress_label = tb.Label(progress_frame, text="")
-        self.progress_label.pack(fill=tk.X)
-
         self.progress_bar = tb.Progressbar(
             progress_frame,
             mode="determinate",
             bootstyle="success-striped"
         )
-        self.progress_bar.pack(fill=tk.X, pady=(5, 0))
+        self.progress_bar.pack(fill=tk.X)
 
         # 结果列表区域
         list_frame = tb.Labelframe(main_frame, text=t("ui.abnormal_check.result_list"), padding=10)
@@ -125,8 +121,8 @@ class AbnormalCheckDialog(StoppableDialog):
         try:
             self.progress_bar["maximum"] = total
             self.progress_bar["value"] = current
-            self.progress_label.config(
-                text=t("status.processing_batch", current=current, total=total, filename=filename)
+            self.app.logger.status(
+                t("status.processing_batch", current=current, total=total, filename=filename)
             )
             self.update_idletasks()
         except tk.TclError:
@@ -169,7 +165,7 @@ class AbnormalCheckDialog(StoppableDialog):
         # 1. 扫描 bundle 文件
         items = list_bundle_files(game_dir)
         if not items:
-            self.after(0, lambda: self.progress_label.config(text=t("log.report.no_bundle_found")))
+            self.after(0, lambda: self.app.logger.status(t("log.report.no_bundle_found")))
             return
 
         # 2. 分析每个文件
@@ -238,7 +234,7 @@ class AbnormalCheckDialog(StoppableDialog):
             self.table.autofit_columns()
 
         # 更新UI状态
-        self.progress_label.config(text=t("status.done"))
+        self.app.logger.status(t("status.done"))
         self.scan_button.config(state=tk.NORMAL)
 
         if count > 0:
@@ -315,7 +311,7 @@ class AbnormalCheckDialog(StoppableDialog):
         if not self.winfo_exists():
             return
 
-        self.progress_label.config(text=t("status.done"))
+        self.app.logger.status(t("status.done"))
         self.scan_button.config(state=tk.NORMAL)
 
         messagebox.showinfo(t("common.success"), t("message.abnormal_check.fix_complete"))
