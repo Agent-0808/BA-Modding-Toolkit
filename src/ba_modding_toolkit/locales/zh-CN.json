@@ -248,7 +248,8 @@
 			"no_mismatch": "未发现CRC不匹配的文件",
 			"confirm_fix": "确定修复 {count} 个文件的CRC值？",
 			"fix_complete": "修复完成"
-		}
+		},
+		"task_running_close_confirm": "任务正在运行中，关闭窗口将停止任务。\n\n确定要关闭窗口吗？"
 	},
 	"status": {
 		"ready": "准备就绪",

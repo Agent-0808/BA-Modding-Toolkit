@@ -122,12 +122,16 @@ class AbnormalCheckDialog(StoppableDialog):
         if not self.winfo_exists():
             return
 
-        self.progress_bar["maximum"] = total
-        self.progress_bar["value"] = current
-        self.progress_label.config(
-            text=t("status.processing_batch", current=current, total=total, filename=filename)
-        )
-        self.update_idletasks()
+        try:
+            self.progress_bar["maximum"] = total
+            self.progress_bar["value"] = current
+            self.progress_label.config(
+                text=t("status.processing_batch", current=current, total=total, filename=filename)
+            )
+            self.update_idletasks()
+        except tk.TclError:
+            # 窗口已被销毁，忽略更新
+            pass
 
     def _start_scan(self):
         """开始扫描"""
@@ -149,6 +153,9 @@ class AbnormalCheckDialog(StoppableDialog):
         # 清空列表
         self.table.delete_rows()
         self._mismatch_items.clear()
+
+        # 标记任务开始
+        self.set_task_running(True)
 
         # 在线程中运行
         def run():
@@ -209,6 +216,9 @@ class AbnormalCheckDialog(StoppableDialog):
 
     def _on_scan_complete(self):
         """扫描完成"""
+        # 标记任务结束
+        self.set_task_running(False)
+
         # 检查窗口是否还存在
         if not self.winfo_exists():
             return
@@ -253,6 +263,9 @@ class AbnormalCheckDialog(StoppableDialog):
         self.scan_button.config(state=tk.DISABLED)
         self.fix_button.config(state=tk.DISABLED)
 
+        # 标记任务开始
+        self.set_task_running(True)
+
         # 在线程中运行
         def run():
             self._fix_files()
@@ -295,6 +308,9 @@ class AbnormalCheckDialog(StoppableDialog):
 
     def _on_fix_complete(self):
         """修复完成"""
+        # 标记任务结束
+        self.set_task_running(False)
+
         # 检查窗口是否还存在
         if not self.winfo_exists():
             return

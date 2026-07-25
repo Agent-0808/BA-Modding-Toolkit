@@ -94,12 +94,16 @@ class ReportDialog(StoppableDialog):
         if not self.winfo_exists():
             return
 
-        self.progress_bar["maximum"] = total
-        self.progress_bar["value"] = current
-        self.progress_label.config(
-            text=t("status.processing_batch", current=current, total=total, filename=filename)
-        )
-        self.update_idletasks()
+        try:
+            self.progress_bar["maximum"] = total
+            self.progress_bar["value"] = current
+            self.progress_label.config(
+                text=t("status.processing_batch", current=current, total=total, filename=filename)
+            )
+            self.update_idletasks()
+        except tk.TclError:
+            # 窗口已被销毁，忽略更新
+            pass
 
     def _generate_report(self):
         """生成报告"""
@@ -134,6 +138,9 @@ class ReportDialog(StoppableDialog):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = output_dir / f"mod_report_{timestamp}.md"
 
+        # 标记任务开始
+        self.set_task_running(True)
+
         # 在线程中运行
         def run():
             success, message = generate_mod_report(
@@ -153,6 +160,9 @@ class ReportDialog(StoppableDialog):
 
     def _on_complete(self, success: bool, message: str, output_path: Path):
         """完成回调"""
+        # 标记任务结束
+        self.set_task_running(False)
+
         # 检查窗口是否还存在
         if not self.winfo_exists():
             return
