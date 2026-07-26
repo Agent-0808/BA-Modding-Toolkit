@@ -136,6 +136,21 @@ def generate_mod_report(
                     prefix_to_all_files[prefix] = []
                 prefix_to_all_files[prefix].append(item.path)
 
+        # 计算需要渲染的条目数
+        render_entries = [
+            entry
+            for cat, cat_entries in categories.items()
+            if cat in RENDER_CATEGORIES
+            for entry in cat_entries
+            if entry.files
+        ]
+        total_render = len(render_entries)
+        current_render = 0
+
+        # 重置进度条（渲染阶段）
+        if progress_callback:
+            progress_callback(current_render, total_render, "")
+
         render_count = 0
         for cat, cat_entries in categories.items():
             if cat not in RENDER_CATEGORIES:
@@ -165,11 +180,16 @@ def generate_mod_report(
                             output_filename=entry.prefix,
                             log=log,
                         )
-                
+
                 if success:
                     render_count += 1
                 else:
                     entry.render_success = False
+
+                # 更新进度
+                current_render += 1
+                if progress_callback:
+                    progress_callback(current_render, total_render, entry.prefix)
 
         log(f"{t('log.report.render_count', count=render_count)}")
 
@@ -236,6 +256,14 @@ def _write_report(
     """写入 Markdown 报告"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # 统计总条目数用于进度
+    total_entries = report.total_count
+    current_entry = 0
+
+    # 重置进度条（第二轮开始）
+    if progress_callback:
+        progress_callback(0, total_entries, "")
+
     # 报告内容使用英文（CLI 不需要本地化）
     lines = [
         f"# Mod Report",
@@ -257,10 +285,6 @@ def _write_report(
             lines.append(f"- {cat_name}: {count}")
 
     lines.append("")  # 空行分隔
-
-    # 统计总条目数用于进度
-    total_entries = report.total_count
-    current_entry = 0
 
     # 按 OUTPUT_ORDER 顺序输出详细列表
     for cat in OUTPUT_ORDER:
