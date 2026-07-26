@@ -53,7 +53,8 @@
 		"detect": "检测",
 		"clear_cache": "清理缓存",
 		"generate": "生成",
-		"fix_all": "修复全部"
+		"fix_all": "修复全部",
+		"start_backup": "开始备份"
 	},
 	"option": {
 		"file_source": "文件来源",
@@ -131,7 +132,9 @@
 		"adb_path": "ADB 路径",
 		"adb_path_info": "adb.exe 的完整路径，或 \"adb\" 使用系统环境变量",
 		"adb_cache_dir": "缓存路径",
-		"adb_cache_dir_info": "ADB 文件的本地缓存目录"
+		"adb_cache_dir_info": "ADB 文件的本地缓存目录",
+		"backup_path": "备份路径",
+		"backup_path_info": "选择备份文件的保存目录"
 	},
 	"file_type": {
 		"executable": "可执行文件",
@@ -252,6 +255,12 @@
 			"no_mismatch": "未发现CRC不匹配的文件",
 			"confirm_fix": "确定修复 {count} 个文件的CRC值？",
 			"fix_complete": "修复完成"
+		},
+		"backup": {
+			"path_required": "请先选择备份路径",
+			"clear_confirm": "备份目录已存在，是否清空后重新备份？",
+			"open_prompt": "备份完成，共备份 {count} 个 Mod 文件。\n是否打开备份目录？",
+			"no_mod_found": "未发现 mod 文件"
 		},
 		"task_running_close_confirm": "任务正在运行中，关闭窗口将停止任务。\n\n确定要关闭窗口吗？"
 	},
@@ -505,6 +514,12 @@
 			"fix_failed": "修复失败: {filename}",
 			"fix_verify_failed": "修复验证失败: {filename}",
 			"fix_error": "修复 {filename} 时发生错误: {error}"
+		},
+		"backup": {
+			"start": "开始备份 Mod",
+			"found_mods": "发现 {count} 个 mod 文件",
+			"copying": "正在备份 ({current}/{total}): {filename}",
+			"done": "备份完成，共 {count} 个文件"
 		}
 	},
 	"ui": {
@@ -531,6 +546,9 @@
 			"column_char_name": "角色名",
 			"column_target_crc": "目标CRC",
 			"column_actual_crc": "实际CRC"
+		},
+		"backup": {
+			"title": "备份 Mod"
 		},
 		"settings": {
 			"title": "设置",
