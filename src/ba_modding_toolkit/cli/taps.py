@@ -395,6 +395,28 @@ Examples:
         self._underscores_to_dashes = True
 
 
+class BackupTap(Tap):
+    """Backup命令的参数解析器 - 用于备份Mod文件。"""
+
+    output_dir: Path = Path('./output/backup/')  # Directory to save the backup files.
+    resource_dir: Path | None = None  # Path to the game resource directory.
+
+    def configure(self) -> None:
+        self.description = '''Backup all modded bundle files from the game directory.
+
+A "modded" bundle is recognized as one that has a trailing byte greater than 0.
+
+Examples:
+  # Backup with auto-detected game directory
+  bamt-cli backup
+
+  # Backup with custom paths
+  bamt-cli backup --resource-dir "C:\\path\\to\\game" --output-dir "C:\\backups"
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
+
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
@@ -410,4 +432,5 @@ class MainTap(BaseTap):
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
         self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
+        self.add_subparser('backup', BackupTap, help='Backup all modded bundle files.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
