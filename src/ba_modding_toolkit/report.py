@@ -4,6 +4,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Literal
 
 from .bundle import analyze_trailing, analyze_naming
 from .i18n import t
@@ -13,6 +14,8 @@ from .searching import list_bundle_files
 from .core import render_spine_preview_from_bundle
 from .utils import no_log
 
+
+ReportFormat = Literal['list', 'table']
 
 # 分类映射
 CATEGORY_MAP: dict[str, str] = {
@@ -59,6 +62,7 @@ def generate_mod_report(
     char_name_field: str = "full_name",
     enable_render: bool = False,
     viewer_path: Path | None = None,
+    report_format: ReportFormat = "list",
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[bool, str]:
@@ -72,6 +76,7 @@ def generate_mod_report(
         char_name_field: 角色名称字段
         enable_render: 是否生成 Spine 预览图
         viewer_path: SpineViewerCLI 路径
+        report_format: 报告格式（"list" 或 "table"）
         log: 日志函数
         progress_callback: 进度回调函数
 
@@ -202,7 +207,7 @@ def generate_mod_report(
         categories=categories,
     )
 
-    _write_report(report, output_path, enable_render, progress_callback)
+    _write_report(report, output_path, enable_render, report_format, progress_callback)
     log(f"✓ {t('log.report.saved', path=output_path)}")
 
     return True, t("log.report.success", count=len(entries))
@@ -251,9 +256,23 @@ def _write_report(
     report: ModReport,
     output_path: Path,
     enable_render: bool,
+    report_format: ReportFormat = "list",
     progress_callback: ProgressCallback | None = None,
 ) -> None:
-    """写入 Markdown 报告"""
+    """写入 Markdown 报告（格式分发器）"""
+    if report_format == "table":
+        _write_table_report(report, output_path, enable_render, progress_callback)
+    else:
+        _write_list_report(report, output_path, enable_render, progress_callback)
+
+
+def _write_list_report(
+    report: ModReport,
+    output_path: Path,
+    enable_render: bool,
+    progress_callback: ProgressCallback | None = None,
+) -> None:
+    """写入列表格式报告"""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # 统计总条目数用于进度
@@ -316,6 +335,158 @@ def _write_report(
             if progress_callback:
                 progress_callback(current_entry, total_entries, entry.prefix)
         lines.append("")
+
+    output_path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _write_table_report(
+    report: ModReport,
+    output_path: Path,
+    enable_render: bool,
+    progress_callback: ProgressCallback | None = None,
+) -> None:
+    """写入表格格式报告"""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 统计总条目数用于进度
+    total_entries = report.total_count
+    current_entry = 0
+
+    # 重置进度条
+    if progress_callback:
+        progress_callback(0, total_entries, "")
+
+    # 头部：标题 + 元信息
+    lines = [
+        "# Mod Report",
+        f"Generated: `{report.generated_time}`",
+        f"Scan Directory: `{report.game_dir}`",
+        f"Total Mods: {report.total_count}",
+        "",
+    ]
+
+    # 添加分类统计列表
+    for cat in OUTPUT_ORDER:
+        if cat in report.category_counts:
+            cat_name = CATEGORY_MAP.get(cat, "Other")
+            lines.append(f"- {cat_name}: {report.category_counts[cat]}")
+
+    # 其他不在 OUTPUT_ORDER 中的分类
+    for cat, count in report.category_counts.items():
+        if cat not in OUTPUT_ORDER:
+            cat_name = CATEGORY_MAP.get(cat, "Other")
+            lines.append(f"- {cat_name}: {count}")
+
+    lines.append("")  # 空行分隔
+
+    # 按 OUTPUT_ORDER 顺序输出详细列表
+    for cat in OUTPUT_ORDER:
+        if cat not in report.categories:
+            continue
+        entries = report.categories[cat]
+        cat_name = CATEGORY_MAP.get(cat, "Other")
+        lines.append(f"### {cat_name}")
+
+        # 判断是否需要预览图列（只对渲染类型）
+        has_render_category = cat in RENDER_CATEGORIES and enable_render
+
+        # 构建表头
+        header_cells = []
+        if entries and entries[0].char_name:
+            header_cells.append("name")
+        header_cells.extend(["core", "types"])
+        if has_render_category:
+            header_cells.append("preview")
+
+        # 添加表格头
+        lines.append("| " + " | ".join(header_cells) + " |")
+        lines.append("| " + " | ".join(["---"] * len(header_cells)) + " |")
+
+        # 添加表格行
+        for entry in entries:
+            cells = []
+            if entry.char_name:
+                cells.append(entry.char_name)
+
+            # core（需要转义表格中的竖线）
+            core_text = entry.core or ""
+            core_text = core_text.replace("|", "\\|")
+            cells.append(core_text)
+
+            # 版本号
+            res_text = ", ".join(entry.res_types) if entry.res_types else ""
+            cells.append(res_text)
+
+            # 预览图（仅在渲染类型且有渲染成功的条目中）
+            if has_render_category:
+                if entry.render_success:
+                    img_dir = output_path.stem
+                    img_name = entry.prefix.replace("/", "_").replace("\\", "_")
+                    cells.append(f"![]({img_dir}/{img_name}.png)")
+                else:
+                    cells.append("⚠️")
+
+            lines.append("| " + " | ".join(cells) + " |")
+
+            current_entry += 1
+            if progress_callback:
+                progress_callback(current_entry, total_entries, entry.prefix)
+
+        lines.append("")  # 空行分隔表格
+
+    # 处理不在输出顺序中的其他分类
+    for cat, entries in report.categories.items():
+        if cat in OUTPUT_ORDER:
+            continue
+        cat_name = CATEGORY_MAP.get(cat, "Other")
+        lines.append(f"### {cat_name}")
+
+        # 判断是否需要预览图列
+        has_render_category = cat in RENDER_CATEGORIES and enable_render
+
+        # 构建表头
+        header_cells = []
+        if entries and entries[0].char_name:
+            header_cells.append("name")
+        header_cells.extend(["core", "types"])
+        if has_render_category:
+            header_cells.append("preview")
+
+        # 添加表格头
+        lines.append("| " + " | ".join(header_cells) + " |")
+        lines.append("| " + " | ".join(["---"] * len(header_cells)) + " |")
+
+        # 添加表格行
+        for entry in entries:
+            cells = []
+            if entry.char_name:
+                cells.append(entry.char_name)
+
+            # core（需要转义表格中的竖线）
+            core_text = entry.core or ""
+            core_text = core_text.replace("|", "\\|")
+            cells.append(core_text)
+
+            # 版本号
+            res_text = ", ".join(entry.res_types) if entry.res_types else ""
+            cells.append(res_text)
+
+            # 预览图
+            if has_render_category:
+                if entry.render_success:
+                    img_dir = output_path.stem
+                    img_name = entry.prefix.replace("/", "_").replace("\\", "_")
+                    cells.append(f"![]({img_dir}/{img_name}.png)")
+                else:
+                    cells.append("⚠️")
+
+            lines.append("| " + " | ".join(cells) + " |")
+
+            current_entry += 1
+            if progress_callback:
+                progress_callback(current_entry, total_entries, entry.prefix)
+
+        lines.append("")  # 空行分隔表格
 
     output_path.write_text("\n".join(lines), encoding="utf-8")
 

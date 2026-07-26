@@ -109,6 +109,7 @@ class ConfigMixin:
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_spine_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+    report_format_var: Annotated[tk.StringVar, ConfigMeta("Tabs", "list")]
 
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]

@@ -369,6 +369,9 @@ class ReportTap(Tap):
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
     name_field: str = "full_name"  # Character name field to display.
 
+    # 报告格式参数
+    report_format: Literal['list', 'table'] = 'list'  # Report output format.
+
     def configure(self) -> None:
         self.description = '''Generate a report of all modded bundle files in the game directory.
 
@@ -379,8 +382,8 @@ Examples:
   # Generate report with auto-detected game directory
   bamt-cli report
 
-  # Specify game directory
-  bamt-cli report --resource-dir "C:\\path\\to\\game_data"
+  # Generate table format report
+  bamt-cli report --report-format table
 
   # Generate report with Spine preview images
   bamt-cli report --enable-render --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"

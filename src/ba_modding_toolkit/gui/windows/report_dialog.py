@@ -54,6 +54,18 @@ class ReportDialog(StoppableDialog):
             on_click_disabled=self._show_spine_viewer_not_configured
         )
 
+        # 报告格式选择
+        SettingRow.create_radiobutton_row(
+            options_frame,
+            label=t("option.report_format"),
+            text_var=self.app.report_format_var,
+            values=[
+                ("list", t("option.report_format_list")),
+                ("table", t("option.report_format_table"))
+            ],
+            tooltip=t("option.report_format_info")
+        )
+
         # 进度区域
         progress_frame = tb.Frame(main_frame)
         progress_frame.pack(fill=tk.X, pady=(0, 10))
@@ -147,6 +159,7 @@ class ReportDialog(StoppableDialog):
                 char_name_field=self.app.character_name_field_var.get(),
                 enable_render=enable_render,
                 viewer_path=viewer_path,
+                report_format=self.app.report_format_var.get(),
                 log=self.app.logger.log,
                 progress_callback=self._update_progress,
             )

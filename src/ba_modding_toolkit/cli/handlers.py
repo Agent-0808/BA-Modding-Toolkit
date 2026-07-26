@@ -846,6 +846,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         char_name_field=args.name_field,
         enable_render=args.enable_render,
         viewer_path=viewer_path,
+        report_format=args.report_format,
         log=logger.log,
         progress_callback=progress_callback,
     )
