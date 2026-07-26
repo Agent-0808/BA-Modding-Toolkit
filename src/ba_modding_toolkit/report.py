@@ -390,11 +390,14 @@ def _write_table_report(
         # 判断是否需要预览图列（只对渲染类型）
         has_render_category = cat in RENDER_CATEGORIES and enable_render
 
+        # 判断是否有角色名列（检查整个分类）
+        has_char_name_column = any(entry.char_name for entry in entries)
+
         # 构建表头
         header_cells = []
-        if entries and entries[0].char_name:
+        if has_char_name_column:
             header_cells.append("name")
-        header_cells.extend(["core", "types"])
+        header_cells.extend(["core", "type"])
         if has_render_category:
             header_cells.append("preview")
 
@@ -405,8 +408,10 @@ def _write_table_report(
         # 添加表格行
         for entry in entries:
             cells = []
-            if entry.char_name:
-                cells.append(entry.char_name)
+
+            # 名称列（即使没有角色名也要添加空单元格，保持列数一致）
+            if has_char_name_column:
+                cells.append(entry.char_name or "")
 
             # core（需要转义表格中的竖线）
             core_text = entry.core or ""
@@ -444,11 +449,14 @@ def _write_table_report(
         # 判断是否需要预览图列
         has_render_category = cat in RENDER_CATEGORIES and enable_render
 
+        # 判断是否有角色名列（检查整个分类）
+        has_char_name_column = any(entry.char_name for entry in entries)
+
         # 构建表头
         header_cells = []
-        if entries and entries[0].char_name:
+        if has_char_name_column:
             header_cells.append("name")
-        header_cells.extend(["core", "types"])
+        header_cells.extend(["core", "type"])
         if has_render_category:
             header_cells.append("preview")
 
