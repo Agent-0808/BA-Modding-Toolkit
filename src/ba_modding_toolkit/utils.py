@@ -55,21 +55,42 @@ def get_BA_path(region: str = "global") -> str | None:
     _ba_path_cache[region] = result
     return result
 
-def get_version() -> str:
-    """从 pyproject.toml 读取版本号"""
+def get_version_info() -> dict[str, str]:
+    """获取版本信息（包含 commit、branch、build time 等元数据）"""
+    info = {
+        "version": "",
+        "commit_hash": "",
+        "commit_hash_short": "",
+        "branch": "",
+        "tag": "",
+        "build_time": ""
+    }
     try:
-        from ba_modding_toolkit._version import __version__
-        print(__version__)
+        from ba_modding_toolkit._version import (
+            __version__, __commit_hash__, __commit_hash_short__,
+            __branch__, __tag__, __build_time__
+        )
+        info["version"] = __version__
+        info["commit_hash"] = __commit_hash__
+        info["commit_hash_short"] = __commit_hash_short__
+        info["branch"] = __branch__
+        info["tag"] = __tag__
+        info["build_time"] = __build_time__
     except ImportError:
         # 如果在本地开发环境没有这个文件，回退到读取 pyproject.toml
         try:
             import toml
             with open("pyproject.toml", 'r', encoding='utf-8') as f:
                 data = toml.load(f)
-                __version__ = data["project"]["version"] + "-dev"
+                info["version"] = data["project"]["version"] + "-dev"
         except:
-            __version__ = "0.0.0-dev"
-    return __version__
+            pass
+
+    for key in info:
+        if not info[key]:
+            info[key] = "N/A"
+
+    return info
 
 def no_log(message):
     """A dummy logger that does nothing."""
@@ -290,12 +311,6 @@ def get_environment_info(ignore_tk: bool = False):
     except (ValueError, TypeError):
         system_locale = "Could not determine"
 
-    try:
-        version = get_version()
-    except Exception as e:
-        print(e)
-        version = "Unknown"
-
     import platform
     import sys
 
@@ -318,7 +333,11 @@ def get_environment_info(ignore_tk: bool = False):
 
     # --- Available Languages ---
     lines.append("\n--- BA Modding Toolkit ---")
-    lines.append(f"Version:             {version}")
+    version_info = get_version_info()
+    lines.append(f"Version:             {version_info['version']}")
+    lines.append(f"Commit:              {version_info['commit_hash_short']}")
+    lines.append(f"Tag:                 {version_info['tag']}")
+    lines.append(f"Build Time:          {version_info['build_time']}")
     lines.append(f"Current Language:    {i18n_manager.lang}")
     lines.append(f"Available Languages: {', '.join(i18n_manager.get_available_languages())}")
 
@@ -340,13 +359,13 @@ def get_environment_info(ignore_tk: bool = False):
 
     # --- Library Versions ---
     lines.append("\n--- Library Versions ---")
-    lines.append(f"UnityPy Version:     {unitypy_version}")
-    lines.append(f"Pillow Version:      {pillow_version}")
-    lines.append(f"Tkinter Version:     {tk_version}")
-    lines.append(f"TkinterDnD2 Version: {tkinterdnd2_version}")
-    lines.append(f"ttkbootstrap Version:{tb_version}")
-    lines.append(f"toml Version:        {toml_version}")
-    lines.append(f"SpineAtlas Version:  {spineatlas_version}")
+    lines.append(f"UnityPy:             {unitypy_version}")
+    lines.append(f"Pillow:              {pillow_version}")
+    lines.append(f"Tkinter:             {tk_version}")
+    lines.append(f"TkinterDnD2:         {tkinterdnd2_version}")
+    lines.append(f"ttkbootstrap:        {tb_version}")
+    lines.append(f"toml:                {toml_version}")
+    lines.append(f"SpineAtlas:          {spineatlas_version}")
     
     lines.append("")
 
