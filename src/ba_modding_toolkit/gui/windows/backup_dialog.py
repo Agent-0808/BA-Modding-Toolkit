@@ -32,8 +32,8 @@ class BackupDialog(StoppableDialog):
 
     def _setup_window(self):
         """设置窗口基本属性"""
-        self.title(t("ui.backup.title"))
-        self.geometry("500x200")
+        self.title(t("ui.tools.backup.title"))
+        self.geometry("800x200")
         self.app.setup_icon(self)
         self.transient(self.master)
 

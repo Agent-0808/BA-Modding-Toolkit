@@ -43,7 +43,7 @@ class AbnormalCheckDialog(StoppableDialog):
 
     def _setup_window(self):
         """设置窗口基本属性"""
-        self.title(t("ui.abnormal_check.title"))
+        self.title(t("ui.tools.abnormal_check.title"))
         self.geometry("1200x400")
         self.app.setup_icon(self)
         self.transient(self.master)
@@ -65,15 +65,15 @@ class AbnormalCheckDialog(StoppableDialog):
         self.progress_bar.pack(fill=tk.X)
 
         # 结果列表区域
-        list_frame = tb.Labelframe(main_frame, text=t("ui.abnormal_check.result_list"), padding=10)
+        list_frame = tb.Labelframe(main_frame, text=t("ui.tools.abnormal_check.result_list"), padding=10)
         list_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
         # Tableview
         coldata = [
-            {"text": t("ui.abnormal_check.column_filename"), "width": 700, "stretch": True},
-            {"text": t("ui.abnormal_check.column_char_name"), "width": 200, "stretch": True},
-            {"text": t("ui.abnormal_check.column_target_crc"), "width": 100, "stretch": False},
-            {"text": t("ui.abnormal_check.column_actual_crc"), "width": 100, "stretch": False},
+            {"text": t("ui.tools.abnormal_check.column_filename"), "width": 700, "stretch": True},
+            {"text": t("ui.tools.abnormal_check.column_char_name"), "width": 200, "stretch": True},
+            {"text": t("ui.tools.abnormal_check.column_target_crc"), "width": 100, "stretch": False},
+            {"text": t("ui.tools.abnormal_check.column_actual_crc"), "width": 100, "stretch": False},
         ]
 
         colors = tb.Style().colors

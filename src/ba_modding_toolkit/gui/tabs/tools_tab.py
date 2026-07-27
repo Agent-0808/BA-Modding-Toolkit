@@ -20,13 +20,16 @@ class ToolsTab(TabFrame):
 
     def create_widgets(self):
         # 工具按钮区域
-        button_frame = tb.Frame(self)
-        button_frame.pack(anchor=tk.CENTER, fill=tk.BOTH, expand=True)
+        batch_tools_frame = tb.Labelframe(self, text=t("ui.tools.batch_tools"))
+        batch_tools_frame.pack(anchor=tk.CENTER, fill=tk.X)
+
+        button_frame = tb.Frame(batch_tools_frame)
+        button_frame.pack(anchor=tk.CENTER, fill=tk.BOTH, expand=True, padx=30)
 
         # Mod 报告按钮
         report_btn = UIComponents.create_button(
             button_frame,
-            text=t("ui.report.title"),
+            text=t("ui.tools.report.title"),
             command=self._open_report_dialog,
             bootstyle="primary",
         )
@@ -35,7 +38,7 @@ class ToolsTab(TabFrame):
         # 修复不正常的用户端按钮
         abnormal_btn = UIComponents.create_button(
             button_frame,
-            text=t("ui.abnormal_check.title"),
+            text=t("ui.tools.abnormal_check.title"),
             command=self._open_abnormal_check_dialog,
             bootstyle="warning",
         )
@@ -44,7 +47,7 @@ class ToolsTab(TabFrame):
         # 备份 Mod 按钮
         backup_btn = UIComponents.create_button(
             button_frame,
-            text=t("ui.backup.title"),
+            text=t("ui.tools.backup.title"),
             command=self._open_backup_dialog,
             bootstyle="info",
         )

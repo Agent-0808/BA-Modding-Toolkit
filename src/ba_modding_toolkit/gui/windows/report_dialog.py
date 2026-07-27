@@ -30,8 +30,8 @@ class ReportDialog(StoppableDialog):
 
     def _setup_window(self):
         """设置窗口基本属性"""
-        self.title(t("ui.report.title"))
-        self.geometry("500x250")
+        self.title(t("ui.tools.report.title"))
+        self.geometry("800x300")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -79,7 +79,7 @@ class ReportDialog(StoppableDialog):
 
         # 按钮区域
         button_frame = tb.Frame(main_frame)
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
 
         # 生成按钮
         generate_btn = UIComponents.create_button(

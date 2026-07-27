@@ -536,19 +536,22 @@
 			"adb_push": "ADB 文件推送",
 			"tools": "工具"
 		},
-		"report": {
-			"title": "生成 Mod 报告"
-		},
-		"abnormal_check": {
-			"title": "修复\"不正常的用户端\"",
-			"result_list": "检测结果",
-			"column_filename": "文件名",
-			"column_char_name": "角色名",
-			"column_target_crc": "目标CRC",
-			"column_actual_crc": "实际CRC"
-		},
-		"backup": {
-			"title": "备份 Mod"
+		"tools": {
+			"batch_tools": "批量工具",
+			"report": {
+				"title": "生成 Mod 报告"
+			},
+			"abnormal_check": {
+				"title": "修复\"不正常的用户端\"",
+				"result_list": "检测结果",
+				"column_filename": "文件名",
+				"column_char_name": "角色名",
+				"column_target_crc": "目标CRC",
+				"column_actual_crc": "实际CRC"
+			},
+			"backup": {
+				"title": "备份 Mod"
+			}
 		},
 		"settings": {
 			"title": "设置",
