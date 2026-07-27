@@ -14,7 +14,8 @@
 		"fail": "失败",
 		"result": "结果",
 		"unknown": "未知",
-		"auto": "自动"
+		"auto": "自动",
+		"options": "选项"
 	},
 	"action": {
 		"browse": "浏览",
@@ -50,7 +51,10 @@
 		"render_preview": "渲染预览图",
 		"cache_to_local": "缓存到本地",
 		"detect": "检测",
-		"clear_cache": "清理缓存"
+		"clear_cache": "清理缓存",
+		"generate": "生成",
+		"fix_all": "修复全部",
+		"start_backup": "开始备份"
 	},
 	"option": {
 		"file_source": "文件来源",
@@ -113,6 +117,12 @@
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
+		"enable_spine_preview": "生成 Spine 预览图",
+		"enable_spine_preview_info": "为 Spine 资源生成预览图（需要配置 SpineViewerCLI 路径）",
+		"report_format": "报告格式",
+		"report_format_info": "选择报告的输出格式：\n- 列表式：每项一行，适合快速浏览\n- 表格式：Markdown 表格，适合渲染预览图的情况下使用",
+		"report_format_list": "列表式",
+		"report_format_table": "表格式",
 		"max_workers": "并行线程数",
 		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
 		"character_id_map": "角色ID映射表",
@@ -122,7 +132,9 @@
 		"adb_path": "ADB 路径",
 		"adb_path_info": "adb.exe 的完整路径，或 \"adb\" 使用系统环境变量",
 		"adb_cache_dir": "缓存路径",
-		"adb_cache_dir_info": "ADB 文件的本地缓存目录"
+		"adb_cache_dir_info": "ADB 文件的本地缓存目录",
+		"backup_path": "备份路径",
+		"backup_path_info": "选择备份文件的保存目录"
 	},
 	"file_type": {
 		"executable": "可执行文件",
@@ -188,6 +200,7 @@
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
 		"spine": {},
+		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
@@ -237,7 +250,19 @@
 			"no_local_files": "请先选择要推送的本地文件",
 			"no_target_dir": "请填写目标目录",
 			"push_summary": "推送完成：成功 {success} 个，失败 {fail} 个"
-		}
+		},
+		"abnormal_check": {
+			"no_mismatch": "未发现CRC不匹配的文件",
+			"confirm_fix": "确定修复 {count} 个文件的CRC值？",
+			"fix_complete": "修复完成"
+		},
+		"backup": {
+			"path_required": "请先选择备份路径",
+			"clear_confirm": "备份目录已存在，是否清空后重新备份？",
+			"open_prompt": "备份完成，共备份 {count} 个 Mod 文件。\n是否打开备份目录？",
+			"no_mod_found": "未发现 mod 文件"
+		},
+		"task_running_close_confirm": "任务正在运行中，关闭窗口将停止任务。\n\n确定要关闭窗口吗？"
 	},
 	"status": {
 		"ready": "准备就绪",
@@ -344,6 +369,23 @@
 			"file_crc32": "文件的 CRC32 值： {crc}",
 			"modified_file_crc32": "待修正文件 CRC32：{crc}",
 			"original_file_crc32": "原始文件　 CRC32：{crc}"
+		},
+		"report": {
+			"title": "Mod 报告",
+			"generated": "生成时间",
+			"scan_dir": "扫描目录",
+			"total_mods": "总Mod数",
+			"scan_start": "开始扫描",
+			"analyze_trailing": "分析尾部字节",
+			"bundle_count": "扫描到 {count} 个 bundle 文件",
+			"mod_count": "发现 {count} 个 mod 文件",
+			"render_preview": "渲染预览图",
+			"render_retry": "Mod 内容未包含完整资源，尝试包含原始文件: {prefix}",
+			"render_count": "渲染完成，共 {count} 个",
+			"no_bundle_found": "未找到 bundle 文件",
+			"no_mod_found": "未找到 mod 文件",
+			"saved": "报告已保存至: {path}",
+			"success": "报告生成成功，共 {count} 个 Mod"
 		},
 		"section": {
 			"extract_to_temp": "提取资源到临时目录",
@@ -464,6 +506,20 @@
 			"cache_caching": "正在缓存 {count} 个文件到本地...",
 			"cache_delete_failed": "删除缓存文件 {name} 失败: {error}",
 			"push_start_batch": "开始推送 {count} 个文件到 {dir}"
+		},
+		"abnormal_check": {
+			"found_count": "发现 {count} 个CRC不匹配的文件",
+			"fixing": "正在修复: {filename}",
+			"fix_success": "修复成功: {filename}",
+			"fix_failed": "修复失败: {filename}",
+			"fix_verify_failed": "修复验证失败: {filename}",
+			"fix_error": "修复 {filename} 时发生错误: {error}"
+		},
+		"backup": {
+			"start": "开始备份 Mod",
+			"found_mods": "发现 {count} 个 mod 文件",
+			"copying": "正在备份 ({current}/{total}): {filename}",
+			"done": "备份完成，共 {count} 个文件"
 		}
 	},
 	"ui": {
@@ -477,7 +533,25 @@
 			"legacy_conversion": "旧版/新版转换",
 			"batch_legacy": "批量处理旧版",
 			"file_list": "文件列表",
-			"adb_push": "ADB 文件推送"
+			"adb_push": "ADB 文件推送",
+			"tools": "工具"
+		},
+		"tools": {
+			"batch_tools": "批量工具",
+			"report": {
+				"title": "生成 Mod 报告"
+			},
+			"abnormal_check": {
+				"title": "修复\"不正常的用户端\"",
+				"result_list": "检测结果",
+				"column_filename": "文件名",
+				"column_char_name": "角色名",
+				"column_target_crc": "目标CRC",
+				"column_actual_crc": "实际CRC"
+			},
+			"backup": {
+				"title": "备份 Mod"
+			}
 		},
 		"settings": {
 			"title": "设置",

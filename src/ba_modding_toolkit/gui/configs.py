@@ -49,6 +49,10 @@ def _get_default_adb_cache_dir() -> str:
     """获取默认ADB缓存目录"""
     return str(Path.cwd() / "adb_cache")
 
+def _get_default_backup_dir() -> str:
+    """获取默认备份目录"""
+    return str(Path.cwd() / "output" / "backup")
+
 
 def _get_default_android_global_dir() -> str:
     """获取默认 Android 国际服目录"""
@@ -100,6 +104,9 @@ class ConfigMixin:
     # SpineViewer
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
 
+    # Mod Backup
+    mod_backup_path_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_backup_dir)]
+
     # CharacterMap
     bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "")]
     character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
@@ -108,6 +115,8 @@ class ConfigMixin:
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+    enable_spine_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+    report_format_var: Annotated[tk.StringVar, ConfigMeta("Tabs", "list")]
 
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]

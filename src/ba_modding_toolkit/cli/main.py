@@ -11,6 +11,8 @@ from .handlers import (
     handle_merge,
     handle_batch_update,
     handle_batch_legacy,
+    handle_report,
+    handle_backup,
 )
 
 # --- 命令映射 ---
@@ -25,6 +27,8 @@ COMMAND_HANDLERS = {
     'merge': handle_merge,
     'split': handle_split,
     'batch-legacy': handle_batch_legacy,
+    'report': handle_report,
+    'backup': handle_backup,
 }
 
 def main() -> None:

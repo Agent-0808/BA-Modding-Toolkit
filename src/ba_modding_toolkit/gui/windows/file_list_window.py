@@ -21,6 +21,7 @@ from ...models import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
 from ..utils import open_directory, select_directory
+from .base import StoppableDialog
 
 if TYPE_CHECKING:
     from ..app import App
@@ -232,7 +233,7 @@ class BatchSelectDialog(tb.Toplevel):
         return self._result
 
 
-class FileListWindow(tb.Toplevel):
+class FileListWindow(StoppableDialog):
     """文件列表独立窗口，展示搜索目录下所有 bundle 文件的信息"""
 
     def __init__(self, master: tk.Tk, app: "App"):
@@ -241,7 +242,6 @@ class FileListWindow(tb.Toplevel):
 
         self._all_items: list[BundleFileInfo] = []
         self._items_by_path: dict[str, BundleFileInfo] = {}
-        self._closed: bool = False
         self._scan_version: int = 0  # 扫描版本号，用于丢弃过期的扫描结果
 
         self.ctx_list: list[tuple[str, Callable[[], None]]] = [
@@ -256,8 +256,6 @@ class FileListWindow(tb.Toplevel):
         self._create_toolbar()
         self._create_status_bar()
         self._create_tableview()
-
-        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.after(100, self._refresh)
 
@@ -551,7 +549,7 @@ class FileListWindow(tb.Toplevel):
 
         def _scan():
             items = list_bundle_files(base_dir)
-            if not self._closed and self._scan_version == current_version:
+            if not self.should_stop() and self.winfo_exists() and self._scan_version == current_version:
                 self.after(0, lambda: self._on_scan_complete(items))
 
         thread = threading.Thread(target=_scan, daemon=True)
@@ -576,7 +574,7 @@ class FileListWindow(tb.Toplevel):
             # 先刷新索引
             adb_source.refresh_index(log=self.app.logger.log)
             items = list_bundle_files_remote(adb_source, log=self.app.logger.log)
-            if not self._closed and self._scan_version == current_version:
+            if not self.should_stop() and self.winfo_exists() and self._scan_version == current_version:
                 self.after(0, lambda: self._on_scan_complete(items))
 
         thread = threading.Thread(target=_scan, daemon=True)
@@ -597,20 +595,20 @@ class FileListWindow(tb.Toplevel):
         self._progress["value"] = 0
 
         def _on_progress(done: int, total: int, filename: str):
-            if self._closed:
+            if self.should_stop() or not self.winfo_exists():
                 return
             self.after(0, lambda: self._update_progress(done, total, filename))
 
         def _run():
             analyze_bundles(self._all_items, analyzer_names, progress_callback=_on_progress)
-            if not self._closed:
+            if not self.should_stop() and self.winfo_exists():
                 self.after(0, self._on_analyze_complete)
 
         thread = threading.Thread(target=_run, daemon=True)
         thread.start()
 
     def _update_progress(self, done: int, total: int, filename: str):
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
         if total > 0:
             self._progress["value"] = done / total * 100
@@ -669,7 +667,7 @@ class FileListWindow(tb.Toplevel):
         ]
 
     def _on_scan_complete(self, items: list[BundleFileInfo]):
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
         self._progress["value"] = 0
         self._status_label.config(text=t("ui.file_list.scan_complete"))
@@ -685,7 +683,7 @@ class FileListWindow(tb.Toplevel):
         self.app.logger.log(t("ui.file_list.scan_complete"))
 
     def _on_analyze_complete(self):
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
         self._progress["value"] = 0
         self._status_label.config(text=t("ui.file_list.analyze_complete"))
@@ -846,20 +844,20 @@ class FileListWindow(tb.Toplevel):
         self._progress["value"] = 0
 
         def _on_progress(done: int, total: int, filename: str):
-            if self._closed:
+            if self.should_stop() or not self.winfo_exists():
                 return
             self.after(0, lambda: self._update_progress(done, total, filename))
 
         def _run():
             analyze_bundles(items, ["trailing", "naming", "crc"], progress_callback=_on_progress)
-            if not self._closed:
+            if not self.should_stop() and self.winfo_exists():
                 self.after(0, self._ctx_analyze_complete)
 
         thread = threading.Thread(target=_run, daemon=True)
         thread.start()
 
     def _ctx_analyze_complete(self):
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
         self._progress["value"] = 0
         self._status_label.config(text=t("ui.file_list.analyze_complete"))
@@ -980,7 +978,7 @@ class FileListWindow(tb.Toplevel):
                 viewer_path=viewer_path,
                 log=self.app.logger.log
             )
-            if not self._closed:
+            if not self.should_stop() and self.winfo_exists():
                 self.after(0, lambda: self._on_render_preview_complete(success, message))
 
         thread = threading.Thread(target=_run, daemon=True)
@@ -1012,7 +1010,7 @@ class FileListWindow(tb.Toplevel):
             fail_count = 0
             success_count = 0
             for i, item in enumerate(adb_items):
-                if self._closed:
+                if self.should_stop() or not self.winfo_exists():
                     return
                 if item.local_cache_path is None:
                     try:
@@ -1026,10 +1024,10 @@ class FileListWindow(tb.Toplevel):
                         ))
                 else:
                     success_count += 1
-                if not self._closed:
+                if not self.should_stop() and self.winfo_exists():
                     self.after(0, lambda i=i: self._update_progress(i + 1, total, item.path.name))
 
-            if not self._closed:
+            if not self.should_stop() and self.winfo_exists():
                 self.after(0, lambda: self._on_cache_complete(success_count, fail_count))
 
         thread = threading.Thread(target=_run, daemon=True)
@@ -1037,7 +1035,7 @@ class FileListWindow(tb.Toplevel):
 
     def _on_cache_complete(self, success_count: int = 0, fail_count: int = 0):
         """缓存完成回调"""
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
         self._progress["value"] = 0
         msg = t("message.adb.cache_complete", success=success_count, fail=fail_count)
@@ -1046,7 +1044,7 @@ class FileListWindow(tb.Toplevel):
 
     def _on_render_preview_complete(self, success: bool, message: str):
         """渲染预览图完成"""
-        if self._closed:
+        if self.should_stop() or not self.winfo_exists():
             return
 
         self._progress["value"] = 0
@@ -1060,7 +1058,7 @@ class FileListWindow(tb.Toplevel):
     # -------- 生命周期 --------
 
     def _on_close(self):
-        self._closed = True
+        """重写关闭方法以清理窗口引用"""
         if hasattr(self.app, '_file_list_window'):
             self.app._file_list_window = None
-        self.destroy()
+        super()._on_close()

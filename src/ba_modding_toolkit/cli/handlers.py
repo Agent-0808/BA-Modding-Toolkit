@@ -4,8 +4,8 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap
-from ..searching import find_target_bundles, search_prefix
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, SplitTap, MergeTap, BatchUpdateTap, BatchLegacyTap, ReportTap, BackupTap
+from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     SaveOptions,
     SpineOptions,
@@ -20,7 +20,9 @@ from ..core import (
 from ..models import SaveOptions, SpineOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
-from ..naming import parse_filename
+from ..naming import parse_filename, CharacterInternalIDMap
+from ..bundle import analyze_trailing
+from ..report import generate_mod_report
 
 class Logger:
     """日志记录器基类。"""
@@ -779,3 +781,157 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"✅ Operation Successful: {message}")
     else:
         logger.log(f"❌ Operation Failed: {message}")
+
+
+def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'report' 命令的逻辑。"""
+    from datetime import datetime
+
+    logger.log("--- Start Mod Report Generation ---")
+
+    # 确定游戏目录
+    resource_dir = args.resource_dir or get_BA_path()
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确定输出路径
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_path = output_dir / f"mod_report_{timestamp}.md"
+
+    logger.log(f"Game directory: {game_dir}")
+    logger.log(f"Output path: {output_path}")
+
+    # 加载角色名称映射
+    char_map = None
+    if args.bacii_path:
+        bacii_path = Path(args.bacii_path)
+        if bacii_path.exists():
+            char_map = CharacterInternalIDMap()
+            if char_map.load(bacii_path):
+                logger.log(f"Loaded character mapping from: {bacii_path}")
+            else:
+                logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
+                char_map = None
+
+    # 验证 Spine 渲染器路径
+    viewer_path = None
+    if args.enable_render:
+        if not args.spine_viewer_path:
+            logger.log("❌ Error: --spine-viewer-path is required when --enable-render is set.")
+            return
+        viewer_path = Path(args.spine_viewer_path)
+        if not viewer_path.exists():
+            logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+            return
+        logger.log(f"Spine rendering enabled: {viewer_path}")
+
+    # 进度回调
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Analyzing: {filename}"
+    )
+
+    # 调用核心处理函数
+    success, message = generate_mod_report(
+        game_dir=game_dir,
+        output_path=output_path,
+        char_map=char_map,
+        char_name_field=args.name_field,
+        enable_render=args.enable_render,
+        viewer_path=viewer_path,
+        report_format=args.report_format,
+        log=logger.log,
+        progress_callback=progress_callback,
+    )
+
+    logger.log("\n" + "="*50)
+    if success:
+        logger.log(f"✅ Report Generated: {message}")
+        logger.log(f"   Output: {output_path}")
+    else:
+        logger.log(f"❌ Report Generation Failed: {message}")
+
+
+def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'backup' 命令的逻辑。"""
+    logger.log("--- Start Mod Backup ---")
+
+    # 确定游戏目录
+    resource_dir = args.resource_dir or get_BA_path()
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确定备份目录
+    backup_dir = Path(args.output_dir)
+
+    logger.log(f"Game directory: {game_dir}")
+    logger.log(f"Backup directory: {backup_dir}")
+
+    # 1. 扫描 bundle 文件
+    logger.log("Scanning for bundle files...")
+    items = list_bundle_files(game_dir)
+    if not items:
+        logger.log("❌ No bundle files found.")
+        return
+
+    logger.log(f"Found {len(items)} bundle file(s).")
+
+    # 2. 分析尾部字节，过滤 mod 文件
+    logger.log("Analyzing trailing bytes...")
+    mod_files: list[Path] = []
+    total = len(items)
+    for i, item in enumerate(items):
+        analyze_trailing(item)
+        if item.trailing_bytes and item.trailing_bytes > 0:
+            mod_files.append(item.path)
+        logger.log(f"  [{i + 1}/{total}] {item.path.name}")
+
+    if not mod_files:
+        logger.log("❌ No modded files found.")
+        return
+
+    logger.log(f"Found {len(mod_files)} modded file(s).")
+
+    # 3. 创建备份目录
+    if backup_dir.exists():
+        if not args.yes:
+            logger.log(f"⚠️  Backup directory already exists: {backup_dir.resolve()}")
+            logger.log("    Clearing it will DELETE all existing files in that directory.")
+            answer = input('    Type "YES" or "Y" to confirm: ').strip()
+            if answer not in ("YES", "Y", "yes", "y"):
+                logger.log("❌ Operation cancelled.")
+                return
+        logger.log(f"Clearing existing backup directory: {backup_dir.resolve()}")
+        shutil.rmtree(backup_dir)
+    backup_dir.mkdir(parents=True)
+
+    # 4. 复制 mod 文件到备份目录
+    logger.log("Copying mod files...")
+    mod_total = len(mod_files)
+    for i, source_path in enumerate(mod_files):
+        try:
+            rel_path = source_path.relative_to(game_dir)
+        except ValueError:
+            rel_path = Path(source_path.name)
+
+        dest_path = backup_dir / rel_path
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, dest_path)
+        logger.log(f"  [{i + 1}/{mod_total}] {rel_path}")
+
+    logger.log("\n" + "="*50)
+    logger.log(f"✅ Backup complete: {mod_total} file(s) saved to {backup_dir.resolve()}")
