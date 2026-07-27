@@ -908,7 +908,14 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 3. 创建备份目录
     if backup_dir.exists():
-        logger.log(f"Clearing existing backup directory: {backup_dir}")
+        if not args.yes:
+            logger.log(f"⚠️  Backup directory already exists: {backup_dir.resolve()}")
+            logger.log("    Clearing it will DELETE all existing files in that directory.")
+            answer = input('    Type "YES" or "Y" to confirm: ').strip()
+            if answer not in ("YES", "Y", "yes", "y"):
+                logger.log("❌ Operation cancelled.")
+                return
+        logger.log(f"Clearing existing backup directory: {backup_dir.resolve()}")
         shutil.rmtree(backup_dir)
     backup_dir.mkdir(parents=True)
 
@@ -927,4 +934,4 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"  [{i + 1}/{mod_total}] {rel_path}")
 
     logger.log("\n" + "="*50)
-    logger.log(f"✅ Backup complete: {mod_total} file(s) saved to {backup_dir}")
+    logger.log(f"✅ Backup complete: {mod_total} file(s) saved to {backup_dir.resolve()}")

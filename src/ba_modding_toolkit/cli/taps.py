@@ -400,11 +400,13 @@ class BackupTap(Tap):
 
     output_dir: Path = Path('./output/backup/')  # Directory to save the backup files.
     resource_dir: Path | None = None  # Path to the game resource directory.
+    yes: bool = False  # Automatically confirm clearing the existing backup directory.
 
     def configure(self) -> None:
         self.description = '''Backup all modded bundle files from the game directory.
 
-A "modded" bundle is recognized as one that has a trailing byte greater than 0.
+Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
+      For a game version that CRC check is unnecessary, modded bundles may not be recognized.
 
 Examples:
   # Backup with auto-detected game directory
@@ -412,6 +414,9 @@ Examples:
 
   # Backup with custom paths
   bamt-cli backup --resource-dir "C:\\path\\to\\game" --output-dir "C:\\backups"
+
+  # Auto-confirm clearing existing backup directory
+  bamt-cli backup --yes
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
