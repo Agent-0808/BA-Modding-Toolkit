@@ -7,10 +7,7 @@ from .handlers import (
     handle_crc,
     handle_env,
     handle_extract,
-    handle_split,
-    handle_merge,
     handle_batch_update,
-    handle_batch_legacy,
     handle_report,
     handle_backup,
 )
@@ -24,9 +21,6 @@ COMMAND_HANDLERS = {
     'crc': handle_crc,
     'env': handle_env,
     'extract': handle_extract,
-    'merge': handle_merge,
-    'split': handle_split,
-    'batch-legacy': handle_batch_legacy,
     'report': handle_report,
     'backup': handle_backup,
 }

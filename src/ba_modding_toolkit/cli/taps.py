@@ -183,93 +183,6 @@ class EnvTap(Tap):
     def configure(self) -> None:
         self.description = 'Display system information and library versions of the current environment.'
 
-
-class SplitTap(Tap):
-    """Split命令的参数解析器 - 将legacy bundle资源拆分到多个modern bundle中。"""
-
-    # 基本参数
-    legacy: Positional[Path]  # Path to the legacy bundle file (source of assets).
-    output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
-
-    # Modern files输入方式（二选一）
-    modern_files: list[Path] | None = None  # One or more modern bundle file paths.
-    resource_dir: Path | None = None  # Directory containing modern bundle files (auto-search by filename prefix).
-
-    # 资源与保存参数
-    no_crc: bool = False  # Disable CRC fix function.
-    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
-
-    def configure(self) -> None:
-        self.description = '''Split assets from legacy bundle into multiple modern bundles.
-
-This command extracts assets from the legacy bundle and distributes them to matching
-assets in the modern bundle files (one-to-many conversion).
-
-Examples:
-  # Use directory auto-search for modern files
-  bamt-cli split "legacy.bundle" --resource-dir "C:\\path\\to\\modern_files\\"
-
-  # Specify multiple modern files directly
-  bamt-cli split "legacy.bundle" --modern-files "sep1.bundle" "sep2.bundle" "sep3.bundle"
-
-  # Specify output directory
-  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --output-dir "./output/"
-
-  # Disable CRC fixing
-  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --no-crc
-
-  # Specify asset types
-  bamt-cli split "legacy.bundle" --resource-dir "./modern/" --asset-types Texture2D TextAsset
-'''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
-
-
-class MergeTap(Tap):
-    """Merge命令的参数解析器 - 将多个modern bundle资源合并到legacy bundle中。"""
-
-    # 基本参数
-    legacy: Positional[Path]  # Path to the legacy bundle file (to be modified).
-    output_dir: Path = Path('./output/')  # Directory to save the merged bundle file.
-
-    # Modern files输入方式（二选一）
-    modern_files: list[Path] | None = None  # One or more modern bundle file paths.
-    resource_dir: Path | None = None  # Directory containing modern bundle files (auto-search by filename prefix).
-
-    # 资源与保存参数
-    no_crc: bool = False  # Disable CRC fix function.
-    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
-
-    def configure(self) -> None:
-        self.description = '''Merge assets from multiple modern bundles into legacy bundle.
-
-This command extracts assets from modern bundle files and merges them into
-the legacy bundle file (many-to-one conversion).
-
-Examples:
-  # Use directory auto-search for modern files
-  bamt-cli merge "legacy.bundle" --resource-dir "C:\\path\\to\\modern_files\\"
-
-  # Specify multiple modern files directly
-  bamt-cli merge "legacy.bundle" --modern-files "mod1.bundle" "mod2.bundle"
-
-  # Specify output directory
-  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --output-dir "./output/"
-
-  # Disable CRC fixing
-  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --no-crc
-
-  # Specify asset types
-  bamt-cli merge "legacy.bundle" --resource-dir "./modern/" --asset-types Texture2D TextAsset
-'''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
-
-
 class BatchUpdateTap(Tap):
     """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
 
@@ -316,41 +229,6 @@ Examples:
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
 
-
-class BatchLegacyTap(Tap):
-    """Batch-legacy命令的参数解析器 - 用于批量将旧版国际服文件转换为新版。"""
-
-    # 基本参数
-    input_dir: Positional[Path]  # Directory containing legacy bundle files to convert.
-    output_dir: Path = Path('./output/')  # Directory to save the converted bundle files.
-
-    # 搜索目录参数
-    resource_dir: Path | None = None  # Path to the game resource directory for searching modern bundles.
-
-    # 资源与保存参数
-    no_crc: bool = False  # Disable CRC fix function.
-    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
-
-    def configure(self) -> None:
-        self.description = '''Batch convert legacy (old) Global server bundles to modern format.
-
-This command scans the input directory for .bundle files, automatically finds corresponding
-modern Global server bundles in the resource directory, and converts them all in batch.
-
-Examples:
-  # Batch convert all legacy bundles in a directory
-  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\"
-
-  # Specify resource directory for auto-search
-  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\" --resource-dir "C:\\game\\resources"
-
-  # Disable CRC fixing
-  bamt-cli batch-legacy "C:\\path\\to\\legacy_mods\\" --no-crc
-'''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 class ReportTap(Tap):
     """Report命令的参数解析器 - 用于生成Mod列表报告。"""
@@ -430,9 +308,6 @@ class MainTap(BaseTap):
         self.add_subparsers(dest='command', help='Available commands')
         self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
         self.add_subparser('batch-update', BatchUpdateTap, help='Batch update multiple Mod files from an input directory.')
-        self.add_subparser('merge', MergeTap, help='Merge assets from multiple reference bundles into base bundle (many-to-one).')
-        self.add_subparser('split', SplitTap, help='Split assets from base bundle into multiple reference bundles (one-to-many).')
-        self.add_subparser('batch-legacy', BatchLegacyTap, help='Batch convert legacy Global bundles to modern format (batch process for split).')
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')

@@ -528,11 +528,9 @@ class App(tb.Frame, ConfigMixin):
         # 创建Tab页面
         mod_update_tab = ModUpdateTab(self.content_frame, self)
         batch_update_tab = BatchUpdateTab(self.content_frame, self)
-        batch_legacy_tab = BatchLegacyTab(self.content_frame, self)
         crc_tool_tab = CrcToolTab(self.content_frame, self)
         asset_packer_tab = AssetPackerTab(self.content_frame, self)
         asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
-        legacy_conversion_tab = LegacyConversionTab(self.content_frame, self)
         adb_push_tab = AdbPushTab(self.content_frame, self)
         tools_tab = ToolsTab(self.content_frame, self)
 
@@ -542,8 +540,6 @@ class App(tb.Frame, ConfigMixin):
             (crc_tool_tab, t("ui.tabs.crc_tool")),
             (asset_packer_tab, t("ui.tabs.asset_packer")),
             (asset_extractor_tab, t("ui.tabs.asset_extractor")),
-            (legacy_conversion_tab, t("ui.tabs.legacy_conversion")),
-            (batch_legacy_tab, t("ui.tabs.batch_legacy")),
             (adb_push_tab, t("ui.tabs.adb_push")),
             (tools_tab, t("ui.tabs.tools")),
         ])
