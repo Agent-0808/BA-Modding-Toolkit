@@ -88,7 +88,7 @@ def generate_mod_report(
     # 1. 扫描 bundle 文件
     items = list_bundle_files(game_dir)
     if not items:
-        msg = t("log.report.no_bundle_found")
+        msg = t("message.no_bundle_found")
         log(f"⚠️ {msg}")
         return False, msg
 

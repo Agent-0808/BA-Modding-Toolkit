@@ -165,7 +165,7 @@ class AbnormalCheckDialog(StoppableDialog):
         # 1. 扫描 bundle 文件
         items = list_bundle_files(game_dir)
         if not items:
-            self.after(0, lambda: self.app.logger.status(t("log.report.no_bundle_found")))
+            self.after(0, lambda: self.app.logger.status(t("message.no_bundle_found")))
             return
 
         # 2. 分析每个文件

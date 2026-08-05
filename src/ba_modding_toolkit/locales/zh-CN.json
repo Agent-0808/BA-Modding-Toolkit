@@ -156,6 +156,7 @@
 		"dir_not_found_create": "目录不存在:\n{path}\n\n是否要创建它？",
 		"path_invalid": "路径无效: {path}",
 		"no_file_selected": "未选择文件。",
+		"no_bundle_found": "未找到 bundle 文件",
 		"list_empty": "列表为空，请先添加项目。",
 		"drop_single_file": "请一次只拖放一个文件。",
 		"missing_paths": "请确保已设置所有必要的路径",
@@ -167,7 +168,6 @@
 		"open_manually": "请手动打开目录：{path}",
 		"invalid_operation": "操作无效",
 		"execution_error": "执行过程中发生错误:\n{error}",
-		"create_dir_failed_detail": "无法创建目录:\n{path}\n\n错误详情: {error}",
 		"output_dir_not_set": "未设置输出目录，请先在设置中配置输出目录。",
 		"save_success": "文件保存成功。",
 		"same_file": "两个路径一致！",
@@ -362,10 +362,6 @@
 			"original_file_crc32": "原始文件　 CRC32：{crc}"
 		},
 		"report": {
-			"title": "Mod 报告",
-			"generated": "生成时间",
-			"scan_dir": "扫描目录",
-			"total_mods": "总Mod数",
 			"scan_start": "开始扫描",
 			"analyze_trailing": "分析尾部字节",
 			"bundle_count": "扫描到 {count} 个 bundle 文件",
@@ -373,7 +369,6 @@
 			"render_preview": "渲染预览图",
 			"render_retry": "Mod 内容未包含完整资源，尝试包含原始文件: {prefix}",
 			"render_count": "渲染完成，共 {count} 个",
-			"no_bundle_found": "未找到 bundle 文件",
 			"no_mod_found": "未找到 mod 文件",
 			"saved": "报告已保存至: {path}",
 			"success": "报告生成成功，共 {count} 个 Mod"
@@ -384,7 +379,6 @@
 			"process_spine_downgrade": "处理Spine资产并降级",
 			"process_atlas_unpack": "解包 Atlas 帧图片",
 			"render_preview": "渲染预览图",
-			"applying_to_global": "正在应用到国际服文件",
 			"applying_to_targets": "应用到目标文件组",
 			"extracting_patches": "正在提取补丁"
 		},
@@ -401,9 +395,7 @@
 			"found_candidates": "找到 {count} 个候选文件，正在验证内容...",
 			"source_mod_asset_count": "源文件组包含 {count} 个资源。",
 			"checking_candidate": "正在检查: {name}",
-			"find_failed": "查找失败: {message}",
-			"found_count": "成功查找到 {count} 个匹配文件。",
-			"no_found": "未找到文件"
+			"find_failed": "查找失败: {message}"
 		},
 		"extractor": {
 			"starting_extraction": "开始从 \"{filename}\" 提取资源...",
@@ -439,12 +431,7 @@
 			"total_files": "总计: {count} 个文件",
 			"output_files": "已输出: {count} 个",
 			"skipped_files": "已跳过: {count} 个",
-			"failed_files": "失败: {count} 个",
-			"replaced_assets": "替换 {count} 个资源",
-			"no_changes": "内容未变化",
-			"output_item": "  - {name} ({detail})",
-			"skipped_item": "  - {name}",
-			"failed_item": "  - {name}: {reason}"
+			"no_changes": "内容未变化"
 		},
 		"game_dir_not_set": "未设置游戏资源目录，无法自动寻找原始文件。",
 		"file_not_found_in_dirs": "未能在指定的资源目录中找到对应的原始文件 \"{filename}\"。",

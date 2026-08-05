@@ -143,9 +143,10 @@ class BackupDialog(StoppableDialog):
     def _run_backup(self, game_path: Path, backup_path: Path):
         """运行备份"""
         # 1. 扫描 bundle 文件
+        self.app.logger.log(t("log.backup.start"))
         items = list_bundle_files(game_path)
         if not items:
-            self.after(0, lambda: self.app.logger.status(t("log.report.no_bundle_found")))
+            self.after(0, lambda: self.app.logger.status(t("message.no_bundle_found")))
             self.set_task_running(False)
             self.after(0, lambda: self.backup_button.config(state=tk.NORMAL))
             return
@@ -173,6 +174,8 @@ class BackupDialog(StoppableDialog):
             self.after(0, lambda: self.backup_button.config(state=tk.NORMAL))
             return
 
+        self.app.logger.log(t("log.backup.found_mods", count=len(mod_files)))
+
         # 3. 复制 mod 文件到备份目录
         mod_total = len(mod_files)
         for i, source_path in enumerate(mod_files):
@@ -193,11 +196,17 @@ class BackupDialog(StoppableDialog):
             # 复制文件（保留元数据）
             shutil.copy2(source_path, dest_path)
 
+            # 记录日志
+            self.app.logger.log(
+                t("log.backup.copying", current=i + 1, total=mod_total, filename=rel_path.name)
+            )
+
             # 更新进度
             self.after(0, lambda idx=i+1, tot=mod_total, name=rel_path.name:
                       self._update_progress(idx, tot, name))
 
         # 标记完成
+        self.app.logger.log(t("log.backup.done", count=mod_total))
         self._backup_count = mod_total
         self.set_task_running(False)
         self.after(0, lambda: self.backup_button.config(state=tk.NORMAL))
