@@ -86,10 +86,6 @@ def get_version_info() -> dict[str, str]:
         except:
             pass
 
-    for key in info:
-        if not info[key]:
-            info[key] = "N/A"
-
     return info
 
 def no_log(message):
@@ -334,10 +330,10 @@ def get_environment_info(ignore_tk: bool = False):
     # --- Available Languages ---
     lines.append("\n--- BA Modding Toolkit ---")
     version_info = get_version_info()
-    lines.append(f"Version:             {version_info['version']}")
-    lines.append(f"Commit:              {version_info['commit_hash_short']}")
-    lines.append(f"Tag:                 {version_info['tag']}")
-    lines.append(f"Build Time:          {version_info['build_time']}")
+    lines.append(f"Version:             {version_info['version'] or 'N/A'}")
+    lines.append(f"Commit:              {version_info['commit_hash'] or 'N/A'}")
+    lines.append(f"Tag:                 {version_info['tag'] or 'N/A'}")
+    lines.append(f"Build Time:          {version_info['build_time'] or 'N/A'}")
     lines.append(f"Current Language:    {i18n_manager.lang}")
     lines.append(f"Available Languages: {', '.join(i18n_manager.get_available_languages())}")
 

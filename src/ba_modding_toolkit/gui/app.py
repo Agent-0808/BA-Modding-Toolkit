@@ -10,7 +10,7 @@ from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText 
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
-from ..utils import get_environment_info, parse_hex_bytes
+from ..utils import get_environment_info, get_version_info, parse_hex_bytes
 from ..models import SaveOptions, SpineOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
@@ -42,7 +42,12 @@ class App(tb.Frame, ConfigMixin):
         self.logger.status(t("status.ready"))
 
     def setup_main_window(self):
-        self.master.title(t("ui.app_title"))
+        # 窗口标题带上版本号（如 "BA Modding Toolkit v1.2.3"）
+        version = get_version_info().get("version", "")
+        title = t("ui.app_title")
+        if version:
+            title += f" v{version}"
+        self.master.title(title)
         self.master.geometry("800x1000")
 
         # 设置路径

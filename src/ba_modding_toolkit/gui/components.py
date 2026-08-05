@@ -250,13 +250,13 @@ class UIComponents:
         return combobox
 
     @staticmethod
-    def create_tooltip_icon(parent, text: str) -> tb.Label:
+    def create_tooltip_icon(parent, text: str, label: str = "ⓘ") -> tb.Label:
         """
         创建一个带有'ⓘ'符号的Label,鼠标悬停时显示Tooltip
         """
         label = tb.Label(
             parent,
-            text="ⓘ",
+            text=label,
             style="info",
             cursor="question_arrow"
         )

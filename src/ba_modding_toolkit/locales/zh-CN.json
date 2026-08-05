@@ -579,7 +579,8 @@
 			"github": "GitHub",
 			"options": "选项",
 			"adb_cache": "ADB缓存",
-			"target_crc": "目标 CRC"
+			"target_crc": "目标 CRC",
+			"mod_info": "关于 Mod 的判定"
 		},
 		"log_area": "日志",
 		"status_label": "状态：",

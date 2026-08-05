@@ -27,7 +27,7 @@ class ToolsTab(TabFrame):
         # Mod 检测方式说明（悬浮在 ⓘ 图标上显示）
         info_frame = tb.Frame(batch_tools_frame)
         info_frame.pack(anchor=tk.W, padx=30, pady=(10, 0))
-        info_icon = UIComponents.create_tooltip_icon(info_frame, t("ui.tools.batch_tools_info"))
+        info_icon = UIComponents.create_tooltip_icon(info_frame, t("ui.tools.batch_tools_info"), label=t("ui.label.mod_info"))
         info_icon.pack(side=tk.LEFT)
 
         button_frame = tb.Frame(batch_tools_frame)
