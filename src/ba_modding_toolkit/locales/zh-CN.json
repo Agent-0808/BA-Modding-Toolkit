@@ -36,7 +36,6 @@
 		"update": "更新",
 		"pack": "打包",
 		"extract": "提取",
-		"convert": "转换",
 		"calculate_crc": "计算 CRC",
 		"check_crc": "检查 CRC",
 		"run_crc_correction": "运行CRC修正",
@@ -219,14 +218,6 @@
 			"no_assets_extracted": "没有资源被提取",
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
-		},
-		"legacy_convert": {
-			"modern_to_legacy_success": "新版 -> 旧版 转换成功！\n已替换 {asset_count} 个 资源",
-			"legacy_to_modern_success": "旧版 -> 新版 转换成功！\n已替换 {bundle_count} 个 Bundle，{asset_count} 个资源",
-			"conversion_error": "转换过程中发生错误:\n{error}",
-			"no_assets_in_source": "源文件中未找到任何可提取资源，无法进行转换。",
-			"no_assets_matched": "未找到任何匹配的资源，无法进行转换。",
-			"load_legacy_failed": "无法加载旧版文件"
 		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
@@ -423,19 +414,6 @@
 			"extraction_failed": "提取资源 {name} 时发生错误: {error}",
 			"processing_file": "正在处理：{name}"
 		},
-		"migration": {
-			"extracting_from_old_bundle": "正在从旧版 bundle 中提取指定类型的资源: {types}",
-			"loading_new_bundle": "正在加载新版 bundle...",
-			"trying_strategy": "正在尝试使用 \"{name}\" 策略进行匹配",
-			"extracting_from_old_bundle_simple": "从旧版 bundle 提取资源...",
-			"strategy_no_assets_found": "使用 \"{name}\" 策略未在旧版 bundle 中找到任何指定类型的资源。",
-			"extraction_complete": "提取完成: 使用 \"{name}\" 策略提取了 {count} 个资源。",
-			"writing_to_new_bundle": "向新版 bundle 写入资源...",
-			"strategy_success": "策略 \"{name}\" 成功替换了 {count} 个资源",
-			"strategy_no_match": "策略 \"{name}\" 未能匹配到任何资源。",
-			"all_strategies_failed": "所有匹配策略均未能在新版 bundle 中找到可替换的资源 ({types})。",
-			"strategy_skipped_unchanged": "策略 \"{name}\"：所有文件内容未变化，跳过生成"
-		},
 		"mod_update": {
 			"all_processes_complete": "全部流程处理完成！共处理 {count} 个资源。",
 			"updating": "正在更新……",
@@ -456,18 +434,6 @@
 			"process_unchanged": "内容未变化，跳过: {filename}",
 			"output_files_list": "输出文件列表（共 {count} 个）："
 		},
-		"legacy_convert": {
-			"found_match": "成功找到: {path}",
-			"searching_jp_counterparts": "正在为 \"{name}\" 搜索对应的JP文件...",
-			"extracted_count_from_jp": "从日服文件提取了 {count} 个资源",
-			"no_assets_replaced": "未替换任何资源",
-			"starting_conversion": "开始转换...",
-			"extracted_count": "提取了 {count} 个资源。",
-			"conversion_complete": "转换完成！",
-			"file_unchanged": "文件内容未变化: {name}（{count} 个资源），跳过生成",
-			"legacy_source_file": "旧版源文件: {name}",
-			"modern_files_count": "选中的新版文件数量: {count}"
-		},
 		"summary": {
 			"title": "处理总结",
 			"total_files": "总计: {count} 个文件",
@@ -487,7 +453,6 @@
 		"success_fail": "成功：{success}，失败：{fail}",
 		"error_detail": "发生错误：{error}",
 		"error_processing": "处理过程中发生错误：{error}",
-		"processing_filename_with_progress": "({current}/{total}) 正在处理文件: {name}",
 		"process_failed": "处理失败: {error}",
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
@@ -530,8 +495,6 @@
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
-			"legacy_conversion": "旧版/新版转换",
-			"batch_legacy": "批量处理旧版",
 			"file_list": "文件列表",
 			"adb_push": "ADB 文件推送",
 			"tools": "工具"
@@ -599,22 +562,8 @@
 		"extractor": {
 			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处\n或点击下方按钮选择"
 		},
-		"legacy_conversion": {
-			"mode_modern_to_legacy": "新版 → 旧版 (合并)",
-			"mode_legacy_to_modern": "旧版 → 新版 (拆分)",
-			"placeholder_modern_bundles": "拖放所有相关的新版 Bundle 到此处\n如：textures, textassets等",
-			"role_legacy_target": "旧版 Bundle (目标文件)",
-			"role_modern_source": "新版 Bundle (源文件)",
-			"role_legacy_source": "旧版 Bundle (源文件)",
-			"role_modern_target": "新版 Bundle (目标文件)",
-			"placeholder_legacy_bundle": "拖放旧版 Bundle 文件到此处\n或点击下方按钮选择"
-		},
 		"dialog": {
-			"select": "选择{type}",
-			"add": "添加{type}",
 			"select_file": "选择文件",
-			"multiple_matches_found": "找到 {count} 个匹配的文件：",
-			"selection_cancelled": "已取消选择",
 			"adb_browser": "ADB 文件选择器",
 			"adb_browser_dir": "ADB 目录选择器"
 		},
