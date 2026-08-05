@@ -294,15 +294,19 @@ class Bundle:
                 - "original": 保留原始压缩方式
                 - "none": 不进行压缩
         """
-        save_kwargs = {}
-        if compression == "original":
-            pass
-        elif compression == "none":
-            save_kwargs['packer'] = ""
+        if not compression or compression == "none":
+            packer = ""
+        elif compression == "original":
+            packer = "original"
+        elif compression == "lz4":
+            # UnityPy "lz4" uses 0xC2 (BlocksInfoAtTheEnd); use 0x42 so CRC tail is safe.
+            packer = (0x42, 2)
+        elif compression == "lzma":
+            packer = "lzma"
         else:
-            save_kwargs['packer'] = compression
-        
-        return self.env.file.save(**save_kwargs)
+            raise ValueError(f"Unsupported compression: {compression}")
+
+        return self.env.file.save(packer=packer)
     
     def save(self, output_path: Path, save_options: SaveOptions) -> tuple[bool, str]:
         """
