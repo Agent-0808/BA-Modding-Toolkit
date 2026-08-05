@@ -117,7 +117,7 @@
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
 		"enable_spine_preview": "生成 Spine 预览图",
-		"enable_spine_preview_info": "为 Spine 资源生成预览图（需要配置 SpineViewerCLI 路径）",
+		"enable_spine_preview_info": "为 Spine 资源生成预览图（需要配置 SpineViewerCLI 路径）\n\n注意：该功能耗时较长。",
 		"report_format": "报告格式",
 		"report_format_info": "选择报告的输出格式：\n- 列表式：每项一行，适合快速浏览\n- 表格式：Markdown 表格，适合渲染预览图的情况下使用",
 		"report_format_list": "列表式",
@@ -488,11 +488,14 @@
 		},
 		"tools": {
 			"batch_tools": "批量工具",
+			"batch_tools_info": "Mod 检测方式：比对 bundle 文件头记录的大小与实际文件大小，若文件尾部存在额外追加的字节（trailing bytes）即判定为 Mod，下方的批量工具均基于此方式检测。\n\n注：该检测方式只保证对 Steam 版有效，其他版本的 Mod 无需 CRC 修正也能进入游戏，因此无法保证能检测到 Mod。",
 			"report": {
-				"title": "生成 Mod 报告"
+				"title": "生成 Mod 报告",
+				"info": "扫描游戏目录中检测到的全部 Mod 文件，按分类汇总生成 Markdown 报告。可选渲染 Spine 文件预览图。"
 			},
 			"abnormal_check": {
 				"title": "修复\"不正常的用户端\"",
+				"info": "检测文件名中标注的 CRC 与实际文件 CRC 不一致的 Mod 文件（此类文件会被游戏客户端判定为异常），并支持一键修复。",
 				"result_list": "检测结果",
 				"column_filename": "文件名",
 				"column_char_name": "角色名",
@@ -500,7 +503,8 @@
 				"column_actual_crc": "实际CRC"
 			},
 			"backup": {
-				"title": "备份 Mod"
+				"title": "备份 Mod",
+				"info": "将游戏目录中检测到的全部 Mod 文件复制到指定备份目录，并保留原始目录结构。"
 			}
 		},
 		"settings": {
@@ -550,6 +554,7 @@
 			"placeholder_bundle": "拖放所有待提取资源的 Bundle 文件到此处\n或点击下方按钮选择"
 		},
 		"dialog": {
+			"select": "选择{type}",
 			"select_file": "选择文件",
 			"adb_browser": "ADB 文件选择器",
 			"adb_browser_dir": "ADB 目录选择器"
