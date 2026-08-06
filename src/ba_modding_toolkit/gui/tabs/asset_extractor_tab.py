@@ -9,6 +9,7 @@ from ...i18n import t
 from ... import core
 from ...models import FileType
 from ...naming import parse_filename
+from ...spine import SpineViewer
 from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
 from .base_tab import TabFrame
@@ -83,6 +84,16 @@ class AssetExtractorTab(TabFrame):
             tooltip=t("option.unpack_atlas_info")
         )
 
+        # 渲染预览图选项
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.extractor_render_preview"),
+            variable=self.app.render_preview_var,
+            tooltip=t("option.extractor_render_preview_info"),
+            app=self.app,
+            on_click_disabled=self._show_spine_viewer_not_configured
+        )
+
         # 操作按钮
         action_frame = tb.Frame(self)
         action_frame.pack(fill=tk.X, pady=10)
@@ -91,6 +102,13 @@ class AssetExtractorTab(TabFrame):
         run_button = UIComponents.create_button(action_frame, t("action.extract"), self.run_extraction_thread,
                                                  bootstyle="success", style="large")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
+
+    def _show_spine_viewer_not_configured(self, parent: tk.Widget | None = None):
+        """显示 SpineViewer 未配置的提示"""
+        messagebox.showwarning(
+            t("common.warning"),
+            t("message.3rd_party.spine_viewer_required")
+        )
 
     def select_output_dir(self):
         """选择输出子目录"""
@@ -153,7 +171,18 @@ class AssetExtractorTab(TabFrame):
             return
             
         unpack_atlas = self.app.unpack_atlas_var.get()
-            
+
+        # 校验 SpineViewer 路径（启用预览渲染时）
+        if self.app.render_preview_var.get():
+            viewer_path_str = self.app.spine_viewer_path_var.get().strip()
+            if not viewer_path_str:
+                messagebox.showerror(t("common.error"), t("message.3rd_party.spine_viewer_required"))
+                return
+            viewer_path = Path(viewer_path_str)
+            if not viewer_path.exists():
+                messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+                return
+
         self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, unpack_atlas)
 
     def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], unpack_atlas=False):
@@ -173,8 +202,36 @@ class AssetExtractorTab(TabFrame):
         )
         
         if success:
+            # 渲染预览图（复用已解包的文件，避免重复解包）
+            if self.app.render_preview_var.get():
+                self._render_previews(output_dir)
             messagebox.showinfo(t("common.success"), message)
         else:
             messagebox.showerror(t("common.fail"), message)
             
         self.logger.status(t("status.done"))
+
+    def _render_previews(self, output_dir: Path) -> None:
+        """从已解包的 skel 文件渲染预览图（复用解包结果，不重复解包）"""
+        skel_files = list(output_dir.glob("*.skel"))
+        if not skel_files:
+            self.logger.log(t("log.spine.no_skel_found"))
+            return
+
+        viewer_path = Path(self.app.spine_viewer_path_var.get().strip())
+
+        self.logger.log(f'\n--- {t("log.section.render_preview")} ---')
+        success_count = 0
+        for skel_path in skel_files:
+            output_path = output_dir / f"{skel_path.stem}_preview.png"
+            success, _ = SpineViewer.render_preview(
+                skel_path=skel_path,
+                output_path=output_path,
+                viewer_path=viewer_path,
+                log=self.logger.log,
+            )
+            if success:
+                success_count += 1
+
+        if success_count:
+            self.logger.log(f'\n✓ {t("log.spine.preview_complete", count=success_count)}')

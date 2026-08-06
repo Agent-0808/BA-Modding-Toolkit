@@ -118,6 +118,8 @@
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
 		"enable_spine_preview": "生成 Spine 预览图",
 		"enable_spine_preview_info": "为 Spine 资源生成预览图（需要配置 SpineViewerCLI 路径）\n\n注意：该功能耗时较长。",
+		"extractor_render_preview": "渲染预览图",
+		"extractor_render_preview_info": "解包完成后，为提取出的 Spine 资源渲染预览图（需要配置 SpineViewerCLI 路径）。",
 		"report_format": "报告格式",
 		"report_format_info": "选择报告的输出格式：\n- 列表式：每项一行，适合快速浏览\n- 表格式：Markdown 表格，适合渲染预览图的情况下使用",
 		"report_format_list": "列表式",

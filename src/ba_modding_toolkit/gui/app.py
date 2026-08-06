@@ -248,10 +248,19 @@ class App(tb.Frame, ConfigMixin):
             return False
         return Path(path).exists()
 
+    def is_spine_viewer_available(self) -> bool:
+        """检查SpineViewerCLI程序路径是否有效"""
+        path = self.spine_viewer_path_var.get()
+        if not path:
+            return False
+        return Path(path).exists()
+
     def check_dependency(self, depends_on: str) -> bool:
         """检查依赖条件是否满足"""
         if depends_on == "spine_converter_path_var":
             return self.is_spine_converter_available()
+        if depends_on == "spine_viewer_path_var":
+            return self.is_spine_viewer_available()
         if depends_on == "enable_spine_conversion_var":
             # 同时检查 Spine 转换器路径和转换功能是否启用
             return self.is_spine_converter_available() and self.enable_spine_conversion_var.get()
