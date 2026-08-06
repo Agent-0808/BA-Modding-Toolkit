@@ -83,10 +83,10 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
-- 在“文件列表”窗口中右键预览
-- 在“资源提取”功能中，可选在解包之后渲染预览图。
-- 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
+This tool can preview and render Spine skeleton files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
+- Right-click to preview in the "File List" window
+- In the Asset Extractor tab, you can optionally render preview images after extraction.
+- In the "Mod Report" feature, you can optionally render preview images when generating the report.
 
 ### ADB (Android Debug Bridge)
 
@@ -103,8 +103,8 @@ This tool can communicate with Android devices. You can configure the path of `a
 
 A reference table that records the mapping between in-game character names and their corresponding internal file IDs (e.g., `CH0288` → Utsumi Aoba).
 
-- 在各个功能中，解析Bundle文件的文件名获得内部ID之后，可以根据该对照表显示角色实际名称。
-- 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
+- In various features, after parsing the Bundle file name to obtain the internal ID, the actual character name can be displayed based on this lookup table.
+- It is also used to display character names based on internal character IDs when generating Mod reports.
 
 ## Command Line Interface (CLI)
 
