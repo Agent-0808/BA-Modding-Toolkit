@@ -35,7 +35,6 @@
 		"update": "Update",
 		"pack": "Pack",
 		"extract": "Extract",
-		"convert": "Convert",
 		"calculate_crc": "Calculate",
 		"check_crc": "Check CRC",
 		"run_crc_correction": "Correct",
@@ -50,7 +49,10 @@
 		"render_preview": "Render Preview",
 		"cache_to_local": "Cache to Local",
 		"detect": "Detect",
-		"clear_cache": "Clear Cache"
+		"clear_cache": "Clear Cache",
+		"generate": "Generate",
+		"fix_all": "Fix All",
+		"start_backup": "Start Backup"
 	},
 	"option": {
 		"file_source": "File Source",
@@ -113,6 +115,14 @@
 		"enable_bleed_info": "Applies bleed operations to image files.\nRecommended if packed images show black or jagged edges in-game.",
 		"enable_spine38_name_fix": "Rename Old Spine Filenames",
 		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png",
+		"enable_spine_preview": "Generate Spine Preview",
+		"enable_spine_preview_info": "Generate preview images for Spine assets (requires SpineViewerCLI path to be configured)\n\nNote: this feature can take a long time.",
+		"extractor_render_preview": "Render Preview",
+		"extractor_render_preview_info": "Render preview images for the extracted Spine assets after extraction (requires SpineViewerCLI path to be configured).\nPreviews directly reuse the extracted files without re-extracting.\n\nNote: if Atlas unpacking is also enabled, previews for some assets may fail to generate.",
+		"report_format": "Report Format",
+		"report_format_info": "Choose the report output format:\n- List: one item per line, good for quick browsing\n- Table: Markdown table, recommended when rendering preview images",
+		"report_format_list": "List",
+		"report_format_table": "Table",
 		"max_workers": "Max Workers",
 		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage.",
 		"character_id_map": "Character ID Map",
@@ -122,7 +132,9 @@
 		"adb_path": "ADB Path",
 		"adb_path_info": "Full path to adb.exe, or \"adb\" to use system PATH",
 		"adb_cache_dir": "Cache Directory",
-		"adb_cache_dir_info": "Local cache directory for ADB files"
+		"adb_cache_dir_info": "Local cache directory for ADB files",
+		"backup_path": "Backup Path",
+		"backup_path_info": "Choose the directory where backup files will be saved"
 	},
 	"file_type": {
 		"executable": "Executable File",
@@ -145,6 +157,7 @@
 		"dir_not_found_create": "Directory does not exist:\n{path}\n\nDo you want to create it?",
 		"path_invalid": "Invalid path: {path}",
 		"no_file_selected": "No file selected.",
+		"no_bundle_found": "No bundle files found",
 		"list_empty": "List is empty, please add items first.",
 		"drop_single_file": "Please drop only one file at a time.",
 		"missing_paths": "Please ensure all necessary paths are set.",
@@ -156,7 +169,6 @@
 		"open_manually": "Please open the directory manually: {path}",
 		"invalid_operation": "Invalid operation",
 		"execution_error": "An error occurred during execution:\n{error}",
-		"create_dir_failed_detail": "Failed to create directory:\n{path}\n\nError details: {error}",
 		"output_dir_not_set": "Output directory not set. Please configure it in settings first.",
 		"save_success": "File saved successfully.",
 		"same_file": "Both paths are identical!",
@@ -188,6 +200,7 @@
 			"correction_failed_file_not_generated": "CRC Correction failed. The final file \"{name}\" could not be generated."
 		},
 		"spine": {},
+		"report_open_prompt": "Report generated!\nOpen the report file?",
 		"search": {
 			"check_file_exists": "Please check if \"{path}\" exists.",
 			"no_matching_files_in_dir": "No matching files found in the specified directory.",
@@ -206,14 +219,6 @@
 			"no_assets_extracted": "No assets were extracted from source files",
 			"no_targets_processed": "No target files were successfully processed",
 			"all_targets_unchanged": "All target files are unchanged, no update needed"
-		},
-		"legacy_convert": {
-			"modern_to_legacy_success": "Modern -> Legacy Conversion Successful!\nReplaced {asset_count} assets",
-			"legacy_to_modern_success": "Legacy -> Modern Conversion Successful!\nReplaced {bundle_count} bundles, {asset_count} assets",
-			"conversion_error": "Conversion error:\n{error}",
-			"no_assets_in_source": "No assets found in source file, cannot convert.",
-			"no_assets_matched": "No matching assets found, cannot convert.",
-			"load_legacy_failed": "Failed to load legacy file."
 		},
 		"save_error": "Error saving file: {error}",
 		"replace_result": "Replacement completed!\nSuccess: {success} files, Failure: {fail} files",
@@ -237,7 +242,19 @@
 			"no_local_files": "Please select local files to push first",
 			"no_target_dir": "Please specify a target directory",
 			"push_summary": "Push complete: {success} succeeded, {fail} failed"
-		}
+		},
+		"abnormal_check": {
+			"no_mismatch": "No CRC mismatches found",
+			"confirm_fix": "Fix CRC values of {count} files?",
+			"fix_complete": "Fix complete"
+		},
+		"backup": {
+			"path_required": "Please select a backup path first",
+			"clear_confirm": "Backup directory already exists. Clear it and back up again?",
+			"open_prompt": "Backup complete, {count} mod files backed up.\nOpen the backup directory?",
+			"no_mod_found": "No mod files found"
+		},
+		"task_running_close_confirm": "A task is running; closing the window will stop it.\n\nAre you sure you want to close the window?"
 	},
 	"status": {
 		"ready": "Ready",
@@ -345,13 +362,24 @@
 			"modified_file_crc32": "Modified File CRC32: {crc}",
 			"original_file_crc32": "Original File CRC32: {crc}"
 		},
+		"report": {
+			"scan_start": "Start scanning",
+			"analyze_trailing": "Analyzing trailing bytes",
+			"bundle_count": "Found {count} bundle files",
+			"mod_count": "Found {count} mod files",
+			"render_preview": "Rendering preview image",
+			"render_retry": "Mod does not contain full assets, retrying with original files: {prefix}",
+			"render_count": "Rendered {count} previews",
+			"no_mod_found": "No mod files found",
+			"saved": "Report saved to: {path}",
+			"success": "Report generated successfully, {count} mods"
+		},
 		"section": {
 			"extract_to_temp": "Extract resources to temp directory",
 			"move_to_output": "Move extracted files to output directory",
 			"process_spine_downgrade": "Process Spine assets and downgrade",
 			"process_atlas_unpack": "Unpack Atlas frame images",
 			"render_preview": "Render preview images",
-			"applying_to_global": "Applying to Global file",
 			"applying_to_targets": "Applying to target group",
 			"extracting_patches": "Extracting Patches"
 		},
@@ -368,9 +396,7 @@
 			"found_candidates": "Found {count} candidate files. Verifying content...",
 			"source_mod_asset_count": "Source group contains {count} assets.",
 			"checking_candidate": "Checking: {name}",
-			"find_failed": "Search failed: {message}",
-			"found_count": "Successfully found {count} matching files.",
-			"no_found": "No files found"
+			"find_failed": "Search failed: {message}"
 		},
 		"extractor": {
 			"starting_extraction": "Starting extraction from \"{filename}\"...",
@@ -380,19 +406,6 @@
 			"skipping_unnamed": "Skipping an unnamed {type} asset",
 			"extraction_failed": "Error extracting asset {name}: {error}",
 			"processing_file": "Processing: {name}"
-		},
-		"migration": {
-			"extracting_from_old_bundle": "Extracting specified asset types from old bundle: {types}",
-			"loading_new_bundle": "Loading new bundle...",
-			"trying_strategy": "Attempting match using strategy \"{name}\"",
-			"extracting_from_old_bundle_simple": "Extracting assets from old bundle...",
-			"strategy_no_assets_found": "Strategy \"{name}\" found no specified asset types in old bundle.",
-			"extraction_complete": "Extraction complete: Extracted {count} assets using strategy \"{name}\".",
-			"writing_to_new_bundle": "Writing assets to new bundle...",
-			"strategy_success": "Strategy \"{name}\" successfully replaced {count} assets",
-			"strategy_no_match": "Strategy \"{name}\" failed to match any assets.",
-			"all_strategies_failed": "All matching strategies failed to find replaceable assets ({types}) in the new bundle.",
-			"strategy_skipped_unchanged": "Strategy \"{name}\": All files unchanged, skipping generation"
 		},
 		"mod_update": {
 			"all_processes_complete": "All processes completed!",
@@ -414,29 +427,12 @@
 			"process_unchanged": "Content unchanged, skipping: {filename}",
 			"output_files_list": "Output files list ({count} total):"
 		},
-		"legacy_convert": {
-			"found_match": "Found: {path}",
-			"searching_jp_counterparts": "Searching for corresponding JP file for \"{name}\"...",
-			"extracted_count_from_jp": "Extracted {count} assets from JP file",
-			"no_assets_replaced": "No assets replaced",
-			"starting_conversion": "Starting conversion...",
-			"extracted_count": "Extracted {count} assets.",
-			"conversion_complete": "Conversion complete!",
-			"file_unchanged": "File content unchanged: {name} ({count} assets)",
-			"legacy_source_file": "Legacy Source File: {name}",
-			"modern_files_count": "Selected Modern files: {count}"
-		},
 		"summary": {
 			"title": "Processing Summary",
 			"total_files": "Total: {count} files",
 			"output_files": "Output: {count} files",
 			"skipped_files": "Skipped: {count} files",
-			"failed_files": "Failed: {count} files",
-			"replaced_assets": "Replaced {count} assets",
-			"no_changes": "No changes",
-			"output_item": "  - {name} ({detail})",
-			"skipped_item": "  - {name}",
-			"failed_item": "  - {name}: {reason}"
+			"no_changes": "No changes"
 		},
 		"game_dir_not_set": "Game resource directory not set. Cannot automatically locate original files.",
 		"file_not_found_in_dirs": "Could not find corresponding original file \"{filename}\" in specified resource directories.",
@@ -445,7 +441,6 @@
 		"success_fail": "Success: {success}, Fail: {fail}",
 		"error_detail": "Error occurred: {error}",
 		"error_processing": "Error occurred during processing: {error}",
-		"processing_filename_with_progress": "({current}/{total}) Processing file: {name}",
 		"process_failed": "Process failed: {error}",
 		"replace_original": "You can now press the \"{button}\" button to overwrite the original file",
 		"generated_file_not_found": "Operation reported success, but the generated file was not found in the output directory.",
@@ -464,6 +459,20 @@
 			"cache_caching": "Caching {count} files to local...",
 			"cache_delete_failed": "Failed to delete cache file {name}: {error}",
 			"push_start_batch": "Pushing {count} file(s) to {dir}"
+		},
+		"abnormal_check": {
+			"found_count": "Found {count} files with CRC mismatch",
+			"fixing": "Fixing: {filename}",
+			"fix_success": "Fix succeeded: {filename}",
+			"fix_failed": "Fix failed: {filename}",
+			"fix_verify_failed": "Fix verification failed: {filename}",
+			"fix_error": "Error fixing {filename}: {error}"
+		},
+		"backup": {
+			"start": "Starting mod backup",
+			"found_mods": "Found {count} mod files",
+			"copying": "Backing up ({current}/{total}): {filename}",
+			"done": "Backup complete, {count} files"
 		}
 	},
 	"ui": {
@@ -474,10 +483,30 @@
 			"crc_tool": "CRC Tool",
 			"asset_packer": "Asset Packer",
 			"asset_extractor": "Asset Extractor",
-			"legacy_conversion": "Legacy Conversion",
-			"batch_legacy": "Batch Legacy",
 			"file_list": "File List",
-			"adb_push": "ADB File Push"
+			"adb_push": "ADB File Push",
+			"tools": "Tools"
+		},
+		"tools": {
+			"batch_tools": "Batch Tools",
+			"batch_tools_info": "Mod detection method: compares the size recorded in the bundle file header with the actual file size. If extra trailing bytes are appended to the file, it is identified as a mod. The batch tools below all rely on this detection.\n\nNote: this detection method is only guaranteed to work on the Steam version. Mods for other versions can enter the game without CRC correction, so detection is not guaranteed for them.",
+			"report": {
+				"title": "Generate Mod Report",
+				"info": "Scan all detected mod files in the game directory and generate a Markdown report grouped by category. Optionally render Spine preview images."
+			},
+			"abnormal_check": {
+				"title": "Fix \"Abnormal Client\"",
+				"info": "Detect mod files whose filename CRC does not match the actual file CRC (such files are flagged as abnormal by the game client), and fix them with one click.",
+				"result_list": "Detection Results",
+				"column_filename": "Filename",
+				"column_char_name": "Character",
+				"column_target_crc": "Target CRC",
+				"column_actual_crc": "Actual CRC"
+			},
+			"backup": {
+				"title": "Backup Mods",
+				"info": "Copy all detected mod files in the game directory to the specified backup directory, preserving the original directory structure."
+			}
 		},
 		"settings": {
 			"title": "Settings",
@@ -525,22 +554,9 @@
 		"extractor": {
 			"placeholder_bundle": "Drag and drop all Bundles to extract from here"
 		},
-		"legacy_conversion": {
-			"mode_modern_to_legacy": "Modern → Legacy (Merge)",
-			"mode_legacy_to_modern": "Legacy → Modern (Split)",
-			"placeholder_modern_bundles": "Drag and drop all related modern Bundles here\ntextures, textassets etc.",
-			"role_legacy_target": "Legacy Bundle (Target)",
-			"role_modern_source": "Modern Bundle (Source)",
-			"role_legacy_source": "Legacy Bundle (Source)",
-			"role_modern_target": "Modern Bundle (Target)",
-			"placeholder_legacy_bundle": "Drag and drop legacy Bundle here\nOr click the button below to select"
-		},
 		"dialog": {
 			"select": "Select {type}",
-			"add": "Add {type}",
 			"select_file": "Select File",
-			"multiple_matches_found": "Found {count} matching files:",
-			"selection_cancelled": "Selection cancelled",
 			"adb_browser": "ADB File Selector",
 			"adb_browser_dir": "ADB Directory Selector"
 		},
@@ -553,7 +569,6 @@
 		},
 		"label": {
 			"mod_file": "Mod File to Process",
-			"target_resource_bundle": "Target Resource Bundle",
 			"search_path": "Search Path:",
 			"assets_to_pack": "Assets to Pack",
 			"target_bundle_file": "Target Bundle File",
@@ -564,7 +579,8 @@
 			"github": "GitHub",
 			"options": "Options",
 			"adb_cache": "ADB Cache",
-			"target_crc": "Target CRC Value"
+			"target_crc": "Target CRC Value",
+			"mod_info": "About Mod Detection"
 		},
 		"log_area": "Log Area",
 		"status_label": "Status: ",

@@ -41,7 +41,7 @@ class ReportDialog(StoppableDialog):
         main_frame.pack(fill=tk.BOTH, expand=True)
 
         # 选项区域
-        options_frame = tb.Labelframe(main_frame, text=t("common.options"), padding=10)
+        options_frame = tb.Labelframe(main_frame, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(0, 10))
 
         # Spine 预览开关

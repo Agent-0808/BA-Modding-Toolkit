@@ -41,7 +41,7 @@ class ModUpdateTab(TabFrame):
         self._search_path_var = tk.StringVar(value=self.app.get_current_resource_dir())
 
         self.new_mod_zone = DropZone(
-            self, title=t("ui.label.target_resource_bundle"),
+            self, title=t("ui.label.target_bundle_file"),
             placeholder_text=t("ui.mod_update.placeholder_new"),
             app=self.app,
             on_files_selected=self.on_new_mod_selected,
