@@ -48,8 +48,10 @@ The program contains multiple functionalities:
 - **CRC Tool**: CRC checksum calculation and correction functionality
 - **Asset Packer**: Pack asset files from a folder into a Bundle file, replacing the corresponding assets in the Bundle
 - **Asset Extractor**: Extract specified types of assets from Bundle files
-- **Legacy Conversion**: Convert between Legacy format(old global version) and Modern format(JP and new global version)
-- **Batch Legacy**: Batch convert Legacy format to Modern format
+- **Tools**
+  - Generate Mod Report：Generate a report of all Mod files in the game directory.
+  - Fix Abnormal Client：Fix the "abnormal client" issue.
+  - Backup Mods：Backup all Mod files in the game directory.
 - **ADB File Push**: Push local files to Android devices using ADB commands.
 - **File List**: View and manage all Bundle files in the specified directory.
 
@@ -81,7 +83,10 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-This tool can preview and render Spine skeleton animation files. You can configure the path of the `SpineViewerCLI.exe` program in the settings interface and preview the Spine animation in the "File List" window.
+该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+- 在“文件列表”窗口中右键预览
+- 在“资源提取”功能中，可选在解包之后渲染预览图。
+- 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
 
 ### ADB (Android Debug Bridge)
 
@@ -98,8 +103,8 @@ This tool can communicate with Android devices. You can configure the path of `a
 
 A reference table that records the mapping between in-game character names and their corresponding internal file IDs (e.g., `CH0288` → Utsumi Aoba).
 
-- In the "File List" window, after parsing the internal ID from a Bundle file name, the actual character name can be displayed according to this reference table.
-- Support in more features is planned for future updates.
+- 在各个功能中，解析Bundle文件的文件名获得内部ID之后，可以根据该对照表显示角色实际名称。
+- 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
 
 ## Command Line Interface (CLI)
 
@@ -115,18 +120,17 @@ All operations can be executed via the `bamt-cli` command. You can use `--help` 
 # View all available commands
 bamt-cli -h
 
+# View environment information
+bamt-cli env
+
 # View detailed help and examples for a specific command
 bamt-cli update -h
 bamt-cli batch-update -h
-bamt-cli merge -h
-bamt-cli split -h
-bamt-cli batch-legacy -h
 bamt-cli pack -h
 bamt-cli extract -h
 bamt-cli crc -h
-
-# View environment information
-bamt-cli env
+bamt-cli report -h
+bamt-cli backup -h
 ```
 
 > [!NOTE]
@@ -185,6 +189,8 @@ BA-Modding-Toolkit/
 │ ├── core.py        # Core processing logic
 │ ├── searching.py   # Searching logic
 │ ├── bundle.py      # Bundle class
+│ ├── spine.py       # Spine-related utilities
+│ ├── report.py      # Mod report generator
 │ ├── naming.py      # File naming logic
 │ ├── models.py      # Data models
 │ ├── i18n.py        # Internationalization functionality
@@ -199,24 +205,27 @@ BA-Modding-Toolkit/
 │ │ ├── __init__.py
 │ │ ├── main.py         # GUI program main entry point
 │ │ ├── app.py          # Main application App class
-│ │ ├── base_tab.py     # TabFrame base class
 │ │ ├── components.py   # UI components, themes, logging
 │ │ ├── configs.py      # Configuration definitions
 │ │ ├── utils.py        # UI related utility functions
 │ │ ├── windows/        # Individual windows
 │ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py        # ADB Browser window
-│ │ │ ├── dialogs.py            # Settings dialogs 
-│ │ │ └── file_list_window.py   # File List window
+│ │ │ ├── adb_browser.py           # ADB Browser window
+│ │ │ ├── dialogs.py               # Settings dialogs
+│ │ │ ├── abnormal_check_dialog.py # Abnormal Client Check
+│ │ │ ├── report_dialog.py         # Report Dialog
+│ │ │ ├── backup_dialog.py         # Backup Dialog
+│ │ │ └── file_list_window.py      # File List window
 │ │ └── tabs/           # Feature tabs
 │ │   ├── __init__.py
+│ │   ├── base_tab.py              # TabFrame base class
 │ │   ├── mod_update_tab.py        # Mod Update tab
 │ │   ├── batch_update_tab.py      # Batch Update tab
 │ │   ├── crc_tool_tab.py          # CRC Tool tab
 │ │   ├── asset_packer_tab.py      # Asset Packer tab
 │ │   ├── asset_extractor_tab.py   # Asset Extractor tab
-│ │   ├── legacy_conversion_tab.py # Legacy Conversion tab
-│ │   └── batch_legacy_tab.py      # Batch Legacy tab
+│ │   ├── adb_push_tab.py          # ADB Push tab
+│ │   └── tools_tab.py             # Tools tab
 │ ├── assets/         # Project assets
 │ └── locales/        # Language files
 ├── tests/            # Pytest test cases folder

@@ -19,7 +19,7 @@ class BatchUpdateTab(TabFrame):
 
     def __init__(self, *args, **kwargs):
         self.current_file_pairs: list[FilePair] = []
-        self.match_strategy_var = tk.StringVar(value='path_id')
+        self.match_strategy_var = tk.StringVar(value='cont_name_type')
         self.workers_var = tk.IntVar(value=min(os.cpu_count() or 4, 8))
         self._adb_remote_paths: list[str] = []  # ADB 模式下目标的远程路径
         super().__init__(*args, **kwargs)

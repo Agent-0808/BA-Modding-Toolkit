@@ -1,4 +1,4 @@
-# log.report.py
+# report.py
 """Mod 报告生成核心逻辑"""
 
 from dataclasses import dataclass, field

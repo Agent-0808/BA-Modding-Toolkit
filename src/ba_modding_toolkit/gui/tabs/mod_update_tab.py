@@ -21,7 +21,7 @@ class ModUpdateTab(TabFrame):
         self.source_paths: list[Path] = []
         self.target_paths: list[Path] = []
         self.current_file_pairs: list[FilePair] = []
-        self.match_strategy_var = tk.StringVar(value='path_id')
+        self.match_strategy_var = tk.StringVar(value='cont_name_type')
         self._adb_remote_target_paths: list[str] = []  # ADB 模式下目标的远程路径
         self._search_path_var = None  # 延迟初始化，在 create_widgets 中绑定
         super().__init__(*args, **kwargs)

@@ -45,9 +45,11 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - **CRC 工具**：CRC 校验值计算与修正功能
 - **资源打包**：将一个文件夹内的资源打包进对应的 Bundle ，替换 Bundle 中的同名资源
 - **资源提取**：从 Bundle 文件中提取指定类型的资源到本地文件
-- **旧版/新版转换**：旧版格式（国际服旧版）与新版格式（日服与国际服新版）的互相转换
-- **批量处理旧版**：批量处理旧版→新版的转换任务
 - **ADB 文件推送**：使用 ADB 命令将本地文件推送至 Android 设备上
+- **工具**
+  - 生成 Mod 报告：用于生成游戏目录下 Mod 文件的图文报告
+  - 修复不正常的用户端：用于修复 Mod 文件中包含的不正常的用户端文件
+  - 备份 Mod 文件：用于备份 Mod 文件到指定目录
 - **文件列表**：用于查看和管理当前指定目录下的所有 Bundle 文件信息
 
 ![How to update a mod with BAMT GUI](docs/help/gui-help-mod-update-zhcn.png)
@@ -78,7 +80,10 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径，并在“文件列表”窗口中右键预览指定的Bundle文件中的Spine动画。
+该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+- 在“文件列表”窗口中右键预览
+- 在“资源提取”功能中，可选在解包之后渲染预览图。
+- 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
 
 ### ADB(Android Debug Bridge)
 
@@ -95,8 +100,8 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 一个对照表，记录了游戏中角色的名称与对应的文件内部ID的对照关系（例如：`CH0288` → 内海 青叶）。
 
-- 在“文件列表”窗口中，解析Bundle文件的文件名获得内部ID之后，可以根据该对照表显示角色实际名称。
-- 后续计划在更多功能中提供支持。
+- 在各个功能中，解析Bundle文件的文件名获得内部ID之后，可以根据该对照表显示角色实际名称。
+- 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
 
 ## 命令行接口 (CLI)
 
@@ -112,18 +117,17 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 # 查看所有可用命令
 bamt-cli -h
 
+# 查看环境信息
+bamt-cli env
+
 # 查看特定命令的详细帮助和示例
 bamt-cli update -h
 bamt-cli batch-update -h
-bamt-cli merge -h
-bamt-cli split -h
-bamt-cli batch-legacy -h
 bamt-cli pack -h
 bamt-cli extract -h
 bamt-cli crc -h
-
-# 查看环境信息
-bamt-cli env
+bamt-cli report -h
+bamt-cli backup -h
 ```
 
 > [!NOTE]
@@ -182,6 +186,8 @@ BA-Modding-Toolkit/
 │ ├── core.py        # 核心处理逻辑
 │ ├── searching.py   # 搜索功能逻辑
 │ ├── bundle.py      # Bundle 类
+│ ├── spine.py       # Spine 相关工具
+│ ├── report.py      # 报告生成工具
 │ ├── naming.py      # 文件名处理逻辑
 │ ├── models.py      # 数据模型类
 │ ├── i18n.py        # 国际化功能相关
@@ -196,24 +202,27 @@ BA-Modding-Toolkit/
 │ │ ├── __init__.py
 │ │ ├── main.py         # GUI 程序主入口
 │ │ ├── app.py          # 主应用 App 类
-│ │ ├── base_tab.py     # TabFrame 基类
 │ │ ├── components.py   # UI 组件、主题、日志
 │ │ ├── configs.py      # 配置项定义
 │ │ ├── utils.py        # UI 相关工具函数
 │ │ ├── windows/        # 独立窗口
 │ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py        # ADB 浏览器窗口
-│ │ │ ├── dialogs.py            # 设置页 
-│ │ │ └── file_list_window.py   # 文件列表窗口
+│ │ │ ├── adb_browser.py           # ADB 浏览器窗口
+│ │ │ ├── dialogs.py               # 设置页 
+│ │ │ ├── abnormal_check_dialog.py # 不正常的用户端检查对话框
+│ │ │ ├── report_dialog.py         # 报告工具对话框
+│ │ │ ├── backup_dialog.py         # 备份工具对话框
+│ │ │ └── file_list_window.py      # 文件列表窗口
 │ │ └── tabs/           # 功能标签页
 │ │   ├── __init__.py
+│ │   ├── base_tab.py              # TabFrame 基类
 │ │   ├── mod_update_tab.py        # Mod 更新标签页
 │ │   ├── batch_update_tab.py      # 批量更新标签页
 │ │   ├── crc_tool_tab.py          # CRC 工具标签页
 │ │   ├── asset_packer_tab.py      # 资源打包标签页
 │ │   ├── asset_extractor_tab.py   # 资源提取标签页
-│ │   ├── legacy_conversion_tab.py # 旧版/新版格式转换标签页
-│ │   └── batch_legacy_tab.py      # 批量旧版转新版标签页
+│ │   ├── adb_push_tab.py          # ADB 推送标签页
+│ │   └── tools_tab.py             # 工具标签页
 │ ├── assets/         # 资源文件
 │ └── locales/        # 语言文件
 ├── tests/            # Pytest 测试案例文件夹
