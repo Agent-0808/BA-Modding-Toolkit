@@ -972,7 +972,7 @@ class FileListWindow(StoppableDialog):
                     bundle_paths_set.update(candidates)
 
             # 渲染预览
-            success, message = render_spine_preview_from_bundle(
+            success, message, _ = render_spine_preview_from_bundle(
                 bundle_path=list(bundle_paths_set),
                 output_dir=output_dir,
                 viewer_path=viewer_path,

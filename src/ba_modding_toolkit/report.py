@@ -43,6 +43,7 @@ class ModEntry:
     res_types: list[str] = field(default_factory=list)
     files: list[Path] = field(default_factory=list)
     render_success: bool = True
+    render_paths: list[Path] = field(default_factory=list)
 
 
 @dataclass
@@ -165,7 +166,7 @@ def generate_mod_report(
                     continue
                 
                 # 第一次尝试：只用 mod 文件
-                success, _ = render_spine_preview_from_bundle(
+                success, _, rendered_paths = render_spine_preview_from_bundle(
                     bundle_path=entry.files,
                     output_dir=output_dir,
                     viewer_path=viewer_path,
@@ -178,7 +179,7 @@ def generate_mod_report(
                     all_files = prefix_to_all_files.get(entry.prefix, [])
                     if all_files and all_files != entry.files:
                         log(f"  > {t('log.report.render_retry', prefix=entry.prefix)}")
-                        success, _ = render_spine_preview_from_bundle(
+                        success, _, rendered_paths = render_spine_preview_from_bundle(
                             bundle_path=all_files,
                             output_dir=output_dir,
                             viewer_path=viewer_path,
@@ -188,6 +189,7 @@ def generate_mod_report(
 
                 if success:
                     render_count += 1
+                    entry.render_paths = rendered_paths
                 else:
                     entry.render_success = False
 
@@ -424,10 +426,10 @@ def _write_table_report(
 
             # 预览图（仅在渲染类型且有渲染成功的条目中）
             if has_render_category:
-                if entry.render_success:
+                if entry.render_success and entry.render_paths:
                     img_dir = output_path.stem
-                    img_name = entry.prefix.replace("/", "_").replace("\\", "_")
-                    cells.append(f"![]({img_dir}/{img_name}.png)")
+                    img_refs = " ".join(f"![]({img_dir}/{p.name})" for p in entry.render_paths)
+                    cells.append(img_refs)
                 else:
                     cells.append("⚠️")
 
@@ -481,10 +483,10 @@ def _write_table_report(
 
             # 预览图
             if has_render_category:
-                if entry.render_success:
+                if entry.render_success and entry.render_paths:
                     img_dir = output_path.stem
-                    img_name = entry.prefix.replace("/", "_").replace("\\", "_")
-                    cells.append(f"![]({img_dir}/{img_name}.png)")
+                    img_refs = " ".join(f"![]({img_dir}/{p.name})" for p in entry.render_paths)
+                    cells.append(img_refs)
                 else:
                     cells.append("⚠️")
 
@@ -517,9 +519,9 @@ def _format_entry(entry: ModEntry, output_path: Path, enable_render: bool) -> st
         line += " ⚠️"
 
     # 图片引用
-    if enable_render and entry.category in RENDER_CATEGORIES and entry.render_success:
+    if enable_render and entry.category in RENDER_CATEGORIES and entry.render_success and entry.render_paths:
         img_dir = output_path.stem
-        img_name = entry.prefix.replace("/", "_").replace("\\", "_")
-        line += f"\n  ![]({img_dir}/{img_name}.png)"
+        for p in entry.render_paths:
+            line += f"\n  ![]({img_dir}/{p.name})"
 
     return line

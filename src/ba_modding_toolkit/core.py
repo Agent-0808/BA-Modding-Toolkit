@@ -403,7 +403,7 @@ def render_spine_preview_from_bundle(
     viewer_path: Path,
     output_filename: str | None = None,
     log: LogFunc = no_log,
-) -> tuple[bool, str]:
+) -> tuple[bool, str, list[Path]]:
     """
     从 bundle 文件渲染 Spine 预览图。
 
@@ -415,7 +415,7 @@ def render_spine_preview_from_bundle(
         log: 日志记录函数
 
     Returns:
-        tuple[bool, str]: (是否成功, 状态消息)
+        tuple[bool, str, list[Path]]: (是否成功, 状态消息, 渲染输出的文件路径列表)
     """
 
     # 统一处理为列表
@@ -424,7 +424,7 @@ def render_spine_preview_from_bundle(
     if not viewer_path.exists():
         msg = t("log.file.not_exist", path=viewer_path)
         log(f'❌ {msg}')
-        return False, msg
+        return False, msg, []
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -444,11 +444,12 @@ def render_spine_preview_from_bundle(
         if not skel_files:
             msg = t("log.spine.no_skel_found")
             log(f'⚠️ {msg}')
-            return False, msg
+            return False, msg, []
 
         # 阶段 2: 渲染预览图
         log(f'\n--- {t("log.section.render_preview")} ---')
         success_count = 0
+        rendered_paths: list[Path] = []
 
         for idx, skel_path in enumerate(skel_files):
             # 确定输出文件名
@@ -464,24 +465,25 @@ def render_spine_preview_from_bundle(
             output_path = output_dir / f"{filename}.png"
 
             # 渲染预览图
-            success, msg = SpineViewer.render_preview(
+            skel_success, msg = SpineViewer.render_preview(
                 skel_path=skel_path,
                 output_path=output_path,
                 viewer_path=viewer_path,
                 log=log
             )
 
-            if success:
+            if skel_success:
                 success_count += 1
+                rendered_paths.append(output_path)
 
         if success_count > 0:
             msg = t("log.spine.preview_complete", count=success_count)
             log(f'\n✓ {msg}')
-            return True, msg
+            return True, msg, rendered_paths
         else:
             msg = t("log.spine.preview_failed")
             log(f'\n❌ {msg}')
-            return False, msg
+            return False, msg, []
 
 
 def process_mod_update(
