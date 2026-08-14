@@ -27,11 +27,8 @@ RESOURCE_TYPES_NUM = {
 }
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
-_RE_CRC = re.compile(r'_(\d+)\.[^.]+$')
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
-_RE_TYPE = re.compile(r'[-_](?:mxdependency|mxload|mxprolog)-([a-zA-Z0-9]+)')
-_RE_MODERN = re.compile(r'\d{4}-\d{2}-\d{2}_([0-9]{3})_')
-_RE_YEAR = re.compile(r'^\d{4}$')
+_RE_MX = re.compile(r'[-_](?:mxdependency|mxload|mxprolog)')
 
 # core 后缀 → 搜索前缀 映射（用于 core 匹配初筛，缩小 iterdir 范围）
 _CORE_SUFFIX_PREFIX: dict[str, str] = {
@@ -69,75 +66,82 @@ def parse_filename(filename: str) -> ParsedFilename:
     Returns:
         ParsedFilename: 包含所有解析字段的命名元组
     """
-    # 提取 CRC32
+    # 1. 提取 CRC（从右向左切片）
     crc = ""
-    match_crc = _RE_CRC.search(filename)
-    if match_crc:
-        crc = match_crc.group(1)
+    stem = filename.rsplit('.', 1)[0]
+    crc_idx = stem.rfind('_')
+    if crc_idx != -1:
+        candidate_crc = stem[crc_idx + 1:]
+        if candidate_crc.isdigit():
+            crc = candidate_crc
 
-    # 提取 Date（同时记录日期起始位置）
-    date = ""
-    date_start = 0
+    # 2. 定位 Date 中轴
     match_date = _RE_DATE.search(filename)
-    if match_date:
-        date = match_date.group(1)
-        date_start = match_date.start()
+    if not match_date:
+        # 无日期情况（如 .skel / .png 散件素材）
+        core_part = stem
+        for p in PRELOAD_PREFIX:
+            if core_part.startswith(p):
+                core_part = core_part[len(p):]
+                break
+        for p in FIXED_PREFIX:
+            if core_part.startswith(p):
+                core_part = core_part[len(p):]
+                break
+        core = core_part.strip('-_')
+        category = None
+        if '-' in core:
+            category, core = core.split('-', 1)
+        return ParsedFilename(category=category, core=core, res_type=None, date="", crc=crc, prefix="")
 
-    # 提取 res_type 和 mx 位置（一次 _RE_TYPE 搜索同时获取）
+    date = match_date.group(1)
+    date_start = match_date.start()
+    date_end = date_start + 10  # YYYY-MM-DD 固定长 10
+
+    before_date = filename[:date_start]
+    after_date = filename[date_end:]
+
+    # 3. 基于“中轴两翼”判定 res_type 与 prefix
     res_type = None
-    mx_start = 0
-    match_type = _RE_TYPE.search(filename)
-    if match_type:
-        mx_start = match_type.start()
-        extracted = match_type.group(1)
-        # 如果提取出的是年份，说明没有 type，而是直接接了日期
-        if _RE_YEAR.match(extracted):
-            res_type = None
-            # 国际服 Modern 版：res_type 在日期之后（如 -2024-11-18_002_assets）
-            match_modern = _RE_MODERN.search(filename)
-            if match_modern:
-                res_type = match_modern.group(1)
-        else:
-            res_type = extracted
+    prefix = before_date
 
-    # 提取 core_part（利用 _RE_TYPE 已找到的 mx 位置，无需再次搜索）
-    if mx_start > 0:
-        core_part = filename[:mx_start]
-    elif date_start > 1:
-        # 无 mx 标记时，以日期前的 `-` 为界
-        core_part = filename[:date_start - 1]
+    # 3.1 检查左邻居：JP 格式 (res_type 在 date 之前，如 -textures-2024-...)
+    left_token = before_date.rstrip('-_').rsplit('-', 1)[-1].lower()
+    if left_token in RESOURCE_TYPES_TEXT:
+        res_type = left_token
+        before_clean = before_date.removesuffix('-')
+        prefix = before_clean.removesuffix(f"-{res_type}") + '-'
+
+    # 3.2 检查右邻居：Modern 格式 (res_type 在 date 之后，如 _002_)
+    elif len(after_date) >= 5 and after_date[0] == '_' and after_date[4] == '_':
+        right_token = after_date[1:4]
+        if right_token.isdigit():
+            res_type = right_token
+
+    # 4. 提取 Core 与 Category
+    # 截掉 mx 依赖标记
+    match_mx = _RE_MX.search(prefix)
+    if match_mx:
+        core_part = prefix[:match_mx.start()]
     else:
-        core_part = filename.rsplit('.', 1)[0]
+        core_part = prefix.rstrip('-_')
 
-    # 去除前缀
-    for preload_prefix in PRELOAD_PREFIX:
-        if core_part.startswith(preload_prefix):
-            core_part = core_part[len(preload_prefix):]
+    # 双重前缀需分两轮独立剥离
+    # 第一轮：剥离 Preload 前缀 (prologdepengroup-)
+    for p in PRELOAD_PREFIX:
+        if core_part.startswith(p):
+            core_part = core_part[len(p):]
             break
-    for fixed_prefix in FIXED_PREFIX:
-        if core_part.startswith(fixed_prefix):
-            core_part = core_part[len(fixed_prefix):]
+    # 第二轮：剥离 Fixed 前缀 (assets-_mx-)
+    for p in FIXED_PREFIX:
+        if core_part.startswith(p):
+            core_part = core_part[len(p):]
             break
 
     core = core_part.strip('-_')
-
-    # 提取 Category
     category = None
-    if core:
-        parts = core.split('-', 1)
-        if len(parts) > 1:
-            category = parts[0]
-            core = parts[1]
-
-    # 计算 prefix（用于搜索新版文件）
-    prefix = ""
-    if date:
-        if res_type and res_type.lower() in RESOURCE_TYPES_TEXT:
-            # JP 格式：文本类型 res_type 在日期之前，需从 prefix 中剥离
-            before_date = filename[:date_start].removesuffix('-')
-            prefix = before_date.removesuffix(f'-{res_type}') + '-'
-        else:
-            prefix = filename[:date_start]
+    if '-' in core:
+        category, core = core.split('-', 1)
 
     return ParsedFilename(
         category=category,
