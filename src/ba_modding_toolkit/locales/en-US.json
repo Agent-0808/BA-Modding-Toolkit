@@ -346,7 +346,8 @@
 			"packing_complete": "Packing complete: Successfully packed {success} / {total} assets.",
 			"unmatched_files_warning": "The following files did not match any assets in the bundle",
 			"attempted_match": "Attempted match: \"{key}\"",
-			"bleed_processed": "Processed Bleed for image {name}"
+			"bleed_processed": "Processed Bleed for image {name}",
+			"strategy_success": "Applied {count} assets with strategy {strategy}"
 		},
 		"crc": {
 			"loaded_original": "Loaded original file: {file}",

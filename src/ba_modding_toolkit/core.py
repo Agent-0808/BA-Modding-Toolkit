@@ -248,7 +248,7 @@ def process_asset_packing(
                 continue
 
             if result.is_success:
-                log(f"✅ {t('log.migration.strategy_success', name=strategy_name, count=result.applied_count)}:")
+                log(f"✅ {t('log.packer.strategy_success', strategy=strategy_name, count=result.applied_count)}:")
                 for item in result.applied_logs:
                     log(f"  - {item}")
                 log(f'{t("log.packer.packing_complete", success=result.applied_count, total=original_tasks_count)}')

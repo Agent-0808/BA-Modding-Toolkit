@@ -346,7 +346,8 @@
 			"packing_complete": "打包完成: 成功打包 {success} / {total} 个资源。",
 			"unmatched_files_warning": "以下文件未在bundle中找到对应的资源",
 			"attempted_match": "尝试匹配: \"{key}\"",
-			"bleed_processed": "对图像 {name} 进行了 Bleed 处理"
+			"bleed_processed": "对图像 {name} 进行了 Bleed 处理",
+			"strategy_success": "策略 {strategy} 成功应用 {count} 个资源"
 		},
 		"crc": {
 			"loaded_original": "已加载原始文件: {file}",
