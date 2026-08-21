@@ -18,7 +18,7 @@ from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
-    SaveOptions, SpineOptions, ParsedFilename,
+    SaveOptions, SkelConvertOptions, ParsedFilename,
     BundleFileInfo, ProgressCallback,
     REPLACEABLE_ASSET_TYPES
 )
@@ -466,7 +466,7 @@ class Bundle:
         self,
         asset_types_to_replace: set[str],
         match_strategy: MatchStrategy = 'path_id',
-        spine_options: SpineOptions | None = None
+        spine_options: SkelConvertOptions | None = None
     ) -> Patch:
         """
         从当前 Bundle 提取资源，生成补丁。

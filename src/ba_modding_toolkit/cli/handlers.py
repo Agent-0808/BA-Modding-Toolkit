@@ -8,13 +8,13 @@ from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     SaveOptions,
-    SpineOptions,
+    SkelConvertOptions,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
     process_batch_mod_update,
 )
-from ..models import SaveOptions, SpineOptions
+from ..models import SaveOptions, SkelConvertOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, CharacterInternalIDMap
@@ -126,7 +126,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
         compression=args.compression
     )
 
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
@@ -212,7 +212,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     )
 
     # 创建Spine选项
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
@@ -296,7 +296,7 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
         compression=args.compression
     )
 
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
@@ -472,7 +472,7 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"  - {bp.name}")
 
     # 创建SpineOptions对象
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_downgrade,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,

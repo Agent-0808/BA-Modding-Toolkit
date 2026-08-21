@@ -62,7 +62,7 @@ class SaveOptions:
 
 
 @dataclass
-class SpineOptions:
+class SkelConvertOptions:
     """封装了Spine版本转换相关的选项。"""
     enabled: bool = False
     converter_path: Path | None = None
