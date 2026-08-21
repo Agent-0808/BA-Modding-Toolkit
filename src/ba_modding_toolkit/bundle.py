@@ -12,7 +12,7 @@ from PIL import Image
 
 from .i18n import t
 from .utils import CRCUtils, no_log
-from .spine import SkelConverter
+from .spine import SkelConverter, check_skel_animation_diff
 from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
@@ -364,7 +364,9 @@ class Bundle:
     def apply_patch(
         self,
         patch: Patch,
-        match_strategy: MatchStrategy = 'path_id'
+        match_strategy: MatchStrategy = 'path_id',
+        viewer_path: Path | None = None,
+        check_animations: bool = False,
     ) -> PatchResult:
         """
         将补丁中的资源应用到当前的 bundle。
@@ -372,6 +374,8 @@ class Bundle:
         Args:
             patch: 资源补丁，格式为 { asset_key: content }。
             match_strategy: 匹配策略，用于从目标环境中的对象生成 asset_key。
+            viewer_path: SpineViewerCLI 路径（用于动画检测）
+            check_animations: 是否启用动画差异检测
 
         Returns:
             PatchResult: 包含修改结果的数据类，包括实际修改数量、跳过数量、日志和未匹配键。
@@ -414,12 +418,28 @@ class Bundle:
                         data.save()
                     elif obj.type == AssetType.TextAsset:
                         content: bytes
-                        new_script = content.decode("utf-8", "surrogateescape")
-                        if data.m_Script == new_script:
+                        target_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+
+                        if target_bytes == content:
                             self.log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
                             skipped_count += 1
                             continue
-                        data.m_Script = new_script
+
+                        # 就地检测动画差异
+                        if check_animations and viewer_path and resource_name.lower().endswith('.skel'):
+                            self.log(f"  🔍 {t('log.spine.anim_check_comparing', name=resource_name)}")
+                            missing_anims = check_skel_animation_diff(
+                                source_skel=content,
+                                target_skel=target_bytes,
+                                viewer_path=viewer_path,
+                                log=self.log
+                            )
+                            if missing_anims:
+                                self.log(f"  ⚠️ {t('log.spine.anim_check_new_animations', name=resource_name, animations=', '.join(missing_anims))}")
+                            else:
+                                self.log(f"  ✓ {t('log.spine.anim_check_no_diff', name=resource_name)}")
+
+                        data.m_Script = content.decode("utf-8", "surrogateescape")
                         data.save()
                     else:
                         obj.set_raw_data(content)

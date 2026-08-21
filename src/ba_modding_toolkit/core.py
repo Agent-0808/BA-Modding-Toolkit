@@ -11,7 +11,11 @@ from PIL import Image
 
 from .i18n import t
 from .utils import ImageUtils, no_log
-from .spine import SkelConverter, SpineViewer, atlas_downgrade, check_legacy_rename_needed, normalize_legacy_assets, unpack_atlas
+from .spine import (
+    SkelConverter, SpineViewer, atlas_downgrade,
+    check_legacy_rename_needed, normalize_legacy_assets,
+    unpack_atlas,
+)
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
@@ -101,6 +105,8 @@ def process_asset_packing(
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
     skip_unchanged: bool = True,
+    viewer_path: Path | None = None,
+    check_animations: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
@@ -238,7 +244,7 @@ def process_asset_packing(
                 log(f"⚠️ {t('message.packer.load_target_bundle_failed')}: {bundle_path.name}")
                 continue
 
-            result = target_bundle.apply_patch(patch, strategy_name)
+            result = target_bundle.apply_patch(patch, strategy_name, viewer_path, check_animations)
 
             # 判断是否应该保存此 bundle
             should_save = result.is_success or not skip_unchanged
@@ -495,6 +501,8 @@ def process_mod_update(
     spine_options: SpineOptions | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
+    viewer_path: Path | None = None,
+    check_animations: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
@@ -532,7 +540,7 @@ def process_mod_update(
                 continue
             patch = src_bundle.extract_patch(asset_types_to_replace, match_strategy, spine_options)
             patches.update(patch)
-        
+
         if not patches:
             return False, t("message.mod_update.no_assets_extracted"), []
 
@@ -549,7 +557,7 @@ def process_mod_update(
                 log(f"  ❌ {t('message.load_failed')}: {tgt.name}")
                 continue
             
-            result = tgt_bundle.apply_patch(patches, match_strategy)
+            result = tgt_bundle.apply_patch(patches, match_strategy, viewer_path, check_animations)
             total_matched += result.matched_count
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
@@ -589,7 +597,9 @@ def _process_single_mod_update(
     spine_options: SpineOptions | None,
     skip_unchanged: bool,
     match_strategy: MatchStrategy,
-    log: LogFunc,
+    viewer_path: Path | None = None,
+    check_animations: bool = False,
+    log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
     处理单个 mod 文件：查找目标 → 执行更新
@@ -603,6 +613,8 @@ def _process_single_mod_update(
         spine_options: Spine资源升级的选项
         skip_unchanged: 是否跳过未变化的文件
         match_strategy: 匹配策略
+        viewer_path: SpineViewerCLI 路径（用于动画检测）
+        check_animations: 是否启用动画差异检测
         log: 日志记录函数
 
     Returns:
@@ -627,6 +639,8 @@ def _process_single_mod_update(
         log=log,
         skip_unchanged=skip_unchanged,
         match_strategy=match_strategy,
+        viewer_path=viewer_path,
+        check_animations=check_animations,
     )
 
     if success:
@@ -652,6 +666,8 @@ def process_batch_mod_update(
     progress_callback: ProgressCallback | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
+    viewer_path: Path | None = None,
+    check_animations: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[int, int, list[str], list[FilePair]]:
     """
@@ -707,6 +723,8 @@ def process_batch_mod_update(
                 spine_options=spine_options,
                 skip_unchanged=skip_unchanged,
                 match_strategy=match_strategy,
+                viewer_path=viewer_path,
+                check_animations=check_animations,
                 log=log,
             )
 
@@ -732,7 +750,7 @@ def process_batch_mod_update(
                     mod_path, search_paths, output_dir,
                     asset_types_to_replace, save_options,
                     spine_options, skip_unchanged,
-                    match_strategy, log,
+                    match_strategy, viewer_path, check_animations, log,
                 )
                 futures[future] = mod_path.name
 

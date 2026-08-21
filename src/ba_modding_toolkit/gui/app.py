@@ -305,6 +305,22 @@ class App(tb.Frame, ConfigMixin):
             parent
         )
 
+    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineViewer未配置提示"""
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.3rd_party.spine_viewer_required"),
+            parent=parent or self.master
+        )
+
+    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineViewer未配置提示"""
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.3rd_party.spine_viewer_required"),
+            parent=parent or self.master
+        )
+
     def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineViewer下载引导对话框"""
         self.show_download_guide(

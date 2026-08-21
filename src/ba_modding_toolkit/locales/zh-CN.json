@@ -109,6 +109,8 @@
 		"skel_converter_path_info": "SpineSkeletonDataConverter.exe 文件的路径",
 		"spine_viewer_path": "SpineViewerCLI 路径",
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
+		"check_animations": "检测动画差异",
+		"check_animations_info": "在替换 .skel 文件时，检测目标是否包含来源中不存在的动画\n需要配置 SpineViewerCLI 路径",
 		"match_strategy": "匹配策略",
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "溢出",
@@ -335,7 +337,11 @@
 			"no_animation_found": "未找到可用动画: {name}",
 			"using_first_animation": "未找到 Idle_01 或 Dummy，使用第一个动画: {anim}",
 			"preview_complete": "预览图渲染完成，共生成 {count} 个文件",
-			"preview_failed": "预览图渲染失败"
+			"preview_failed": "预览图渲染失败",
+			"anim_check_comparing": "正在检测动画差异: {name}",
+			"anim_check_new_animations": "目标 {name} 含有来源不存在的动画: {animations}",
+			"anim_check_no_diff": "{name} 动画一致",
+			"anim_check_failed": "动画差异检测失败: {error}"
 		},
 		"packer": {
 			"start_packing": "开始打包资源...",
