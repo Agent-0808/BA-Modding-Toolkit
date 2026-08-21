@@ -11,7 +11,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes
-from ..models import SaveOptions, SkelConvertOptions
+from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
@@ -240,6 +240,13 @@ class App(tb.Frame, ConfigMixin):
                 converter_path=Path(self.spine_converter_path_var.get()),
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
+
+    def build_anim_check_options(self) -> AnimCheckOptions:
+        """从全局配置构建动画差异检测选项"""
+        return AnimCheckOptions(
+            enabled=self.check_animations_var.get(),
+            viewer_path=Path(self.spine_viewer_path_var.get())
+        )
 
     def is_spine_converter_available(self) -> bool:
         """检查SpineConverter程序路径是否有效"""

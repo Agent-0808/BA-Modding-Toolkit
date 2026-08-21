@@ -18,7 +18,7 @@ from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
-    SaveOptions, SkelConvertOptions, ParsedFilename,
+    SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
     BundleFileInfo, ProgressCallback,
     REPLACEABLE_ASSET_TYPES
 )
@@ -365,8 +365,7 @@ class Bundle:
         self,
         patch: Patch,
         match_strategy: MatchStrategy = 'path_id',
-        viewer_path: Path | None = None,
-        check_animations: bool = False,
+        anim_check: AnimCheckOptions | None = None,
     ) -> PatchResult:
         """
         将补丁中的资源应用到当前的 bundle。
@@ -374,8 +373,7 @@ class Bundle:
         Args:
             patch: 资源补丁，格式为 { asset_key: content }。
             match_strategy: 匹配策略，用于从目标环境中的对象生成 asset_key。
-            viewer_path: SpineViewerCLI 路径（用于动画检测）
-            check_animations: 是否启用动画差异检测
+            anim_check: 动画差异检测选项（启用开关与 SpineViewerCLI 路径）
 
         Returns:
             PatchResult: 包含修改结果的数据类，包括实际修改数量、跳过数量、日志和未匹配键。
@@ -426,12 +424,12 @@ class Bundle:
                             continue
 
                         # 就地检测动画差异
-                        if check_animations and viewer_path and resource_name.lower().endswith('.skel'):
+                        if anim_check and anim_check.is_valid() and resource_name.lower().endswith('.skel'):
                             self.log(f"  🔍 {t('log.spine.anim_check_comparing', name=resource_name)}")
                             missing_anims = check_skel_animation_diff(
                                 source_skel=content,
                                 target_skel=target_bytes,
-                                viewer_path=viewer_path,
+                                viewer_path=anim_check.viewer_path,
                                 log=self.log
                             )
                             if missing_anims:

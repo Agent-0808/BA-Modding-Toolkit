@@ -63,7 +63,7 @@ class SaveOptions:
 
 @dataclass
 class SkelConvertOptions:
-    """封装了Spine版本转换相关的选项。"""
+    """封装了Spine版本转换相关的选项（依赖 SpineSkeletonDataConverter）"""
     enabled: bool = False
     converter_path: Path | None = None
     target_version: str | None = None
@@ -76,6 +76,20 @@ class SkelConvertOptions:
             and self.converter_path.exists()
             and self.target_version
             and self.target_version.count(".") == 2
+        )
+
+@dataclass
+class AnimCheckOptions:
+    """动画差异比对与校验配置（依赖 SpineViewerCLI）"""
+    enabled: bool = False
+    viewer_path: Path | None = None
+
+    def is_valid(self) -> bool:
+        """检查动画检测器是否就绪"""
+        return (
+            self.enabled
+            and self.viewer_path
+            and self.viewer_path.exists()
         )
 
 class PatchResult(NamedTuple):

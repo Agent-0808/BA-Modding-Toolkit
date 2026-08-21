@@ -213,8 +213,7 @@ class ModUpdateTab(TabFrame):
             spine_options=spine_options,
             match_strategy=self.match_strategy_var.get(),
             skip_unchanged=self.app.skip_unchanged_var.get(),
-            check_animations=self.app.check_animations_var.get(),
-            viewer_path=Path(self.app.spine_viewer_path_var.get()),
+            anim_check=self.app.build_anim_check_options(),
             log=self.logger.log,
         )
 
