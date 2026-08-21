@@ -218,7 +218,6 @@ class SpineViewer:
     def query(
         skel_path: Path,
         viewer_path: Path,
-        atlas_path: Path | None = None,
         log: LogFunc = no_log,
     ) -> tuple[bool, dict]:
         """
@@ -227,7 +226,6 @@ class SpineViewer:
         Args:
             skel_path: skel 文件路径
             viewer_path: SpineViewerCLI 可执行文件路径
-            atlas_path: atlas 文件路径(可选)
             log: 日志记录函数
 
         Returns:
@@ -248,9 +246,6 @@ class SpineViewer:
                 "--all",
                 str(skel_path)
             ]
-
-            if atlas_path and atlas_path.exists():
-                command.extend(["--atlas", str(atlas_path)])
 
             log(f'  > {t("log.spine.querying_info", name=skel_path.name)}')
 
@@ -346,7 +341,7 @@ class SpineViewer:
                 break
 
         # 查询动画信息
-        success, info = SpineViewer.query(skel_path, viewer_path, atlas_path, log)
+        success, info = SpineViewer.query(skel_path, viewer_path, log)
         if not success:
             return False, t("log.spine.query_failed")
 
