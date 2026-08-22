@@ -11,7 +11,7 @@ from ...models import FilePair
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
 from ..components import FileListbox, UIComponents, SettingRow
-from ..utils import confirm_and_replace
+from ..utils import confirm_and_replace, warn_anim_diffs
 from .base_tab import TabFrame
 
 class BatchUpdateTab(TabFrame):
@@ -282,7 +282,7 @@ class BatchUpdateTab(TabFrame):
         def progress_callback(completed, total, filename):
             self.master.after(0, lambda: self._update_progress(completed, total, filename))
 
-        success_count, fail_count, failed_tasks, file_pairs = core.process_batch_mod_update(
+        result = core.process_batch_mod_update(
             mod_file_list=self.mod_file_list,
             search_paths=search_paths,
             output_dir=output_dir,
@@ -294,9 +294,13 @@ class BatchUpdateTab(TabFrame):
             progress_callback=progress_callback,
             skip_unchanged=self.app.skip_unchanged_var.get(),
             match_strategy=self.match_strategy_var.get(),
+            anim_check=self.app.build_anim_check_options(),
         )
 
-        self.current_file_pairs = file_pairs
+        success_count = result.success_count
+        fail_count = result.fail_count
+        failed_tasks = result.failed_tasks
+        self.current_file_pairs = result.file_pairs
 
         self.logger.log(t("log.batch.summary", total=total, success=success_count, fail=fail_count))
 
@@ -307,6 +311,10 @@ class BatchUpdateTab(TabFrame):
 
         if self.current_file_pairs:
             self.master.after(0, lambda: self.batch_replace_button.config(state=tk.NORMAL))
+
+        # 动画缺失警告（日志输出 + 提示弹窗）
+        if result.anim_diffs:
+            self.master.after(0, lambda: warn_anim_diffs(result.anim_diffs, self.logger.log))
 
         self.logger.status(t("status.done"))
         messagebox.showinfo(t("common.success"), t("message.batch.success", success=success_count, fail=fail_count))

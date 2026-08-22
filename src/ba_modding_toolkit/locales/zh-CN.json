@@ -227,6 +227,9 @@
 		"batch": {
 			"success": "批量处理完成！\n成功: {success}，失败: {fail}"
 		},
+		"anim_diff": {
+			"header": "游戏需要的一些新增动画在本 Mod 中缺失。\n当这些动画在游戏中播放时（例如剧情事件），\n可能会导致游戏卡死。\n\n为避免此类问题，请查看上方日志中的详细缺失列表，\n并与 Mod 作者确认正确更新。"
+		},
 		"3rd_party": {
 			"download_guide": "是否前往下载 {program}？\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter 未配置。\n请在设置页面配置 SpineSkeletonDataConverter 的路径。",
@@ -655,6 +658,9 @@
 			"loading": "正在加载文件列表...",
 			"error": "加载失败: {error}",
 			"found": "扫描完成，共 {count} 个文件"
+		},
+		"anim_diff": {
+			"title": "动画缺失警告"
 		}
 	}
 }

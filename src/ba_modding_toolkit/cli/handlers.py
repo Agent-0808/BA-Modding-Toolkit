@@ -133,7 +133,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 调用核心处理函数
-    success, message, file_pairs = process_mod_update(
+    result = process_mod_update(
         source_paths=valid_old_paths,
         target_paths=target_paths,
         output_dir=output_dir,
@@ -146,14 +146,14 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     logger.log("\n" + "="*50)
-    if success:
-        logger.log(f"✅ Operation Successful: {message}")
+    if result.success:
+        logger.log(f"✅ Operation Successful: {result.message}")
     else:
-        logger.log(f"❌ Operation Failed: {message}")
+        logger.log(f"❌ Operation Failed: {result.message}")
 
-    if file_pairs:
-        logger.log(f"Output files: {len(file_pairs)}")
-        for pair in file_pairs:
+    if result.file_pairs:
+        logger.log(f"Output files: {len(result.file_pairs)}")
+        for pair in result.file_pairs:
             logger.log(f"  - {pair.source}")
     else:
         logger.log("  - No file pairs processed.")
@@ -223,7 +223,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         )
 
     # 调用批量处理函数
-    success_count, fail_count, failed_tasks, file_pairs = process_batch_mod_update(
+    result = process_batch_mod_update(
         mod_file_list=mod_file_list,
         search_paths=search_paths,
         output_dir=output_dir,
@@ -240,17 +240,17 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     logger.log("\n" + "="*50)
     logger.log(f"Batch Update Summary:")
     logger.log(f"  Total files: {len(mod_file_list)}")
-    logger.log(f"  Successful: {success_count}")
-    logger.log(f"  Failed: {fail_count}")
+    logger.log(f"  Successful: {result.success_count}")
+    logger.log(f"  Failed: {result.fail_count}")
 
-    if file_pairs:
-        logger.log(f"\n✅ Output files ({len(file_pairs)}):")
-        for pair in file_pairs:
+    if result.file_pairs:
+        logger.log(f"\n✅ Output files ({len(result.file_pairs)}):")
+        for pair in result.file_pairs:
             logger.log(f"  - {pair.output.name}")
 
-    if failed_tasks:
+    if result.failed_tasks:
         logger.log(f"\n❌ Failed tasks:")
-        for task in failed_tasks:
+        for task in result.failed_tasks:
             logger.log(f"  - {task}")
 
     logger.log("="*50)

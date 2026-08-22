@@ -86,11 +86,37 @@ class AnimCheckOptions:
 
     def is_valid(self) -> bool:
         """检查动画检测器是否就绪"""
-        return (
+        return bool(
             self.enabled
             and self.viewer_path
             and self.viewer_path.exists()
         )
+
+# 动画差异映射：{skel名称: [缺失动画列表]}
+AnimDiffMap = dict[str, list[str]]
+
+class FilePair(NamedTuple):
+    """core 中处理产生的文件对，包含output和source"""
+
+    output: Path    # 输出文件路径
+    source: Path    # 源文件路径
+
+@dataclass
+class ModUpdateResult:
+    """process_mod_update 的返回结果"""
+    success: bool
+    message: str
+    file_pairs: list[FilePair]
+    anim_diffs: AnimDiffMap | None = None
+
+@dataclass
+class BatchUpdateResult:
+    """process_batch_mod_update 的返回结果"""
+    success_count: int
+    fail_count: int
+    failed_tasks: list[str]
+    file_pairs: list[FilePair]
+    anim_diffs: AnimDiffMap | None = None
 
 class PatchResult(NamedTuple):
     """封装资源修改操作的结果。"""
@@ -110,12 +136,6 @@ class PatchResult(NamedTuple):
     def is_success(self) -> bool:
         """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
-
-class FilePair(NamedTuple):
-    """core 中处理产生的文件对，包含output和source"""
-
-    output: Path    # 输出文件路径
-    source: Path    # 源文件路径
 
 class ParsedFilename(NamedTuple):
     """

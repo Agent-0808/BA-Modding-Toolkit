@@ -10,7 +10,7 @@ from ...models import FileType, FilePair
 from ... import core
 from ...searching import get_search_dirs, find_target_bundles, find_target_bundles_remote
 from ..components import DropZone, UIComponents, SettingRow
-from ..utils import confirm_and_replace
+from ..utils import confirm_and_replace, warn_anim_diffs
 from .base_tab import TabFrame
 
 
@@ -204,7 +204,7 @@ class ModUpdateTab(TabFrame):
         save_options = self.app.build_save_options(perform_crc)
         spine_options = self.app.build_spine_options()
 
-        success, message, file_pairs = core.process_mod_update(
+        result = core.process_mod_update(
             source_paths=self.source_paths,
             target_paths=self.target_paths,
             output_dir=output_dir,
@@ -217,14 +217,14 @@ class ModUpdateTab(TabFrame):
             log=self.logger.log,
         )
 
-        self.current_file_pairs = file_pairs
+        self.current_file_pairs = result.file_pairs
 
-        if not success:
-            messagebox.showerror(t("common.error"), message)
+        if not result.success:
+            messagebox.showerror(t("common.error"), result.message)
             return
 
         # 处理所有目标都被跳过的情况
-        if message == "all_targets_unchanged":
+        if result.message == "all_targets_unchanged":
             self.logger.log(t("log.mod_update.all_targets_unchanged"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
             messagebox.showinfo(t("common.success"), t("message.mod_update.all_targets_unchanged"))
@@ -233,19 +233,23 @@ class ModUpdateTab(TabFrame):
 
         # 输出处理总结
         self.logger.log(f'\n--- {t("log.summary.title")} ---')
-        self.logger.log(f"✅ {t('log.summary.output_files', count=len(file_pairs))}")
-        for pair in file_pairs:
+        self.logger.log(f"✅ {t('log.summary.output_files', count=len(result.file_pairs))}")
+        for pair in result.file_pairs:
             self.logger.log(f"  - {pair.source.name}")
-        self.logger.log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=len(file_pairs))}')
+        self.logger.log(f'\n🎉 {t("log.mod_update.all_processes_complete", count=len(result.file_pairs))}')
 
-        if file_pairs:
+        if result.file_pairs:
             self.logger.log(t("log.replace_original", button=t("action.replace_original")))
             self.master.after(0, lambda: self.replace_button.config(state=tk.NORMAL))
-            messagebox.showinfo(t("common.success"), message)
+            messagebox.showinfo(t("common.success"), result.message)
         else:
             self.logger.log(t("log.generated_file_not_found"))
             self.master.after(0, lambda: self.replace_button.config(state=tk.DISABLED))
             messagebox.showinfo(t("common.success"), t("message.process_success"))
+
+        # 动画缺失警告（日志输出 + 提示弹窗）
+        if result.anim_diffs:
+            self.master.after(0, lambda: warn_anim_diffs(result.anim_diffs, self.logger.log))
 
         self.logger.status(t("status.done"))
 
