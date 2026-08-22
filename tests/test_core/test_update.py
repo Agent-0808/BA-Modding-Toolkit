@@ -30,7 +30,7 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg, _ = process_mod_update(
+        result = process_mod_update(
             source_paths=old_mod_bundle_paths,
             target_paths=new_original_bundle_paths,
             output_dir=output_dir,
@@ -38,7 +38,7 @@ class TestModUpdate:
             save_options=save_options,
         )
         
-        assert success is True, msg
+        assert result.success is True, result.message
         
         # 验证输出文件数量匹配
         output_files = list(output_dir.glob("*.bundle"))
@@ -66,7 +66,7 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg, _ = process_mod_update(
+        result = process_mod_update(
             source_paths=old_mod_bundle_paths,
             target_paths=new_original_bundle_paths,
             output_dir=output_dir,
@@ -74,7 +74,7 @@ class TestModUpdate:
             save_options=save_options,
         )
         
-        assert success is True, msg
+        assert result.success is True, result.message
         
         output_files = list(output_dir.glob("*.bundle"))
         assert len(output_files) == len(new_original_bundle_paths)
@@ -110,7 +110,7 @@ class TestModUpdate:
             compression="none",
         )
         
-        success, msg, _ = process_mod_update(
+        result = process_mod_update(
             source_paths=old_mod_bundle_paths,
             target_paths=new_original_bundle_paths,
             output_dir=output_dir,
@@ -118,7 +118,7 @@ class TestModUpdate:
             save_options=save_options,
         )
         
-        assert success is True, msg
+        assert result.success is True, result.message
         
         # 提取更新后的资源进行对比
         updated_bundle = output_dir / new_original_bundle_paths[0].name
