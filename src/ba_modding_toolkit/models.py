@@ -99,6 +99,7 @@ class PatchResult(NamedTuple):
     applied_logs: list[str]         # 修改成功的日志
     unmatched_keys: list[AssetKey]  # 未匹配的资源键
     matched_keys: list[AssetKey]    # 匹配成功的资源键（包括修改和跳过的）
+    anim_diffs: dict[str, list[str]] | None = None  # 动画差异字典 {skel名称: [缺失动画列表]}
     
     @property
     def matched_count(self) -> int:

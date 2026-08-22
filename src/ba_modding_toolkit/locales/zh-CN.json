@@ -341,7 +341,11 @@
 			"anim_check_comparing": "正在检测动画差异: {name}",
 			"anim_check_new_animations": "目标 {name} 含有来源不存在的动画: {animations}",
 			"anim_check_no_diff": "{name} 动画一致",
-			"anim_check_failed": "动画差异检测失败: {error}"
+			"anim_check_failed": "动画差异检测失败: {error}",
+			"anim_diff_title": "⚠️  以下文件包含原 Mod 中缺失的新增动作：",
+			"anim_diff_item_count": "缺失 {count} 个动画",
+			"anim_diff_missing_list": "缺失列表: {animations}",
+			"anim_diff_hint": "提示: 原版游戏可能更新了动作，若直接使用旧 Mod，这些动作触发时可能会导致游戏卡死。"
 		},
 		"packer": {
 			"start_packing": "开始打包资源...",

@@ -24,7 +24,20 @@ from .models import (
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
-from .searching import find_target_bundles, search_prefix
+from .searching import find_target_bundles
+
+
+def _log_anim_diff_report(anim_diffs: dict[str, list[str]], log: LogFunc) -> None:
+    """输出动画缺失警告报告（仅在有差异时输出）"""
+    if not anim_diffs:
+        return
+    log("\n" + "!" * 50)
+    log(t("log.spine.anim_diff_title"))
+    for name, anims in anim_diffs.items():
+        log(f"   - {name} ({t('log.spine.anim_diff_item_count', count=len(anims))})")
+        log(f"     {t('log.spine.anim_diff_missing_list', animations=', '.join(anims))}")
+    log(t("log.spine.anim_diff_hint"))
+    log("!" * 50)
 
 
 # ====== 资源处理相关 ======
@@ -233,6 +246,7 @@ def process_asset_packing(
         file_pairs: list[FilePair] = []
         success_count = 0
         all_matched_keys: set[AssetKey] = set()
+        anim_diffs: dict[str, set[str]] = {}
 
         for i, bundle_path in enumerate(bundle_paths):
             if len(bundle_paths) > 1:
@@ -244,6 +258,10 @@ def process_asset_packing(
                 continue
 
             result = target_bundle.apply_patch(patch, strategy_name, anim_check)
+
+            # 汇总动画差异
+            for name, anims in (result.anim_diffs or {}).items():
+                anim_diffs.setdefault(name, set()).update(anims)
 
             # 判断是否应该保存此 bundle
             should_save = result.is_success or not skip_unchanged
@@ -280,6 +298,9 @@ def process_asset_packing(
             log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             for key in sorted(never_matched_keys):
                 log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=str(key))})")
+
+        # 3. 输出动画缺失警告报告
+        _log_anim_diff_report({k: sorted(v) for k, v in anim_diffs.items()}, log)
 
         if not file_pairs:
             return False, t("message.packer.no_matching_assets_to_pack"), []
@@ -548,6 +569,7 @@ def process_mod_update(
         log(f'\n--- {t("log.section.applying_to_targets")} ---')
         file_pairs: list[FilePair] = []
         total_matched = 0  # 总匹配数（包括跳过的）
+        anim_diffs: dict[str, set[str]] = {}
 
         for tgt in target_paths:
             tgt_bundle = Bundle.load(tgt, log)
@@ -557,6 +579,10 @@ def process_mod_update(
             
             result = tgt_bundle.apply_patch(patches, match_strategy, anim_check)
             total_matched += result.matched_count
+
+            # 汇总动画差异
+            for name, anims in (result.anim_diffs or {}).items():
+                anim_diffs.setdefault(name, set()).update(anims)
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
                 log(f"  ⏭️ {t('log.mod_update.target_unchanged', name=tgt.name, count=result.skipped_count)}")
@@ -573,6 +599,9 @@ def process_mod_update(
             else:
                 log(f"  > {t('log.file.no_changes_made')} ({tgt.name})")
         
+        # 3. 输出动画缺失警告报告
+        _log_anim_diff_report({k: sorted(v) for k, v in anim_diffs.items()}, log)
+
         if not file_pairs:
             # 区分：完全没有匹配 vs 匹配了但都被跳过
             if total_matched > 0 and skip_unchanged:

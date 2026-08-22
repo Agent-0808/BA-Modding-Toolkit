@@ -383,6 +383,7 @@ class Bundle:
         skipped_count = 0
         applied_assets_log = []
         matched_keys: list[AssetKey] = []
+        anim_diffs: dict[str, list[str]] = {}
         
         tasks = patch.copy()
         
@@ -433,6 +434,7 @@ class Bundle:
                                 log=self.log
                             )
                             if missing_anims:
+                                anim_diffs[resource_name] = missing_anims
                                 self.log(f"  ⚠️ {t('log.spine.anim_check_new_animations', name=resource_name, animations=', '.join(missing_anims))}")
                             else:
                                 self.log(f"  ✓ {t('log.spine.anim_check_no_diff', name=resource_name)}")
@@ -457,7 +459,8 @@ class Bundle:
             skipped_count=skipped_count,
             applied_logs=applied_assets_log,
             unmatched_keys=list(tasks.keys()),
-            matched_keys=matched_keys
+            matched_keys=matched_keys,
+            anim_diffs=anim_diffs,
         )
     
     def extract_patch(
