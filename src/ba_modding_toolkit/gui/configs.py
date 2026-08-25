@@ -121,6 +121,7 @@ class ConfigMixin:
 
     # Tools
     report_format_var: Annotated[tk.StringVar, ConfigMeta("Tools", "list")]
+    report_render_preset_var: Annotated[tk.StringVar, ConfigMeta("Tools", "low")]
 
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]

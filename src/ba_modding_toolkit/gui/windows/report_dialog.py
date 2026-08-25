@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
+from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ...report import generate_mod_report
 from ..components import SettingRow, UIComponents
 from .base import StoppableDialog
@@ -31,7 +32,7 @@ class ReportDialog(StoppableDialog):
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.tools.report.title"))
-        self.geometry("800x300")
+        self.geometry("800x400")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -52,6 +53,18 @@ class ReportDialog(StoppableDialog):
             tooltip=t("option.enable_spine_preview_info"),
             app=self.app,
             on_click_disabled=self._show_spine_viewer_not_configured
+        )
+
+        # 预览渲染预设选择
+        SettingRow.create_combobox_row(
+            options_frame,
+            label=t("option.report_render_preset"),
+            text_var=self.app.report_render_preset_var,
+            values=[
+                ("low", t("option.report_render_preset_low")),
+                ("high", t("option.report_render_preset_high"))
+            ],
+            tooltip=t("option.report_render_preset_info"),
         )
 
         # 报告格式选择
@@ -150,6 +163,10 @@ class ReportDialog(StoppableDialog):
         # 标记任务开始
         self.set_task_running(True)
 
+        # 预览渲染预设
+        preset_map = {"low": RENDER_PRESET_LOW, "high": RENDER_PRESET_HIGH}
+        render_options = preset_map.get(self.app.report_render_preset_var.get(), RENDER_PRESET_LOW)
+
         # 在线程中运行
         def run():
             success, message = generate_mod_report(
@@ -160,6 +177,7 @@ class ReportDialog(StoppableDialog):
                 enable_render=enable_render,
                 viewer_path=viewer_path,
                 report_format=self.app.report_format_var.get(),
+                render_options=render_options,
                 log=self.app.logger.log,
                 progress_callback=self._update_progress,
             )

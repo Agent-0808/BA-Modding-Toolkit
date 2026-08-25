@@ -12,7 +12,7 @@ from .models import BundleFileInfo, LogFunc, ProgressCallback
 from .naming import CharacterInternalIDMap
 from .searching import list_bundle_files
 from .core import render_spine_preview_from_bundle
-from .spine import RENDER_PRESET_LOW
+from .spine import RenderOptions, RENDER_PRESET_LOW
 from .utils import no_log
 
 
@@ -65,6 +65,7 @@ def generate_mod_report(
     enable_render: bool = False,
     viewer_path: Path | None = None,
     report_format: ReportFormat = "list",
+    render_options: RenderOptions = RENDER_PRESET_LOW,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[bool, str]:
@@ -79,6 +80,7 @@ def generate_mod_report(
         enable_render: 是否生成 Spine 预览图
         viewer_path: SpineViewerCLI 路径
         report_format: 报告格式（"list" 或 "table"）
+        render_options: 渲染参数（默认低画质，供报告预览图使用）
         log: 日志函数
         progress_callback: 进度回调函数
 
@@ -172,7 +174,7 @@ def generate_mod_report(
                     output_dir=output_dir,
                     viewer_path=viewer_path,
                     output_filename=entry.prefix,
-                    render_options=RENDER_PRESET_LOW,
+                    render_options=render_options,
                     log=log,
                 )
                 
@@ -186,7 +188,7 @@ def generate_mod_report(
                             output_dir=output_dir,
                             viewer_path=viewer_path,
                             output_filename=entry.prefix,
-                            render_options=RENDER_PRESET_LOW,
+                            render_options=render_options,
                             log=log,
                         )
 
