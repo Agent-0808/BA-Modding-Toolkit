@@ -5,7 +5,6 @@ import threading
 from pathlib import Path
 import shutil
 import tempfile
-from typing import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 
@@ -14,7 +13,7 @@ from .utils import ImageUtils, no_log
 from .spine import (
     SkelConverter, SpineViewer, atlas_downgrade,
     check_legacy_rename_needed, normalize_legacy_assets,
-    unpack_atlas,
+    unpack_atlas, RenderOptions, RENDER_PRESET_HIGH,
 )
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
@@ -429,6 +428,7 @@ def render_spine_preview_from_bundle(
     output_dir: Path,
     viewer_path: Path,
     output_filename: str | None = None,
+    render_options: RenderOptions = RENDER_PRESET_HIGH,
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[Path]]:
     """
@@ -439,6 +439,7 @@ def render_spine_preview_from_bundle(
         output_dir: 输出目录
         viewer_path: SpineViewerCLI 路径
         output_filename: 输出文件名（不含扩展名），用于自定义命名。None 则使用 skel 文件名
+        render_options: 渲染参数（默认高画质）
         log: 日志记录函数
 
     Returns:
@@ -496,6 +497,7 @@ def render_spine_preview_from_bundle(
                 skel_path=skel_path,
                 output_path=output_path,
                 viewer_path=viewer_path,
+                render_options=render_options,
                 log=log
             )
 

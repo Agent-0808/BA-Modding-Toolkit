@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from SpineAtlas import Atlas, ReadAtlasFile
 
@@ -211,6 +212,25 @@ class SkelConverter:
         return success
 
 
+@dataclass(frozen=True)
+class RenderOptions:
+    """SpineViewerCLI 导出预览图的渲染参数。"""
+    fmt: str = "png"
+    scale: float = 1.0
+    background: str = "#00000000"
+    margin: int = 0
+    max_resolution: int = 8888
+    time: float = 0.0
+    quality: int = 100
+
+
+# 高画质预设：与旧版默认参数一致（extractor / file_list 交互预览使用）
+RENDER_PRESET_HIGH = RenderOptions()
+
+# 低画质预设：报告生成使用，降低分辨率与质量以减小体积
+RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50)
+
+
 class SpineViewer:
     """SpineViewerCLI 工具集成类,用于查询信息和渲染预览。"""
 
@@ -313,6 +333,7 @@ class SpineViewer:
         skel_path: Path,
         output_path: Path,
         viewer_path: Path,
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
         log: LogFunc = no_log,
     ) -> tuple[bool, str]:
         """
@@ -328,6 +349,7 @@ class SpineViewer:
             skel_path: skel 文件路径（atlas 和 png 在同目录）
             output_path: 输出图片路径
             viewer_path: SpineViewerCLI 路径
+            render_options: 渲染参数（默认高画质）
             log: 日志函数
 
         Returns:
@@ -367,7 +389,7 @@ class SpineViewer:
             viewer_path=viewer_path,
             atlas_path=atlas_path,
             animation=animation,
-            fmt="png",
+            render_options=render_options,
             log=log
         )
 
@@ -379,9 +401,7 @@ class SpineViewer:
         atlas_path: Path | None = None,
         animation: str = "Idle_01",
         skin: str = "",
-        scale: float = 1.0,
-        background: str = "#00000000",
-        fmt: str = "png",
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
         log: LogFunc = no_log,
     ) -> tuple[bool, str]:
         """
@@ -394,9 +414,7 @@ class SpineViewer:
             animation: 动画名称
             skin: 皮肤名称（空字符串表示默认皮肤）
             atlas_path: atlas 文件路径（可选）
-            scale: 缩放比例
-            background: 背景颜色（默认透明）
-            fmt: 输出格式
+            render_options: 渲染参数（含输出格式与画质相关参数）
             log: 日志记录函数
 
         Returns:
@@ -417,15 +435,15 @@ class SpineViewer:
                 str(viewer_path),
                 "export",
                 str(skel_path),
-                "-f", fmt,
+                "-f", render_options.fmt,
                 "-o", str(output_path),
                 "-a", animation,
-                "--scale", str(scale),
-                "--color", background,
-                "--margin", "0",
-                "--max-resolution", "8888",
-                "--time", "0",
-                "--quality", "100",
+                "--scale", str(render_options.scale),
+                "--color", render_options.background,
+                "--margin", str(render_options.margin),
+                "--max-resolution", str(render_options.max_resolution),
+                "--time", str(render_options.time),
+                "--quality", str(render_options.quality),
                 "--no-progress"
             ]
 

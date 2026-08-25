@@ -12,6 +12,7 @@ from .models import BundleFileInfo, LogFunc, ProgressCallback
 from .naming import CharacterInternalIDMap
 from .searching import list_bundle_files
 from .core import render_spine_preview_from_bundle
+from .spine import RENDER_PRESET_LOW
 from .utils import no_log
 
 
@@ -171,6 +172,7 @@ def generate_mod_report(
                     output_dir=output_dir,
                     viewer_path=viewer_path,
                     output_filename=entry.prefix,
+                    render_options=RENDER_PRESET_LOW,
                     log=log,
                 )
                 
@@ -184,6 +186,7 @@ def generate_mod_report(
                             output_dir=output_dir,
                             viewer_path=viewer_path,
                             output_filename=entry.prefix,
+                            render_options=RENDER_PRESET_LOW,
                             log=log,
                         )
 
