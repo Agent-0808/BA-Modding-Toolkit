@@ -8,13 +8,13 @@ from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     SaveOptions,
-    SpineOptions,
+    SkelConvertOptions,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
     process_batch_mod_update,
 )
-from ..models import SaveOptions, SpineOptions
+from ..models import SaveOptions, SkelConvertOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, CharacterInternalIDMap
@@ -126,14 +126,14 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
         compression=args.compression
     )
 
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
     # 调用核心处理函数
-    success, message, file_pairs = process_mod_update(
+    result = process_mod_update(
         source_paths=valid_old_paths,
         target_paths=target_paths,
         output_dir=output_dir,
@@ -146,14 +146,14 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     logger.log("\n" + "="*50)
-    if success:
-        logger.log(f"✅ Operation Successful: {message}")
+    if result.success:
+        logger.log(f"✅ Operation Successful: {result.message}")
     else:
-        logger.log(f"❌ Operation Failed: {message}")
+        logger.log(f"❌ Operation Failed: {result.message}")
 
-    if file_pairs:
-        logger.log(f"Output files: {len(file_pairs)}")
-        for pair in file_pairs:
+    if result.file_pairs:
+        logger.log(f"Output files: {len(result.file_pairs)}")
+        for pair in result.file_pairs:
             logger.log(f"  - {pair.source}")
     else:
         logger.log("  - No file pairs processed.")
@@ -212,7 +212,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     )
 
     # 创建Spine选项
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
@@ -223,7 +223,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         )
 
     # 调用批量处理函数
-    success_count, fail_count, failed_tasks, file_pairs = process_batch_mod_update(
+    result = process_batch_mod_update(
         mod_file_list=mod_file_list,
         search_paths=search_paths,
         output_dir=output_dir,
@@ -240,17 +240,17 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     logger.log("\n" + "="*50)
     logger.log(f"Batch Update Summary:")
     logger.log(f"  Total files: {len(mod_file_list)}")
-    logger.log(f"  Successful: {success_count}")
-    logger.log(f"  Failed: {fail_count}")
+    logger.log(f"  Successful: {result.success_count}")
+    logger.log(f"  Failed: {result.fail_count}")
 
-    if file_pairs:
-        logger.log(f"\n✅ Output files ({len(file_pairs)}):")
-        for pair in file_pairs:
+    if result.file_pairs:
+        logger.log(f"\n✅ Output files ({len(result.file_pairs)}):")
+        for pair in result.file_pairs:
             logger.log(f"  - {pair.output.name}")
 
-    if failed_tasks:
+    if result.failed_tasks:
         logger.log(f"\n❌ Failed tasks:")
-        for task in failed_tasks:
+        for task in result.failed_tasks:
             logger.log(f"  - {task}")
 
     logger.log("="*50)
@@ -296,7 +296,7 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
         compression=args.compression
     )
 
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_conversion,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,
@@ -472,7 +472,7 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"  - {bp.name}")
 
     # 创建SpineOptions对象
-    spine_options = SpineOptions(
+    spine_options = SkelConvertOptions(
         enabled=args.enable_spine_downgrade,
         converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
         target_version=args.target_spine_version or None,

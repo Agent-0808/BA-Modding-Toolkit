@@ -623,3 +623,54 @@ def normalize_legacy_assets(source_folder_path: Path, bundle_png_names: set[str]
 
     return final_temp_path
 
+
+def check_skel_animation_diff(
+    source_skel: Path | bytes,
+    target_skel: Path | bytes,
+    viewer_path: Path,
+    log: LogFunc = no_log,
+) -> list[str]:
+    """
+    比较两个 skel 的动画差异，返回目标中有但来源中没有的动画列表。
+
+    Args:
+        source_skel: 来源 skel 文件路径或内容
+        target_skel: 目标 skel 文件路径或内容
+        viewer_path: SpineViewerCLI 路径
+        log: 日志记录函数
+
+    Returns:
+        目标中有但来源中没有的动画名称列表，查询失败时返回空列表
+    """
+    if not viewer_path or not viewer_path.exists():
+        return []
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="skel_diff_") as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # 统一转为文件路径供 CLI 使用
+            def to_file(data: Path | bytes, name: str) -> Path:
+                if isinstance(data, Path):
+                    return data
+                p = temp_path / name
+                p.write_bytes(data)
+                return p
+
+            src_file = to_file(source_skel, "source.skel")
+            tgt_file = to_file(target_skel, "target.skel")
+
+            src_ok, src_info = SpineViewer.query(src_file, viewer_path, log=log)
+            tgt_ok, tgt_info = SpineViewer.query(tgt_file, viewer_path, log=log)
+
+            if not (src_ok and tgt_ok):
+                return []
+
+            src_anims = set(src_info.get('animations', []))
+            tgt_anims = set(tgt_info.get('animations', []))
+            return sorted(tgt_anims - src_anims)
+
+    except Exception as e:
+        log(f'  ⚠️ {t("log.spine.anim_check_failed", error=e)}')
+        return []
+

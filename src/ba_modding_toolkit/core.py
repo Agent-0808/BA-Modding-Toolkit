@@ -11,16 +11,34 @@ from PIL import Image
 
 from .i18n import t
 from .utils import ImageUtils, no_log
-from .spine import SkelConverter, SpineViewer, atlas_downgrade, check_legacy_rename_needed, normalize_legacy_assets, unpack_atlas
+from .spine import (
+    SkelConverter, SpineViewer, atlas_downgrade,
+    check_legacy_rename_needed, normalize_legacy_assets,
+    unpack_atlas,
+)
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
     LogFunc, PatchResult,
-    MatchStrategy, SaveOptions, SpineOptions,
+    MatchStrategy, SaveOptions, SkelConvertOptions, AnimCheckOptions,
+    AnimDiffMap, ModUpdateResult, BatchUpdateResult,
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
-from .searching import find_target_bundles, search_prefix
+from .searching import find_target_bundles
+
+
+def _log_anim_diff_report(anim_diffs: dict[str, list[str]], log: LogFunc) -> None:
+    """输出动画缺失警告报告（仅在有差异时输出）"""
+    if not anim_diffs:
+        return
+    log("\n" + "!" * 50)
+    log(t("log.spine.anim_diff_title"))
+    for name, anims in anim_diffs.items():
+        log(f"   - {name} ({t('log.spine.anim_diff_item_count', count=len(anims))})")
+        log(f"     {t('log.spine.anim_diff_missing_list', animations=', '.join(anims))}")
+    log(t("log.spine.anim_diff_hint"))
+    log("!" * 50)
 
 
 # ====== 资源处理相关 ======
@@ -97,10 +115,11 @@ def process_asset_packing(
     assets: list[Path],
     output_dir: Path,
     save_options: SaveOptions,
-    spine_options: SpineOptions | None = None,
+    spine_options: SkelConvertOptions | None = None,
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
     skip_unchanged: bool = True,
+    anim_check: AnimCheckOptions | None = None,
     log: LogFunc = no_log,
 ) -> tuple[bool, str, list[FilePair]]:
     """
@@ -228,6 +247,7 @@ def process_asset_packing(
         file_pairs: list[FilePair] = []
         success_count = 0
         all_matched_keys: set[AssetKey] = set()
+        anim_diffs: dict[str, set[str]] = {}
 
         for i, bundle_path in enumerate(bundle_paths):
             if len(bundle_paths) > 1:
@@ -238,7 +258,11 @@ def process_asset_packing(
                 log(f"⚠️ {t('message.packer.load_target_bundle_failed')}: {bundle_path.name}")
                 continue
 
-            result = target_bundle.apply_patch(patch, strategy_name)
+            result = target_bundle.apply_patch(patch, strategy_name, anim_check)
+
+            # 汇总动画差异
+            for name, anims in (result.anim_diffs or {}).items():
+                anim_diffs.setdefault(name, set()).update(anims)
 
             # 判断是否应该保存此 bundle
             should_save = result.is_success or not skip_unchanged
@@ -276,6 +300,9 @@ def process_asset_packing(
             for key in sorted(never_matched_keys):
                 log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=str(key))})")
 
+        # 3. 输出动画缺失警告报告
+        _log_anim_diff_report({k: sorted(v) for k, v in anim_diffs.items()}, log)
+
         if not file_pairs:
             return False, t("message.packer.no_matching_assets_to_pack"), []
 
@@ -296,7 +323,7 @@ def process_asset_extraction(
     bundle_path: Path | list[Path],
     output_dir: Path,
     asset_types_to_extract: set[str],
-    spine_options: SpineOptions | None = None,
+    spine_options: SkelConvertOptions | None = None,
     enable_unpack_atlas: bool = False,
     scale_atlas: bool = False,
     log: LogFunc = no_log,
@@ -492,11 +519,12 @@ def process_mod_update(
     output_dir: Path,
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
-    spine_options: SpineOptions | None = None,
+    spine_options: SkelConvertOptions | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
+    anim_check: AnimCheckOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[bool, str, list[FilePair]]:
+) -> ModUpdateResult:
     """
     自动化Mod更新流程 (N-to-N)。
     
@@ -517,9 +545,9 @@ def process_mod_update(
         log: 日志记录函数，默认为空函数
     
     Returns:
-        tuple[bool, str, list[FilePair]]: (是否成功, 状态消息, 文件对列表) 的元组
+        ModUpdateResult: 包含成功标志、状态消息、文件对列表及动画差异信息。
         文件对列表为 (输出文件路径, 原始目标文件路径) 的元组
-        如果skip_unchanged=True且所有资源都未变化，返回 (True, "unchanged", [])
+        如果skip_unchanged=True且所有资源都未变化，message 为 "unchanged"。
     """
     try:
         # 1. 提取资源 (Extraction)
@@ -532,7 +560,7 @@ def process_mod_update(
                 continue
             patch = src_bundle.extract_patch(asset_types_to_replace, match_strategy, spine_options)
             patches.update(patch)
-        
+
         if not patches:
             return False, t("message.mod_update.no_assets_extracted"), []
 
@@ -542,6 +570,7 @@ def process_mod_update(
         log(f'\n--- {t("log.section.applying_to_targets")} ---')
         file_pairs: list[FilePair] = []
         total_matched = 0  # 总匹配数（包括跳过的）
+        anim_diffs: dict[str, set[str]] = {}
 
         for tgt in target_paths:
             tgt_bundle = Bundle.load(tgt, log)
@@ -549,8 +578,12 @@ def process_mod_update(
                 log(f"  ❌ {t('message.load_failed')}: {tgt.name}")
                 continue
             
-            result = tgt_bundle.apply_patch(patches, match_strategy)
+            result = tgt_bundle.apply_patch(patches, match_strategy, anim_check)
             total_matched += result.matched_count
+
+            # 汇总动画差异
+            for name, anims in (result.anim_diffs or {}).items():
+                anim_diffs.setdefault(name, set()).update(anims)
             
             if skip_unchanged and result.applied_count == 0 and result.skipped_count > 0:
                 log(f"  ⏭️ {t('log.mod_update.target_unchanged', name=tgt.name, count=result.skipped_count)}")
@@ -566,19 +599,22 @@ def process_mod_update(
                     log(f"  ❌ {t('log.file.save_failed', path=output_path, error=save_message)}")
             else:
                 log(f"  > {t('log.file.no_changes_made')} ({tgt.name})")
-        
+
+        # 3. 归一化动画差异（按 skel 名排序）
+        final_anim_diffs: AnimDiffMap = {k: sorted(v) for k, v in anim_diffs.items()}
+
         if not file_pairs:
             # 区分：完全没有匹配 vs 匹配了但都被跳过
             if total_matched > 0 and skip_unchanged:
-                return True, "all_targets_unchanged", []
-            return False, t("message.mod_update.no_targets_processed"), []
+                return ModUpdateResult(True, "all_targets_unchanged", [], final_anim_diffs)
+            return ModUpdateResult(False, t("message.mod_update.no_targets_processed"), [], final_anim_diffs)
 
-        return True, t("message.mod_update.success"), file_pairs
+        return ModUpdateResult(True, t("message.mod_update.success"), file_pairs, final_anim_diffs)
 
     except Exception as e:
         log(f"\n❌ {t('common.error')}: {t('log.error_processing', error=e)}")
         log(traceback.format_exc())
-        return False, t("message.error_during_process", error=e), []
+        return ModUpdateResult(False, t("message.error_during_process", error=e), [])
 
 def _process_single_mod_update(
     mod_path: Path,
@@ -586,11 +622,12 @@ def _process_single_mod_update(
     output_dir: Path,
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
-    spine_options: SpineOptions | None,
+    spine_options: SkelConvertOptions | None,
     skip_unchanged: bool,
     match_strategy: MatchStrategy,
-    log: LogFunc,
-) -> tuple[bool, str, list[FilePair]]:
+    anim_check: AnimCheckOptions | None = None,
+    log: LogFunc = no_log,
+) -> ModUpdateResult:
     """
     处理单个 mod 文件：查找目标 → 执行更新
 
@@ -603,10 +640,11 @@ def _process_single_mod_update(
         spine_options: Spine资源升级的选项
         skip_unchanged: 是否跳过未变化的文件
         match_strategy: 匹配策略
+        anim_check: 动画差异检测选项（启用开关与 SpineViewerCLI 路径）
         log: 日志记录函数
 
     Returns:
-        (success, message, file_pairs)
+        ModUpdateResult: 包含成功标志、状态消息、文件对列表及动画差异信息。
         - success=True, message="" 表示处理成功且有输出
         - success=True, message="unchanged" 表示内容未变化，无输出
         - success=False, message=错误信息 表示处理失败
@@ -615,9 +653,9 @@ def _process_single_mod_update(
 
     if not new_bundle_paths:
         log(f'  ❌ {t("log.search.find_failed", message=find_message)}')
-        return False, t("log.search.find_failed", message=find_message), []
+        return ModUpdateResult(False, t("log.search.find_failed", message=find_message), [])
 
-    success, process_message, update_file_pairs = process_mod_update(
+    result = process_mod_update(
         source_paths=[mod_path],
         target_paths=new_bundle_paths,
         output_dir=output_dir,
@@ -627,18 +665,19 @@ def _process_single_mod_update(
         log=log,
         skip_unchanged=skip_unchanged,
         match_strategy=match_strategy,
+        anim_check=anim_check,
     )
 
-    if success:
-        if process_message in ("unchanged", "all_targets_unchanged"):
+    if result.success:
+        if result.message in ("unchanged", "all_targets_unchanged"):
             log(f'  ⏭️ {t("log.batch.process_unchanged", filename=mod_path.name)}')
-            return True, "unchanged", []
+            return ModUpdateResult(True, "unchanged", [], result.anim_diffs)
         else:
             log(f'  ✅ {t("log.batch.process_success", filename=mod_path.name)}')
-            return True, "", update_file_pairs
+            return ModUpdateResult(True, "", result.file_pairs, result.anim_diffs)
     else:
-        log(f'  ❌ {t("log.batch.process_failed", filename=mod_path.name, message=process_message)}')
-        return False, process_message, []
+        log(f'  ❌ {t("log.batch.process_failed", filename=mod_path.name, message=result.message)}')
+        return ModUpdateResult(False, result.message, [], result.anim_diffs)
 
 
 def process_batch_mod_update(
@@ -647,13 +686,14 @@ def process_batch_mod_update(
     output_dir: Path,
     asset_types_to_replace: set[str],
     save_options: SaveOptions,
-    spine_options: SpineOptions | None,
+    spine_options: SkelConvertOptions | None,
     max_workers: int = 1,
     progress_callback: ProgressCallback | None = None,
     skip_unchanged: bool = False,
     match_strategy: MatchStrategy = 'path_id',
+    anim_check: AnimCheckOptions | None = None,
     log: LogFunc = no_log,
-) -> tuple[int, int, list[str], list[FilePair]]:
+) -> BatchUpdateResult:
     """
     执行批量Mod更新的核心逻辑。
 
@@ -672,8 +712,8 @@ def process_batch_mod_update(
         log: 日志记录函数。
 
     Returns:
-        tuple[int, int, list[str], list[FilePair]]: 
-            (成功计数, 失败计数, 失败任务详情列表, (输出文件路径, 被替换的原始文件路径) 元组列表)
+        BatchUpdateResult: 包含成功计数、失败计数、失败任务详情、文件对列表
+        （各为 (输出文件路径, 被替换的原始文件路径) 元组）及按 mod 分组的动画差异信息。
     """
     total_files = len(mod_file_list)
     success_count = 0
@@ -681,6 +721,14 @@ def process_batch_mod_update(
     unchanged_count = 0
     failed_tasks: list[str] = []
     file_pairs: list[FilePair] = []
+    anim_diffs: dict[str, set[str]] = {}
+
+    def record_diff(diff: AnimDiffMap | None) -> None:
+        """记录动画差异，按 skel 名合并去重"""
+        if not diff:
+            return
+        for skel, anims in diff.items():
+            anim_diffs.setdefault(skel, set()).update(anims)
 
     log("\n" + "=" * 50)
     log(f"📦 {t('log.batch.start')}")
@@ -698,7 +746,7 @@ def process_batch_mod_update(
             log("\n" + "=" * 50)
             log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
 
-            success, message, pairs = _process_single_mod_update(
+            result: ModUpdateResult = _process_single_mod_update(
                 mod_path=old_mod_path,
                 search_paths=search_paths,
                 output_dir=output_dir,
@@ -707,18 +755,20 @@ def process_batch_mod_update(
                 spine_options=spine_options,
                 skip_unchanged=skip_unchanged,
                 match_strategy=match_strategy,
+                anim_check=anim_check,
                 log=log,
             )
+            record_diff(result.anim_diffs)
 
-            if success:
-                if message == "unchanged":
+            if result.success:
+                if result.message == "unchanged":
                     unchanged_count += 1
                 else:
                     success_count += 1
-                    file_pairs.extend(pairs)
+                    file_pairs.extend(result.file_pairs)
             else:
                 fail_count += 1
-                failed_tasks.append(f"{filename} - {message}")
+                failed_tasks.append(f"{filename} - {result.message}")
     else:
         # 并行处理
         lock = threading.Lock()
@@ -732,14 +782,14 @@ def process_batch_mod_update(
                     mod_path, search_paths, output_dir,
                     asset_types_to_replace, save_options,
                     spine_options, skip_unchanged,
-                    match_strategy, log,
+                    match_strategy, anim_check, log,
                 )
                 futures[future] = mod_path.name
 
             for future in as_completed(futures):
                 filename = futures[future]
                 try:
-                    success, message, pairs = future.result()
+                    result = future.result()
                 except Exception as e:
                     with lock:
                         fail_count += 1
@@ -748,18 +798,19 @@ def process_batch_mod_update(
                     log(t("log.batch.process_failed", filename=filename, message=str(e)))
                 else:
                     with lock:
-                        if success:
-                            if message == "unchanged":
+                        record_diff(result.anim_diffs)
+                        if result.success:
+                            if result.message == "unchanged":
                                 unchanged_count += 1
                                 log(t("log.batch.process_unchanged", filename=filename))
                             else:
                                 success_count += 1
-                                file_pairs.extend(pairs)
+                                file_pairs.extend(result.file_pairs)
                                 log(t("log.batch.process_success", filename=filename))
                         else:
                             fail_count += 1
-                            failed_tasks.append(f"{filename} - {message}")
-                            log(t("log.batch.process_failed", filename=filename, message=message))
+                            failed_tasks.append(f"{filename} - {result.message}")
+                            log(t("log.batch.process_failed", filename=filename, message=result.message))
                         completed += 1
 
                 if progress_callback:
@@ -781,4 +832,10 @@ def process_batch_mod_update(
         for task in failed_tasks:
             log(f'  - {task}')
 
-    return success_count, fail_count, failed_tasks, file_pairs
+    return BatchUpdateResult(
+        success_count=success_count,
+        fail_count=fail_count,
+        failed_tasks=failed_tasks,
+        file_pairs=file_pairs,
+        anim_diffs={k: sorted(v) for k, v in anim_diffs.items()},
+    )

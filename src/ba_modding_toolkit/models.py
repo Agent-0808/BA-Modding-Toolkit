@@ -62,8 +62,8 @@ class SaveOptions:
 
 
 @dataclass
-class SpineOptions:
-    """封装了Spine版本转换相关的选项。"""
+class SkelConvertOptions:
+    """封装了Spine版本转换相关的选项（依赖 SpineSkeletonDataConverter）"""
     enabled: bool = False
     converter_path: Path | None = None
     target_version: str | None = None
@@ -78,6 +78,46 @@ class SpineOptions:
             and self.target_version.count(".") == 2
         )
 
+@dataclass
+class AnimCheckOptions:
+    """动画差异比对与校验配置（依赖 SpineViewerCLI）"""
+    enabled: bool = False
+    viewer_path: Path | None = None
+
+    def is_valid(self) -> bool:
+        """检查动画检测器是否就绪"""
+        return bool(
+            self.enabled
+            and self.viewer_path
+            and self.viewer_path.exists()
+        )
+
+# 动画差异映射：{skel名称: [缺失动画列表]}
+AnimDiffMap = dict[str, list[str]]
+
+class FilePair(NamedTuple):
+    """core 中处理产生的文件对，包含output和source"""
+
+    output: Path    # 输出文件路径
+    source: Path    # 源文件路径
+
+@dataclass
+class ModUpdateResult:
+    """process_mod_update 的返回结果"""
+    success: bool
+    message: str
+    file_pairs: list[FilePair]
+    anim_diffs: AnimDiffMap | None = None
+
+@dataclass
+class BatchUpdateResult:
+    """process_batch_mod_update 的返回结果"""
+    success_count: int
+    fail_count: int
+    failed_tasks: list[str]
+    file_pairs: list[FilePair]
+    anim_diffs: AnimDiffMap | None = None
+
 class PatchResult(NamedTuple):
     """封装资源修改操作的结果。"""
     applied_count: int              # 实际执行修改的数量
@@ -85,6 +125,7 @@ class PatchResult(NamedTuple):
     applied_logs: list[str]         # 修改成功的日志
     unmatched_keys: list[AssetKey]  # 未匹配的资源键
     matched_keys: list[AssetKey]    # 匹配成功的资源键（包括修改和跳过的）
+    anim_diffs: dict[str, list[str]] | None = None  # 动画差异字典 {skel名称: [缺失动画列表]}
     
     @property
     def matched_count(self) -> int:
@@ -95,12 +136,6 @@ class PatchResult(NamedTuple):
     def is_success(self) -> bool:
         """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
-
-class FilePair(NamedTuple):
-    """core 中处理产生的文件对，包含output和source"""
-
-    output: Path    # 输出文件路径
-    source: Path    # 源文件路径
 
 class ParsedFilename(NamedTuple):
     """

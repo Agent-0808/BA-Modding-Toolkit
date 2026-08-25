@@ -12,7 +12,7 @@ import ttkbootstrap as tb
 
 from ..utils import CREATE_NO_WINDOW, no_log
 from ..i18n import t
-from ..models import FilePair, FileType
+from ..models import FilePair, FileType, AnimDiffMap, LogFunc
 
 from tkinterdnd2.TkinterDnD import DnDWrapper, _require
 from ttkbootstrap.window import Window as tbWindow
@@ -200,6 +200,31 @@ def _perform_file_replace(
     except Exception as e:
         log(t("log.process_failed", error=e))
         return False
+
+
+def warn_anim_diffs(
+    data: AnimDiffMap,
+    log: LogFunc,
+) -> None:
+    """
+    输出动画缺失警告：在日志中详细列出缺失动画，并弹出警告框提示后果。
+
+    Args:
+        data: 动画差异数据，{skel名: [缺失动画列表]}
+        log: 日志函数（GUI 日志面板）
+    """
+    if not data:
+        return
+
+    # 日志详细输出
+    log(f"\n⚠️  {t('log.spine.anim_diff_title')}")
+    for skel, anims in data.items():
+        log(f"  - {skel} ({t('log.spine.anim_diff_item_count', count=len(anims))})")
+        log(f"    {t('log.spine.anim_diff_missing_list', animations=', '.join(anims))}")
+    log(f"{t('log.spine.anim_diff_hint')}")
+
+    # 警告弹窗，提示后果并引导查看日志
+    messagebox.showwarning(t("ui.anim_diff.title"), t("message.anim_diff.header"))
 
 
 def replace_file(

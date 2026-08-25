@@ -12,13 +12,13 @@ from PIL import Image
 
 from .i18n import t
 from .utils import CRCUtils, no_log
-from .spine import SkelConverter
+from .spine import SkelConverter, check_skel_animation_diff
 from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
-    SaveOptions, SpineOptions, ParsedFilename,
+    SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
     BundleFileInfo, ProgressCallback,
     REPLACEABLE_ASSET_TYPES
 )
@@ -364,7 +364,8 @@ class Bundle:
     def apply_patch(
         self,
         patch: Patch,
-        match_strategy: MatchStrategy = 'path_id'
+        match_strategy: MatchStrategy = 'path_id',
+        anim_check: AnimCheckOptions | None = None,
     ) -> PatchResult:
         """
         将补丁中的资源应用到当前的 bundle。
@@ -372,6 +373,7 @@ class Bundle:
         Args:
             patch: 资源补丁，格式为 { asset_key: content }。
             match_strategy: 匹配策略，用于从目标环境中的对象生成 asset_key。
+            anim_check: 动画差异检测选项（启用开关与 SpineViewerCLI 路径）
 
         Returns:
             PatchResult: 包含修改结果的数据类，包括实际修改数量、跳过数量、日志和未匹配键。
@@ -381,6 +383,7 @@ class Bundle:
         skipped_count = 0
         applied_assets_log = []
         matched_keys: list[AssetKey] = []
+        anim_diffs: dict[str, list[str]] = {}
         
         tasks = patch.copy()
         
@@ -414,12 +417,29 @@ class Bundle:
                         data.save()
                     elif obj.type == AssetType.TextAsset:
                         content: bytes
-                        new_script = content.decode("utf-8", "surrogateescape")
-                        if data.m_Script == new_script:
+                        target_bytes = data.m_Script.encode("utf-8", "surrogateescape")
+
+                        if target_bytes == content:
                             self.log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
                             skipped_count += 1
                             continue
-                        data.m_Script = new_script
+
+                        # 就地检测动画差异
+                        if anim_check and anim_check.is_valid() and resource_name.lower().endswith('.skel'):
+                            self.log(f"  🔍 {t('log.spine.anim_check_comparing', name=resource_name)}")
+                            missing_anims = check_skel_animation_diff(
+                                source_skel=content,
+                                target_skel=target_bytes,
+                                viewer_path=anim_check.viewer_path,
+                                log=self.log
+                            )
+                            if missing_anims:
+                                anim_diffs[resource_name] = missing_anims
+                                self.log(f"  ⚠️ {t('log.spine.anim_check_new_animations', name=resource_name, animations=', '.join(missing_anims))}")
+                            else:
+                                self.log(f"  ✓ {t('log.spine.anim_check_no_diff', name=resource_name)}")
+
+                        data.m_Script = content.decode("utf-8", "surrogateescape")
                         data.save()
                     else:
                         obj.set_raw_data(content)
@@ -439,14 +459,15 @@ class Bundle:
             skipped_count=skipped_count,
             applied_logs=applied_assets_log,
             unmatched_keys=list(tasks.keys()),
-            matched_keys=matched_keys
+            matched_keys=matched_keys,
+            anim_diffs=anim_diffs,
         )
     
     def extract_patch(
         self,
         asset_types_to_replace: set[str],
         match_strategy: MatchStrategy = 'path_id',
-        spine_options: SpineOptions | None = None
+        spine_options: SkelConvertOptions | None = None
     ) -> Patch:
         """
         从当前 Bundle 提取资源，生成补丁。

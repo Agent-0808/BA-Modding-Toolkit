@@ -11,7 +11,7 @@ from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes
-from ..models import SaveOptions, SpineOptions
+from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
@@ -221,7 +221,7 @@ class App(tb.Frame, ConfigMixin):
             return False
         return Bundle.check_need_crc(target_path, log=self.logger.log)
 
-    def build_spine_options(self, upgrade_mode: bool = True) -> SpineOptions:
+    def build_spine_options(self, upgrade_mode: bool = True) -> SkelConvertOptions:
         """从全局配置构建 SpineOptions
 
         Args:
@@ -229,17 +229,24 @@ class App(tb.Frame, ConfigMixin):
         """
 
         if upgrade_mode:
-            return SpineOptions(
+            return SkelConvertOptions(
                 enabled=self.enable_spine_conversion_var.get(),
                 converter_path=Path(self.spine_converter_path_var.get()),
                 target_version=self.target_spine_version_var.get()
             )
         else:
-            return SpineOptions(
+            return SkelConvertOptions(
                 enabled=self.enable_spine_downgrade_var.get(),
                 converter_path=Path(self.spine_converter_path_var.get()),
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
+
+    def build_anim_check_options(self) -> AnimCheckOptions:
+        """从全局配置构建动画差异检测选项"""
+        return AnimCheckOptions(
+            enabled=self.check_animations_var.get(),
+            viewer_path=Path(self.spine_viewer_path_var.get())
+        )
 
     def is_spine_converter_available(self) -> bool:
         """检查SpineConverter程序路径是否有效"""
@@ -303,6 +310,22 @@ class App(tb.Frame, ConfigMixin):
             "SpineSkeletonDataConverter",
             "https://github.com/wang606/SpineSkeletonDataConverter",
             parent
+        )
+
+    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineViewer未配置提示"""
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.3rd_party.spine_viewer_required"),
+            parent=parent or self.master
+        )
+
+    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示SpineViewer未配置提示"""
+        messagebox.showinfo(
+            t("common.tip"),
+            t("message.3rd_party.spine_viewer_required"),
+            parent=parent or self.master
         )
 
     def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:

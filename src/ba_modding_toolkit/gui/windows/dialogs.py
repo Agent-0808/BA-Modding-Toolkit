@@ -566,6 +566,15 @@ class SettingsDialog(StoppableDialog):
             status_check=lambda: Path(self.app.spine_viewer_path_var.get()).is_file()
         )
 
+        SettingRow.create_switch(
+            section,
+            label=t("option.check_animations"),
+            variable=self.app.check_animations_var,
+            tooltip=t("option.check_animations_info"),
+            app=self.app,
+            on_click_disabled=self.app.show_spine_viewer_not_configured
+        )
+
         tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
 
         # 角色ID映射表
