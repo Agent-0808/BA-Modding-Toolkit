@@ -217,7 +217,7 @@ def warn_anim_diffs(
         return
 
     # 日志详细输出
-    log(f"\n--- {t('log.spine.anim_diff_title')} ---")
+    log(f"\n⚠️  {t('log.spine.anim_diff_title')}")
     for skel, anims in data.items():
         log(f"  - {skel} ({t('log.spine.anim_diff_item_count', count=len(anims))})")
         log(f"    {t('log.spine.anim_diff_missing_list', animations=', '.join(anims))}")
