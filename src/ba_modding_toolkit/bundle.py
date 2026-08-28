@@ -11,7 +11,7 @@ from UnityPy.environment import Environment as Env
 from PIL import Image
 
 from .i18n import t
-from .utils import CRCUtils, no_log
+from .utils import CRCUtils, no_log, throttle_progress
 from .spine import SkelConverter, check_skel_animation_diff
 from .naming import parse_filename
 from .models import (
@@ -584,8 +584,10 @@ def analyze_bundles(
         return
 
     total = len(items)
+    # 节流进度回调，避免海量文件时的高频 GUI 更新
+    if progress_callback:
+        progress_callback = throttle_progress(progress_callback)
     for i, item in enumerate(items):
         for analyzer in analyzers:
             analyzer(item)
-        if progress_callback:
-            progress_callback(i + 1, total, item.path.name)
+        progress_callback(i + 1, total, item.path.name)

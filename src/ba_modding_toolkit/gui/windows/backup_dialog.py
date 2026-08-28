@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from ...i18n import t
 from ...searching import list_bundle_files
 from ...bundle import analyze_trailing
+from ...utils import throttle_progress
 from ..utils import select_directory
 from ..components import SettingRow, UIComponents
 from .base import StoppableDialog
@@ -154,6 +155,10 @@ class BackupDialog(StoppableDialog):
         # 2. 分析尾部字节，过滤 mod 文件
         mod_files: list[Path] = []
         total = len(items)
+        # 节流进度更新，避免海量文件时的高频 GUI 更新
+        update_progress = throttle_progress(
+            lambda cur, tot, name: self.after(0, lambda: self._update_progress(cur, tot, name))
+        )
         for i, item in enumerate(items):
             if self.should_stop():
                 return
@@ -161,8 +166,7 @@ class BackupDialog(StoppableDialog):
             analyze_trailing(item)
 
             # 更新进度
-            self.after(0, lambda idx=i, tot=total, name=item.path.name:
-                      self._update_progress(idx + 1, tot, name))
+            update_progress(i + 1, total, item.path.name)
 
             # 判断是否是 mod（尾部字节 > 0）
             if item.trailing_bytes and item.trailing_bytes > 0:

@@ -13,7 +13,7 @@ from .naming import CharacterInternalIDMap
 from .searching import list_bundle_files
 from .core import render_spine_preview_from_bundle
 from .spine import RenderOptions, RENDER_PRESET_LOW
-from .utils import no_log
+from .utils import no_log, throttle_progress
 
 
 ReportFormat = Literal['list', 'table']
@@ -88,6 +88,10 @@ def generate_mod_report(
         tuple[bool, str]: (是否成功, 状态消息)
     """
     log(f"--- {t('log.report.scan_start')} ---")
+
+    # 节流进度回调，避免海量文件时的高频 GUI 更新
+    if progress_callback:
+        progress_callback = throttle_progress(progress_callback)
 
     # 1. 扫描 bundle 文件
     items = list_bundle_files(game_dir)

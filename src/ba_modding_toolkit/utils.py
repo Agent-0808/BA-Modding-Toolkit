@@ -383,6 +383,25 @@ def timing(func: Callable[_P, _R]) -> Callable[_P, _R]:
             print(f"[timing] {func.__qualname__}: {time.perf_counter() - start:.3f}s")
     return wrapper
 
+
+def throttle_progress(callback: Callable[[int, int, str], None], interval: float = 0.1) -> Callable[[int, int, str], None]:
+    """为进度回调 (current, total, filename) 添加时间节流
+
+    interval 秒内最多实际调用一次回调，最后一次（current >= total）必定调用，
+    用于避免海量文件的逐条 GUI 更新。
+    """
+    last = 0.0
+
+    def throttled(current: int, total: int, filename: str) -> None:
+        nonlocal last
+        now = time.perf_counter()
+        if current >= total or now - last >= interval:
+            last = now
+            callback(current, total, filename)
+
+    return throttled
+
+
 class ImageUtils:
     @staticmethod
     def bleed_image(image: Image.Image, iteration: int = 8) -> Image.Image:

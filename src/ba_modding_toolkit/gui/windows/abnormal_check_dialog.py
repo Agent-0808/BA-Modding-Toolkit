@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...searching import list_bundle_files
-from ...utils import CRCUtils
+from ...utils import CRCUtils, throttle_progress
 from ...bundle import analyze_trailing, analyze_naming
 from .base import StoppableDialog
 
@@ -170,6 +170,10 @@ class AbnormalCheckDialog(StoppableDialog):
 
         # 2. 分析每个文件
         total = len(items)
+        # 节流进度更新，避免海量文件时的高频 GUI 更新
+        update_progress = throttle_progress(
+            lambda cur, tot, name: self.after(0, lambda: self._update_progress(cur, tot, name))
+        )
         for i, item in enumerate(items):
             # 检查停止信号
             if self.should_stop():
@@ -179,8 +183,7 @@ class AbnormalCheckDialog(StoppableDialog):
             analyze_naming(item)
 
             # 更新进度
-            self.after(0, lambda idx=i, tot=total, name=item.path.name:
-                      self._update_progress(idx + 1, tot, name))
+            update_progress(i + 1, total, item.path.name)
 
             # 检查 CRC 是否匹配
             if item.parsed_name and item.parsed_name.crc:
