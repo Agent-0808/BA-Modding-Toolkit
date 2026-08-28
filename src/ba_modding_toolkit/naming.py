@@ -34,6 +34,7 @@ _RE_MX = re.compile(r'[-_](?:mxdependency|mxload|mxprolog)')
 _CORE_SUFFIX_PREFIX: dict[str, str] = {
     '_spr': 'assets-_mx-spinecharacters-',
     '_home': 'assets-_mx-spinelobbies-',
+    '_home_gl': 'assets-_mx-spinelobbies-',
 }
 _DEFAULT_SEARCH_PREFIX = 'assets-_mx-characters-'
 
@@ -44,6 +45,8 @@ COMMON_MOD_PREFIXES: list[str] = [
     'assets-_mx-characters-',
     'assets-_mx-npcs-',
     'assets-_mx-spinebackground-',
+    'prologdepengroup-assets-_mx-characters-',
+    'prologdepengroup-assets-_mx-spinecharacters-'
 ]
 
 
@@ -156,7 +159,12 @@ def parse_filename(filename: str) -> ParsedFilename:
 # -------- 角色ID映射 --------
 
 # core 值中需要剥离的已知后缀
-_CORE_SUFFIXES = ("_spr", "_home", "_original")
+_CORE_SUFFIXES = (
+    "_spr",
+    "_home",
+    "_home_gl",
+    "_original"
+    )
 
 
 class CharacterInternalIDMap:
