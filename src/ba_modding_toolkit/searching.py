@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import TYPE_CHECKING
+import os
 
 from .i18n import t
 from .utils import no_log
@@ -223,27 +224,28 @@ def list_bundle_files(base_dir: Path) -> list[BundleFileInfo]:
     Returns:
         BundleFileInfo 列表（仅基础字段已填充）
     """
-    search_dirs = get_search_dirs(base_dir)
-    if not search_dirs:
-        return []
+    results = []
+    seen = set()
+    for directory in get_search_dirs(base_dir):
+        with os.scandir(directory) as it:
+            for entry in it:
+                if not entry.is_file(follow_symlinks=False):
+                    continue
+                if not entry.name.endswith('.bundle'):
+                    continue
+                
+                # 直接使用 entry.stat() 获取大小和修改时间
+                st = entry.stat(follow_symlinks=False)
 
-    seen: set[Path] = set()
-    results: list[BundleFileInfo] = []
-
-    for directory in search_dirs:
-        for bundle_path in sorted(directory.iterdir()):
-            if not bundle_path.is_file() or bundle_path.suffix != '.bundle':
-                continue
-            if bundle_path in seen:
-                continue
-            seen.add(bundle_path)
-
-            stat = bundle_path.stat()
-            results.append(BundleFileInfo(
-                path=bundle_path,
-                file_size=stat.st_size,
-                modified_time=stat.st_mtime,
-            ))
+                bundle_path = Path(entry.path)
+                if bundle_path in seen:
+                    continue
+                seen.add(bundle_path)
+                results.append(BundleFileInfo(
+                    path=bundle_path,
+                    file_size=st.st_size,
+                    modified_time=st.st_mtime,
+                ))
 
     return results
 
