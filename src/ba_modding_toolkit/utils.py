@@ -3,10 +3,12 @@
 import binascii
 import subprocess
 import sys
+import time
+from functools import wraps
 from PIL import Image
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Callable, ParamSpec, TypeVar
 
 from .i18n import i18n_manager, t
 
@@ -366,6 +368,20 @@ def get_environment_info(ignore_tk: bool = False):
     lines.append("")
 
     return "\n".join(lines)
+
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+def timing(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """函数运行时间统计装饰器，结果直接 print 输出"""
+    @wraps(func)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
+        start = time.perf_counter()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            print(f"[timing] {func.__qualname__}: {time.perf_counter() - start:.3f}s")
+    return wrapper
 
 class ImageUtils:
     @staticmethod
