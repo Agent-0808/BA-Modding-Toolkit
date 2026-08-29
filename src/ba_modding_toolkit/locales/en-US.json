@@ -47,6 +47,7 @@
 		"open_in_explorer": "Open in Explorer",
 		"copy_filename": "Copy Filename",
 		"render_preview": "Render Preview",
+		"send_to_extractor": "Send to Asset Extractor",
 		"cache_to_local": "Cache to Local",
 		"detect": "Detect",
 		"clear_cache": "Clear Cache",
@@ -91,8 +92,6 @@
 		"scale_atlas_info": "Advanced Option\nWhen downgrading Spine, decides whether to scale images according to the scale factor in the Atlas file.\n\nEnable scaling: Automatically resizes images to match dimensions, allowing direct import into Spine, but may cause precision loss and misalignment. In-game rendering will also use the scaled images, resulting in reduced precision.\nDisable scaling (default): Preserves original precision, provides the best in-game rendering, and is recommended for game import. However, when importing into Spine, region attachments will not change size, requiring manual application of the scale factor to the bone's Transform.\n\nThe scaling option affects both in-game rendering and Spine import: when disabled, in-game appears normal and Spine requires manual adjustment; when enabled, images are physically scaled, in-game will also show the scaled effect (with precision loss), and Spine needs no manual adjustment.\nFor importing into Spine, advanced users are recommended to use the no-scaling approach + manually set scale for bones/parts based on the scale factor for the best result.",
 		"unpack_atlas": "Unpack Atlas",
 		"unpack_atlas_info": "Unpacks Atlas into individual PNG frames.\nUnpacked frames will be saved in an images/ subdirectory.",
-		"auto_search": "Auto Search for Corresponding Files",
-		"auto_search_info": "",
 		"game_dir_windows_global": "Steam Game Directory (Global)",
 		"game_dir_windows_global_info": "Installation directory for the Steam version (Global server)\nThe program can automatically detect the following subdirectories:\n- BlueArchive_Data/StreamingAssets/PUB/Resource/GameData/Windows\n- BlueArchive_Data/StreamingAssets/PUB/Resource/Preload/Windows\n- GameData/Windows\n- Preload/Windows",
 		"game_dir_windows_japan": "PC Game Directory (Japan)",
@@ -109,6 +108,8 @@
 		"skel_converter_path_info": "Path to the SpineSkeletonDataConverter.exe file.",
 		"spine_viewer_path": "SpineViewerCLI Path",
 		"spine_viewer_path_info": "Path to the SpineViewerCLI.exe file.",
+		"check_animations": "Detect Animation Differences",
+		"check_animations_info": "When replacing .skel files, detect whether the target contains animations not present in the source\nRequires configuring the SpineViewerCLI path",
 		"match_strategy": "Match Strategy",
 		"match_strategy_info": "Select the strategy for matching resources:\n- path_id: Best for same-version files, exact match\n- cont_name_type: Best for cross-version migration (between Global and Japanese servers) with container+name+type matching\n- name_type: name+type matching",
 		"enable_bleed": "Bleed",
@@ -123,10 +124,16 @@
 		"report_format_info": "Choose the report output format:\n- List: one item per line, good for quick browsing\n- Table: Markdown table, recommended when rendering preview images",
 		"report_format_list": "List",
 		"report_format_table": "Table",
+		"report_render_preset": "Preview Quality",
+		"report_render_preset_info": "Select the rendering quality of preview images.\nHigher quality may take longer to render.",
+		"report_render_preset_low": "Low Quality",
+		"report_render_preset_high": "High Quality",
 		"max_workers": "Max Workers",
 		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage.",
 		"character_id_map": "Character ID Map",
 		"character_id_map_info": "Character ID to name mapping table, used to display actual character names for files.",
+		"character_index_column": "Index Column",
+		"character_index_column_info": "The column in the mapping CSV used as the lookup key (character internal ID).\nKey values should look like CH0808.",
 		"character_name_field": "Character Name",
 		"character_name_field_info": "Select the display field for character names:\nfull_name: kivo.wiki (Chinese, Most Complete)\nname_cn: Chinese Mainland Server\nname_jp: Japanese\nname_tw: Traditional Chinese\nname_en: English\nname_kr: Korean\n\nThe English and Korean versions contain only the character names, while the JP, CN, TW versions also include the names of the characters' costume variants (e.g., Swimsuit, Maid, etc.). The kivo.wiki version additionally includes names for more NPC variants (e.g., Sportswear, Unarmed, etc.).",
 		"adb_path": "ADB Path",
@@ -224,6 +231,9 @@
 		"replace_result": "Replacement completed!\nSuccess: {success} files, Failure: {fail} files",
 		"batch": {
 			"success": "Batch processing completed!\nSuccess: {success}, Failure: {fail}"
+		},
+		"anim_diff": {
+			"header": "Some new animations required by the game are missing in this Mod.\nWhen these animations are played in-game (e.g., during story events),\nthe game may freeze.\n\nTo avoid this issue, check the detailed missing list in the log above,\nand confirm the correct update with the Mod author."
 		},
 		"3rd_party": {
 			"download_guide": "Download {program}?\n{url}",
@@ -335,7 +345,15 @@
 			"no_animation_found": "No available animations found: {name}",
 			"using_first_animation": "No Idle_01 or Dummy found, using first animation found: {anim}",
 			"preview_complete": "Preview render completed, generated {count} files.",
-			"preview_failed": "Preview render failed."
+			"preview_failed": "Preview render failed.",
+			"anim_check_comparing": "Checking animation differences: {name}",
+			"anim_check_new_animations": "Target {name} contains animations not present in the source: {animations}",
+			"anim_check_no_diff": "{name} animations match",
+			"anim_check_failed": "Animation difference check failed: {error}",
+			"anim_diff_title": "The following files contain new animations missing from the original Mod:",
+			"anim_diff_item_count": "{count} animations missing",
+			"anim_diff_missing_list": "Missing list: {animations}",
+			"anim_diff_hint": "Hint: The original game may have updated animations. Using an old Mod directly may cause the game to freeze when these animations are triggered."
 		},
 		"packer": {
 			"start_packing": "Starting packing resources...",
@@ -568,6 +586,9 @@
 			"multiple_files_rejected": "Only single file supported per drop",
 			"contains": "Contains {count} files: {types}"
 		},
+		"preview": {
+			"double_click_hint": "Double-click the image to view the full-size version"
+		},
 		"label": {
 			"mod_file": "Mod File to Process",
 			"search_path": "Search Path:",
@@ -629,7 +650,7 @@
 			},
 			"filter": {
 				"has_trailing": "Has Trailing Bytes",
-				"crc_mismatch": "Exclude CRC Mismatch",
+				"crc_mismatch": "CRC Mismatch",
 				"has_character": "Has Character Name",
 				"common_mod": "Common Mod Prefix"
 			},
@@ -645,6 +666,9 @@
 			"loading": "Loading file list...",
 			"error": "Loading failed: {error}",
 			"found": "Scan complete, {count} files found"
+		},
+		"anim_diff": {
+			"title": "Missing Animations Warning"
 		}
 	}
 }
