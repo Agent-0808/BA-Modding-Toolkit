@@ -250,6 +250,7 @@ class FileListWindow(StoppableDialog):
             (t("action.copy_filename"), self._ctx_copy_filename),
             (t("action.check_crc"), self._ctx_check_crc),
             (t("action.render_preview"), self._ctx_render_preview),
+            (t("action.send_to_extractor"), self._ctx_send_to_extractor),
         ]
 
         self._setup_window()
@@ -783,6 +784,30 @@ class FileListWindow(StoppableDialog):
             updated.append(item)
         return updated
 
+    def _collect_prefix_group_files(self, selected: list[Path]) -> list[Path]:
+        """搜索选中文件同 prefix 的所有 bundle 文件（ADB 模式下自动缓存到本地）"""
+        if self._is_adb_mode():
+            adb_source = self.app.get_adb_file_source()
+            search_dirs = adb_source.get_search_dirs()
+        else:
+            search_dirs = get_search_dirs(Path(self.app.game_resource_dir_var.get()))
+
+        bundle_paths_set: set[Path] = set()
+        for file in selected:
+            if self._is_adb_mode():
+                # ADB 模式：远程搜索后拉取到本地
+                remote_candidates, _ = search_prefix_remote(file, search_dirs, adb_source, self.app.logger.log)
+                for remote_path in remote_candidates:
+                    try:
+                        local_path = adb_source.ensure_local(remote_path)
+                        bundle_paths_set.add(local_path)
+                    except RuntimeError:
+                        pass
+            else:
+                candidates, _ = search_prefix(file, search_dirs)
+                bundle_paths_set.update(candidates)
+        return list(bundle_paths_set)
+
     def _ctx_open_in_explorer(self):
         items = self._get_selected_items()
         if self._is_adb_mode():
@@ -913,36 +938,16 @@ class FileListWindow(StoppableDialog):
         # 获取同组所有文件，支持只选中texture文件，自动寻找textassets的情况
         selected = [item.effective_path for item in items]
 
-        if self._is_adb_mode():
-            # ADB 模式：使用远程搜索
-            adb_source = self.app.get_adb_file_source()
-            search_dirs = adb_source.get_search_dirs()
-        else:
-            search_dirs = get_search_dirs(Path(self.app.game_resource_dir_var.get()))
-
         self._status_label.config(text=t("status.processing"))
         self._progress["value"] = 0
 
         def _run():
             # 在后台线程中搜索同组所有文件
-            bundle_paths_set: set[Path] = set()
-            for file in selected:
-                if self._is_adb_mode():
-                    # ADB 模式：远程搜索后拉取到本地
-                    remote_candidates, _ = search_prefix_remote(file, search_dirs, adb_source, self.app.logger.log)
-                    for remote_path in remote_candidates:
-                        try:
-                            local_path = adb_source.ensure_local(remote_path)
-                            bundle_paths_set.add(local_path)
-                        except RuntimeError:
-                            pass
-                else:
-                    candidates, _ = search_prefix(file, search_dirs)
-                    bundle_paths_set.update(candidates)
+            bundle_paths = self._collect_prefix_group_files(selected)
 
             # 渲染预览
             success, message, _ = render_spine_preview_from_bundle(
-                bundle_path=list(bundle_paths_set),
+                bundle_path=bundle_paths,
                 output_dir=output_dir,
                 viewer_path=viewer_path,
                 log=self.app.logger.log
@@ -952,6 +957,38 @@ class FileListWindow(StoppableDialog):
 
         thread = threading.Thread(target=_run, daemon=True)
         thread.start()
+
+    def _ctx_send_to_extractor(self):
+        """将选中文件的同组文件发送到资源提取工具"""
+        items = self._get_selected_items()
+        if not items:
+            return
+
+        # ADB 模式下先缓存文件
+        items = self._ensure_items_local(items)
+        selected = [item.effective_path for item in items]
+
+        self._status_label.config(text=t("status.processing"))
+
+        def _run():
+            # 在后台线程中搜索同组所有文件（ADB 模式下拉取远程文件可能较慢）
+            bundle_paths = self._collect_prefix_group_files(selected)
+            if not self.should_stop() and self.winfo_exists():
+                self.after(0, lambda: self._on_send_to_extractor(bundle_paths))
+
+        thread = threading.Thread(target=_run, daemon=True)
+        thread.start()
+
+    def _on_send_to_extractor(self, bundle_paths: list[Path]):
+        """发送完成：填入资源提取工具并切换到对应 Tab"""
+        self._status_label.config(text=t("status.done"))
+        if not bundle_paths:
+            messagebox.showwarning(t("common.warning"), t("message.no_bundle_found"))
+            return
+
+        tab = self.app.tabs.asset_extractor
+        tab.bundle_dropzone.set_files(bundle_paths)
+        self.app.show_tab(tab)
 
     def _ctx_cache_to_local(self):
         """将选中的 ADB 文件缓存到本地"""

@@ -4,10 +4,11 @@ import sys
 import tkinter as tk
 from tkinter import messagebox
 import urllib.request
+from dataclasses import dataclass, fields
 from typing import get_type_hints
 import ttkbootstrap as tb
 from pathlib import Path
-from ttkbootstrap.widgets.scrolled import ScrolledText 
+from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes
@@ -20,6 +21,26 @@ from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
 from .windows import SettingsDialog, FileListWindow
 from .tabs import *
+
+
+@dataclass
+class Tabs:
+    """所有功能 Tab 的注册表，支持 app.tabs.<名称> 属性访问
+
+    字段名与 i18n 键 ui.tabs.<字段名> 一一对应，声明顺序即侧边栏显示顺序。
+    """
+    mod_update: ModUpdateTab
+    batch_update: BatchUpdateTab
+    crc_tool: CrcToolTab
+    asset_packer: AssetPackerTab
+    asset_extractor: AssetExtractorTab
+    adb_push: AdbPushTab
+    tools: ToolsTab
+
+    def with_titles(self) -> list[tuple[TabFrame, str]]:
+        """返回 (tab, 标题) 列表"""
+        return [(getattr(self, f.name), t(f"ui.tabs.{f.name}")) for f in fields(self)]
+
 
 class App(tb.Frame, ConfigMixin):
     def __init__(self, master: tk.Tk):
@@ -555,40 +576,29 @@ class App(tb.Frame, ConfigMixin):
         self.create_sidebar_buttons()
         
         # 默认显示第一个Tab
-        if self.tabs:
-            self.show_tab(self.tabs[0])
-    
+        self.show_tab(self.tabs.mod_update)
+
     def populate_tabs(self):
         """创建并添加所有的Tab页面到内容区域。"""
-        self.tabs: list[tuple[TabFrame, str]] = []
+        # 创建Tab页面（声明顺序即侧边栏顺序）
+        self.tabs: Tabs = Tabs(
+            mod_update=ModUpdateTab(self.content_frame, self),
+            batch_update=BatchUpdateTab(self.content_frame, self),
+            crc_tool=CrcToolTab(self.content_frame, self),
+            asset_packer=AssetPackerTab(self.content_frame, self),
+            asset_extractor=AssetExtractorTab(self.content_frame, self),
+            adb_push=AdbPushTab(self.content_frame, self),
+            tools=ToolsTab(self.content_frame, self),
+        )
 
-        # 创建Tab页面
-        mod_update_tab = ModUpdateTab(self.content_frame, self)
-        batch_update_tab = BatchUpdateTab(self.content_frame, self)
-        crc_tool_tab = CrcToolTab(self.content_frame, self)
-        asset_packer_tab = AssetPackerTab(self.content_frame, self)
-        asset_extractor_tab = AssetExtractorTab(self.content_frame, self)
-        adb_push_tab = AdbPushTab(self.content_frame, self)
-        tools_tab = ToolsTab(self.content_frame, self)
-
-        self.tabs.extend([
-            (mod_update_tab, t("ui.tabs.mod_update")),
-            (batch_update_tab, t("ui.tabs.batch_update")),
-            (crc_tool_tab, t("ui.tabs.crc_tool")),
-            (asset_packer_tab, t("ui.tabs.asset_packer")),
-            (asset_extractor_tab, t("ui.tabs.asset_extractor")),
-            (adb_push_tab, t("ui.tabs.adb_push")),
-            (tools_tab, t("ui.tabs.tools")),
-        ])
-        
         # 将所有Tab放置在content_frame的同一位置
-        for tab, _ in self.tabs:
+        for tab, _ in self.tabs.with_titles():
             tab.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
     
     def create_sidebar_buttons(self):
         """创建侧边栏导航按钮"""
         self.tab_buttons: list[tuple[tb.Button, TabFrame]] = []
-        for tab, title in self.tabs:
+        for tab, title in self.tabs.with_titles():
             btn = UIComponents.create_button(
                 self.sidebar_frame,
                 text=title,
@@ -626,15 +636,12 @@ class App(tb.Frame, ConfigMixin):
         )
         settings_btn.pack(fill=tk.X, padx=5, pady=(5,0))
     
-    def show_tab(self, tab_to_show):
+    def show_tab(self, tab_to_show: TabFrame):
         """显示指定的Tab页面"""
-        # 如果传入的是元组，提取tab对象
-        if isinstance(tab_to_show, tuple):
-            tab_to_show = tab_to_show[0]
         assert(isinstance(tab_to_show, TabFrame))
 
         # 隐藏所有Tab
-        for tab, _ in self.tabs:
+        for tab, _ in self.tabs.with_titles():
             tab.pack_forget()
         
         # 显示目标Tab
