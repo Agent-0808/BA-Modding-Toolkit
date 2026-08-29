@@ -87,6 +87,40 @@ jobs:
           Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
         shell: powershell
 
+      # 内置角色ID映射表（BA-Characters-Internal-ID，CC BY-SA 4.0）
+      - name: Bundle BA-Characters-Internal-ID into Addons
+        run: |
+          New-Item -ItemType Directory -Path "publish/Addons" -Force
+          $url = "https://agent-0808.github.io/BA-characters-internal-id/data/students_data.csv"
+          Invoke-WebRequest -Uri $url -OutFile "publish/Addons/BA-Characters-Internal-ID.csv"
+          $license = @'
+          BA-Characters-Internal-ID data file
+          ===================================
+
+          File:     BA-Characters-Internal-ID.csv
+          Source:   https://github.com/Agent-0808/BA-characters-internal-id
+
+          This character internal ID mapping data is licensed under the
+          Creative Commons Attribution-ShareAlike 4.0 International
+          License (CC BY-SA 4.0).
+
+          You are free to share and adapt this material for any purpose,
+          even commercially, provided that you give appropriate credit,
+          provide a link to the license, and indicate if changes were
+          made. If you remix, transform, or build upon this material,
+          you must distribute your contributions under the same license
+          as the original.
+
+          Full license text:
+          https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+          DISCLAIMER: This data is provided "as is" without warranty of
+          any kind. Blue Archive (c) NEXON Games Co., Ltd. & Yostar, Inc.
+          This tool is unofficial and not endorsed by them.
+          '@
+          Set-Content -Path "publish/Addons/BA-Characters-Internal-ID-LICENSE.txt" -Value $license -Encoding UTF8
+        shell: powershell
+
       # 上传 Artifact
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

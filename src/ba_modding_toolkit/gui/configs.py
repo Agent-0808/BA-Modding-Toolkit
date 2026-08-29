@@ -9,7 +9,7 @@ import toml
 if TYPE_CHECKING:
     from .app import App
 
-from ..utils import get_BA_path
+from ..utils import get_BA_path, EXE_DIR
 from ..i18n import t
 
 
@@ -41,19 +41,6 @@ def _get_default_file_source() -> str:
     return "windows_global"
 
 
-def _get_default_output_dir() -> str:
-    """获取默认输出目录"""
-    return str(Path.cwd() / "output")
-
-def _get_default_adb_cache_dir() -> str:
-    """获取默认ADB缓存目录"""
-    return str(Path.cwd() / "adb_cache")
-
-def _get_default_backup_dir() -> str:
-    """获取默认备份目录"""
-    return str(Path.cwd() / "output" / "backup")
-
-
 def _get_default_android_global_dir() -> str:
     """获取默认 Android 国际服目录"""
     return "/storage/emulated/0/Android/data/com.nexon.bluearchive/files/PUB/Resource/"
@@ -76,7 +63,7 @@ class ConfigMixin:
     
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
-    output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", _get_default_output_dir)]
+    output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", str(EXE_DIR / "output"))]
     
     # SaveOptions (原 GlobalOptions)
     extra_bytes_var: Annotated[tk.StringVar, ConfigMeta("SaveOptions", "0x08080808")]
@@ -106,10 +93,10 @@ class ConfigMixin:
     check_animations_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", False, depends_on="spine_viewer_path_var")]
 
     # Mod Backup
-    mod_backup_path_var: Annotated[tk.StringVar, ConfigMeta("Directories", _get_default_backup_dir)]
+    mod_backup_path_var: Annotated[tk.StringVar, ConfigMeta("Directories", str(EXE_DIR / "output" / "backup"))]
 
     # CharacterMap
-    bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "")]
+    bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", str(EXE_DIR / "Addons" / "BA-Characters-Internal-ID.csv"))]
     character_index_column_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "file_id")]
     character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
 
@@ -127,7 +114,7 @@ class ConfigMixin:
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
     adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
-    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", _get_default_adb_cache_dir)]
+    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "adb_cache"))]
 
 
 class ConfigManager:

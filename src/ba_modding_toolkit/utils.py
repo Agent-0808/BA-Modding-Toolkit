@@ -233,6 +233,13 @@ class CRCUtils:
                 a ^= CRCUtils.POLY_NORMAL
         return result
 
+# 程序所在目录（打包后为 exe 目录，开发环境为项目根目录）
+EXE_DIR: Path = (
+    Path(__compiled__.containing_dir).resolve()
+    if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir")
+    else Path(__file__).resolve().parents[2]
+)
+
 def get_environment_info(ignore_tk: bool = False):
     """Collects and formats key environment details."""
     
@@ -323,7 +330,7 @@ def get_environment_info(ignore_tk: bool = False):
 
     def _exe_dir() -> str | None:
         if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
-            return str(Path(__compiled__.containing_dir).resolve())
+            return str(EXE_DIR)
         return None
 
     lines: list[str] = []

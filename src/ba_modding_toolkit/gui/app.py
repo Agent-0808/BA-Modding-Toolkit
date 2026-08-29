@@ -11,7 +11,7 @@ from pathlib import Path
 from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
-from ..utils import get_environment_info, get_version_info, parse_hex_bytes
+from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR
 from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
@@ -81,16 +81,14 @@ class App(tb.Frame, ConfigMixin):
         self.master.geometry("800x1000")
 
         # 设置路径
-        if "__compiled__" in globals() and hasattr(__compiled__, "containing_dir"):
+        # exe_dir: 程序所在目录（打包后为 exe 目录，开发环境为项目根目录）
+        self.exe_dir = EXE_DIR
+        if "__compiled__" in globals():
             # 打包环境（nuitka onefile）
-            # __compiled__.containing_dir 为原始 exe 所在目录
-            self.exe_dir = Path(__compiled__.containing_dir).resolve()
             # root_path: nuitka 解压的资源目录（temp 目录下）
             self.root_path = Path(sys.executable).parent / "ba_modding_toolkit"
         else:
             # 开发环境
-            # exe_dir: 项目根目录 BA-Modding-Toolkit/
-            self.exe_dir = Path(__file__).parents[3]
             # root_path：src/ba_modding_toolkit/
             self.root_path = Path(__file__).parents[1]
 
