@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from threading import Thread
 import shutil
-import subprocess
 
 if TYPE_CHECKING:
     from ..app import App
@@ -16,7 +15,7 @@ from ...i18n import t
 from ...searching import list_bundle_files
 from ...bundle import analyze_trailing
 from ...utils import throttle_progress
-from ..utils import select_directory
+from ..utils import open_directory, select_directory
 from ..components import SettingRow, UIComponents
 from .base import StoppableDialog
 
@@ -229,7 +228,7 @@ class BackupDialog(StoppableDialog):
             t("common.success"),
             t("message.backup.open_prompt", count=count)
         ):
-            subprocess.run(["explorer", str(backup_path)])
+            open_directory(backup_path, self.app.logger.log)
 
         # 关闭对话框
         self.destroy()

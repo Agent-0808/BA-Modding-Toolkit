@@ -20,7 +20,7 @@ from ...bundle import analyze_bundles
 from ...models import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
-from ..utils import open_directory, select_directory
+from ..utils import reveal_in_explorer, select_directory
 from .base import StoppableDialog
 from .preview_window import PreviewWindow
 
@@ -817,8 +817,14 @@ class FileListWindow(StoppableDialog):
             adb_source = self.app.get_adb_file_source()
             ADBFileBrowser(self, adb_source, title=t("ui.dialog.adb_browser"), log=self.app.logger.log)
             return
+        # 按所在目录聚合，每个目录只打开一次（选中该目录下第一个选中文件）
+        revealed_dirs: set[Path] = set()
         for item in items:
-            open_directory(item.path.parent, self.app.logger.log)
+            parent = item.path.parent
+            if parent in revealed_dirs:
+                continue
+            revealed_dirs.add(parent)
+            reveal_in_explorer(item.path)
 
     def _ctx_copy_filename(self):
         items = self._get_selected_items()

@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 from ttkbootstrap.widgets.scrolled import ScrolledFrame
 
 from ...i18n import t
-from ..utils import open_in_os
+from ..utils import open_in_os, reveal_in_explorer
 from .base import StoppableDialog
 
 if TYPE_CHECKING:
@@ -48,7 +48,7 @@ class PreviewWindow(StoppableDialog):
         container.pack(fill=tk.BOTH, expand=True)
 
         for path in image_paths:
-            name_label = tb.Label(container, text=path.name, bootstyle="secondary")
+            name_label = tb.Label(container, text=path.name, bootstyle="primary")
             name_label.pack(anchor=tk.W, pady=(8, 2))
 
             photo = self._load_thumbnail(path)
@@ -58,10 +58,11 @@ class PreviewWindow(StoppableDialog):
             image_label = tb.Label(container, image=photo)
             image_label.pack()
 
-            # 双击用系统默认看图工具打开原图
-            for label in (name_label, image_label):
-                label.configure(cursor="hand2")
-                label.bind("<Double-Button-1>", lambda e, p=path: open_in_os(p))
+            # 双击文件名在文件管理器中定位文件，双击图片用系统默认看图工具打开
+            name_label.configure(cursor="hand2")
+            name_label.bind("<Double-Button-1>", lambda e, p=path: reveal_in_explorer(p))
+            image_label.configure(cursor="hand2")
+            image_label.bind("<Double-Button-1>", lambda e, p=path: open_in_os(p))
 
     def _load_thumbnail(self, path: Path) -> ImageTk.PhotoImage | None:
         """加载图片并缩放到预览尺寸"""

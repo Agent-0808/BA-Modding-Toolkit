@@ -197,6 +197,33 @@ def open_in_os(path: str | Path) -> None:
     except Exception as e:
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
 
+def reveal_in_explorer(path: str | Path) -> None:
+    """
+    在文件管理器中打开文件所在目录并选中该文件（类似 Everything 的“打开路径”）。
+
+    Windows 用 explorer /select；macOS 用 open -R
+    WSL 下经 wslpath 转换后调用 explorer.exe /select
+    其他 Linux 无统一选中接口，仅打开所在目录。
+    """
+    try:
+        path_obj = Path(path).resolve()
+        if sys.platform == 'win32':
+            subprocess.run(['explorer', f'/select,{path_obj}'], creationflags=CREATE_NO_WINDOW)
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', '-R', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
+        elif _is_wsl():
+            # WSL 环境：先转换路径，再调用 explorer.exe 定位文件
+            result = subprocess.run(
+                ['wslpath', '-w', str(path_obj)],
+                capture_output=True, text=True, check=True,
+                creationflags=CREATE_NO_WINDOW,
+            )
+            subprocess.run(['explorer.exe', f'/select,{result.stdout.strip()}'], creationflags=CREATE_NO_WINDOW)
+        else:
+            subprocess.run(['xdg-open', str(path_obj.parent)], check=True, creationflags=CREATE_NO_WINDOW)
+    except Exception as e:
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+
 def _perform_file_replace(
     source_path: Path,
     dest_path: Path,

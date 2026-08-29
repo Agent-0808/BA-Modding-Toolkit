@@ -10,7 +10,7 @@ from typing import Callable, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import select_file, select_directory, open_directory, build_filetypes
+from .utils import select_file, select_directory, reveal_in_explorer, build_filetypes
 from ..i18n import t
 from ..naming import parse_filename
 from ..models import FileType
@@ -432,12 +432,11 @@ class DropZone(tb.Labelframe):
             self._clear_cmd()
 
     def _handle_open_directory(self) -> None:
-        """打开选中文件所在的目录"""
+        """在文件管理器中定位选中的第一个文件"""
         if not self._paths:
             return
 
-        directory = self._paths[0].parent
-        open_directory(directory, log=self._logger.log if self._logger else None)
+        reveal_in_explorer(self._paths[0])
 
     def _update_btn_state(self) -> None:
         """更新"打开"和"清除"按钮的启用/禁用状态"""
