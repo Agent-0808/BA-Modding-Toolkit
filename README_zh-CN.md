@@ -208,7 +208,7 @@ BA-Modding-Toolkit/
 │ │ ├── windows/        # 独立窗口
 │ │ │ ├── __init__.py
 │ │ │ ├── adb_browser.py           # ADB 浏览器窗口
-│ │ │ ├── dialogs.py               # 设置页 
+│ │ │ ├── settings.py              # 设置页 
 │ │ │ ├── abnormal_check_dialog.py # 不正常的用户端检查对话框
 │ │ │ ├── report_dialog.py         # 报告工具对话框
 │ │ │ ├── backup_dialog.py         # 备份工具对话框

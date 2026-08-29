@@ -1,4 +1,4 @@
-# gui/windows/dialogs.py
+# gui/windows/settings.py
 
 import tkinter as tk
 import ttkbootstrap as tb

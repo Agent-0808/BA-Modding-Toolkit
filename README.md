@@ -211,7 +211,7 @@ BA-Modding-Toolkit/
 │ │ ├── windows/        # Individual windows
 │ │ │ ├── __init__.py
 │ │ │ ├── adb_browser.py           # ADB Browser window
-│ │ │ ├── dialogs.py               # Settings dialogs
+│ │ │ ├── settings.py              # Settings window
 │ │ │ ├── abnormal_check_dialog.py # Abnormal Client Check
 │ │ │ ├── report_dialog.py         # Report Dialog
 │ │ │ ├── backup_dialog.py         # Backup Dialog
