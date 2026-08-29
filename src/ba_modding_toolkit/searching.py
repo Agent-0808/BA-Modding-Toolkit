@@ -42,12 +42,19 @@ def search_prefix(
 
     log(f"  > {t('log.search.file_prefix', prefix=prefix)}")
 
-    candidates = [
-        file for dir in search_dirs
-        if dir.exists() and dir.is_dir()
-        for file in dir.iterdir()
-        if file.is_file() and file.name.startswith(prefix) and file.suffix == '.bundle'
-    ]
+    # 使用 scandir 代替 iterdir + is_file，避免海量文件时的逐个 stat 系统调用
+    candidates: list[Path] = []
+    for dir in search_dirs:
+        if not dir.is_dir():
+            continue
+        with os.scandir(dir) as it:
+            candidates.extend(
+                Path(entry.path)
+                for entry in it
+                if entry.name.startswith(prefix)
+                and entry.name.endswith('.bundle')
+                and entry.is_file(follow_symlinks=False)
+            )
 
     if not candidates:
         msg = t("message.search.no_matching_files_in_dir")
@@ -86,16 +93,22 @@ def search_core(
 
     log(f"  > {t('log.search.file_core', core=core)}")
 
-    # 字符串包含匹配，粗筛
+    # 字符串包含匹配，粗筛（scandir 避免逐个 stat 系统调用）
     core_lower = core.lower()
     search_prefix = get_category_prefix(core_lower)
-    rough = [
-        file for dir in search_dirs
-        if dir.exists() and dir.is_dir()
-        for file in dir.iterdir()
-        if file.is_file() and file.name.startswith(search_prefix)
-        and core_lower in file.name.lower() and file.suffix == '.bundle'
-    ]
+    rough: list[Path] = []
+    for dir in search_dirs:
+        if not dir.is_dir():
+            continue
+        with os.scandir(dir) as it:
+            rough.extend(
+                Path(entry.path)
+                for entry in it
+                if entry.name.startswith(search_prefix)
+                and core_lower in entry.name.lower()
+                and entry.name.endswith('.bundle')
+                and entry.is_file(follow_symlinks=False)
+            )
 
     # 第二轮：parse_filename 确认 core 相同（大小写不敏感）
     candidates = [
