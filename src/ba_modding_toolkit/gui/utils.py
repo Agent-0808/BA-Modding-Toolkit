@@ -94,6 +94,17 @@ def handle_drop(event: tk.Event,
     callback(path)
     return True
 
+def _is_wsl() -> bool:
+    """检测当前是否运行在 WSL 环境"""
+    if sys.platform != 'linux':
+        return False
+    try:
+        with open('/proc/version', 'r') as f:
+            return 'microsoft' in f.read().lower()
+    except Exception:
+        return False
+
+
 def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = False) -> None:
     """
     打开文件资源管理器。
@@ -117,14 +128,7 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
                 return
         
         # 检测是否为 WSL 环境
-        is_wsl = False
-        if sys.platform == 'linux':
-            try:
-                with open('/proc/version', 'r') as f:
-                    if 'microsoft' in f.read().lower():
-                        is_wsl = True
-            except Exception:
-                pass
+        is_wsl = _is_wsl()
 
         # --- 打开目录 ---
         if sys.platform == 'win32':
@@ -164,6 +168,32 @@ def open_directory(path: str | Path, log = no_log, create_if_not_exist: bool = F
         # 统一记录成功打开目录的日志
         log(t("log.file.directory_opened", path=path_obj))
                 
+    except Exception as e:
+        messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
+
+def open_in_os(path: str | Path) -> None:
+    """
+    使用系统默认程序打开文件（跨平台）。
+
+    Windows 用 os.startfile；macOS 用 open；Linux 用 xdg-open；
+    WSL 下经 wslpath 转换为 Windows 路径后调用 explorer.exe。
+    """
+    try:
+        path_obj = Path(path).resolve()
+        if sys.platform == 'win32':
+            os.startfile(str(path_obj))
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
+        elif _is_wsl():
+            # WSL 环境：先转换路径，再调用 explorer.exe 以默认关联程序打开
+            result = subprocess.run(
+                ['wslpath', '-w', str(path_obj)],
+                capture_output=True, text=True, check=True,
+                creationflags=CREATE_NO_WINDOW,
+            )
+            subprocess.run(['explorer.exe', result.stdout.strip()], creationflags=CREATE_NO_WINDOW)
+        else:
+            subprocess.run(['xdg-open', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
     except Exception as e:
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
 

@@ -7,7 +7,6 @@ from pathlib import Path
 from datetime import datetime
 from typing import TYPE_CHECKING
 from threading import Thread
-import subprocess
 
 if TYPE_CHECKING:
     from ..app import App
@@ -16,6 +15,7 @@ from ...i18n import t
 from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ...report import generate_mod_report
 from ..components import SettingRow, UIComponents
+from ..utils import open_in_os
 from .base import StoppableDialog
 
 
@@ -200,7 +200,7 @@ class ReportDialog(StoppableDialog):
 
             # 询问是否打开报告
             if messagebox.askyesno(t("common.success"), t("message.report_open_prompt")):
-                subprocess.run(["explorer", str(output_path)])
+                open_in_os(output_path)
 
             # 关闭对话框
             self.destroy()

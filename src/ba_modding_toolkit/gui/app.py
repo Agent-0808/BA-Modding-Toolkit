@@ -38,8 +38,17 @@ class Tabs:
     tools: ToolsTab
 
     def with_titles(self) -> list[tuple[TabFrame, str]]:
-        """返回 (tab, 标题) 列表"""
-        return [(getattr(self, f.name), t(f"ui.tabs.{f.name}")) for f in fields(self)]
+        """返回 (tab, 标题) 列表（顺序与字段声明顺序一致）"""
+        titles = [
+            t("ui.tabs.mod_update"),
+            t("ui.tabs.batch_update"),
+            t("ui.tabs.crc_tool"),
+            t("ui.tabs.asset_packer"),
+            t("ui.tabs.asset_extractor"),
+            t("ui.tabs.adb_push"),
+            t("ui.tabs.tools"),
+        ]
+        return [(getattr(self, f.name), title) for f, title in zip(fields(self), titles)]
 
 
 class App(tb.Frame, ConfigMixin):
