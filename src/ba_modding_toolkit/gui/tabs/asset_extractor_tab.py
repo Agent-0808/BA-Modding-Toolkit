@@ -12,6 +12,7 @@ from ...naming import parse_filename
 from ...spine import SpineViewer
 from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
+from ..windows.preview_window import PreviewWindow
 from .base_tab import TabFrame
 
 class AssetExtractorTab(TabFrame):
@@ -222,6 +223,7 @@ class AssetExtractorTab(TabFrame):
 
         self.logger.log(f'\n--- {t("log.section.render_preview")} ---')
         success_count = 0
+        rendered_paths: list[Path] = []
         for skel_path in skel_files:
             output_path = output_dir / f"{skel_path.stem}_preview.png"
             success, _ = SpineViewer.render_preview(
@@ -232,6 +234,9 @@ class AssetExtractorTab(TabFrame):
             )
             if success:
                 success_count += 1
+                rendered_paths.append(output_path)
 
         if success_count:
             self.logger.log(f'\n✓ {t("log.spine.preview_complete", count=success_count)}')
+            # 后台线程不能直接创建组件，调度到主线程弹出预览窗口
+            self.after(0, lambda: PreviewWindow(self, self.app, rendered_paths))
