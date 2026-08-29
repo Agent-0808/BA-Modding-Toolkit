@@ -589,12 +589,21 @@ class SettingsDialog(StoppableDialog):
             status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
         )
 
+        # 索引列选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("option.character_index_column"),
+            text_var=self.app.character_index_column_var,
+            values=self.app.char_map.columns or [CharacterInternalIDMap.DEFAULT_INDEX_COLUMN],
+            tooltip=t("option.character_index_column_info")
+        )
+
         # 角色名称字段选择
         SettingRow.create_combobox_row(
             section,
             label=t("option.character_name_field"),
             text_var=self.app.character_name_field_var,
-            values=CharacterInternalIDMap.NAME_FIELDS,
+            values=self.app.char_map.fields or CharacterInternalIDMap.NAME_FIELDS,
             tooltip=t("option.character_name_field_info")
         )
 

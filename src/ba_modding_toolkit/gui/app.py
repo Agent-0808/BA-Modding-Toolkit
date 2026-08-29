@@ -144,7 +144,7 @@ class App(tb.Frame, ConfigMixin):
         """加载角色ID映射表 CSV"""
         path = self.bacii_map_path_var.get().strip()
         if path:
-            self.char_map.load(Path(path))
+            self.char_map.load(Path(path), index_column=self.character_index_column_var.get().strip())
 
     def create_widgets(self):
         # 使用grid布局确保status_widget固定在底部
@@ -556,6 +556,7 @@ class App(tb.Frame, ConfigMixin):
     def save_current_config(self):
         """保存当前配置到文件"""
         if self.config_manager.save_config(self):
+            self._load_character_mapping()  # 映射表路径/索引列变更后重新加载
             self.logger.log(t("log.config.saved"))
             messagebox.showinfo(t("common.success"), t("message.config.saved"))
         else:

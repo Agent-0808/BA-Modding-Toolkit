@@ -168,34 +168,49 @@ _CORE_SUFFIXES = (
 
 
 class CharacterInternalIDMap:
-    """角色ID映射表，从 CSV 加载 core → 角色名称的映射"""
+    """角色ID映射表，从 CSV 加载 core → 角色名称的映射
 
-    # 可用的名称字段
+    索引列与可用字段根据实际 CSV 表头自动生成。
+    """
+
+    # 默认索引列与名称字段（CSV 未加载时的回退值）
+    DEFAULT_INDEX_COLUMN = "file_id"
     NAME_FIELDS = ["full_name", "name_cn", "name_jp", "name_tw", "name_en", "name_kr"]
 
     def __init__(self):
         self._map: dict[str, dict[str, str]] = {}
+        self.index_column: str = self.DEFAULT_INDEX_COLUMN  # 实际使用的索引列
+        self.columns: list[str] = []  # CSV 全部列（含索引列），用于索引列选择
+        self.fields: list[str] = list(self.NAME_FIELDS)  # 除索引列外的可用名称字段
 
-    def load(self, csv_path: Path) -> bool:
-        """从 CSV 文件加载映射表，返回是否成功"""
+    def load(self, csv_path: Path, index_column: str | None = None) -> bool:
+        """从 CSV 文件加载映射表，返回是否成功
+
+        Args:
+            csv_path: CSV 文件路径
+            index_column: 用作查找键的列名；为 None 或不在表头中时按 默认列 → 首列 回退
+        """
         self._map.clear()
         if not csv_path.exists():
             return False
         try:
             with open(csv_path, 'r', encoding='utf-8-sig') as f:
                 reader = csv.DictReader(f)
+                columns = [c for c in (reader.fieldnames or []) if c]
+                if not columns:
+                    return False
+                self.index_column = (
+                    index_column if index_column in columns
+                    else self.DEFAULT_INDEX_COLUMN if self.DEFAULT_INDEX_COLUMN in columns
+                    else columns[0]
+                )
+                self.columns = columns
+                self.fields = [c for c in columns if c != self.index_column]
                 for row in reader:
-                    file_id = row.get("file_id", "").strip()
+                    file_id = (row.get(self.index_column) or "").strip()
                     if not file_id:
                         continue
-                    self._map[file_id.lower()] = {
-                        "full_name": row.get("full_name", ""),
-                        "name_cn": row.get("name_cn", ""),
-                        "name_jp": row.get("name_jp", ""),
-                        "name_tw": row.get("name_tw", ""),
-                        "name_en": row.get("name_en", ""),
-                        "name_kr": row.get("name_kr", ""),
-                    }
+                    self._map[file_id.lower()] = {c: row.get(c, "") for c in self.fields}
             return True
         except Exception as e:
             print(f"Failed to load BACII: {e}")

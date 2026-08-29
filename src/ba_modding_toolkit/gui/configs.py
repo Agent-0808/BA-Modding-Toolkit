@@ -110,6 +110,7 @@ class ConfigMixin:
 
     # CharacterMap
     bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "")]
+    character_index_column_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "file_id")]
     character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
 
     # Tabs

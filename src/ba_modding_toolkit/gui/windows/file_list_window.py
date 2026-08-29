@@ -327,7 +327,7 @@ class FileListWindow(StoppableDialog):
         tb.Label(char_label_frame, text=t("option.character_name_field")).pack(side=tk.LEFT)
         UIComponents.create_tooltip_icon(char_label_frame, t("option.character_name_field_info")).pack(side=tk.LEFT, padx=(3, 0))
 
-        char_field_values = CharacterInternalIDMap.NAME_FIELDS
+        char_field_values = self.app.char_map.fields or CharacterInternalIDMap.NAME_FIELDS
         self._char_field_var = tk.StringVar(
             value=self.app.character_name_field_var.get() or char_field_values[0]
         )
