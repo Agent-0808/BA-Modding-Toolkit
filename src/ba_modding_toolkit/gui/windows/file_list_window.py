@@ -376,37 +376,6 @@ class FileListWindow(StoppableDialog):
         )
         self.table.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
-        # 替换内置滚动条为 ttkbootstrap 风格
-        if hasattr(self.table, 'ybar') and hasattr(self.table, 'hbar'):
-            ybar_master = self.table.ybar.master
-            hbar_master = self.table.hbar.master
-
-            # 暂时解除所有布局
-            self.table.view.pack_forget()
-            self.table.ybar.pack_forget()
-            self.table.hbar.pack_forget()
-
-            # 销毁旧滚动条
-            self.table.ybar.destroy()
-            self.table.hbar.destroy()
-
-            # 创建新滚动条
-            self.table.ybar = tb.Scrollbar(
-                ybar_master, command=self.table.view.yview, orient=tk.VERTICAL,
-            )
-            self.table.hbar = tb.Scrollbar(
-                hbar_master, command=self.table.view.xview, orient=tk.HORIZONTAL,
-            )
-
-            # 重新布局：hbar 在底部，ybar 在右侧，view 填满剩余空间
-            self.table.hbar.pack(fill=tk.X, side=tk.BOTTOM)
-            self.table.ybar.pack(fill=tk.Y, side=tk.RIGHT)
-            self.table.view.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
-
-            # 配置滚动条联动
-            self.table.view.configure(yscrollcommand=self.table.ybar.set)
-            self.table.view.configure(xscrollcommand=self.table.hbar.set)
-
         # 默认隐藏 _path 列（索引 0）和非默认可见列
         self.table.get_column(index=0, visible=False).hide()
         for i, col in enumerate(columns):
