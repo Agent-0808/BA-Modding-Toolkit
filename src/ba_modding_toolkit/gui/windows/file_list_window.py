@@ -22,6 +22,7 @@ from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
 from ..utils import open_directory, select_directory
 from .base import StoppableDialog
+from .preview_window import PreviewWindow
 
 if TYPE_CHECKING:
     from ..app import App
@@ -946,14 +947,14 @@ class FileListWindow(StoppableDialog):
             bundle_paths = self._collect_prefix_group_files(selected)
 
             # 渲染预览
-            success, message, _ = render_spine_preview_from_bundle(
+            success, message, rendered_paths = render_spine_preview_from_bundle(
                 bundle_path=bundle_paths,
                 output_dir=output_dir,
                 viewer_path=viewer_path,
                 log=self.app.logger.log
             )
             if not self.should_stop() and self.winfo_exists():
-                self.after(0, lambda: self._on_render_preview_complete(success, message))
+                self.after(0, lambda: self._on_render_preview_complete(success, message, rendered_paths))
 
         thread = threading.Thread(target=_run, daemon=True)
         thread.start()
@@ -1048,7 +1049,7 @@ class FileListWindow(StoppableDialog):
         self._status_label.config(text=msg)
         self.app.logger.log(msg)
 
-    def _on_render_preview_complete(self, success: bool, message: str):
+    def _on_render_preview_complete(self, success: bool, message: str, rendered_paths: list[Path]):
         """渲染预览图完成"""
         if self.should_stop() or not self.winfo_exists():
             return
@@ -1057,7 +1058,11 @@ class FileListWindow(StoppableDialog):
         self._status_label.config(text=t("status.done") if success else t("status.failed"))
 
         if success:
-            messagebox.showinfo(t("action.render_preview"), message)
+            if rendered_paths:
+                # 弹出预览窗口展示渲染结果
+                PreviewWindow(self, self.app, rendered_paths)
+            else:
+                messagebox.showinfo(t("action.render_preview"), message)
         else:
             messagebox.showerror(t("common.error"), message)
 

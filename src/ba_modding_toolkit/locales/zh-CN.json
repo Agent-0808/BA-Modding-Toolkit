@@ -586,6 +586,9 @@
 			"multiple_files_rejected": "仅支持单个文件",
 			"contains": "包含 {count} 个文件: {types}"
 		},
+		"preview": {
+			"double_click_hint": "双击图片查看原图"
+		},
 		"label": {
 			"mod_file": "待处理 Mod 文件",
 			"search_path": "查找路径:",
