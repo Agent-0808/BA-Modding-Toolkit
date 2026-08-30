@@ -103,6 +103,11 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 在各个功能中，解析Bundle文件的文件名获得内部ID之后，可以根据该对照表显示角色实际名称。
 - 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
 
+> [!NOTE]
+> 从 Releases 下载的打包版本已在程序目录的 `Addons/` 子目录中附带了一份数据文件（`BA-Characters-Internal-ID.csv`），开箱即用；您也可以在设置界面手动下载最新版本。
+>
+> 该数据文件基于 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) 协议授权（完整声明见程序目录 `Addons/BA-Characters-Internal-ID-LICENSE.txt`），数据整理自 [基沃托斯古书馆](https://kivo.wiki) 的文本数据，在本程序中仅用于显示角色名称等合理用途。
+
 ## 命令行接口 (CLI)
 
 除了图形界面，本项目还提供了一个命令行接口（CLI）版本的程序 `cli/main.py`。

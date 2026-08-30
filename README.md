@@ -106,6 +106,11 @@ A reference table that records the mapping between in-game character names and t
 - In various features, after parsing the Bundle file name to obtain the internal ID, the actual character name can be displayed based on this lookup table.
 - It is also used to display character names based on internal character IDs when generating Mod reports.
 
+> [!NOTE]
+> The packaged version downloaded from Releases already includes a copy of the data file (`BA-Characters-Internal-ID.csv`) in the `Addons/` subdirectory next to the executable, ready to use out of the box. You can also download the latest version manually in the Settings interface.
+>
+> The data file is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) (see `Addons/BA-Characters-Internal-ID-LICENSE.txt` for the full notice). The data is compiled from the text data of [KivoWiki](https://kivo.wiki) and is used in this program only for fair purposes such as displaying character names.
+
 ## Command Line Interface (CLI)
 
 In addition to the graphical interface, this project provides a Command Line Interface (CLI) version `cli/main.py`.
