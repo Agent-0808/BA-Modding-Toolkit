@@ -80,10 +80,12 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+该工具可以解析与渲染 Spine 的 `.skel` 动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+
 - 在“文件列表”窗口中右键预览
 - 在“资源提取”功能中，可选在解包之后渲染预览图。
 - 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
+- 可用于检测 `.skel` 动画列表的区别，在“Mod 更新”与“资源打包”功能中使用。
 
 ### ADB(Android Debug Bridge)
 
@@ -93,6 +95,8 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 - 该功能需要您已连接 Android 设备，并且已授权该程序访问您的设备。
 - 设置 `adb.exe` 程序的路径后，在“设置”窗口内选择目标 Android 设备与对应的文件来源即可。
+
+## 子项目
 
 ### BA-characters-internal-id
 
@@ -104,7 +108,7 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
 
 > [!NOTE]
-> 从 Releases 下载的打包版本已在程序目录的 `Addons/` 子目录中附带了一份数据文件（`BA-Characters-Internal-ID.csv`），开箱即用；您也可以在设置界面手动下载最新版本。
+> 从 Releases 下载的打包版本已在程序目录的 `Addons/` 子目录中附带了一份数据文件（`BA-Characters-Internal-ID.csv`），开箱即用；您也可以在设置界面手动下载托管的最新版本。
 >
 > 该数据文件基于 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) 协议授权（完整声明见程序目录 `Addons/BA-Characters-Internal-ID-LICENSE.txt`），数据整理自 [基沃托斯古书馆](https://kivo.wiki) 的文本数据，在本程序中仅用于显示角色名称等合理用途。
 
@@ -140,21 +144,6 @@ bamt-cli backup -h
 
 请查看 [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) 页面参考详细用法说明。
 
-## 技术细节
-
-### 经过测试的环境
-
-下表列出了经过测试的环境配置，供参考。
-
-| 操作系统 (OS)           | Python 版本 | UnityPy 版本 | Pillow 版本 | 状态  | 备注   |
-|:------------------- |:--------- |:---------- |:--------- |:--- | ---- |
-| Windows 10          | 3.12.4    | 1.23.0     | 12.0.0    | ✅   | 开发环境 |
-| Windows 10          | 3.11.x    | 1.23.0     | 12.0.0    | ✅   |  |
-| Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   |  |
-| Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
-| Windows 10          | 3.12.4    | 1.24.0     | 10.4.0    | ❌   |  |
-| Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
-
 ## 开发
 
 请安装 Python 3.12+ 版本，安装依赖后运行：
@@ -177,6 +166,19 @@ python -m ba_modding_toolkit
 您可以将 `BA-Modding-Toolkit` 的代码加入您的项目中或是进行修改，以实现自定义的 Mod 制作和更新功能。
 
 `cli/main.py` 是一个命令行接口（CLI）版本的主程序，您可以参考其调用处理函数的方式。
+
+### 经过测试的环境
+
+下表列出了经过测试的环境配置，供参考。
+
+| 操作系统 (OS)           | Python 版本 | UnityPy 版本 | Pillow 版本 | 状态  | 备注   |
+|:------------------- |:--------- |:---------- |:--------- |:--- | ---- |
+| Windows 10          | 3.12.4    | 1.23.0     | 12.0.0    | ✅   | 开发环境 |
+| Windows 10          | 3.11.x    | 1.23.0     | 12.0.0    | ✅   |  |
+| Windows 10          | 3.12.4    | 1.23.0     | 10.4.0    | ✅   |  |
+| Windows 10          | 3.13.7    | 1.23.0     | 11.3.0    | ✅   |  |
+| Windows 10          | 3.12.4    | 1.24.0     | 10.4.0    | ❌   |  |
+| Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
 ### 文件结构
 

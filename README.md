@@ -83,10 +83,12 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-This tool can preview and render Spine skeleton files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
+This tool can parse and render Spine `.skel` animation files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
+
 - Right-click to preview in the "File List" window
 - In the Asset Extractor tab, you can optionally render preview images after extraction.
 - In the "Mod Report" feature, you can optionally render preview images when generating the report.
+- It can be used to detect differences in `.skel` animation lists, and is used in the "Mod Update" and "Asset Packer" features.
 
 ### ADB (Android Debug Bridge)
 
@@ -96,6 +98,8 @@ This tool can communicate with Android devices. You can configure the path of `a
 
 - This feature requires an Android device to be connected and authorized for this program to access.
 - After setting the path to `adb.exe`, select the target Android device and corresponding file source in the "Settings" window.
+
+## Subproject
 
 ### BA-characters-internal-id
 
@@ -143,21 +147,6 @@ bamt-cli backup -h
 
 Check the [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) Page for Complete Usage Instructions.
 
-## Technical Details
-
-### Tested Environments
-
-The table below lists tested environment configurations for reference.
-
-| Operating System | Python | UnityPy | Pillow | Status | Note   |
-|:------------------- |:-------------- |:--------------- |:-------------- |:------ | :--- |
-| Windows 10          | 3.12.4         | 1.23.0     | 12.0.0    | ✅   | Dev Env |
-| Windows 10          | 3.11.x         | 1.23.0     | 12.0.0    | ✅   |  |
-| Windows 10          | 3.12.4         | 1.23.0     | 10.4.0    | ✅   |  |
-| Windows 10          | 3.13.7         | 1.23.0     | 11.3.0    | ✅   |  |
-| Windows 10          | 3.12.4         | 1.24.0     | 10.4.0    | ❌   |  |
-| Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0     | 12.0.0    | ✅   |  |
-
 ## Developing
 
 Please ensure that Python 3.11 or higher is installed.
@@ -180,6 +169,19 @@ The author's programming skills are limited, welcome to provide suggestions or i
 You can add `BA-Modding-Toolkit` code to your project or modify the existing code to implement custom Mod creation and update functionality.
 
 `cli/main.py` is a command-line interface (CLI) version of the main program, which you can refer to for calling processing functions.
+
+### Tested Environments
+
+The table below lists tested environment configurations for reference.
+
+| Operating System | Python | UnityPy | Pillow | Status | Note   |
+|:------------------- |:-------------- |:--------------- |:-------------- |:------ | :--- |
+| Windows 10          | 3.12.4         | 1.23.0     | 12.0.0    | ✅   | Dev Env |
+| Windows 10          | 3.11.x         | 1.23.0     | 12.0.0    | ✅   |  |
+| Windows 10          | 3.12.4         | 1.23.0     | 10.4.0    | ✅   |  |
+| Windows 10          | 3.13.7         | 1.23.0     | 11.3.0    | ✅   |  |
+| Windows 10          | 3.12.4         | 1.24.0     | 10.4.0    | ❌   |  |
+| Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0     | 12.0.0    | ✅   |  |
 
 ### File Structure
 
