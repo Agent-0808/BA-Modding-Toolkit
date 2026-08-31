@@ -651,7 +651,8 @@ class SettingRow:
             variable=variable,
             command=command,
             style="success-square-toggle",
-            text=""
+            text="",
+            takefocus=False
         )
         chk.pack(side=tk.RIGHT)
         
