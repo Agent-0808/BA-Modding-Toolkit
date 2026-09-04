@@ -10,13 +10,12 @@ from ttkbootstrap.widgets.scrolled import ScrolledFrame
 
 from ...i18n import t
 from ..utils import open_in_os, reveal_in_explorer
-from .base import StoppableDialog
 
 if TYPE_CHECKING:
     from ..app import App
 
 
-class PreviewWindow(StoppableDialog):
+class PreviewWindow(tb.Toplevel):
     """预览图查看窗口：纵向滚动展示多张图片"""
 
     # 缩略图最大边长（像素）

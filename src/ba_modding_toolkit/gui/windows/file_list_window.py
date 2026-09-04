@@ -264,7 +264,6 @@ class FileListWindow(StoppableDialog):
     def _setup_window(self):
         self.title(t("ui.file_list.window_title"))
         self.geometry("1400x750")
-        self.transient(self.master)
         self.app.setup_icon(self)
 
     def _create_toolbar(self):
