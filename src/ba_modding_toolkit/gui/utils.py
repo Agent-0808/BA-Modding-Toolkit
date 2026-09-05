@@ -208,7 +208,11 @@ def reveal_in_explorer(path: str | Path) -> None:
     try:
         path_obj = Path(path).resolve()
         if sys.platform == 'win32':
-            subprocess.run(['explorer', f'/select,{path_obj}'], creationflags=CREATE_NO_WINDOW)
+            # explorer 的命令行解析不规范：list 形式传参会在路径含空格时把整个参数
+            subprocess.Popen(
+                f'explorer /select,"{path_obj}"',
+                creationflags=CREATE_NO_WINDOW,
+            )
         elif sys.platform == 'darwin':
             subprocess.run(['open', '-R', str(path_obj)], check=True, creationflags=CREATE_NO_WINDOW)
         elif _is_wsl():
@@ -218,7 +222,10 @@ def reveal_in_explorer(path: str | Path) -> None:
                 capture_output=True, text=True, check=True,
                 creationflags=CREATE_NO_WINDOW,
             )
-            subprocess.run(['explorer.exe', f'/select,{result.stdout.strip()}'], creationflags=CREATE_NO_WINDOW)
+            subprocess.Popen(
+                f'explorer.exe /select,"{result.stdout.strip()}"',
+                creationflags=CREATE_NO_WINDOW,
+            )
         else:
             subprocess.run(['xdg-open', str(path_obj.parent)], check=True, creationflags=CREATE_NO_WINDOW)
     except Exception as e:
