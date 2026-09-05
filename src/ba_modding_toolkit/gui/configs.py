@@ -81,7 +81,7 @@ class ConfigMixin:
     # SpineConverter
     spine_converter_path_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "")]
     enable_spine_conversion_var: Annotated[tk.BooleanVar, ConfigMeta("SpineConverter", False, depends_on="spine_converter_path_var")]
-    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33", depends_on="enable_spine_conversion_var")]
+    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33")]
     
     # SpineDowngrade
     enable_spine_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
