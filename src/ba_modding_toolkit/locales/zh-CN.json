@@ -621,6 +621,7 @@
 				"modified_time": "修改时间",
 				"trailing_bytes": "尾部字节",
 				"trailing_content": "尾部内容",
+				"category": "类型",
 				"core": "Core",
 				"character": "角色名称",
 				"res_type": "资源类型",

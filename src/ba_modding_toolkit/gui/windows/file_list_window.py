@@ -47,7 +47,7 @@ def _format_hex(data: bytes | None) -> str:
 def _format_time(mtime: float) -> str:
     if mtime <= 0:
         return ""
-    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
 
 
 _UNSET = "—"
@@ -62,11 +62,12 @@ class ColumnId(Enum):
     modified_time = 4
     trailing_bytes = 5
     trailing_content = 6
-    core = 7
-    char_name = 8       # 角色名称（通过映射表从 core 转换）
-    res_type = 9
-    crc = 10
-    crc_actual = 11
+    category = 7        # 资源分类
+    core = 8
+    char_name = 9       # 角色名称（通过映射表从 core 转换）
+    res_type = 10
+    crc = 11
+    crc_actual = 12
 
 
 class ColumnDef(NamedTuple):
@@ -86,6 +87,7 @@ def _get_columns() -> list[ColumnDef]:
         ColumnDef(ColumnId.modified_time, t("ui.file_list.column.modified_time"), 100),
         ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
         ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
+        ColumnDef(ColumnId.category, t("ui.file_list.column.category"), 120, default_visible=False),
         ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
         ColumnDef(ColumnId.char_name, t("ui.file_list.column.character"), 150, default_visible=False),
         ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
@@ -108,7 +110,7 @@ def _get_analyzer_options() -> list[AnalyzerOption]:
 
 ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "trailing": [ColumnId.trailing_bytes, ColumnId.trailing_content],
-    "naming": [ColumnId.core, ColumnId.char_name, ColumnId.res_type],
+    "naming": [ColumnId.category, ColumnId.core, ColumnId.char_name, ColumnId.res_type],
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
@@ -594,6 +596,7 @@ class FileListWindow(StoppableDialog):
             _format_hex(item.trailing_content) if item.trailing_content is not None else _UNSET
         )
         core_display = item.parsed_name.core if item.parsed_name else _UNSET
+        category_display = item.parsed_name.category if item.parsed_name and item.parsed_name.category else _UNSET
         character_display = self._lookup_character_name(core_display) if item.parsed_name else _UNSET
         res_type_display = item.parsed_name.res_type if item.parsed_name and item.parsed_name.res_type else _UNSET
         crc_display = (
@@ -629,11 +632,12 @@ class FileListWindow(StoppableDialog):
             _format_time(item.modified_time),   # 4: modified_time
             trailing_display,         # 5: trailing_bytes
             trailing_content_display, # 6: trailing_content
-            core_display,             # 7: core
-            character_display,        # 8: character
-            res_type_display,         # 9: res_type
-            crc_display,              # 10: crc
-            crc_actual_display,       # 11: crc_actual
+            category_display,         # 7: category
+            core_display,             # 8: core
+            character_display,        # 9: character
+            res_type_display,         # 10: res_type
+            crc_display,              # 11: crc
+            crc_actual_display,       # 12: crc_actual
         ]
 
     def _on_scan_complete(self, items: list[BundleFileInfo]):
