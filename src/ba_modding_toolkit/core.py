@@ -20,7 +20,7 @@ from .models import (
     AssetKey, AssetContent, AssetType, Patch,
     LogFunc, PatchResult,
     MatchStrategy, SaveOptions, SkelConvertOptions, AnimCheckOptions,
-    AnimDiffMap, ModUpdateResult, BatchUpdateResult,
+    AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
     REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
@@ -38,6 +38,19 @@ def _log_anim_diff_report(anim_diffs: dict[str, list[str]], log: LogFunc) -> Non
         log(f"     {t('log.spine.anim_diff_missing_list', animations=', '.join(anims))}")
     log(t("log.spine.anim_diff_hint"))
     log("!" * 50)
+
+
+def _format_skel_conflicts(conflicts: list[SkelVersionConflict]) -> str:
+    """将 skel 版本冲突列表格式化为终止消息（用于日志与弹窗）"""
+    target = conflicts[0].target_version
+    major_minor = ".".join(target.split(".")[:2])
+    lines = [t("message.spine.version_conflict_header", major_minor=major_minor)]
+    lines.extend(
+        t("message.spine.version_conflict_item", name=c.name, source=c.source_version or t("common.unknown"))
+        for c in conflicts
+    )
+    lines.append(t("message.spine.version_conflict_hint", major_minor=major_minor))
+    return "\n".join(lines)
 
 
 # ====== 资源处理相关 ======
@@ -150,6 +163,7 @@ def process_asset_packing(
     try:
         # 1. 从所有资源路径中收集输入文件
         patch: Patch = {}
+        skel_conflicts: list[SkelVersionConflict] = []
         supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
         input_files: list[Path] = []
         
@@ -211,14 +225,15 @@ def process_asset_packing(
                     content = f.read()
                 
                 if file_path.suffix.lower() == '.skel':
-                    content = SkelConverter.upgrade(
+                    content, conflict = SkelConverter.ensure_version(
                         skel_bytes=content,
                         resource_name=asset_key.name,
-                        enabled=spine_options.enabled if spine_options else False,
-                        converter_path=spine_options.converter_path if spine_options else None,
-                        target_version=spine_options.target_version if spine_options else None,
+                        options=spine_options,
                         log=log
                     )
+                    if conflict:
+                        skel_conflicts.append(conflict)
+                        continue
             elif suffix == ".bytes" and file_path.name.endswith(".mesh.bytes"):
                 resource_name = file_path.name.removesuffix(".mesh.bytes")
                 asset_key = NameTypeKey(resource_name, AssetType.Mesh.name)
@@ -227,7 +242,13 @@ def process_asset_packing(
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             patch[asset_key] = content
-        
+
+        if skel_conflicts:
+            # skel 版本与预设目标版本不兼容：终止流程，不处理任何目标 Bundle（详情见失败消息）
+            log(f'❌ {t("log.spine.version_conflict_rejected", count=len(skel_conflicts))}')
+            msg = _format_skel_conflicts(skel_conflicts)
+            return False, msg, []
+
         original_tasks_count = len(patch)
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
 
@@ -555,13 +576,21 @@ def process_mod_update(
         # 1. 提取资源 (Extraction)
         log(f'\n--- {t("log.section.extracting_patches")} ---')
         patches: Patch = {}
-        
+        skel_conflicts: list[SkelVersionConflict] = []
+
         for src in source_paths:
             src_bundle = Bundle.load(src, log)
             if not src_bundle:
                 continue
-            patch = src_bundle.extract_patch(asset_types_to_replace, match_strategy, spine_options)
+            patch, conflicts = src_bundle.extract_patch(asset_types_to_replace, match_strategy, spine_options)
             patches.update(patch)
+            skel_conflicts.extend(conflicts)
+
+        if skel_conflicts:
+            # skel 版本与预设目标版本不兼容：整批终止，不处理任何目标
+            msg = _format_skel_conflicts(skel_conflicts)
+            log(f"❌ {msg}")
+            return ModUpdateResult(False, msg, [])
 
         if not patches:
             return False, t("message.mod_update.no_assets_extracted"), []
@@ -770,7 +799,7 @@ def process_batch_mod_update(
                     file_pairs.extend(result.file_pairs)
             else:
                 fail_count += 1
-                failed_tasks.append(f"{filename} - {result.message}")
+                failed_tasks.append(filename)
     else:
         # 并行处理
         lock = threading.Lock()

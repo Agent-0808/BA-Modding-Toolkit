@@ -10,6 +10,7 @@ from SpineAtlas import Atlas, ReadAtlasFile
 
 from .i18n import t
 from .utils import CREATE_NO_WINDOW, LogFunc, no_log
+from .models import SkelConvertOptions, SkelVersionConflict
 
 
 def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
@@ -131,59 +132,90 @@ class SkelConverter:
             return False
 
     @staticmethod
-    def upgrade(
+    def ensure_version(
         skel_bytes: bytes,
         resource_name: str,
-        enabled: bool = False,
-        converter_path: Path | None = None,
-        target_version: str | None = None,
+        options: SkelConvertOptions | None = None,
         log: LogFunc = no_log,
-    ) -> bytes:
-        """处理 .skel 文件的版本检查和升级。"""
-        if not enabled or not converter_path or not target_version:
-            return skel_bytes
+    ) -> tuple[bytes, SkelVersionConflict | None]:
+        """
+        检测 .skel 版本与预设目标版本是否兼容（前两位 major.minor 一致），不一致时尝试转换。
 
-        if not converter_path.exists():
-            return skel_bytes
+        Args:
+            skel_bytes: .skel 文件字节数据
+            resource_name: 资源名（用于日志与临时文件名）
+            options: Spine 转换选项；target_version 无论转换器是否启用均作为判定基准
+            log: 日志函数
 
-        if target_version.count(".") != 2:
-            return skel_bytes
+        Returns:
+            (处理后的字节数据, 冲突信息或 None)；冲突时返回原始字节数据
+        """
+        target_version = options.target_version if options else None
+        if not target_version or target_version.count(".") != 2:
+            # 未配置有效的基准版本，不做检测
+            return skel_bytes, None
 
+        current_version = get_skel_version(skel_bytes, log)
+        if not current_version:
+            log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
+            return skel_bytes, None
+
+        major_minor = ".".join(target_version.split(".")[:2])
+        if current_version.startswith(major_minor):
+            return skel_bytes, None
+
+        # 版本前两位不一致：转换器可用则尝试转换，否则报告冲突
+        log(f'  > {t("log.spine.skel_detected", name=resource_name)}')
+
+        if options.enabled and options.converter_path and options.converter_path.exists():
+            log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+            converted = SkelConverter._convert_bytes(
+                skel_bytes=skel_bytes,
+                resource_name=resource_name,
+                converter_path=options.converter_path,
+                target_version=target_version,
+                log=log,
+            )
+            if converted is not None:
+                return converted, None
+        else:
+            log(f'    > {t("log.spine.version_mismatch_no_convert", current=current_version, target=target_version)}')
+
+        return skel_bytes, SkelVersionConflict(resource_name, current_version, target_version)
+
+    @staticmethod
+    def _convert_bytes(
+        skel_bytes: bytes,
+        resource_name: str,
+        converter_path: Path,
+        target_version: str,
+        log: LogFunc,
+    ) -> bytes | None:
+        """将 .skel 字节数据转换到目标版本，失败返回 None。"""
         try:
-            log(f'  > {t("log.spine.skel_detected", name=resource_name)}')
-            current_version = get_skel_version(skel_bytes, log)
-            target_major_minor = ".".join(target_version.split('.')[:2])
+            # 创建临时文件进行转换
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_input_path = Path(temp_dir) / resource_name
+                temp_input_path.write_bytes(skel_bytes)
 
-            if current_version and not current_version.startswith(target_major_minor):
-                log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+                # 调用 run() 进行转换（原地覆盖）
+                success = SkelConverter.run(
+                    input_path=temp_input_path,
+                    output_path=temp_input_path,
+                    converter_path=converter_path,
+                    target_version=target_version,
+                    log=log
+                )
 
-                # 创建临时文件进行转换
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_dir_path = Path(temp_dir)
-                    temp_input_path = temp_dir_path / resource_name
-
-                    # 写入临时文件
-                    temp_input_path.write_bytes(skel_bytes)
-
-                    # 调用 run() 进行转换（原地覆盖）
-                    success = SkelConverter.run(
-                        input_path=temp_input_path,
-                        output_path=temp_input_path,
-                        converter_path=converter_path,
-                        target_version=target_version,
-                        log=log
-                    )
-
-                    if success:
-                        log(f'  > {t("log.spine.skel_conversion_success")}')
-                        return temp_input_path.read_bytes()
-                    else:
-                        log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
+                if success:
+                    log(f'  > {t("log.spine.skel_conversion_success")}')
+                    return temp_input_path.read_bytes()
+                log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
 
         except Exception as e:
             log(f'    ❌ {t("log.error_detail", error=e)}')
 
-        return skel_bytes
+        return None
 
     @staticmethod
     def downgrade(

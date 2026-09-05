@@ -302,8 +302,6 @@ class BatchUpdateTab(TabFrame):
         failed_tasks = result.failed_tasks
         self.current_file_pairs = result.file_pairs
 
-        self.logger.log(t("log.batch.summary", total=total, success=success_count, fail=fail_count))
-
         if failed_tasks:
             self.logger.log(t("log.batch.failed_items_cnt", count=fail_count))
             failed_list = "\n".join([t("log.batch.failed_item", filename=f) for f in failed_tasks])

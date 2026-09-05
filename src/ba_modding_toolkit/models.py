@@ -78,6 +78,13 @@ class SkelConvertOptions:
             and self.target_version.count(".") == 2
         )
 
+@dataclass(frozen=True)
+class SkelVersionConflict:
+    """skel 版本与预设目标版本不兼容的冲突信息"""
+    name: str               # skel 资源名
+    source_version: str     # 来源 skel 检测到的版本
+    target_version: str     # 预设目标版本
+
 @dataclass
 class AnimCheckOptions:
     """动画差异比对与校验配置（依赖 SpineViewerCLI）"""

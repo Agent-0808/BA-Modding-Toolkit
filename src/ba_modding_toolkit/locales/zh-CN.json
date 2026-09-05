@@ -206,7 +206,11 @@
 			"match_no": "CRC值匹配: ❌否",
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
-		"spine": {},
+		"spine": {
+			"version_conflict_header": "以下 .skel 文件的 Spine 版本与目标版本 ({major_minor}.x) 不一致，已拒绝替换：",
+			"version_conflict_item": "  - {name}（来源版本 {source}）",
+			"version_conflict_hint": "请检查 Spine 转换器设置。"
+		},
 		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
@@ -326,6 +330,8 @@
 			"skel_conversion_failed": "skel 转换失败",
 			"skel_detected": "检测到 .skel 文件: {name}",
 			"version_mismatch_converting": "检测到Spine版本不匹配（当前{current}，目标{target}），将进行转换。",
+			"version_mismatch_no_convert": "检测到Spine版本不匹配（当前{current}，目标{target}），且 Spine 转换器未启用。",
+			"version_conflict_rejected": "检测到 {count} 个 .skel 版本冲突，已拒绝替换",
 			"converting_atlas": "正在转换 Atlas: {name}",
 			"version_detected_downgrading": "检测到Spine版本: {version}，尝试降级...",
 			"atlas_downgrade_success": "Atlas 降级成功",

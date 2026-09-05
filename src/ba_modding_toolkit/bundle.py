@@ -19,7 +19,7 @@ from .models import (
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult,
     SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
-    BundleFileInfo, ProgressCallback,
+    BundleFileInfo, ProgressCallback, SkelVersionConflict,
     REPLACEABLE_ASSET_TYPES
 )
 
@@ -468,20 +468,21 @@ class Bundle:
         asset_types_to_replace: set[str],
         match_strategy: MatchStrategy = 'path_id',
         spine_options: SkelConvertOptions | None = None
-    ) -> Patch:
+    ) -> tuple[Patch, list[SkelVersionConflict]]:
         """
         从当前 Bundle 提取资源，生成补丁。
         
         Args:
             asset_types_to_replace: 要替换的资源类型集合（如 {"Texture2D", "TextAsset", "Mesh"} 或 {"ALL"}）
             match_strategy: 匹配策略，用于生成资源键
-            spine_options: Spine 资源升级选项
+            spine_options: Spine 资源版本检测与转换选项
             
         Returns:
-            资源补丁 { asset_key: content }
+            (资源补丁 { asset_key: content }, skel 版本冲突列表)
         """
         key_func = self._get_key_func(match_strategy)
         patch: Patch = {}
+        skel_conflicts: list[SkelVersionConflict] = []
         replace_all = "ALL" in asset_types_to_replace
         
         for obj in self.env.objects:
@@ -506,14 +507,15 @@ class Bundle:
                 elif obj.type == AssetType.TextAsset:
                     asset_bytes = data.m_Script.encode("utf-8", "surrogateescape")
                     if resource_name.lower().endswith('.skel'):
-                        content: bytes = SkelConverter.upgrade(
+                        content, conflict = SkelConverter.ensure_version(
                             skel_bytes=asset_bytes,
                             resource_name=resource_name,
-                            enabled=spine_options.enabled if spine_options else False,
-                            converter_path=spine_options.converter_path if spine_options else None,
-                            target_version=spine_options.target_version if spine_options else None,
+                            options=spine_options,
                             log=self.log
                         )
+                        if conflict:
+                            skel_conflicts.append(conflict)
+                            continue
                     else:
                         content: bytes = asset_bytes
                 elif replace_all or obj.type.name in asset_types_to_replace:
@@ -526,8 +528,8 @@ class Bundle:
         
         if replace_all:
             patch["__mode__"] = {"ALL"}
-        
-        return patch
+
+        return patch, skel_conflicts
 
 
 # -------- Bundle 分析器 --------
