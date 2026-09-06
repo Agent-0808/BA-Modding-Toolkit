@@ -1,0 +1,201 @@
+# gui/windows/batch_preview_dialog.py
+
+import tkinter as tk
+import ttkbootstrap as tb
+from tkinter import messagebox
+from pathlib import Path
+from typing import TYPE_CHECKING
+from threading import Thread
+
+if TYPE_CHECKING:
+    from ..app import App
+
+from ...i18n import t
+from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
+from ...report import render_all_spine_previews
+from ..components import SettingRow, UIComponents
+from ..utils import open_directory, select_directory
+from .base import StoppableDialog
+
+
+class BatchRenderDialog(StoppableDialog):
+    """批量渲染 Spine 预览图对话框（作用于全部 Spine 资源，不限 Mod）"""
+
+    def __init__(self, master, app_instance: "App"):
+        super().__init__(master)
+        self.app = app_instance
+
+        # 游戏资源目录（仅对话框内使用，不保存配置），默认为当前游戏目录
+        self.game_dir_var: tk.StringVar = tk.StringVar(
+            value=self.app.get_current_resource_dir() or ""
+        )
+
+        self._setup_window()
+        self._create_widgets()
+
+    def _setup_window(self):
+        """设置窗口基本属性"""
+        self.title(t("ui.tools.batch_preview.title"))
+        self.geometry("800x350")
+        self.app.setup_icon(self)
+        self.transient(self.master)
+
+    def _create_widgets(self):
+        """创建界面组件"""
+        main_frame = tb.Frame(self, padding=15)
+        main_frame.pack(fill=tk.BOTH, expand=True)
+
+        # 游戏资源目录选择（默认当前游戏目录）
+        UIComponents.create_directory_path_entry(
+            main_frame,
+            t("ui.tools.batch_preview.game_dir"),
+            self.game_dir_var,
+            self._select_game_dir,
+            self._open_game_dir,
+        )
+
+        # 选项区域
+        options_frame = tb.Labelframe(main_frame, text=t("ui.label.options"), padding=10)
+        options_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # 预览渲染预设选择
+        SettingRow.create_combobox_row(
+            options_frame,
+            label=t("option.report_render_preset"),
+            text_var=self.app.report_render_preset_var,
+            values=[
+                ("low", t("option.report_render_preset_low")),
+                ("high", t("option.report_render_preset_high"))
+            ],
+            tooltip=t("option.report_render_preset_info"),
+        )
+
+        # 进度区域
+        progress_frame = tb.Frame(main_frame)
+        progress_frame.pack(fill=tk.X, pady=(0, 10))
+
+        self.progress_bar = tb.Progressbar(
+            progress_frame,
+            mode="determinate",
+            bootstyle="success-striped"
+        )
+        self.progress_bar.pack(fill=tk.X, pady=10)
+
+        # 按钮区域
+        button_frame = tb.Frame(main_frame)
+        button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=5)
+
+        # 渲染按钮
+        render_btn = UIComponents.create_button(
+            button_frame,
+            text=t("action.generate"),
+            command=self._start_render,
+            bootstyle="success"
+        )
+        render_btn.pack(anchor=tk.CENTER)
+
+    def _select_game_dir(self):
+        """选择游戏资源目录"""
+        select_directory(
+            var=self.game_dir_var,
+            title=t("ui.dialog.select", type=t("ui.tools.batch_preview.game_dir")),
+            log=self.app.logger.log,
+        )
+
+    def _open_game_dir(self):
+        """打开游戏资源目录"""
+        open_directory(self.game_dir_var.get(), log=self.app.logger.log)
+
+    def _show_spine_viewer_not_configured(self):
+        """显示 SpineViewer 未配置的提示"""
+        messagebox.showwarning(
+            t("common.warning"),
+            t("message.3rd_party.spine_viewer_required")
+        )
+
+    def _update_progress(self, current: int, total: int, filename: str):
+        """更新进度"""
+        # 检查窗口是否还存在
+        if not self.winfo_exists():
+            return
+
+        try:
+            self.progress_bar["maximum"] = total
+            self.progress_bar["value"] = current
+            self.app.logger.status(
+                t("status.processing_batch", current=current, total=total, filename=filename)
+            )
+            self.update_idletasks()
+        except tk.TclError:
+            # 窗口已被销毁，忽略更新
+            pass
+
+    def _start_render(self):
+        """开始批量渲染"""
+
+        # 检查游戏目录
+        game_dir = self.app.get_current_resource_dir()
+        if not game_dir:
+            messagebox.showerror(t("common.error"), t("message.missing_paths"))
+            return
+
+        game_path = Path(game_dir)
+        if not game_path.is_dir():
+            messagebox.showerror(t("common.error"), t("message.dir_not_found", path=game_dir))
+            return
+
+        # 检查 SpineViewer
+        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
+        if not viewer_path_str:
+            self._show_spine_viewer_not_configured()
+            return
+        viewer_path = Path(viewer_path_str)
+        if not viewer_path.exists():
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+            return
+
+        # 输出目录（固定 output/batch_preview/，文件名 = prefix，重复渲染自动覆盖）
+        output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BATCH_PREVIEW)
+
+        # 标记任务开始
+        self.set_task_running(True)
+
+        # 预览渲染预设
+        preset_map = {"low": RENDER_PRESET_LOW, "high": RENDER_PRESET_HIGH}
+        render_options = preset_map.get(self.app.report_render_preset_var.get(), RENDER_PRESET_LOW)
+
+        # 在线程中运行
+        def run():
+            rendered, total = render_all_spine_previews(
+                game_dir=game_path,
+                output_dir=output_dir,
+                viewer_path=viewer_path,
+                render_options=render_options,
+                log=self.app.logger.log,
+                progress_callback=self._update_progress,
+            )
+
+            self.after(0, lambda: self._on_complete(rendered, total, output_dir))
+
+        Thread(target=run, daemon=True).start()
+
+    def _on_complete(self, rendered: int, total: int, output_dir: Path):
+        """完成回调"""
+        # 标记任务结束
+        self.set_task_running(False)
+
+        # 检查窗口是否还存在
+        if not self.winfo_exists():
+            return
+
+        if total > 0:
+            self.app.logger.status(t("status.done"))
+
+            # 询问是否打开输出目录
+            if messagebox.askyesno(t("common.success"), t("message.batch_preview_open_prompt", rendered=rendered, total=total)):
+                open_directory(output_dir)
+
+            # 关闭对话框
+            self.destroy()
+        else:
+            self.app.logger.status(t("status.failed"))

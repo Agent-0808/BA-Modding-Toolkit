@@ -212,6 +212,7 @@
 			"version_conflict_hint": "请检查 Spine 转换器设置。"
 		},
 		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
+		"batch_preview_open_prompt": "批量渲染完成！\n成功 {rendered} / {total} 组，是否打开输出目录？",
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
@@ -399,6 +400,12 @@
 			"saved": "报告已保存至: {path}",
 			"success": "报告生成成功，共 {count} 个 Mod"
 		},
+		"batch_preview": {
+			"scan_start": "开始批量渲染扫描",
+			"no_spine_found": "未找到 Spine 资源",
+			"group_count": "共 {count} 组 Spine 资源待渲染",
+			"render_count": "批量渲染完成，成功 {count} / {total} 组"
+		},
 		"section": {
 			"extract_to_temp": "提取资源到临时目录",
 			"move_to_output": "移动提取的文件到输出目录",
@@ -532,6 +539,11 @@
 			"backup": {
 				"title": "备份 Mod",
 				"info": "将游戏目录中检测到的全部 Mod 文件复制到指定备份目录，并保留原始目录结构。"
+			},
+			"batch_preview": {
+				"title": "批量渲染预览图",
+				"info": "渲染指定游戏资源目录下全部 Spine 资源（角色立绘、记忆大厅、Spine 背景）的预览图，不限于 Mod 文件。输出到输出目录的 batch_preview 子目录。",
+				"game_dir": "游戏资源目录"
 			}
 		},
 		"settings": {

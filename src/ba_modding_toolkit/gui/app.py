@@ -519,6 +519,7 @@ class App(tb.Frame, ConfigMixin):
     OUTPUT_SUBDIR_EXTRACT = "extract"
     OUTPUT_SUBDIR_PREVIEW = "preview"
     OUTPUT_SUBDIR_REPORTS = "reports"
+    OUTPUT_SUBDIR_BATCH_PREVIEW = "batch_preview"
 
     def get_output_subdir(self, subdir: str) -> Path:
         """获取输出目录下的子目录路径，自动创建"""

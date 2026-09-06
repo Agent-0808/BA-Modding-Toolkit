@@ -9,7 +9,7 @@ from typing import Literal
 from .bundle import analyze_trailing, analyze_naming
 from .i18n import t
 from .models import BundleFileInfo, LogFunc, ProgressCallback
-from .naming import CharacterInternalIDMap
+from .naming import CharacterInternalIDMap, parse_filename
 from .searching import list_bundle_files
 from .core import render_spine_preview_from_bundle
 from .spine import RenderOptions, RENDER_PRESET_LOW
@@ -222,6 +222,87 @@ def generate_mod_report(
     log(f"✓ {t('log.report.saved', path=output_path)}")
 
     return True, t("log.report.success", count=len(entries))
+
+
+def render_all_spine_previews(
+    game_dir: Path,
+    output_dir: Path,
+    viewer_path: Path,
+    render_options: RenderOptions = RENDER_PRESET_LOW,
+    log: LogFunc = no_log,
+    progress_callback: ProgressCallback | None = None,
+) -> tuple[int, int]:
+    """
+    批量渲染游戏目录下全部 Spine 资源的预览图（不限 Mod 文件）。
+
+    按 parse_filename 解析出的 category 筛选 RENDER_CATEGORIES，
+    再按 prefix 聚合后逐组渲染（同组 bundle 合并，保证 skel/atlas/texture 完整）。
+
+    Args:
+        game_dir: 游戏资源目录
+        output_dir: 预览图输出目录
+        viewer_path: SpineViewerCLI 路径
+        render_options: 渲染参数（默认低画质）
+        log: 日志函数
+        progress_callback: 进度回调函数（按 prefix 组推进）
+
+    Returns:
+        tuple[int, int]: (渲染成功的组数, 总组数)
+    """
+    log(f"--- {t('log.batch_preview.scan_start')} ---")
+
+    # 节流进度回调，避免海量文件时的高频 GUI 更新
+    if progress_callback:
+        progress_callback = throttle_progress(progress_callback)
+
+    # 1. 扫描 bundle 文件
+    items = list_bundle_files(game_dir)
+    if not items:
+        log(f"⚠️ {t('message.no_bundle_found')}")
+        return 0, 0
+
+    log(f"{t('log.report.bundle_count', count=len(items))}")
+
+    # 2. 解析文件名，筛选 Spine 分类并按 prefix 聚合
+    grouped: dict[str, list[Path]] = {}
+    for item in items:
+        parsed = parse_filename(item.path.name)
+        if parsed.category in RENDER_CATEGORIES and parsed.prefix:
+            grouped.setdefault(parsed.prefix, []).append(item.path)
+
+    if not grouped:
+        log(f"⚠️ {t('log.batch_preview.no_spine_found')}")
+        return 0, 0
+
+    prefixes = sorted(grouped)
+    total = len(prefixes)
+    log(f"{t('log.batch_preview.group_count', count=total)}")
+
+    # 3. 逐组渲染（文件名 = prefix，重复渲染自动覆盖）
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 重置进度条（渲染阶段）
+    if progress_callback:
+        progress_callback(0, total, "")
+
+    render_count = 0
+    for i, prefix in enumerate(prefixes):
+        success, _, _ = render_spine_preview_from_bundle(
+            bundle_path=grouped[prefix],
+            output_dir=output_dir,
+            viewer_path=viewer_path,
+            output_filename=prefix,
+            render_options=render_options,
+            log=log,
+        )
+        if success:
+            render_count += 1
+
+        if progress_callback:
+            progress_callback(i + 1, total, prefix)
+
+    log(f"{t('log.batch_preview.render_count', count=render_count, total=total)}")
+    return render_count, total
 
 
 def _aggregate_mods(
