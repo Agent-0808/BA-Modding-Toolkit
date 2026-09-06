@@ -409,7 +409,9 @@ class Bundle:
                     if obj.type == AssetType.Texture2D:
                         content: Image.Image
                         new_image = content
-                        if data.image.tobytes() == new_image.tobytes():
+                        if (data.image.mode == new_image.mode
+                                and data.image.size == new_image.size
+                                and data.image.tobytes() == new_image.tobytes()):
                             self.log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
                             skipped_count += 1
                             continue
