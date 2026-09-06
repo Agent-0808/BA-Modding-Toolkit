@@ -445,6 +445,7 @@ class Bundle:
                         obj.set_raw_data(content)
                     
                     applied_count += 1
+                    self.log(f'  ✅ {t("log.replace_applied", type=obj.type.name, name=resource_name)}')
                     key_display = str(asset_key)
                     log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
                     applied_assets_log.append(log_message)
