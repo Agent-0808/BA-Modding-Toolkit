@@ -10,10 +10,20 @@ from typing import Callable, Any, TYPE_CHECKING
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import select_file, select_directory, reveal_in_explorer, build_filetypes
+from .utils import select_file, select_directory, open_directory, reveal_in_explorer, build_filetypes
 from ..i18n import t
 from ..naming import parse_filename
 from ..models import FileType
+
+# --- 路径选择组件共用的核心机制 ---
+def _auto_path_commands(
+    path_var: tk.StringVar,
+    title: str,
+    parent: tk.Widget,
+) -> tuple[Callable[[], None], Callable[[], None]]:
+    select_cmd = lambda: select_directory(path_var, title, parent=parent)
+    open_cmd = lambda: open_directory(path_var.get())
+    return select_cmd, open_cmd
 
 # --- 日志管理类 ---
 class Logger:
@@ -164,7 +174,7 @@ class UIComponents:
         return checkbutton
 
     @staticmethod
-    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True):
+    def create_path_entry(parent, title, textvariable, select_cmd=None, open_cmd=None, placeholder_text=None, open_button=True):
         """
         创建路径输入框组件
 
@@ -172,14 +182,19 @@ class UIComponents:
             parent: 父组件
             title: 标题（可选，用于向后兼容）
             textvariable: 文本变量
-            select_cmd: 选择按钮命令
-            open_cmd: 打开按钮命令（可选）
+            select_cmd: 选择按钮命令；为 None 时自动生成默认的本地目录选择命令（以 title 作为对话框标题）
+            open_cmd: 打开按钮命令（可选）；仅在 select_cmd 也为 None（即选择命令为自动生成）时自动生成默认的打开目录命令
             placeholder_text: 占位符文本（可选）
             open_button: 是否显示"开"按钮，默认为True
 
         Returns:
             创建的框架组件
         """
+        # 自动生成默认的选择/打开命令（适用于普通本地目录路径）
+        if select_cmd is None:
+            select_cmd, auto_open_cmd = _auto_path_commands(textvariable, title, parent)
+            if open_cmd is None:
+                open_cmd = auto_open_cmd
 
         frame = tb.Labelframe(parent, text=title, padding=8)
         frame.pack(fill=tk.X, pady=5)
@@ -198,13 +213,13 @@ class UIComponents:
 
     # 保留原函数作为向后兼容的包装器
     @staticmethod
-    def create_directory_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text=None):
-        """创建目录路径输入框组件（向后兼容）"""
+    def create_directory_path_entry(parent, title, textvariable, select_cmd=None, open_cmd=None, placeholder_text=None):
+        """创建目录路径输入框组件（向后兼容）；select_cmd/open_cmd 为 None 时自动生成默认命令"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True)
 
     @staticmethod
     def create_file_path_entry(parent, title, textvariable, select_cmd):
-        """创建文件路径输入框组件（向后兼容）"""
+        """创建文件路径输入框组件（向后兼容）；文件选择无默认命令，select_cmd 需手动提供"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
 
     @staticmethod
@@ -479,7 +494,8 @@ class DropZone(tb.Labelframe):
         if self._allow_folder:
             path = select_directory(
                 title=t("ui.dialog.select", type=self.cget("text")),
-                log=self._logger.log if self._logger else None
+                log=self._logger.log if self._logger else None,
+                parent=self
             )
             if path:
                 dir_path = Path(path)
@@ -675,12 +691,12 @@ class SettingRow:
         parent: tk.Widget,
         label: str,
         path_var: tk.StringVar,
-        select_cmd: Callable[[], None],
+        select_cmd: Callable[[], None] | None = None,
         open_cmd: Callable[[], None] | None = None,
         tooltip: str | None = None,
         download_guide_cmd: Callable[[tk.Widget | None], None] | None = None,
         status_check: Callable[[], bool] | None = None,
-        extra_button: tuple[str, Callable[[], None], str] | None = None
+        extra_button: tuple[str, Callable[[], None], str] | None = None,
     ) -> tb.Frame:
         """创建路径选择行
 
@@ -688,8 +704,8 @@ class SettingRow:
             parent: 父组件
             label: 标签文本
             path_var: 路径变量
-            select_cmd: 选择路径命令
-            open_cmd: 打开路径命令（可选）
+            select_cmd: 选择路径命令；为 None 时自动生成默认的本地目录选择命令（以 label 作为对话框标题）
+            open_cmd: 打开路径命令（可选）；仅在 select_cmd 也为 None（即选择命令为自动生成）时自动生成默认的打开目录命令
             tooltip: 提示文本（可选）
             download_guide_cmd: 下载引导命令（可选），接收顶层窗口作为参数
             status_check: 状态检查函数（可选），返回 True 显示绿色指示器
@@ -697,6 +713,10 @@ class SettingRow:
         """
         container = SettingRow.create_container(parent)
         refresh_indicator = SettingRow._add_label_area(container, label, tooltip, status_check)
+        if select_cmd is None:
+            select_cmd, auto_open_cmd = _auto_path_commands(path_var, label, parent)
+            if open_cmd is None:
+                open_cmd = auto_open_cmd
         
         # 右侧区域容器
         right_frame = tb.Frame(container)
@@ -1219,14 +1239,16 @@ class FileListbox:
             file_types=ft,
             multiple=True,
             callback=lambda paths: self.add_files(paths),
-            log=self.logger.log if self.logger else None
+            log=self.logger.log if self.logger else None,
+            parent=self
         )
 
     def _browse_add_folder(self):
         """浏览添加文件夹"""
         folder = select_directory(
             title = t("action.add_folder"),
-            log = self.logger.log if self.logger else None
+            log = self.logger.log if self.logger else None,
+            parent = self
             )
 
         if folder:

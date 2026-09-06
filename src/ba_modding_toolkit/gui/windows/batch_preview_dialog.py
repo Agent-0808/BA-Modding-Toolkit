@@ -14,7 +14,7 @@ from ...i18n import t
 from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ...report import render_all_spine_previews
 from ..components import SettingRow, UIComponents
-from ..utils import open_directory, select_directory
+from ..utils import open_directory
 from .base import StoppableDialog
 
 
@@ -93,18 +93,6 @@ class BatchRenderDialog(StoppableDialog):
             bootstyle="success"
         )
         render_btn.pack(anchor=tk.CENTER)
-
-    def _select_game_dir(self):
-        """选择游戏资源目录"""
-        select_directory(
-            var=self.game_dir_var,
-            title=t("ui.dialog.select", type=t("ui.tools.batch_preview.game_dir")),
-            log=self.app.logger.log,
-        )
-
-    def _open_game_dir(self):
-        """打开游戏资源目录"""
-        open_directory(self.game_dir_var.get(), log=self.app.logger.log)
 
     def _show_spine_viewer_not_configured(self):
         """显示 SpineViewer 未配置的提示"""

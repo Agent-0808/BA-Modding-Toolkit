@@ -16,7 +16,7 @@ from ...models import FileType
 from ...utils import get_environment_info
 from ...naming import CharacterInternalIDMap
 from ..components import Theme, UIComponents, SettingRow
-from ..utils import select_file, select_directory, open_directory
+from ..utils import select_file, open_directory
 
 class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
@@ -96,8 +96,6 @@ class SettingsDialog(tb.Toplevel):
             path_config_frame,
             label=t("option.game_dir_windows_global"),
             path_var=self.app.game_resource_dir_var,
-            select_cmd=self.app.select_game_resource_directory,
-            open_cmd=self.app.open_game_resource_in_explorer,
             tooltip=t("option.game_dir_windows_global_info")
         )
 
@@ -106,8 +104,6 @@ class SettingsDialog(tb.Toplevel):
             path_config_frame,
             label=t("option.game_dir_windows_japan"),
             path_var=self.app.game_resource_dir_japan_var,
-            select_cmd=self._select_game_resource_directory_japan,
-            open_cmd=self._open_game_resource_japan_in_explorer,
             tooltip=t("option.game_dir_windows_japan_info")
         )
 
@@ -144,14 +140,6 @@ class SettingsDialog(tb.Toplevel):
         self._prev_file_source = source
         # 发送事件通知各tab更新
         self.app.event_generate("<<FileSourceChanged>>")
-
-    def _select_game_resource_directory_japan(self):
-        """选择日服游戏资源目录"""
-        select_directory(self.app.game_resource_dir_japan_var, t("option.game_dir_windows_japan"), self.app.logger.log)
-
-    def _open_game_resource_japan_in_explorer(self):
-        """打开日服游戏资源目录"""
-        open_directory(self.app.game_resource_dir_japan_var.get(), self.app.logger.log)
 
     def _select_android_global_dir(self):
         """通过 ADB 浏览器选择国际服 Android 目录"""
@@ -226,7 +214,6 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.adb_cache_dir"),
             path_var=self.app.adb_cache_dir_var,
-            select_cmd=self._select_adb_cache_dir,
             open_cmd=self._open_adb_cache_dir,
             tooltip=t("option.adb_cache_dir_info")
         )
@@ -258,6 +245,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.adb_path_var.set(str(path)),
                 self._update_adb_status()
             ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -363,15 +351,6 @@ class SettingsDialog(tb.Toplevel):
                 bootstyle="danger"
             )
 
-    def _select_adb_cache_dir(self):
-        """选择 ADB 缓存目录"""
-
-        select_directory(
-            var=self.app.adb_cache_dir_var,
-            title=t("ui.dialog.select", type=t("option.adb_cache_dir")),
-            log=self.app.logger.log
-        )
-
     def _open_adb_cache_dir(self):
         """打开 ADB 缓存目录"""
         cache_dir = self.app.adb_cache_dir_var.get()
@@ -423,8 +402,7 @@ class SettingsDialog(tb.Toplevel):
             section,
             label=t("option.output_dir"),
             path_var=self.app.output_dir_var,
-            select_cmd=self.app.select_output_directory,
-            open_cmd=self.app.open_output_dir_in_explorer,
+            open_cmd=lambda: open_directory(self.app.output_dir_var.get(), self.app.logger.log, create_if_not_exist=True),
             tooltip=t("option.output_dir_info")
         )
 
@@ -580,7 +558,6 @@ class SettingsDialog(tb.Toplevel):
             label=t("option.character_id_map"),
             path_var=self.app.bacii_map_path_var,
             select_cmd=self.select_character_map_path,
-            open_cmd=None,
             tooltip=t("option.character_id_map_info"),
             download_guide_cmd=self.app.download_BACII_map,
             status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
@@ -663,6 +640,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
             ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -675,6 +653,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.spine_viewer_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.spine_viewer_set", path=path))
             ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -687,6 +666,7 @@ class SettingsDialog(tb.Toplevel):
                 self.app.bacii_map_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.character_map_set", path=path))
             ),
+            parent=self,
             log=self.app.logger.log
         )
 

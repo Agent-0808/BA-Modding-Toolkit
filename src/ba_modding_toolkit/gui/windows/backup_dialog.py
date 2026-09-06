@@ -15,7 +15,7 @@ from ...i18n import t
 from ...searching import list_bundle_files
 from ...bundle import analyze_trailing
 from ...utils import throttle_progress
-from ..utils import open_directory, select_directory
+from ..utils import open_directory
 from ..components import SettingRow, UIComponents
 from .base import StoppableDialog
 
@@ -47,7 +47,6 @@ class BackupDialog(StoppableDialog):
             main_frame,
             label=t("option.backup_path"),
             path_var=self.app.mod_backup_path_var,
-            select_cmd=self._select_backup_path,
             tooltip=t("option.backup_path_info"),
         )
 
@@ -74,14 +73,6 @@ class BackupDialog(StoppableDialog):
             bootstyle="success"
         )
         self.backup_button.pack(anchor=tk.CENTER)
-
-    def _select_backup_path(self):
-        """选择备份路径"""
-        select_directory(
-            self.app.mod_backup_path_var,
-            t("option.backup_path"),
-            self.app.logger.log
-        )
 
     def _update_progress(self, current: int, total: int, filename: str):
         """更新进度"""

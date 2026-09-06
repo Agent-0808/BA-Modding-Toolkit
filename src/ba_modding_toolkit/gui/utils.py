@@ -444,7 +444,7 @@ def confirm_and_replace(
 
     return True
 
-def select_directory(var: tk.Variable = None, title="", log=no_log):
+def select_directory(var: tk.Variable = None, title="", log=no_log, parent: tk.Widget | None = None):
     """
     选择目录并更新变量或返回路径
     
@@ -452,6 +452,7 @@ def select_directory(var: tk.Variable = None, title="", log=no_log):
         var: tkinter变量，用于存储选择的目录路径，如果为None则直接返回路径
         title: 目录选择对话框的标题
         log: 日志函数，用于记录操作
+        parent: 父窗口组件，保证对话框置顶于其父窗口（可选）
         
     Returns:
         如果var为None，返回选择的目录路径字符串，否则返回None
@@ -463,7 +464,7 @@ def select_directory(var: tk.Variable = None, title="", log=no_log):
             if current_path.is_dir(): 
                 initial_dir = str(current_path)
                 
-        selected_dir = filedialog.askdirectory(title=title, initialdir=initial_dir)
+        selected_dir = filedialog.askdirectory(title=title, initialdir=initial_dir, parent=parent)
         if selected_dir:
             if var is not None:
                 var.set(str(Path(selected_dir)))
@@ -477,11 +478,12 @@ def select_directory(var: tk.Variable = None, title="", log=no_log):
         messagebox.showerror(t("common.error"), t("message.process_failed", error=e))
         return None
 
-def select_file(title: str, 
-                file_types: list[FileType | str] | list[tuple[str, str]] | None = None, 
+def select_file(title: str,
+                file_types: list[FileType | str] | list[tuple[str, str]] | None = None,
                 multiple: bool = False,
                 callback: Callable[[Path | list[Path]], None] | None = None,
-                log = no_log) -> Path | list[Path] | None:
+                log = no_log,
+                parent: tk.Widget | None = None) -> Path | list[Path] | None:
     """
     统一的文件选择对话框函数
     
@@ -491,6 +493,7 @@ def select_file(title: str,
         multiple: 是否支持多选
         callback: 选择文件后的回调函数，接收Path或Path列表作为参数
         log: 日志函数，用于记录操作
+        parent: 父窗口组件，保证对话框置顶于其父窗口（可选）
         
     Returns:
         单选时返回Path或None，多选时返回Path列表或空列表
@@ -507,7 +510,7 @@ def select_file(title: str,
             tk_filetypes = file_types
             
         if multiple:
-            filepaths = filedialog.askopenfilenames(title=title, filetypes=tk_filetypes)
+            filepaths = filedialog.askopenfilenames(title=title, filetypes=tk_filetypes, parent=parent)
             if filepaths:
                 paths = [Path(p) for p in filepaths]
                 log(t("log.file.loaded", path=f"{len(paths)} files"))
@@ -516,7 +519,7 @@ def select_file(title: str,
                 return paths
             return []
         else:
-            filepath = filedialog.askopenfilename(title=title, filetypes=tk_filetypes)
+            filepath = filedialog.askopenfilename(title=title, filetypes=tk_filetypes, parent=parent)
             if filepath:
                 path = Path(filepath)
                 log(t("log.file.loaded", path=path))

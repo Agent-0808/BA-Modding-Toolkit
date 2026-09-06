@@ -487,7 +487,7 @@ class FileListWindow(StoppableDialog):
             if browser.selected_paths:
                 self._dir_var.set(browser.selected_paths[0])
         else:
-            select_directory(self._dir_var, t("option.game_dir_windows_global"), self.app.logger.log)
+            select_directory(self._dir_var, t("option.game_dir_windows_global"), self.app.logger.log, parent=self)
 
     def _is_adb_mode(self) -> bool:
         """当前是否为 ADB 模式"""

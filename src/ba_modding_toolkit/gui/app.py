@@ -17,7 +17,6 @@ from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
 from .components import Theme, Logger, UIComponents
-from .utils import open_directory, select_directory
 from .configs import ConfigManager, ConfigMeta, ConfigMixin
 from .windows import SettingsDialog, FileListWindow
 from .tabs import *
@@ -424,18 +423,6 @@ class App(tb.Frame, ConfigMixin):
         source = self.file_source_var.get()
         return source.startswith("adb_")
 
-
-    def select_game_resource_directory(self):
-        select_directory(self.game_resource_dir_var, t("option.game_dir_windows_global"), self.logger.log)
-
-    def open_game_resource_in_explorer(self):
-        open_directory(self.game_resource_dir_var.get(), self.logger.log)
-
-    def select_output_directory(self):
-        select_directory(self.output_dir_var, t("option.output_dir"), self.logger.log)
-
-    def open_output_dir_in_explorer(self):
-        open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
 
     # --- ADB 相关方法 ---
 

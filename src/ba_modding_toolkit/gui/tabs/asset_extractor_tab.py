@@ -116,6 +116,7 @@ class AssetExtractorTab(TabFrame):
         selected_dir = select_directory(
             var=None,
             title=t("ui.dialog.select", type=t("option.output_dir")),
+            parent=self,
             log=self.logger.log
         )
         
