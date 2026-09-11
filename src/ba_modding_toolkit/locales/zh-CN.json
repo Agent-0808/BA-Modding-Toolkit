@@ -128,6 +128,12 @@
 		"report_render_preset_info": "选择预览图的渲染画质。\n更高的画质可能会消耗更长的时间来渲染。",
 		"report_render_preset_low": "低画质",
 		"report_render_preset_high": "高画质",
+		"render_characters": "渲染角色立绘",
+		"render_characters_info": "渲染 spinecharacters 分类的 Spine 资源预览图",
+		"render_lobbies": "渲染记忆大厅",
+		"render_lobbies_info": "渲染 spinelobbies 分类的 Spine 资源预览图",
+		"render_background": "渲染其它 Spine 资源",
+		"render_background_info": "渲染 spinebackground 分类的 Spine 资源预览图",
 		"max_workers": "并行线程数",
 		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
 		"character_id_map": "角色ID映射表",
@@ -213,6 +219,9 @@
 		},
 		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
 		"batch_preview_open_prompt": "批量渲染完成！\n成功 {rendered} / {total} 组，是否打开输出目录？",
+		"batch_preview": {
+			"no_category": "请至少选择一个需要渲染的分类。"
+		},
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",

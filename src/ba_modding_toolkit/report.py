@@ -229,13 +229,14 @@ def render_all_spine_previews(
     output_dir: Path,
     viewer_path: Path,
     render_options: RenderOptions = RENDER_PRESET_LOW,
+    render_categories: set[str] = RENDER_CATEGORIES,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
 ) -> tuple[int, int]:
     """
     批量渲染游戏目录下全部 Spine 资源的预览图（不限 Mod 文件）。
 
-    按 parse_filename 解析出的 category 筛选 RENDER_CATEGORIES，
+    按 parse_filename 解析出的 category 筛选（默认 RENDER_CATEGORIES），
     再按 prefix 聚合后逐组渲染（同组 bundle 合并，保证 skel/atlas/texture 完整）。
 
     Args:
@@ -243,6 +244,7 @@ def render_all_spine_previews(
         output_dir: 预览图输出目录
         viewer_path: SpineViewerCLI 路径
         render_options: 渲染参数（默认低画质）
+        render_categories: 需要渲染的分类集合（默认 RENDER_CATEGORIES）
         log: 日志函数
         progress_callback: 进度回调函数（按 prefix 组推进）
 
@@ -267,7 +269,7 @@ def render_all_spine_previews(
     grouped: dict[str, list[Path]] = {}
     for item in items:
         parsed = parse_filename(item.path.name)
-        if parsed.category in RENDER_CATEGORIES and parsed.prefix:
+        if parsed.category in render_categories and parsed.prefix:
             grouped.setdefault(parsed.prefix, []).append(item.path)
 
     if not grouped:

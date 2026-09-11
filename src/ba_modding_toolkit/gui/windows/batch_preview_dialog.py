@@ -30,13 +30,18 @@ class BatchRenderDialog(StoppableDialog):
             value=self.app.get_current_resource_dir() or ""
         )
 
+        # 渲染分类开关（对应 report.py 的 RENDER_CATEGORIES，仅对话框内使用，不保存配置）
+        self.render_characters_var: tk.BooleanVar = tk.BooleanVar(value=True)
+        self.render_lobbies_var: tk.BooleanVar = tk.BooleanVar(value=True)
+        self.render_background_var: tk.BooleanVar = tk.BooleanVar(value=True)
+
         self._setup_window()
         self._create_widgets()
 
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.tools.batch_preview.title"))
-        self.geometry("800x350")
+        self.geometry("800x400")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -65,6 +70,31 @@ class BatchRenderDialog(StoppableDialog):
                 ("high", t("option.report_render_preset_high"))
             ],
             tooltip=t("option.report_render_preset_info"),
+        )
+
+        render_option_sep = tb.Separator(options_frame)
+        render_option_sep.pack(fill=tk.X, pady=10)
+
+        # 渲染分类开关（对应 report.py 的 RENDER_CATEGORIES）
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.render_characters"),
+            variable=self.render_characters_var,
+            tooltip=t("option.render_characters_info")
+        )
+
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.render_lobbies"),
+            variable=self.render_lobbies_var,
+            tooltip=t("option.render_lobbies_info")
+        )
+
+        SettingRow.create_switch(
+            options_frame,
+            label=t("option.render_background"),
+            variable=self.render_background_var,
+            tooltip=t("option.render_background_info")
         )
 
         # 进度区域
@@ -149,6 +179,19 @@ class BatchRenderDialog(StoppableDialog):
         preset_map = {"low": RENDER_PRESET_LOW, "high": RENDER_PRESET_HIGH}
         render_options = preset_map.get(self.app.report_render_preset_var.get(), RENDER_PRESET_LOW)
 
+        # 收集需要渲染的分类（对应 report.py 的 RENDER_CATEGORIES）
+        render_categories: set[str] = set()
+        if self.render_characters_var.get():
+            render_categories.add("spinecharacters")
+        if self.render_lobbies_var.get():
+            render_categories.add("spinelobbies")
+        if self.render_background_var.get():
+            render_categories.add("spinebackground")
+
+        if not render_categories:
+            messagebox.showwarning(t("common.warning"), t("message.batch_preview.no_category"))
+            return
+
         # 在线程中运行
         def run():
             rendered, total = render_all_spine_previews(
@@ -156,6 +199,7 @@ class BatchRenderDialog(StoppableDialog):
                 output_dir=output_dir,
                 viewer_path=viewer_path,
                 render_options=render_options,
+                render_categories=render_categories,
                 log=self.app.logger.log,
                 progress_callback=self._update_progress,
             )
