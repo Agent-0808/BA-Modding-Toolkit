@@ -1,5 +1,6 @@
 # gui/windows/settings.py
 
+import os
 import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
@@ -404,6 +405,16 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.output_dir_var,
             open_cmd=lambda: open_directory(self.app.output_dir_var.get(), self.app.logger.log, create_if_not_exist=True),
             tooltip=t("option.output_dir_info")
+        )
+
+        # 并行线程数（批量更新 / 批量预览渲染 / 报告渲染共用）
+        SettingRow.create_spinbox_row(
+            section,
+            label=t("option.max_workers"),
+            int_var=self.app.max_workers_var,
+            from_=1,
+            to=min(os.cpu_count() or 4, 8),
+            tooltip=t("option.max_workers_info")
         )
 
         SettingRow.create_button_row(

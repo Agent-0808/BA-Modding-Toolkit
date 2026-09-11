@@ -1,6 +1,7 @@
 # report.py
 """Mod 报告生成核心逻辑"""
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +36,14 @@ RENDER_CATEGORIES = {"spinecharacters", "spinelobbies", "spinebackground"}
 
 
 @dataclass
+class RenderTask:
+    """单个预览渲染任务"""
+    name: str                                  # 输出文件名（prefix，需唯一）
+    files: list[Path]                          # 首选 bundle 文件
+    fallback_files: list[Path] | None = None   # 渲染失败时的回退文件（None 表示不回退）
+
+
+@dataclass
 class ModEntry:
     """单个 mod 条目（聚合后）"""
     prefix: str
@@ -57,6 +66,95 @@ class ModReport:
     categories: dict[str, list[ModEntry]]
 
 
+def _render_task(
+    task: RenderTask,
+    output_dir: Path,
+    viewer_path: Path,
+    render_options: RenderOptions,
+    log: LogFunc,
+) -> tuple[bool, list[Path]]:
+    """执行单个渲染任务：首选文件失败且有回退文件时重试一次"""
+    success, _, rendered_paths = render_spine_preview_from_bundle(
+        bundle_path=task.files,
+        output_dir=output_dir,
+        viewer_path=viewer_path,
+        output_filename=task.name,
+        render_options=render_options,
+        log=log,
+    )
+
+    # 失败时尝试包含所有同 prefix 的文件（可能有原始 skel/atlas）
+    if not success and task.fallback_files and task.fallback_files != task.files:
+        log(f"  > {t('log.report.render_retry', prefix=task.name)}")
+        success, _, rendered_paths = render_spine_preview_from_bundle(
+            bundle_path=task.fallback_files,
+            output_dir=output_dir,
+            viewer_path=viewer_path,
+            output_filename=task.name,
+            render_options=render_options,
+            log=log,
+        )
+
+    return success, rendered_paths
+
+
+def render_spine_previews_batch(
+    tasks: list[RenderTask],
+    output_dir: Path,
+    viewer_path: Path,
+    render_options: RenderOptions = RENDER_PRESET_LOW,
+    log: LogFunc = no_log,
+    progress_callback: ProgressCallback | None = None,
+    max_workers: int = 1,
+) -> dict[str, list[Path]]:
+    """
+    批量渲染预览图（单路径实现，max_workers=1 时顺序执行）。
+
+    每个任务调用外部 SpineViewerCLI 子进程，子进程调用会释放 GIL，
+    多线程可获得真实并行收益；但渲染本身吃 CPU/GPU/内存，线程数建议 1~4。
+
+    Args:
+        tasks: 渲染任务列表（name 需唯一，作为输出文件名）
+        output_dir: 输出目录
+        viewer_path: SpineViewerCLI 路径
+        render_options: 渲染参数
+        log: 日志函数
+        progress_callback: 进度回调（按任务推进，任务完成后调用）
+        max_workers: 并行线程数
+
+    Returns:
+        dict[str, list[Path]]: 成功任务名 → 渲染输出的文件路径列表
+    """
+    results: dict[str, list[Path]] = {}
+    total = len(tasks)
+    completed = 0
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
+        futures = {
+            executor.submit(_render_task, task, output_dir, viewer_path, render_options, log): task
+            for task in tasks
+        }
+        # 计数与进度更新只在主线程（本循环）中进行，无需加锁
+        for future in as_completed(futures):
+            task = futures[future]
+            try:
+                success, rendered_paths = future.result()
+            except Exception as e:
+                success, rendered_paths = False, []
+                log(t("log.batch.process_failed", filename=task.name, message=str(e)))
+
+            if success:
+                results[task.name] = rendered_paths
+
+            completed += 1
+            if progress_callback:
+                progress_callback(completed, total, task.name)
+
+    return results
+
+
 def generate_mod_report(
     game_dir: Path,
     output_path: Path,
@@ -68,6 +166,7 @@ def generate_mod_report(
     render_options: RenderOptions = RENDER_PRESET_LOW,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
+    max_workers: int = 1,
 ) -> tuple[bool, str]:
     """
     生成 Mod 报告。
@@ -83,6 +182,7 @@ def generate_mod_report(
         render_options: 渲染参数（默认低画质，供报告预览图使用）
         log: 日志函数
         progress_callback: 进度回调函数
+        max_workers: 预览渲染的并行线程数
 
     Returns:
         tuple[bool, str]: (是否成功, 状态消息)
@@ -144,70 +244,43 @@ def generate_mod_report(
         prefix_to_all_files: dict[str, list[Path]] = {}
         for item in items:
             if item.parsed_name and item.parsed_name.prefix:
-                prefix = item.parsed_name.prefix
-                if prefix not in prefix_to_all_files:
-                    prefix_to_all_files[prefix] = []
-                prefix_to_all_files[prefix].append(item.path)
+                prefix_to_all_files.setdefault(item.parsed_name.prefix, []).append(item.path)
 
-        # 计算需要渲染的条目数
-        render_entries = [
-            entry
+        # 构建渲染任务（仅 Spine 分类，mod 文件优先，失败回退到全量同 prefix 文件）
+        render_tasks = [
+            RenderTask(entry.prefix, entry.files, prefix_to_all_files.get(entry.prefix))
             for cat, cat_entries in categories.items()
             if cat in RENDER_CATEGORIES
             for entry in cat_entries
             if entry.files
         ]
-        total_render = len(render_entries)
-        current_render = 0
+        total_render = len(render_tasks)
 
         # 重置进度条（渲染阶段）
         if progress_callback:
-            progress_callback(current_render, total_render, "")
+            progress_callback(0, total_render, "")
 
-        render_count = 0
+        results = render_spine_previews_batch(
+            tasks=render_tasks,
+            output_dir=output_dir,
+            viewer_path=viewer_path,
+            render_options=render_options,
+            log=log,
+            progress_callback=progress_callback,
+            max_workers=max_workers,
+        )
+
+        # 回写渲染结果
         for cat, cat_entries in categories.items():
             if cat not in RENDER_CATEGORIES:
                 continue
             for entry in cat_entries:
-                if not entry.files:
-                    continue
-                
-                # 第一次尝试：只用 mod 文件
-                success, _, rendered_paths = render_spine_preview_from_bundle(
-                    bundle_path=entry.files,
-                    output_dir=output_dir,
-                    viewer_path=viewer_path,
-                    output_filename=entry.prefix,
-                    render_options=render_options,
-                    log=log,
-                )
-                
-                # 如果失败，尝试包含所有同 prefix 的文件（可能有原始 skel/atlas）
-                if not success:
-                    all_files = prefix_to_all_files.get(entry.prefix, [])
-                    if all_files and all_files != entry.files:
-                        log(f"  > {t('log.report.render_retry', prefix=entry.prefix)}")
-                        success, _, rendered_paths = render_spine_preview_from_bundle(
-                            bundle_path=all_files,
-                            output_dir=output_dir,
-                            viewer_path=viewer_path,
-                            output_filename=entry.prefix,
-                            render_options=render_options,
-                            log=log,
-                        )
-
-                if success:
-                    render_count += 1
-                    entry.render_paths = rendered_paths
-                else:
+                if entry.prefix in results:
+                    entry.render_paths = results[entry.prefix]
+                elif entry.files:
                     entry.render_success = False
 
-                # 更新进度
-                current_render += 1
-                if progress_callback:
-                    progress_callback(current_render, total_render, entry.prefix)
-
-        log(f"{t('log.report.render_count', count=render_count)}")
+        log(f"{t('log.report.render_count', count=len(results))}")
 
     # 8. 生成报告（第二轮进度：处理mod条目）
     report = ModReport(
@@ -232,6 +305,7 @@ def render_all_spine_previews(
     render_categories: set[str] = RENDER_CATEGORIES,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
+    max_workers: int = 1,
 ) -> tuple[int, int]:
     """
     批量渲染游戏目录下全部 Spine 资源的预览图（不限 Mod 文件）。
@@ -247,6 +321,7 @@ def render_all_spine_previews(
         render_categories: 需要渲染的分类集合（默认 RENDER_CATEGORIES）
         log: 日志函数
         progress_callback: 进度回调函数（按 prefix 组推进）
+        max_workers: 并行渲染线程数
 
     Returns:
         tuple[int, int]: (渲染成功的组数, 总组数)
@@ -280,31 +355,26 @@ def render_all_spine_previews(
     total = len(prefixes)
     log(f"{t('log.batch_preview.group_count', count=total)}")
 
-    # 3. 逐组渲染（文件名 = prefix，重复渲染自动覆盖）
+    # 3. 批量渲染（文件名 = prefix，重复渲染自动覆盖）
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 重置进度条（渲染阶段）
     if progress_callback:
         progress_callback(0, total, "")
 
-    render_count = 0
-    for i, prefix in enumerate(prefixes):
-        success, _, _ = render_spine_preview_from_bundle(
-            bundle_path=grouped[prefix],
-            output_dir=output_dir,
-            viewer_path=viewer_path,
-            output_filename=prefix,
-            render_options=render_options,
-            log=log,
-        )
-        if success:
-            render_count += 1
+    tasks = [RenderTask(prefix, grouped[prefix]) for prefix in prefixes]
+    results = render_spine_previews_batch(
+        tasks=tasks,
+        output_dir=output_dir,
+        viewer_path=viewer_path,
+        render_options=render_options,
+        log=log,
+        progress_callback=progress_callback,
+        max_workers=max_workers,
+    )
 
-        if progress_callback:
-            progress_callback(i + 1, total, prefix)
-
-    log(f"{t('log.batch_preview.render_count', count=render_count, total=total)}")
-    return render_count, total
+    log(f"{t('log.batch_preview.render_count', count=len(results), total=total)}")
+    return len(results), total
 
 
 def _aggregate_mods(

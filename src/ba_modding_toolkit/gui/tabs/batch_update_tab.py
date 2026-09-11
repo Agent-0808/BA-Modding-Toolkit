@@ -1,6 +1,5 @@
 # gui/tabs/batch_update_tab.py
 
-import os
 import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
@@ -20,7 +19,6 @@ class BatchUpdateTab(TabFrame):
     def __init__(self, *args, **kwargs):
         self.current_file_pairs: list[FilePair] = []
         self.match_strategy_var = tk.StringVar(value='cont_name_type')
-        self.workers_var = tk.IntVar(value=min(os.cpu_count() or 4, 8))
         self._adb_remote_paths: list[str] = []  # ADB 模式下目标的远程路径
         super().__init__(*args, **kwargs)
 
@@ -40,7 +38,7 @@ class BatchUpdateTab(TabFrame):
         )
         self.batch_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
-        # 匹配策略选择 + 线程数选择
+        # 匹配策略选择（线程数在全局设置中配置）
         option_frame = tb.Labelframe(self, text=t("ui.label.options"), padding=10)
         option_frame.pack(fill=tk.X, pady=(5, 0))
 
@@ -49,16 +47,6 @@ class BatchUpdateTab(TabFrame):
             self.match_strategy_var,
             values=['path_id', 'cont_name_type', 'name_type'],
             tooltip=t("option.match_strategy_info")
-        )
-
-        cpu_count = os.cpu_count() or 4
-        max_workers = min(cpu_count, 8)
-        self.workers_spinbox = SettingRow.create_spinbox_row(
-            option_frame, t("option.max_workers"),
-            self.workers_var,
-            from_=1,
-            to=max_workers,
-            tooltip=t("option.max_workers_info")
         )
 
         # 进度条区域
@@ -289,7 +277,7 @@ class BatchUpdateTab(TabFrame):
             asset_types_to_replace=asset_types_to_replace,
             save_options=save_options,
             spine_options=spine_options,
-            max_workers=self.workers_var.get(),
+            max_workers=self.app.max_workers_var.get(),
             log=self.logger.log,
             progress_callback=progress_callback,
             skip_unchanged=self.app.skip_unchanged_var.get(),

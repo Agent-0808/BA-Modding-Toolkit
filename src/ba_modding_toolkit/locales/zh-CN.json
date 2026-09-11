@@ -135,7 +135,7 @@
 		"render_background": "渲染其它 Spine 资源",
 		"render_background_info": "渲染 spinebackground 分类的 Spine 资源预览图",
 		"max_workers": "并行线程数",
-		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
+		"max_workers_info": "批量处理任务（批量更新 / 批量预览渲染等）的并行线程数。\n增加数量可提高处理速度，但会增加内存与 CPU 占用。",
 		"character_id_map": "角色ID映射表",
 		"character_id_map_info": "角色内部ID与名称的映射表，用于显示文件对应的角色实际名称",
 		"character_index_column": "索引列",

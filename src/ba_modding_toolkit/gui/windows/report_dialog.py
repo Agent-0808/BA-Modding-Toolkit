@@ -180,6 +180,7 @@ class ReportDialog(StoppableDialog):
                 render_options=render_options,
                 log=self.app.logger.log,
                 progress_callback=self._update_progress,
+                max_workers=self.app.max_workers_var.get(),
             )
 
             self.after(0, lambda: self._on_complete(success, message, output_path))

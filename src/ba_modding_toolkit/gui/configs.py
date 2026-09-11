@@ -1,5 +1,6 @@
 # gui/configs.py
 
+import os
 import tkinter as tk
 from pathlib import Path
 from dataclasses import dataclass
@@ -64,6 +65,7 @@ class ConfigMixin:
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
     output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", str(EXE_DIR / "output"))]
+    max_workers_var: Annotated[tk.IntVar, ConfigMeta("AppSettings", 4)]
     
     # SaveOptions (原 GlobalOptions)
     extra_bytes_var: Annotated[tk.StringVar, ConfigMeta("SaveOptions", "0x08080808")]

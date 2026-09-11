@@ -148,16 +148,6 @@ class BatchRenderDialog(StoppableDialog):
     def _start_render(self):
         """开始批量渲染"""
 
-        # 检查游戏目录
-        game_dir = self.app.get_current_resource_dir()
-        if not game_dir:
-            messagebox.showerror(t("common.error"), t("message.missing_paths"))
-            return
-
-        game_path = Path(game_dir)
-        if not game_path.is_dir():
-            messagebox.showerror(t("common.error"), t("message.dir_not_found", path=game_dir))
-            return
 
         # 检查 SpineViewer
         viewer_path_str = self.app.spine_viewer_path_var.get().strip()
@@ -195,13 +185,14 @@ class BatchRenderDialog(StoppableDialog):
         # 在线程中运行
         def run():
             rendered, total = render_all_spine_previews(
-                game_dir=game_path,
+                game_dir=Path(self.game_dir_var.get()),
                 output_dir=output_dir,
                 viewer_path=viewer_path,
                 render_options=render_options,
                 render_categories=render_categories,
                 log=self.app.logger.log,
                 progress_callback=self._update_progress,
+                max_workers=self.app.max_workers_var.get(),
             )
 
             self.after(0, lambda: self._on_complete(rendered, total, output_dir))
