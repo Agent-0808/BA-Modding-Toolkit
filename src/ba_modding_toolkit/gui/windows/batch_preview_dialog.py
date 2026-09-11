@@ -45,20 +45,17 @@ class BatchRenderDialog(StoppableDialog):
         main_frame = tb.Frame(self, padding=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # 游戏资源目录选择（默认当前游戏目录）
-        UIComponents.create_directory_path_entry(
-            main_frame,
-            t("ui.tools.batch_preview.game_dir"),
-            self.game_dir_var,
-            self._select_game_dir,
-            self._open_game_dir,
-        )
-
         # 选项区域
         options_frame = tb.Labelframe(main_frame, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(0, 10))
 
         # 预览渲染预设选择
+        SettingRow.create_path_selector(
+            parent=options_frame,
+            label=t("ui.tools.batch_preview.game_dir"),
+            path_var=self.game_dir_var,
+        )
+
         SettingRow.create_combobox_row(
             options_frame,
             label=t("option.report_render_preset"),
