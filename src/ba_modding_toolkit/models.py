@@ -49,6 +49,9 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 # 匹配策略类型
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
 
+# 资源类型名（ALL 表示全部支持类型）
+ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "ALL"]
+
 KeyFunc = Callable[[Obj], AssetKey]
 
 # -------- 业务配置 DataClass ---------

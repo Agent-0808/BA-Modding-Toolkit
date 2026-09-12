@@ -17,7 +17,7 @@ from .naming import parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
-    CompressionType, PatchResult,
+    CompressionType, PatchResult, ReplaceAssetType,
     SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
     BundleFileInfo, ProgressCallback, SkelVersionConflict,
     REPLACEABLE_ASSET_TYPES
@@ -468,7 +468,7 @@ class Bundle:
     
     def extract_patch(
         self,
-        asset_types_to_replace: set[str],
+        asset_types_to_replace: set[ReplaceAssetType],
         match_strategy: MatchStrategy = 'path_id',
         spine_options: SkelConvertOptions | None = None
     ) -> tuple[Patch, list[SkelVersionConflict]]:

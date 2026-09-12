@@ -167,6 +167,9 @@ class AssetExtractorTab(TabFrame):
             final_output_path = output_path
             
         asset_types = self.app.get_asset_types()
+        # 提取链路不支持 "ALL" 占位符，需展开为具体类型
+        if 'ALL' in asset_types:
+            asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
         
         if not asset_types:
             messagebox.showwarning(t("common.tip"), t("message.missing_asset_type"))

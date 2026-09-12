@@ -1,9 +1,10 @@
 # cli/taps.py
 from argparse import RawTextHelpFormatter
-from typing import Literal
 from tap import Tap, Positional
 from pathlib import Path
 
+from ..models import ReplaceAssetType, CompressionType, MatchStrategy
+from ..report import ReportFormat
 from ..utils import BARegion
 
 class BaseTap(Tap):
@@ -30,8 +31,8 @@ class UpdateTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
     # Spine转换参数
@@ -40,7 +41,7 @@ class UpdateTap(Tap):
     target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
 
     # 匹配策略
-    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy for cross-version migration.
+    strategy: MatchStrategy = 'path_id'  # Match strategy for cross-version migration.
 
     def configure(self) -> None:
         self.description = '''Update or port a Mod, migrating assets from old Mod(s) to new Bundle(s).
@@ -77,7 +78,7 @@ class PackTap(Tap):
     # 保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all bundles including unchanged ones (default: skip unchanged bundles).
 
     # Spine转换参数
@@ -148,7 +149,7 @@ class ExtractTap(Tap):
     subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
 
     # 资源类型参数
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
 
     # Spine转换参数
     enable_spine_downgrade: bool = False  # Enable Spine skeleton downgrade.
@@ -201,8 +202,8 @@ class BatchUpdateTap(Tap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method.
 
     # Spine转换参数
     enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
@@ -210,7 +211,7 @@ class BatchUpdateTap(Tap):
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     # 匹配策略
-    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy.
+    strategy: MatchStrategy = 'path_id'  # Match strategy.
     max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
 
     def configure(self) -> None:
@@ -255,7 +256,7 @@ class ReportTap(Tap):
     name_field: str = "full_name"  # Character name field to display.
 
     # 报告格式参数
-    report_format: Literal['list', 'table'] = 'list'  # Report output format.
+    report_format: ReportFormat = 'list'  # Report output format.
     max_workers: int = 1  # Number of parallel worker threads for Spine preview rendering (1 = sequential).
 
     def configure(self) -> None:

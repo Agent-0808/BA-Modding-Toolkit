@@ -18,7 +18,7 @@ from .spine import (
 from .models import (
     NameTypeKey, FilePair, ProgressCallback,
     AssetKey, AssetContent, AssetType, Patch,
-    LogFunc, PatchResult,
+    LogFunc, PatchResult, ReplaceAssetType,
     MatchStrategy, SaveOptions, SkelConvertOptions, AnimCheckOptions,
     AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
     REPLACEABLE_ASSET_TYPES
@@ -58,7 +58,7 @@ def _format_skel_conflicts(conflicts: list[SkelVersionConflict]) -> str:
 def _extract_assets_from_bundle(
     bundle_paths: list[Path],
     work_dir: Path,
-    asset_types_to_extract: set[str],
+    asset_types_to_extract: set[ReplaceAssetType],
     log: LogFunc = no_log,
 ) -> dict[AssetType, list[Path]]:
     """
@@ -342,7 +342,7 @@ def process_asset_packing(
 def process_asset_extraction(
     bundle_path: Path | list[Path],
     output_dir: Path,
-    asset_types_to_extract: set[str],
+    asset_types_to_extract: set[ReplaceAssetType],
     spine_options: SkelConvertOptions | None = None,
     enable_unpack_atlas: bool = False,
     scale_atlas: bool = False,
@@ -540,7 +540,7 @@ def process_mod_update(
     source_paths: list[Path],
     target_paths: list[Path],
     output_dir: Path,
-    asset_types_to_replace: set[str],
+    asset_types_to_replace: set[ReplaceAssetType],
     save_options: SaveOptions,
     spine_options: SkelConvertOptions | None = None,
     skip_unchanged: bool = False,
@@ -651,7 +651,7 @@ def _process_single_mod_update(
     mod_path: Path,
     search_paths: list[Path],
     output_dir: Path,
-    asset_types_to_replace: set[str],
+    asset_types_to_replace: set[ReplaceAssetType],
     save_options: SaveOptions,
     spine_options: SkelConvertOptions | None,
     skip_unchanged: bool,
@@ -715,7 +715,7 @@ def process_batch_mod_update(
     mod_file_list: list[Path],
     search_paths: list[Path],
     output_dir: Path,
-    asset_types_to_replace: set[str],
+    asset_types_to_replace: set[ReplaceAssetType],
     save_options: SaveOptions,
     spine_options: SkelConvertOptions | None,
     max_workers: int = 1,
