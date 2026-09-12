@@ -234,6 +234,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         progress_callback=callback_log,
         skip_unchanged=True,
         match_strategy=args.strategy,
+        max_workers=max(1, args.max_workers),
     )
 
     # 输出结果摘要
@@ -587,6 +588,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         report_format=args.report_format,
         log=logger.log,
         progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
     )
 
     logger.log("\n" + "="*50)

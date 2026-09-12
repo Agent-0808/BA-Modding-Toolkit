@@ -206,6 +206,7 @@ class BatchUpdateTap(Tap):
 
     # 匹配策略
     strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy.
+    max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
 
     def configure(self) -> None:
         self.description = '''Batch update multiple Mod files, migrating assets from old Mods to new game bundles.
@@ -249,6 +250,7 @@ class ReportTap(Tap):
 
     # 报告格式参数
     report_format: Literal['list', 'table'] = 'list'  # Report output format.
+    max_workers: int = 1  # Number of parallel worker threads for Spine preview rendering (1 = sequential).
 
     def configure(self) -> None:
         self.description = '''Generate a report of all modded bundle files in the game directory.
