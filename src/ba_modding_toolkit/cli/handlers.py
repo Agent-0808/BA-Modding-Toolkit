@@ -83,7 +83,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 确定资源目录：优先使用 --resource-dir，否则自动搜寻
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
 
     target_paths: list[Path] = []
     if args.target:
@@ -174,7 +174,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 确定资源目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return
@@ -339,7 +339,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"❌ Error: Modified file '{modified_path}' does not exist.")
         return
 
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
 
     # 确定原始文件路径：优先使用 --original，其次使用 resource_dir 自动查找
     original_path = None
@@ -528,7 +528,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
     logger.log("--- Start Mod Report Generation ---")
 
     # 确定游戏目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return
@@ -604,7 +604,7 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
     logger.log("--- Start Mod Backup ---")
 
     # 确定游戏目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return

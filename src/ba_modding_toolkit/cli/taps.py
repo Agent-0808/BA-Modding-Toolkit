@@ -4,6 +4,8 @@ from typing import Literal
 from tap import Tap, Positional
 from pathlib import Path
 
+from ..utils import BARegion
+
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
 
@@ -23,6 +25,7 @@ class UpdateTap(Tap):
     # 目标文件定位参数
     target: list[Path] | None = None  # Path(s) to the new game resource bundle file(s) (Overrides --resource-dir if provided).
     resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
@@ -108,6 +111,7 @@ class CrcTap(Tap):
     # 原始文件定位参数
     original: Path | None = None  # Path to the original file (provides target CRC value).
     resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # 操作选项
     check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
@@ -192,6 +196,7 @@ class BatchUpdateTap(Tap):
 
     # 搜索目录参数
     resource_dir: Path | None = None  # Path to the game resource directory for searching new bundles.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
@@ -239,6 +244,7 @@ class ReportTap(Tap):
 
     # 搜索目录参数
     resource_dir: Path | None = None  # Path to the game resource directory.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # Spine渲染参数
     enable_render: bool = False  # Enable Spine preview rendering.
@@ -280,6 +286,7 @@ class BackupTap(Tap):
 
     output_dir: Path = Path('./output/backup/')  # Directory to save the backup files.
     resource_dir: Path | None = None  # Path to the game resource directory.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
     yes: bool = False  # Automatically confirm clearing the existing backup directory.
 
     def configure(self) -> None:

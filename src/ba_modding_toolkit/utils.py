@@ -8,7 +8,7 @@ from functools import wraps
 from PIL import Image
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, ParamSpec, TypeVar
+from typing import Callable, Literal, ParamSpec, TypeVar
 
 from .i18n import i18n_manager, t
 
@@ -34,12 +34,15 @@ def _get_path_from_registry(key_path: str) -> str | None:
 
 _ba_path_cache: dict[str, str | None] = {}
 
-def get_BA_path(region: str = "global") -> str | None:
+# 游戏区服，用于定位安装路径；auto = global 优先，japan 兜底
+BARegion = Literal["auto", "global", "japan"]
+
+def get_BA_path(region: BARegion = "auto") -> str | None:
     """获取游戏安装路径，带缓存机制
-    
+
     Args:
-        region: 区服，"global" 或 "japan"
-    
+        region: 区服，"auto"（默认）时优先返回 global 的结果，找不到则回退 japan
+
     Returns:
         游戏安装路径，如果未找到则返回 None
     """
@@ -51,8 +54,9 @@ def get_BA_path(region: str = "global") -> str | None:
         result = _get_path_from_registry(fr"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {BA_STEAM_APPID}")
     elif region == "japan":
         result = _get_path_from_registry(r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\e02a2fab-b426-5ce2-b9de-b9e7506c327e")
-    else:
-        result = None
+    else:  # auto
+        result = get_BA_path("global") or get_BA_path("japan")
+        return result  # auto 不缓存，保持对注册表变化的响应
 
     _ba_path_cache[region] = result
     return result
