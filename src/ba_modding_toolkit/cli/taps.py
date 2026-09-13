@@ -37,8 +37,7 @@ class UpdateTap(Tap):
     save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
 
     # 匹配策略
@@ -62,7 +61,7 @@ Examples:
   bamt-cli update "old_mod.bundle" --no-crc
 
   # Enable Spine skeleton conversion
-  bamt-cli update "old.bundle" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
+  bamt-cli update "old.bundle" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -83,8 +82,7 @@ class PackTap(Tap):
     save_all: bool = False  # Save all bundles including unchanged ones (default: skip unchanged bundles).
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     def configure(self) -> None:
@@ -98,7 +96,7 @@ Examples:
   bamt-cli pack --bundle "b1.bundle" "b2.bundle" --folder "assets_folder"
 
   # Pack with Spine conversion
-  bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe"
+  bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -153,8 +151,7 @@ class ExtractTap(Tap):
     asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
 
     # Spine转换参数
-    enable_spine_downgrade: bool = False  # Enable Spine skeleton downgrade.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine downgrade is enabled when provided.
     target_spine_version: str = '3.8.75'  # Target Spine version for downgrade (e.g., "3.8.75").
 
     # Atlas解包参数
@@ -168,7 +165,7 @@ Examples:
   bamt-cli extract "C:\\path\\to\\bundle.bundle"
 
   # Extract with Spine downgrade
-  bamt-cli extract "bundle.bundle" --enable-spine-downgrade --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version 3.8.75
+  bamt-cli extract "bundle.bundle" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version 3.8.75
 
   # Extract multiple bundles
   bamt-cli extract "bundle1.bundle" "bundle2.bundle" --output-dir "C:\\output"
@@ -207,8 +204,7 @@ class BatchUpdateTap(Tap):
     compression: CompressionType = 'lzma'  # Compression method.
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     # 匹配策略
@@ -232,7 +228,7 @@ Examples:
   bamt-cli batch-update "C:\\path\\to\\old_mods\\" --no-crc
 
   # Enable Spine conversion
-  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --enable-spine-conversion --spine-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe"
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --skel-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -249,15 +245,14 @@ class ReportTap(Tap):
     region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # Spine渲染参数
-    enable_render: bool = False  # Enable Spine preview rendering.
-    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe.
+    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe. Spine preview rendering is enabled when provided.
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
     name_field: str = "full_name"  # Character name field to display.
 
     # 报告格式参数
-    report_format: ReportFormat = 'list'  # Report output format.
+    format: ReportFormat = 'list'  # Report output format.
     max_workers: int = 1  # Number of parallel worker threads for Spine preview rendering (1 = sequential).
 
     def configure(self) -> None:
@@ -271,10 +266,10 @@ Examples:
   bamt-cli report
 
   # Generate table format report
-  bamt-cli report --report-format table
+  bamt-cli report --format table
 
   # Generate report with Spine preview images
-  bamt-cli report --enable-render --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+  bamt-cli report --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
 
   # Use character name mapping
   bamt-cli report --bacii-map-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"

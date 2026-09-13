@@ -128,8 +128,8 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -214,8 +214,8 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
 
     # 创建Spine选项
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -299,8 +299,8 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -475,16 +475,16 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 创建SpineOptions对象
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_downgrade,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
     # 检查Spine降级配置
-    if args.enable_spine_downgrade:
+    if spine_options.enabled:
         if not spine_options.is_valid():
             logger.log("❌ Error: Spine downgrade is enabled but configuration is invalid.")
-            logger.log("   Please provide a valid --spine-converter-path and --target-spine-version.")
+            logger.log("   Please provide a valid --skel-converter-path and --target-spine-version.")
             return
         logger.log(f"Spine downgrade enabled: target version {args.target_spine_version}")
 
@@ -561,12 +561,9 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
                 logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
                 char_map = None
 
-    # 验证 Spine 渲染器路径
+    # 验证 Spine 渲染器路径（提供路径即启用渲染）
     viewer_path = None
-    if args.enable_render:
-        if not args.spine_viewer_path:
-            logger.log("❌ Error: --spine-viewer-path is required when --enable-render is set.")
-            return
+    if args.spine_viewer_path:
         viewer_path = Path(args.spine_viewer_path)
         if not viewer_path.exists():
             logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
@@ -584,9 +581,9 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         output_path=output_path,
         char_map=char_map,
         char_name_field=args.name_field,
-        enable_render=args.enable_render,
+        enable_render=args.spine_viewer_path is not None,
         viewer_path=viewer_path,
-        report_format=args.report_format,
+        report_format=args.format,
         log=logger.log,
         progress_callback=progress_callback,
         max_workers=max(1, args.max_workers),
