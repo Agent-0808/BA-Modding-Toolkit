@@ -1,5 +1,6 @@
 # cli/main.py - CLI 主入口
 from .taps import MainTap
+from ..i18n import i18n_manager
 from .handlers import (
     setup_cli_logger,
     handle_update,
@@ -25,9 +26,21 @@ COMMAND_HANDLERS = {
     'backup': handle_backup,
 }
 
+def _resolve_language(lang: str) -> str:
+    """大小写不敏感地匹配可用语言代码（如 "en-us" -> "en-US"），未匹配则原样返回。"""
+    normalized = lang.strip().replace('_', '-')
+    for code in i18n_manager.get_available_languages():
+        if code.lower() == normalized.lower():
+            return code
+    return normalized
+
 def main() -> None:
     """主函数，用于解析命令行参数并分派任务。"""
     args = MainTap().parse_args()
+
+    # 显式指定语言时覆盖默认语言（需在任何本地化输出之前生效）
+    if args.lang:
+        i18n_manager.set_language(_resolve_language(args.lang))
 
     # 初始化日志记录器
     logger = setup_cli_logger()

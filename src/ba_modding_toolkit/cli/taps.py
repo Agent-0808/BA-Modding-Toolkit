@@ -313,6 +313,9 @@ Examples:
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
+    # 全局参数（需放在子命令之前，如: bamt-cli --lang en-us update ...）
+    lang: str | None = None  # Interface language for localized output (e.g., "en-US", "zh-CN", "debug"; default: auto-detect).
+
     def configure(self) -> None:
         super().configure()
         self.add_subparsers(dest='command', help='Available commands')
