@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BackupTap
+from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     SaveOptions,
@@ -19,7 +19,8 @@ from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, CharacterInternalIDMap
 from ..bundle import analyze_trailing
-from ..report import generate_mod_report
+from ..report import generate_mod_report, render_all_spine_previews, RENDER_CATEGORIES
+from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
 
 class Logger:
     """日志记录器基类。"""
@@ -597,6 +598,70 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"   Output: {output_path}")
     else:
         logger.log(f"❌ Report Generation Failed: {message}")
+
+
+def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'batch-preview' 命令的逻辑。"""
+    logger.log("--- Start Batch Spine Preview Rendering ---")
+
+    # 验证 SpineViewerCLI 路径
+    viewer_path = Path(args.spine_viewer_path)
+    if not viewer_path.exists():
+        logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+        return
+
+    # 确定游戏目录
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 渲染预设（Literal 类型已在 argparse 阶段校验取值）
+    preset_map = {'low': RENDER_PRESET_LOW, 'high': RENDER_PRESET_HIGH}
+    render_options = preset_map[args.preset]
+
+    # 渲染分类
+    if not args.categories:
+        logger.log("❌ Error: All render categories are ignored. Nothing to render.")
+        return
+
+    logger.log(f"Game directory: {game_dir}")
+    logger.log(f"Output directory: {output_dir.resolve()}")
+    logger.log(f"Render preset: {args.preset}")
+    logger.log(f"Render categories: {', '.join(args.categories)}")
+
+    # 进度回调
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Rendering: {filename}"
+    )
+
+    # 调用核心渲染函数
+    rendered, total = render_all_spine_previews(
+        game_dir=game_dir,
+        output_dir=output_dir,
+        viewer_path=viewer_path,
+        render_options=render_options,
+        render_categories=args.categories,
+        log=logger.log,
+        progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
+    )
+
+    logger.log("\n" + "="*50)
+    if total > 0:
+        logger.log(f"✅ Batch Preview Rendering Complete: {rendered}/{total} group(s) rendered.")
+        logger.log(f"   Output: {output_dir.resolve()}")
+    else:
+        logger.log("❌ No preview images rendered.")
 
 
 def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:

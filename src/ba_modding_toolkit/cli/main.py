@@ -10,6 +10,7 @@ from .handlers import (
     handle_extract,
     handle_batch_update,
     handle_report,
+    handle_batch_preview,
     handle_backup,
 )
 
@@ -23,6 +24,7 @@ COMMAND_HANDLERS = {
     'env': handle_env,
     'extract': handle_extract,
     'report': handle_report,
+    'batch-preview': handle_batch_preview,
     'backup': handle_backup,
 }
 

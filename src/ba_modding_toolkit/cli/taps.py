@@ -2,6 +2,7 @@
 from argparse import RawTextHelpFormatter
 from tap import Tap, Positional
 from pathlib import Path
+from typing import Literal
 
 from ..models import ReplaceAssetType, CompressionType, MatchStrategy
 from ..report import ReportFormat
@@ -282,6 +283,45 @@ Examples:
         self._underscores_to_dashes = True
 
 
+class BatchPreviewTap(Tap):
+    """Batch-preview命令的参数解析器 - 用于批量渲染Spine预览图。"""
+
+    # 基本参数
+    spine_viewer_path: Positional[Path]  # Path to SpineViewerCLI.exe.
+    output_dir: Path = Path('./output/batch_preview/')  # Directory to save preview images.
+
+    # 搜索目录参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+
+    # Spine渲染参数
+    preset: Literal['low', 'high'] = 'low'  # Preview render preset.
+    categories: list[Literal['spinecharacters', 'spinelobbies', 'spinebackground']] = ['spinecharacters', 'spinelobbies', 'spinebackground']  # Categories to render (default: render all).
+    max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
+
+    def configure(self) -> None:
+        self.description = '''Batch render Spine preview images for all Spine resources in the game directory.
+
+Note: This command renders ALL Spine resources (not limited to modded files),
+      grouped by file prefix. Existing preview images with the same name are overwritten.
+
+Examples:
+  # Render previews with auto-detected game directory
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Specify game resource directory and high quality preset
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --resource-dir "C:\\game\\resources" --preset high
+
+  # Render only characters and lobbies
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --categories spinecharacters spinelobbies
+
+  # Render with 4 parallel workers
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --max-workers 4
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
+
 class BackupTap(Tap):
     """Backup命令的参数解析器 - 用于备份Mod文件。"""
 
@@ -325,5 +365,6 @@ class MainTap(BaseTap):
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
         self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
+        self.add_subparser('batch-preview', BatchPreviewTap, help='Batch render Spine preview images for all Spine resources.')
         self.add_subparser('backup', BackupTap, help='Backup all modded bundle files.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
