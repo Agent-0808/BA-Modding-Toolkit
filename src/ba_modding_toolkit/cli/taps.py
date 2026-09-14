@@ -350,6 +350,33 @@ Examples:
         self._underscores_to_dashes = True
 
 
+class ParseTap(Tap):
+    """Parse命令的参数解析器 - 用于解析Bundle文件名。"""
+
+    # 基本参数
+    filenames: Positional[list[Path]]  # Filename(s) or path(s) to parse (only the name part is used).
+
+    # 角色映射参数
+    bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
+    name_field: str = "full_name"  # Character name field to display.
+
+    def configure(self) -> None:
+        self.description = '''Parse BA bundle filename(s) and print the parsed components.
+
+Examples:
+  # Parse a single filename (full path is also accepted)
+  bamt-cli parse "assets-_mx-spinecharacters-ch0808_spr-mxdependency-textures-2077-08-08_12345678.bundle"
+
+  # Parse multiple filenames
+  bamt-cli parse "a.bundle" "b.bundle"
+
+  # Resolve character name from the BACII mapping
+  bamt-cli parse "ch0001_spr.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
+'''
+        self.formatter_class = RawTextHelpFormatter
+        self._underscores_to_dashes = True
+
+
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
@@ -364,6 +391,7 @@ class MainTap(BaseTap):
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
+        self.add_subparser('parse', ParseTap, help='Parse BA bundle filename(s) and print the parsed components.')
         self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
         self.add_subparser('batch-preview', BatchPreviewTap, help='Batch render Spine preview images for all Spine resources.')
         self.add_subparser('backup', BackupTap, help='Backup all modded bundle files.')

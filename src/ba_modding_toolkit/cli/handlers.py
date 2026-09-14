@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap
+from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     SaveOptions,
@@ -17,7 +17,7 @@ from ..core import (
 from ..models import SaveOptions, SkelConvertOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
-from ..naming import parse_filename, CharacterInternalIDMap
+from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
 from ..bundle import analyze_trailing
 from ..report import generate_mod_report, render_all_spine_previews, RENDER_CATEGORIES
 from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
@@ -469,6 +469,37 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
 
     except Exception as e:
         logger.log(f"❌ Error during CRC fix process: {e}")
+
+
+def handle_parse(args: ParseTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'parse' 命令的逻辑。"""
+    logger.log("--- Start Filename Parser ---")
+
+    # 可选：加载角色ID映射表
+    bacii_map: CharacterInternalIDMap | None = None
+    if args.bacii_path:
+        bacii_map = CharacterInternalIDMap()
+        if not bacii_map.load(args.bacii_path):
+            logger.log(f"⚠ Failed to load BACII from '{args.bacii_path}', character name lookup disabled.")
+            bacii_map = None
+
+    for filename_path in args.filenames:
+        filename = Path(filename_path).name
+        parsed = parse_filename(filename)
+
+        logger.log(f"File: {filename}")
+        logger.log(f"  category:      {parsed.category or '-'}")
+        logger.log(f"  core:          {parsed.core or '-'}")
+        logger.log(f"  res_type:      {parsed.res_type or '-'}")
+        logger.log(f"  date:          {parsed.date or '-'}")
+        crc_display = f"{parsed.crc} (0x{int(parsed.crc):08X})" if parsed.crc else "-"
+        logger.log(f"  crc:           {crc_display}")
+        logger.log(f"  prefix:        {parsed.prefix or '-'}")
+        if parsed.core:
+            logger.log(f"  search_prefix: {get_category_prefix(parsed.core)}")
+        if bacii_map and parsed.core:
+            name = bacii_map.lookup(parsed.core, args.name_field)
+            logger.log(f"  character:     {name or '(not found)'}")
 
 
 def handle_env(args: EnvTap, logger: Logger = NULL_LOGGER) -> None:
