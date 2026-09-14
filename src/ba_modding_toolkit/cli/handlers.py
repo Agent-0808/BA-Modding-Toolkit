@@ -479,7 +479,7 @@ def handle_parse(args: ParseTap, logger: Logger = NULL_LOGGER) -> None:
     bacii_map: CharacterInternalIDMap | None = None
     if args.bacii_path:
         bacii_map = CharacterInternalIDMap()
-        if not bacii_map.load(args.bacii_path):
+        if not bacii_map.load(args.bacii_path, index_column=args.index_column):
             logger.log(f"⚠ Failed to load BACII from '{args.bacii_path}', character name lookup disabled.")
             bacii_map = None
 
@@ -621,7 +621,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         bacii_path = Path(args.bacii_path)
         if bacii_path.exists():
             char_map = CharacterInternalIDMap()
-            if char_map.load(bacii_path):
+            if char_map.load(bacii_path, index_column=args.index_column):
                 logger.log(f"Loaded character mapping from: {bacii_path}")
             else:
                 logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")

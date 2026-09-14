@@ -7,6 +7,7 @@ from typing import Literal
 from ..models import ReplaceAssetType, CompressionType, MatchStrategy
 from ..report import ReportFormat
 from ..utils import BARegion
+from ..naming import CharacterInternalIDMap
 
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
@@ -254,6 +255,7 @@ class ReportTap(Tap):
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
     name_field: str = "full_name"  # Character name field to display.
 
     # 报告格式参数
@@ -277,7 +279,10 @@ Examples:
   bamt-cli report --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
 
   # Use character name mapping
-  bamt-cli report --bacii-map-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
+  bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
+
+  # Use a different CSV column as the lookup key
+  bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --index-column "student_id" --name-field "name_en"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
@@ -358,6 +363,7 @@ class ParseTap(Tap):
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
     name_field: str = "full_name"  # Character name field to display.
 
     def configure(self) -> None:
