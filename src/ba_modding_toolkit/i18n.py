@@ -73,7 +73,7 @@ class I18n:
         - zh-* 语言：回退到 zh-CN → key
         - 其他语言：回退到 en-US → key
         """
-        print(f"Loading locales from: {self.locales_dir}")
+        # print(f"Loading locales from: {self.locales_dir}")
         
         if self.lang == "debug":
             self.translations = {}
@@ -93,12 +93,13 @@ class I18n:
         main_exists = main_path.exists()
         fallback_exists = fallback_path.exists()
 
-        if not main_exists and not fallback_exists:
-            print(f"I18n Warning: Language '{self.lang}' not found, fallback '{fallback_code}' not found either.")
-        elif not main_exists and fallback_exists:
+        if main_exists:
+            # print(f"I18n: Loaded language '{self.lang}'.")
+            pass
+        elif fallback_exists:
             print(f"I18n: Language '{self.lang}' not found, using fallback '{fallback_code}'.")
-        elif main_exists:
-            print(f"I18n: Loaded language '{self.lang}'.")
+        else:
+            print(f"I18n Warning: Language '{self.lang}' not found, fallback '{fallback_code}' not found either.")
 
         self.translations = self._load_translation_file(main_path)
         self.fallback_translations = self._load_translation_file(fallback_path)
