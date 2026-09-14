@@ -335,80 +335,115 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- Start CRC Tool ---")
 
-    modified_path = Path(args.modified)
+    files = [Path(p) for p in args.files]
+
+    def compute_crc_hex(path: Path) -> str:
+        """计算文件 CRC32 的十六进制字符串，读取失败时返回空字符串。"""
+        try:
+            with open(path, "rb") as f:
+                return f"{CRCUtils.compute_crc32(f.read()):08X}"
+        except Exception as e:
+            logger.log(f"❌ Error computing CRC: {e}")
+            return ""
+
+    # --- 模式 1: 仅检查/计算 CRC ---
+    if args.check:
+        if not 1 <= len(files) <= 2:
+            logger.log("❌ Error: Check mode accepts 1 or 2 files.")
+            return
+        for file_path in files:
+            if not file_path.is_file():
+                logger.log(f"❌ Error: File '{file_path}' does not exist.")
+                return
+
+        # 两个文件：分别计算并互相对比
+        if len(files) == 2:
+            first_crc_hex = compute_crc_hex(files[0])
+            second_crc_hex = compute_crc_hex(files[1])
+            if not first_crc_hex or not second_crc_hex:
+                return
+            logger.log(f"File CRC32: {first_crc_hex}  ({files[0].name})")
+            logger.log(f"File CRC32: {second_crc_hex}  ({files[1].name})")
+            if first_crc_hex == second_crc_hex:
+                logger.log("✅ CRC Match: Yes")
+            else:
+                logger.log("❌ CRC Match: No")
+            return
+
+        # 单个文件：计算 CRC
+        single_path = files[0]
+        single_crc_hex = compute_crc_hex(single_path)
+        if not single_crc_hex:
+            return
+        logger.log(f"File CRC32: {single_crc_hex}  ({single_path.name})")
+
+        # 对比文件名中的期望 CRC（若有）
+        crc_str = parse_filename(single_path.name).crc
+        if crc_str:
+            expected_crc = int(crc_str)
+            logger.log(f"Expected CRC from filename: {expected_crc:08X}")
+            if expected_crc == int(single_crc_hex, 16):
+                logger.log("✅ CRC Match: Yes")
+            else:
+                logger.log("❌ CRC Match: No")
+
+        # 可选：仅当显式提供 --resource-dir 或 --region 时，在游戏目录中搜索同名文件对比
+        if args.resource_dir is None and args.region == 'auto':
+            return
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if not resource_dir:
+            logger.log("⚠ Could not auto-detect game install path, skipping comparison.")
+            return
+        game_dir = Path(resource_dir)
+        if not game_dir.is_dir():
+            logger.log(f"⚠ Game resource directory '{game_dir}' does not exist or is not a directory, skipping comparison.")
+            return
+
+        logger.log(f"Searching for same-name file in '{game_dir}'...")
+        original_path: Path | None = None
+        for dir_path in get_search_dirs(game_dir):
+            if not dir_path.exists():
+                continue
+            candidate = dir_path / single_path.name
+            if candidate.is_file():
+                original_path = candidate
+                break
+        if original_path is None:
+            logger.log(f"⚠ Auto-search failed: File '{single_path.name}' not found in search directories, skipping comparison.")
+            return
+        logger.log(f"  > Found original file: {original_path}")
+
+        original_crc_hex = compute_crc_hex(original_path)
+        if not original_crc_hex:
+            return
+        logger.log(f"Original File CRC32: {original_crc_hex}  ({original_path.name})")
+        if original_crc_hex == single_crc_hex:
+            logger.log("✅ CRC Match: Yes")
+        else:
+            logger.log("❌ CRC Match: No")
+        return
+
+    # --- 模式 2: 修正 CRC ---
+    if len(files) != 1:
+        logger.log("❌ Error: Fix mode accepts exactly 1 file.")
+        return
+    modified_path = files[0]
     if not modified_path.is_file():
         logger.log(f"❌ Error: Modified file '{modified_path}' does not exist.")
         return
 
-    resource_dir = args.resource_dir or get_BA_path(args.region)
-
-    # 确定原始文件路径：优先使用 --original，其次使用 resource_dir 自动查找
-    original_path = None
-    if args.original:
-        original_path = Path(args.original)
-        if not original_path.is_file():
-            logger.log(f"❌ Error: Manually specified original file '{original_path.name}' does not exist.")
-            return
-        logger.log(f"Manually specified original file: {original_path}")
-    elif resource_dir:
-        logger.log(f"No original file provided, searching automatically in '{resource_dir}'...")
-        game_dir = Path(resource_dir)
-        if not game_dir.is_dir():
-            logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
-            return
-
-        # 在搜索目录中查找同名文件（只取第一个找到的）
-        search_dirs = get_search_dirs(game_dir)
-        target_name = modified_path.name
-        original_path: Path | None = None
-        for dir_path in search_dirs:
-            if not dir_path.exists():
-                continue
-            candidate = dir_path / target_name
-            if candidate.is_file():
-                original_path = candidate
-                break
-
-        if original_path is None:
-            logger.log(f"❌ Auto-search failed: File '{target_name}' not found in search directories")
-            return
-        logger.log(f"  > Found original file: {original_path}")
-
-    # --- 模式 1: 仅检查/计算 CRC ---
-    if args.check_only:
-        try:
-            with open(modified_path, "rb") as f:
-                modified_data = f.read()
-            modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
-            logger.log(f"Modified File CRC32: {modified_crc_hex}  ({modified_path.name})")
-
-            if original_path:
-                with open(original_path, "rb") as f:
-                    original_data = f.read()
-                original_crc_hex = f"{CRCUtils.compute_crc32(original_data):08X}"
-                logger.log(f"Original File CRC32: {original_crc_hex}  ({original_path.name})")
-                if original_crc_hex == modified_crc_hex:
-                    logger.log("✅ CRC Match: Yes")
-                else:
-                    logger.log("❌ CRC Match: No")
-        except Exception as e:
-            logger.log(f"❌ Error computing CRC: {e}")
-        return
-
-    # --- 模式 2: 修正 CRC ---
-    if not modified_path:
-        logger.log("❌ Error: For CRC fix, must provide '--modified' file.")
-        return
-
     try:
-        # 从文件名提取目标 CRC
-        _, _, _, _, crc_str = parse_filename(modified_path.name)
-        if not crc_str:
-            logger.log("❌ Error: Could not extract target CRC from filename.")
-            return
-        
-        target_crc = int(crc_str)
-        logger.log(f"Target CRC from filename: {target_crc:08X}")
+        # 确定 target CRC：优先使用 --target-crc，其次从文件名提取
+        if args.target_crc:
+            target_crc = int(args.target_crc, 16)
+            logger.log(f"Target CRC from argument: {target_crc:08X}")
+        else:
+            crc_str = parse_filename(modified_path.name).crc
+            if not crc_str:
+                logger.log("❌ Error: Could not extract target CRC from filename. Use '--target-crc' to specify it explicitly.")
+                return
+            target_crc = int(crc_str)
+            logger.log(f"Target CRC from filename: {target_crc:08X}")
 
         # 检查当前 CRC 是否已匹配
         with open(modified_path, "rb") as f:

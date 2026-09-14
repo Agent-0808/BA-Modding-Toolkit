@@ -106,34 +106,39 @@ class CrcTap(Tap):
     """CRC命令的参数解析器 - 用于CRC修正工具。"""
 
     # 基本参数
-    modified: Positional[Path]  # Path to the modified file (to be fixed or calculated).
+    files: Positional[list[Path]]  # Check mode: 1 file to calculate (compare with filename CRC if present), or 2 files to compare. Fix mode: exactly 1 file.
 
-    # 原始文件定位参数
-    original: Path | None = None  # Path to the original file (provides target CRC value).
-    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
-    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+    # 修正参数
+    target_crc: str | None = None  # Target CRC32 in hex (e.g., "0xABCD1234"). If omitted, extracted from the filename.
 
     # 操作选项
-    check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
+    check: bool = False  # Only calculate and compare CRC, do not modify any files.
     no_backup: bool = False  # Do not create a backup (.backup) before fixing the file.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
 
+    # 游戏目录搜索参数（仅 check 模式单文件场景使用，可选）
+    resource_dir: Path | None = None  # Path to the game resource directory. Search for a same-name file to compare against.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan). Search only runs when --resource-dir/--region is explicitly provided.
+
     def configure(self) -> None:
         self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
-It OVERWRITES the input file and will NOT output at "output/" directory.
+Fix mode OVERWRITES the input file and will NOT output at "output/" directory.
 
 Examples:
-  # Fix CRC of my_mod.bundle to match original bundle
+  # Fix CRC of my_mod.bundle (target CRC extracted from the filename)
   bamt-cli crc "my_mod.bundle"
 
-  # Automatically search original file in game directory and fix CRC
-  bamt-cli crc "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
+  # Fix CRC with an explicit target value
+  bamt-cli crc "my_mod.bundle" --target-crc "0xABCD1234"
 
-  # Check if CRC matches only, do not modify file
-  bamt-cli crc "my_mod.bundle" --original "original.bundle" --check-only
+  # Calculate CRC of a file (also compares with the CRC in the filename if present)
+  bamt-cli crc "my_mod.bundle" --check
 
-  # Calculate CRC for a single file
-  bamt-cli crc "my_mod.bundle" --check-only
+  # Compare CRC of two files
+  bamt-cli crc "my_mod.bundle" "original.bundle" --check
+
+  # Calculate CRC and additionally compare with the same-name file in the game directory
+  bamt-cli crc "my_mod.bundle" --check --resource-dir "C:\\path\\to\\game_data"
 '''
         self.formatter_class = RawTextHelpFormatter
         self._underscores_to_dashes = True
