@@ -623,7 +623,7 @@ class SettingsDialog(tb.Toplevel):
         footer_frame.columnconfigure(1, weight=1)
         footer_frame.columnconfigure(2, weight=1)
 
-        save_button = UIComponents.create_button(footer_frame, text=t("action.save"), command=self.app.save_current_config, bootstyle="success")
+        save_button = UIComponents.create_button(footer_frame, text=t("action.save"), command=lambda: self.app.save_current_config(parent=self), bootstyle="success")
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
         load_button = UIComponents.create_button(footer_frame, text=t("action.load"), command=self.load_config, bootstyle="warning") 
@@ -645,7 +645,7 @@ class SettingsDialog(tb.Toplevel):
     def _on_language_changed(self, event):
         """语言选项变化时的处理"""
         if messagebox.askyesno(t("common.tip"), t("message.config.language_changed"), parent=self):
-            self.app.save_current_config()
+            self.app.save_current_config(parent=self)
             self.destroy()
             self.master.quit()
 
@@ -653,7 +653,7 @@ class SettingsDialog(tb.Toplevel):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
             self.app.logger.log(t("log.config.loaded"))
-            messagebox.showinfo(t("common.success"), t("message.config.loaded"))
+            messagebox.showinfo(t("common.success"), t("message.config.loaded"), parent=self)
         else:
             self.app.logger.log(t("log.config.load_failed"))
             messagebox.showerror(t("common.error"), t("message.config.load_failed"), parent=self)

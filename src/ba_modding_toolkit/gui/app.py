@@ -539,15 +539,15 @@ class App(tb.Frame, ConfigMixin):
         if config_loaded:
             print(f"配置加载成功，语言设置为: {language}")
     
-    def save_current_config(self):
+    def save_current_config(self, parent: tk.Misc | None = None):
         """保存当前配置到文件"""
         if self.config_manager.save_config(self):
             self._load_character_mapping()  # 映射表路径/索引列变更后重新加载
             self.logger.log(t("log.config.saved"))
-            messagebox.showinfo(t("common.success"), t("message.config.saved"))
+            messagebox.showinfo(t("common.success"), t("message.config.saved"), parent=parent)
         else:
             self.logger.log(t("log.config.save_failed"))
-            messagebox.showerror(t("common.error"), t("message.config.save_failed"))
+            messagebox.showerror(t("common.error"), t("message.config.save_failed"), parent=parent)
 
     
     def create_sidebar_layout(self, parent):
