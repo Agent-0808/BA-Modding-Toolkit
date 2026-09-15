@@ -18,9 +18,6 @@ if TYPE_CHECKING:
 class PreviewWindow(tb.Toplevel):
     """预览图查看窗口：纵向滚动展示多张图片"""
 
-    # 缩略图最大边长（像素）
-    MAX_THUMBNAIL_SIZE = 768
-
     def __init__(self, master, app_instance: "App", image_paths: list[Path]):
         super().__init__(master)
         self.app = app_instance
@@ -64,7 +61,8 @@ class PreviewWindow(tb.Toplevel):
         """加载图片并缩放到预览尺寸"""
         try:
             with Image.open(path) as image:
-                image.thumbnail((self.MAX_THUMBNAIL_SIZE, self.MAX_THUMBNAIL_SIZE))
+                size = self.app.preview_thumbnail_size_var.get()
+                image.thumbnail((size, size))
                 return ImageTk.PhotoImage(image)
         except OSError:
             return None

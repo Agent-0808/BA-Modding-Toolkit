@@ -32,11 +32,14 @@ class SettingsDialog(tb.Toplevel):
         self.content_area.pack(fill=tk.BOTH, expand=True, padx=(0, 15))
 
         self._init_app_settings()
+        self._init_performance_settings()
         self._init_path_settings()
-        self._init_adb_settings()
         self._init_saving_options()
+        self._init_bacii_settings()
         self._init_asset_options()
-        self._init_spine_settings()
+        self._init_skel_converter_settings()
+        self._init_spine_viewer_settings()
+        self._init_adb_settings()
 
         self._init_footer_buttons()
 
@@ -407,16 +410,6 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.output_dir_info")
         )
 
-        # 并行线程数（批量更新 / 批量预览渲染 / 报告渲染共用）
-        SettingRow.create_spinbox_row(
-            section,
-            label=t("option.max_workers"),
-            int_var=self.app.max_workers_var,
-            from_=1,
-            to=min(os.cpu_count() or 4, 8),
-            tooltip=t("option.max_workers_info")
-        )
-
         SettingRow.create_button_row(
             section,
             label=t("ui.label.github"),
@@ -431,6 +424,20 @@ class SettingsDialog(tb.Toplevel):
             button_text=t("action.print"),
             command=self.print_environment_info,
             bootstyle="info"
+        )
+
+    def _init_performance_settings(self):
+        """初始化性能设置"""
+        section = self._create_section(t("ui.settings.group_performance"))
+
+        # 并行线程数（批量更新 / 批量预览渲染 / 报告渲染共用）
+        SettingRow.create_spinbox_row(
+            section,
+            label=t("option.max_workers"),
+            int_var=self.app.max_workers_var,
+            from_=1,
+            to=min(os.cpu_count() or 4, 8),
+            tooltip=t("option.max_workers_info")
         )
 
     def _init_saving_options(self):
@@ -460,7 +467,7 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.backup_info")
         )
 
-        SettingRow.create_radiobutton_row(
+        SettingRow.create_combobox_row(
             section,
             label=t("option.compression_method"),
             text_var=self.app.compression_method_var,
@@ -507,11 +514,20 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.replace_mesh_info")
         )
 
-    def _init_spine_settings(self):
-        """初始化Spine设置"""
-        section = self._create_section(t("ui.settings.group_spine"))
+    def _init_skel_converter_settings(self):
+        """初始化 Skel 转换器设置"""
+        section = self._create_section(t("ui.settings.group_skel_converter"))
 
-        # Spine 转换器路径设置
+        # skel 目标版本：无论是否启用转换，都作为版本检测基线，不匹配则拒绝/报错
+        SettingRow.create_entry_row(
+            section,
+            label=t("option.spine_target_version"),
+            text_var=self.app.target_spine_version_var,
+            tooltip=t("option.spine_target_version_info"),
+            app=self.app,
+        )
+
+        # Skel 转换器路径设置
         SettingRow.create_path_selector(
             section,
             label=t("option.skel_converter_path"),
@@ -531,15 +547,9 @@ class SettingsDialog(tb.Toplevel):
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
-        SettingRow.create_entry_row(
-            section,
-            label=t("option.spine_target_version"),
-            text_var=self.app.target_spine_version_var,
-            tooltip=t("option.spine_target_version_info"),
-            app=self.app,
-        )
-
-        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
+    def _init_spine_viewer_settings(self):
+        """初始化 SpineViewer 预览设置"""
+        section = self._create_section(t("ui.settings.group_spine_viewer"))
 
         # SpineViewerCLI 路径设置
         SettingRow.create_path_selector(
@@ -561,7 +571,19 @@ class SettingsDialog(tb.Toplevel):
             on_click_disabled=self.app.show_spine_viewer_not_configured
         )
 
-        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
+        # 预览图缩略图尺寸（预览窗口中缩略图的最大边长）
+        SettingRow.create_spinbox_row(
+            section,
+            label=t("option.preview_thumbnail_size"),
+            int_var=self.app.preview_thumbnail_size_var,
+            from_=128,
+            to=2048,
+            tooltip=t("option.preview_thumbnail_size_info")
+        )
+
+    def _init_bacii_settings(self):
+        """初始化角色 ID 映射（BACII）设置"""
+        section = self._create_section(t("ui.settings.group_bacii"))
 
         # 角色ID映射表
         SettingRow.create_path_selector(

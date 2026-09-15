@@ -93,6 +93,7 @@ class ConfigMixin:
     # SpineViewer
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
     check_animations_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", False, depends_on="spine_viewer_path_var")]
+    preview_thumbnail_size_var: Annotated[tk.IntVar, ConfigMeta("SpineViewer", 768)]
 
     # Mod Backup
     mod_backup_path_var: Annotated[tk.StringVar, ConfigMeta("Directories", str(EXE_DIR / "output" / "backup"))]
