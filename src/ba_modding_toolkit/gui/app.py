@@ -5,10 +5,8 @@ import tkinter as tk
 from tkinter import messagebox
 import urllib.request
 from dataclasses import dataclass, fields
-from typing import get_type_hints
 import ttkbootstrap as tb
 from pathlib import Path
-from ttkbootstrap.widgets.scrolled import ScrolledText
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR
@@ -16,8 +14,8 @@ from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
-from .components import Theme, Logger, UIComponents
-from .configs import ConfigManager, ConfigMeta, ConfigMixin
+from .components import Theme, Logger, UIComponents, create_log_area
+from .configs import ConfigManager, ConfigMixin
 from .windows import SettingsDialog, FileListWindow
 from .tabs import *
 
@@ -102,41 +100,6 @@ class App(tb.Frame, ConfigMixin):
         if icon_path.exists():
             window.iconbitmap(icon_path)
 
-    def init_shared_variables(self):
-        """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""
-        self._config_specs: dict[str, ConfigMeta] = {}
-        
-        hints = get_type_hints(self.__class__, include_extras=True)
-        for var_name, hint in hints.items():
-            if not hasattr(hint, '__metadata__'):
-                continue
-            
-            var_type = hint.__origin__
-            meta: ConfigMeta = hint.__metadata__[0]
-            
-            var_instance = var_type()
-            setattr(self, var_name, var_instance)
-            self._config_specs[var_name] = meta
-            
-            default = meta.default() if callable(meta.default) else meta.default
-            var_instance.set(default)
-        
-        # 特殊处理：语言设置
-        self.language_var.set(i18n_manager.lang)
-        self.available_languages = i18n_manager.get_available_languages()
-
-    def _set_default_values(self):
-        """重置所有配置变量为默认值"""
-        hints = get_type_hints(self.__class__, include_extras=True)
-        for var_name, hint in hints.items():
-            if not hasattr(hint, '__metadata__'):
-                continue
-
-            meta: ConfigMeta = hint.__metadata__[0]
-            var = getattr(self, var_name)
-            default = meta.default() if callable(meta.default) else meta.default
-            var.set(default)
-
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
         path = self.bacii_map_path_var.get().strip()
@@ -169,7 +132,8 @@ class App(tb.Frame, ConfigMixin):
         paned_window.add(log_panel_frame, weight=0)
 
         # 创建日志区域（需要在侧边栏之前创建，因为侧边栏会创建Tab，Tab需要logger）
-        self.log_text = self.create_log_area(log_panel_frame)
+        self.log_scrolled_wrapper = create_log_area(log_panel_frame)
+        self.log_text = self.log_scrolled_wrapper.text
 
         # 底部状态栏 - 固定在窗口底部
         self.status_label = tb.Label(self.master, relief=tk.SUNKEN, padding=(5,0),
@@ -337,14 +301,6 @@ class App(tb.Frame, ConfigMixin):
             "SpineSkeletonDataConverter",
             "https://github.com/wang606/SpineSkeletonDataConverter",
             parent
-        )
-
-    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
-        """显示SpineViewer未配置提示"""
-        messagebox.showinfo(
-            t("common.tip"),
-            t("message.3rd_party.spine_viewer_required"),
-            parent=parent or self.master
         )
 
     def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
@@ -649,43 +605,3 @@ class App(tb.Frame, ConfigMixin):
                 btn.config(bootstyle="primary")  # 激活状态使用更亮的样式
             else:
                 btn.config(bootstyle="secondary")  # 非激活状态使用稍浅样式，比侧边栏背景稍浅
-    
-    def create_log_area(self, parent):
-        """
-        创建日志区域，使用自定义的深色风格
-        """
-        # 创建外层容器（带标题的边框）
-        log_frame = tb.Labelframe(
-            parent, 
-            text=t("ui.log_area"), 
-            bootstyle="default",
-            padding=(5, 0)
-        )
-        log_frame.pack(fill=tk.BOTH, expand=True)
-
-        # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
-        st = ScrolledText(
-            log_frame,
-            padding=0,
-            height=8,
-            autohide=True,            # 自动隐藏滚动条
-            bootstyle="round" # 滚动条样式
-        )
-        st.pack(fill=tk.BOTH, expand=True)
-
-        # 这里直接操作 st.text (内部的 Text 组件) 来修改颜色
-        st.text.configure(
-            font=Theme.LOG_FONT,
-            background=Theme.LOG_BG,
-            foreground=Theme.LOG_FG,
-            selectbackground=Theme.LOG_SELECTED, # 选中时的背景色
-            insertbackground=Theme.LOG_FG,  # 光标颜色
-            state=tk.DISABLED,              # 初始设为不可编辑
-            spacing1=2,                     # 段前间距（像素）
-        )
-
-        # 保存引用以防被垃圾回收（虽然在 pack 后通常不需要）
-        self.log_scrolled_wrapper = st
-
-        # 返回内部的 Text 组件，这样你现有的 Logger 类无需修改即可直接使用
-        return st.text

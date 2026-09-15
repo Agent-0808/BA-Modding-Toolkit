@@ -3,6 +3,7 @@
 import tkinter as tk
 import ttkbootstrap as tb
 from ttkbootstrap.widgets.tooltip import ToolTip
+from ttkbootstrap.widgets.scrolled import ScrolledText
 from tkinterdnd2 import DND_FILES
 from pathlib import Path
 from typing import Callable, Any, TYPE_CHECKING
@@ -61,6 +62,41 @@ class Logger:
             self.log_widget.config(state=tk.DISABLED)
         
         self.master.after(0, _clear_log)
+
+# --- 日志区域构建 ---
+
+def create_log_area(parent: tk.Widget) -> ScrolledText:
+    """创建日志区域，返回带自动隐藏滚动条的 ScrolledText（.text 为内部 Text 组件）"""
+    # 创建外层容器（带标题的边框）
+    log_frame = tb.Labelframe(
+        parent,
+        text=t("ui.log_area"),
+        bootstyle="default",
+        padding=(5, 0)
+    )
+    log_frame.pack(fill=tk.BOTH, expand=True)
+
+    # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
+    st = ScrolledText(
+        log_frame,
+        padding=0,
+        height=8,
+        autohide=True,    # 自动隐藏滚动条
+        bootstyle="round" # 滚动条样式
+    )
+    st.pack(fill=tk.BOTH, expand=True)
+
+    # 通过操作内部的 Text 组件来修改颜色
+    st.text.configure(
+        font=Theme.LOG_FONT,
+        background=Theme.LOG_BG,
+        foreground=Theme.LOG_FG,
+        selectbackground=Theme.LOG_SELECTED, # 选中时的背景色
+        insertbackground=Theme.LOG_FG,  # 光标颜色
+        state=tk.DISABLED,              # 初始设为不可编辑
+        spacing1=2,                     # 段前间距（像素）
+    )
+    return st
 
 # --- 主题与颜色管理 ---
 

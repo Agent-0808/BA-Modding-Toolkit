@@ -4,14 +4,14 @@ import os
 import tkinter as tk
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import Annotated, Any, TYPE_CHECKING, get_type_hints
 import toml
 
 if TYPE_CHECKING:
     from .app import App
 
 from ..utils import get_BA_path, EXE_DIR
-from ..i18n import t
+from ..i18n import t, i18n_manager
 
 
 @dataclass
@@ -118,6 +118,43 @@ class ConfigMixin:
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
     adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
     adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "adb_cache"))]
+
+    # --- 配置变量反射机制 ---
+
+    def init_shared_variables(self):
+        """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""
+        self._config_specs: dict[str, ConfigMeta] = {}
+
+        hints = get_type_hints(type(self), include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+
+            var_type = hint.__origin__
+            meta: ConfigMeta = hint.__metadata__[0]
+
+            var_instance = var_type()
+            setattr(self, var_name, var_instance)
+            self._config_specs[var_name] = meta
+
+            default = meta.default() if callable(meta.default) else meta.default
+            var_instance.set(default)
+
+        # 特殊处理：语言设置
+        self.language_var.set(i18n_manager.lang)
+        self.available_languages = i18n_manager.get_available_languages()
+
+    def _set_default_values(self):
+        """重置所有配置变量为默认值"""
+        hints = get_type_hints(type(self), include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+
+            meta: ConfigMeta = hint.__metadata__[0]
+            var = getattr(self, var_name)
+            default = meta.default() if callable(meta.default) else meta.default
+            var.set(default)
 
 
 class ConfigManager:
