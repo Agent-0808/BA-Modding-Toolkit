@@ -83,7 +83,9 @@
 		"spine_conversion": "Enable Spine Version Conversion",
 		"spine_conversion_info": "(Optional Extension)\nCalls an external program to convert .skel files to a supported version.\nRequires configuring the path to the Skel Converter.",
 		"spine_target_version": "Target Version",
-		"spine_target_version_info": "Format should be \"A.B.C\".",
+		"spine_target_version_info": "Format should be \"A.B.C\".\nskel files whose version does not match the configured version will be rejected.\nWhen the Skel converter is configured and enabled, they are automatically converted to this version.",
+		"preview_thumbnail_size": "Preview Thumbnail Size",
+		"preview_thumbnail_size_info": "Maximum edge length (pixels) of thumbnails in the preview window",
 		"spine_downgrade": "Enable Spine Downgrade",
 		"spine_downgrade_info": "(Optional Extension)\nCalls an external program to export files compatible with older Spine versions (.skel and .atlas).\nRequires configuring the path to the Skel Converter.",
 		"spine_downgrade_target_version": "Target Version",
@@ -128,8 +130,14 @@
 		"report_render_preset_info": "Select the rendering quality of preview images.\nHigher quality may take longer to render.",
 		"report_render_preset_low": "Low Quality",
 		"report_render_preset_high": "High Quality",
+		"render_characters": "Render Character Art",
+		"render_characters_info": "Render preview images for Spine assets in the spinecharacters category",
+		"render_lobbies": "Render Memory Lobby",
+		"render_lobbies_info": "Render preview images for Spine assets in the spinelobbies category",
+		"render_background": "Render Other Spine Assets",
+		"render_background_info": "Render preview images for Spine assets in the spinebackground category",
 		"max_workers": "Max Workers",
-		"max_workers_info": "Number of mod files processed simultaneously.\n\nIncreasing the number increases processing speed but increases memory usage.",
+		"max_workers_info": "Number of parallel threads for batch tasks (batch update / batch preview rendering, etc.).\nIncreasing the number improves processing speed but increases memory and CPU usage.",
 		"character_id_map": "Character ID Map",
 		"character_id_map_info": "Character ID to name mapping table, used to display actual character names for files.",
 		"character_index_column": "Index Column",
@@ -206,8 +214,16 @@
 			"match_no": "CRC Match: ❌ No",
 			"correction_failed_file_not_generated": "CRC Correction failed. The final file \"{name}\" could not be generated."
 		},
-		"spine": {},
+		"spine": {
+			"version_conflict_header": "The following .skel files have a Spine version inconsistent with the target version ({major_minor}.x) and have been rejected:",
+			"version_conflict_item": "  - {name} (source version {source})",
+			"version_conflict_hint": "Please check the Spine converter settings."
+		},
 		"report_open_prompt": "Report generated!\nOpen the report file?",
+		"batch_preview_open_prompt": "Batch rendering complete!\nSucceeded {rendered} / {total} groups. Open the output directory?",
+		"batch_preview": {
+			"no_category": "Please select at least one category to render."
+		},
 		"search": {
 			"check_file_exists": "Please check if \"{path}\" exists.",
 			"no_matching_files_in_dir": "No matching files found in the specified directory.",
@@ -326,6 +342,8 @@
 			"skel_conversion_failed": "Skel conversion failed",
 			"skel_detected": "Detected .skel file: {name}",
 			"version_mismatch_converting": "Spine version mismatch detected (Current {current}, Target {target}). Converting.",
+			"version_mismatch_no_convert": "Spine version mismatch detected (current {current}, target {target}) and the Spine converter is not enabled.",
+			"version_conflict_rejected": "Detected {count} .skel version conflicts, replacement rejected",
 			"converting_atlas": "Converting Atlas: {name}",
 			"version_detected_downgrading": "Detected Spine version: {version}. Attempting downgrade...",
 			"atlas_downgrade_success": "Atlas downgrade successful",
@@ -392,6 +410,12 @@
 			"no_mod_found": "No mod files found",
 			"saved": "Report saved to: {path}",
 			"success": "Report generated successfully, {count} mods"
+		},
+		"batch_preview": {
+			"scan_start": "Starting batch render scan",
+			"no_spine_found": "No Spine assets found",
+			"group_count": "Found {count} Spine asset groups to render",
+			"render_count": "Batch rendering complete: {count} / {total} groups succeeded"
 		},
 		"section": {
 			"extract_to_temp": "Extract resources to temp directory",
@@ -464,6 +488,7 @@
 		"replace_original": "You can now press the \"{button}\" button to overwrite the original file",
 		"generated_file_not_found": "Operation reported success, but the generated file was not found in the output directory.",
 		"replace_resource_failed": "Error replacing resource [{type}] {name}: {error}",
+		"replace_applied": "Replaced [{type}] {name}",
 		"replace_skipped_same_content": "Skipped replacement for [{type}] {name}: content identical to original",
 		"platform_info": "Target Platform: {platform} (Unity {version})",
 		"unnamed_resource": "Unnamed {type} asset",
@@ -525,6 +550,11 @@
 			"backup": {
 				"title": "Backup Mods",
 				"info": "Copy all detected mod files in the game directory to the specified backup directory, preserving the original directory structure."
+			},
+			"batch_preview": {
+				"title": "Batch Render Previews",
+				"info": "Render preview images for all Spine assets (character art, memory lobby, Spine backgrounds) in the specified game resource directory, not limited to mod files. Output to the batch_preview subdirectory of the output directory.",
+				"game_dir": "Game Resource Directory"
 			}
 		},
 		"settings": {
@@ -532,7 +562,10 @@
 			"button_text": "Settings",
 			"group_save": "Save Settings",
 			"group_assets": "Asset Options",
-			"group_spine": "Spine Tool Settings",
+			"group_skel_converter": "Skel Converter",
+			"group_spine_viewer": "SpineViewer",
+			"group_bacii": "Character Names",
+			"group_performance": "Performance",
 			"group_app": "App Settings",
 			"group_paths": "Path Settings",
 			"group_adb": "ADB Settings",
@@ -604,7 +637,7 @@
 			"target_crc": "Target CRC Value",
 			"mod_info": "About Mod Detection"
 		},
-		"log_area": "Log Area",
+		"log_area": "Log",
 		"status_label": "Status: ",
 		"file_list": {
 			"window_title": "Bundle File List",
@@ -615,6 +648,7 @@
 				"modified_time": "Modified Time",
 				"trailing_bytes": "Trailing Bytes",
 				"trailing_content": "Trailing Content",
+				"category": "Category",
 				"core": "Core",
 				"character": "Character Name",
 				"res_type": "Resource Type",
