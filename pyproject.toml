@@ -1,6 +1,6 @@
 [project]
 name = "BA-Modding-Toolkit"
-version = "2.9.0"
+version = "2.9.1"
 description = "更新、移植、修复碧蓝档案mod的工具集 | Updating&Porting&Fixing Mods for Blue Archive"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,6 +20,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv.sources]
+spineatlas = { git = "https://github.com/Agent-0808/SpineAtlas.git", rev = "fix/bounds-not-first" }
 
 [project.scripts]
 bamt = "ba_modding_toolkit.gui.main:main"

@@ -49,7 +49,7 @@ wheels = [
 
 [[package]]
 name = "ba-modding-toolkit"
-version = "2.9.0b2"
+version = "2.9.1"
 source = { editable = "." }
 dependencies = [
     { name = "pillow" },
@@ -69,7 +69,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pillow", specifier = ">=10.4.0" },
-    { name = "spineatlas", specifier = ">=1.0.13" },
+    { name = "spineatlas", git = "https://github.com/Agent-0808/SpineAtlas.git?rev=fix%2Fbounds-not-first" },
     { name = "tkinterdnd2", specifier = ">=0.4.3" },
     { name = "toml", specifier = ">=0.10.2" },
     { name = "ttkbootstrap", specifier = ">=1.10.1" },
@@ -380,14 +380,10 @@ wheels = [
 [[package]]
 name = "spineatlas"
 version = "1.0.13"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/Agent-0808/SpineAtlas.git?rev=fix%2Fbounds-not-first#cfe70061f3c85c32722c72840edab876f23c4e25" }
 dependencies = [
     { name = "attrs" },
     { name = "pillow" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/da/f0/d29e1cbc17deb5050ee5bab810943ad84894d49e5e2e87367b030729dae9/spineatlas-1.0.13.tar.gz", hash = "sha256:f672ad893e7ff8c339babcde516bc3b79961545d5ae3fc8123c481cd3ccbafbd", size = 10060, upload-time = "2026-01-25T17:59:04.495Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/9c/b63642b0e268e532b87f219934625692842015b7972c5bf73c50670b85db/spineatlas-1.0.13-py3-none-any.whl", hash = "sha256:c5f105f7a546751d3789e0561cd7fd4b8abb4de426a3289758de4cc36366bf2a", size = 9155, upload-time = "2026-01-25T17:59:03.43Z" },
 ]
 
 [[package]]
