@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Literal, ParamSpec, TypeVar
 
-from .i18n import i18n_manager, t
 
 # Windows 下隐藏子进程的控制台窗口（避免Nuitka打包后弹出terminal）
 CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -322,6 +321,7 @@ def get_environment_info(ignore_tk: bool = False):
 
     import platform
     import sys
+    from .i18n import i18n_manager
 
     def _is_admin():
         if sys.platform == 'win32':
