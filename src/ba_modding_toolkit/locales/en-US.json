@@ -199,7 +199,7 @@
 			"load_target_bundle_failed": "Unable to load target Bundle file, even after attempting to remove potential CRC patches. Please check if the file is corrupted.",
 			"no_supported_files_found": "No supported files ({extensions}) found in the specified folder.",
 			"no_matching_assets_to_pack": "No assets with matching names found for packing.",
-			"process_complete": "Processing complete!\nSuccessfully packed {count} assets.\n\nThe file has been saved to the working directory. You can now click the \"{button}\" button to apply changes."
+			"process_complete": "Processing complete!\nSuccessfully packed {count} files.\n\nThe file has been saved to the output directory. You can now click the \"{button}\" button to apply changes."
 		},
 		"crc": {
 			"provide_at_least_one_file": "Please provide at least one file path.",

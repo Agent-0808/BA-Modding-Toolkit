@@ -199,7 +199,7 @@
 			"load_target_bundle_failed": "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。",
 			"no_supported_files_found": "在指定文件夹中没有找到任何支持的文件 ({extensions})。",
 			"no_matching_assets_to_pack": "没有找到任何名称匹配的资源进行打包。",
-			"process_complete": "处理完成！\n成功打包 {count} 个资源。\n\n文件已保存至工作目录，现在可以点击“{button}”按钮应用更改。"
+			"process_complete": "处理完成！\n成功打包 {count} 个文件。\n\n文件已保存至输出目录，现在可以点击“{button}”按钮应用更改。"
 		},
 		"crc": {
 			"provide_at_least_one_file": "请至少提供一个文件路径。",
