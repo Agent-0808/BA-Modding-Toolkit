@@ -362,7 +362,7 @@ class SettingsDialog(tb.Toplevel):
             open_directory(cache_dir, self.app.logger.log, create_if_not_exist=True)
         else:
             # 打开默认缓存目录
-            default_dir = self.app.exe_dir / "adb_cache"
+            default_dir = self.app.exe_dir / "Addons" / "adb_cache"
             default_dir.mkdir(parents=True, exist_ok=True)
             open_directory(default_dir, self.app.logger.log)
 

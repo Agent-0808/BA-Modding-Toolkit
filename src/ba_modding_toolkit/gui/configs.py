@@ -117,7 +117,7 @@ class ConfigMixin:
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
     adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
-    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "adb_cache"))]
+    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "Addons" / "adb_cache"))]
 
     # --- 配置变量反射机制 ---
 

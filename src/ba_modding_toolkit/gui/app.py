@@ -390,8 +390,8 @@ class App(tb.Frame, ConfigMixin):
         self._adb_index = ADBFileIndex(self._adb_manager)
         cache_dir = self.adb_cache_dir_var.get()
         if not cache_dir:
-            # 默认缓存路径：程序根目录/adb_cache
-            cache_dir = str(self.exe_dir / "adb_cache")
+            # 默认缓存路径：程序根目录/Addons/adb_cache
+            cache_dir = str(self.exe_dir / "Addons" / "adb_cache")
             self.adb_cache_dir_var.set(cache_dir)
         self._adb_cache = ADBCache(Path(cache_dir))
         self._local_source = LocalFileSource()
