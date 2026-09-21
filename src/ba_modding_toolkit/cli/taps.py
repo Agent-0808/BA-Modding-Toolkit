@@ -18,7 +18,7 @@ class BaseTap(Tap):
         self._underscores_to_dashes = True
 
 
-class UpdateTap(Tap):
+class UpdateTap(BaseTap):
     """Update命令的参数解析器 - 用于更新或移植Mod。"""
 
     # 基本参数
@@ -45,6 +45,7 @@ class UpdateTap(Tap):
     strategy: MatchStrategy = 'path_id'  # Match strategy for cross-version migration.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Update or port a Mod, migrating assets from old Mod(s) to new Bundle(s).
 
 Examples:
@@ -64,11 +65,9 @@ Examples:
   # Enable Spine skeleton conversion
   bamt-cli update "old.bundle" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class PackTap(Tap):
+class PackTap(BaseTap):
     """Pack命令的参数解析器 - 用于资源打包。"""
 
     # 基本参数
@@ -87,6 +86,7 @@ class PackTap(Tap):
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Pack contents from an asset folder into target bundle files.
 
 Examples:
@@ -99,11 +99,9 @@ Examples:
   # Pack with Spine conversion
   bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class CrcTap(Tap):
+class CrcTap(BaseTap):
     """CRC命令的参数解析器 - 用于CRC修正工具。"""
 
     # 基本参数
@@ -122,6 +120,7 @@ class CrcTap(Tap):
     region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan). Search only runs when --resource-dir/--region is explicitly provided.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
 Fix mode OVERWRITES the input file and will NOT output at "output/" directory.
 
@@ -141,11 +140,9 @@ Examples:
   # Calculate CRC and additionally compare with the same-name file in the game directory
   bamt-cli crc "my_mod.bundle" --check --resource-dir "C:\\path\\to\\game_data"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class ExtractTap(Tap):
+class ExtractTap(BaseTap):
     """Extract命令的参数解析器 - 用于从Bundle中提取资源。"""
 
     # 基本参数
@@ -164,6 +161,7 @@ class ExtractTap(Tap):
     unpack_atlas: bool = False  # Unpack Atlas into individual PNG frames while keeping the original files.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Extract assets from Unity Bundle files.
 
 Examples:
@@ -182,17 +180,16 @@ Examples:
   # Extract with unpack mode for atlas files
   bamt-cli extract "bundle.bundle" --unpack-atlas
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class EnvTap(Tap):
+class EnvTap(BaseTap):
     """Env命令的参数解析器 - 用于显示环境信息。"""
 
     def configure(self) -> None:
+        super().configure()
         self.description = 'Display system information and library versions of the current environment.'
 
-class BatchUpdateTap(Tap):
+class BatchUpdateTap(BaseTap):
     """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
 
     # 基本参数
@@ -218,6 +215,7 @@ class BatchUpdateTap(Tap):
     max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Batch update multiple Mod files, migrating assets from old Mods to new game bundles.
 
 This command scans the input directory for .bundle files, automatically finds corresponding
@@ -236,11 +234,9 @@ Examples:
   # Enable Spine conversion
   bamt-cli batch-update "C:\\path\\to\\old_mods\\" --skel-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class ReportTap(Tap):
+class ReportTap(BaseTap):
     """Report命令的参数解析器 - 用于生成Mod列表报告。"""
 
     # 基本参数
@@ -263,6 +259,7 @@ class ReportTap(Tap):
     max_workers: int = 1  # Number of parallel worker threads for Spine preview rendering (1 = sequential).
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Generate a report of all modded bundle files in the game directory.
 
 Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
@@ -284,11 +281,9 @@ Examples:
   # Use a different CSV column as the lookup key
   bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --index-column "student_id" --name-field "name_en"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class BatchPreviewTap(Tap):
+class BatchPreviewTap(BaseTap):
     """Batch-preview命令的参数解析器 - 用于批量渲染Spine预览图。"""
 
     # 基本参数
@@ -305,6 +300,7 @@ class BatchPreviewTap(Tap):
     max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Batch render Spine preview images for all Spine resources in the game directory.
 
 Note: This command renders ALL Spine resources (not limited to modded files),
@@ -323,11 +319,9 @@ Examples:
   # Render with 4 parallel workers
   bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --max-workers 4
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class BackupTap(Tap):
+class BackupTap(BaseTap):
     """Backup命令的参数解析器 - 用于备份Mod文件。"""
 
     output_dir: Path = Path('./output/backup/')  # Directory to save the backup files.
@@ -336,6 +330,7 @@ class BackupTap(Tap):
     yes: bool = False  # Automatically confirm clearing the existing backup directory.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Backup all modded bundle files from the game directory.
 
 Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
@@ -351,11 +346,9 @@ Examples:
   # Auto-confirm clearing existing backup directory
   bamt-cli backup --yes
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class ParseTap(Tap):
+class ParseTap(BaseTap):
     """Parse命令的参数解析器 - 用于解析Bundle文件名。"""
 
     # 基本参数
@@ -367,6 +360,7 @@ class ParseTap(Tap):
     name_field: str = "full_name"  # Character name field to display.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Parse BA bundle filename(s) and print the parsed components.
 
 Examples:
@@ -379,8 +373,6 @@ Examples:
   # Resolve character name from the BACII mapping
   bamt-cli parse "ch0001_spr.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
 class MainTap(BaseTap):
