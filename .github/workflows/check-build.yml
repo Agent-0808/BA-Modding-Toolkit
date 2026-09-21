@@ -80,7 +80,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path "publish" -Force
           Copy-Item -Path "build/BA-Modding-Toolkit.exe" -Destination "publish/"
-          Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
+        # Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
         shell: powershell
 
       # 上传测试版 Artifact
