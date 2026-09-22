@@ -12,9 +12,6 @@
 
 # BA Modding Toolkit
 
-> [!NOTE]
-> English Translations are available now. If you find any errors or have any suggestions, please feel free to submit an issue or pull request.
-
 [简体中文](README_zh-CN.md) | English
 
 A toolkit based on UnityPy for automating the creation and updating of Blue Archive/ブルーアーカイブ mods.
@@ -114,6 +111,16 @@ A reference table that records the mapping between in-game character names and t
 > The packaged version downloaded from Releases already includes a copy of the data file (`BA-Characters-Internal-ID.csv`) in the `Addons/` subdirectory next to the executable, ready to use out of the box. You can also download the latest version manually in the Settings interface.
 >
 > The data file is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) (see `Addons/BA-Characters-Internal-ID-LICENSE.txt` for the full notice). The data is compiled from the text data of [KivoWiki](https://kivo.wiki) and is used in this program only for fair purposes such as displaying character names.
+
+## Language Support
+
+The development language of this project is **zh-CN**, and the currently maintained language is **en-US**.
+
+During the Beta stage, we only guarantee the completeness of **zh-CN** content; texts for other languages may not be updated promptly when new content is added. We will gradually supplement and improve the maintained languages before the official release. If you find any errors in the existing language content, feel free to point them out via Issue or PR.
+
+If you want to add a language yourself, you can create a `locales` folder next to the EXE file and put the new language file in it (e.g. `new-LANG.json`). The program will load external language files from that directory.
+
+If you are interested in adding a new language, PRs are welcome. However, due to limited maintenance capacity, newly added languages will most likely not be actively maintained afterwards — your understanding is appreciated.
 
 ## Command Line Interface (CLI)
 
