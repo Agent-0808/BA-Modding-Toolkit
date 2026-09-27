@@ -20,7 +20,6 @@ class TestAssetExtraction:
         success, msg = process_asset_extraction(
             bundle_path=sample_bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract={"Texture2D"},
         )
         
         assert success is True, msg
@@ -39,7 +38,6 @@ class TestAssetExtraction:
         success, msg = process_asset_extraction(
             bundle_path=sample_bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract={"TextAsset"},
         )
         
         assert success is True, msg
@@ -51,7 +49,6 @@ class TestAssetExtraction:
         success, msg = process_asset_extraction(
             bundle_path=sample_bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract={"Texture2D", "TextAsset"},
         )
         
         assert success is True, msg
@@ -62,7 +59,6 @@ class TestAssetExtraction:
         success, msg = process_asset_extraction(
             bundle_path=sample_bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract={"Texture2D"},
         )
         
         assert success is True
@@ -76,7 +72,6 @@ class TestAssetExtraction:
         success, msg = process_asset_extraction(
             bundle_path=sample_bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract={"TextAsset", "Texture2D"},
             enable_unpack_atlas=True,
         )
         

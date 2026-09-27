@@ -166,15 +166,6 @@ class AssetExtractorTab(TabFrame):
         else:
             final_output_path = output_path
             
-        asset_types = self.app.get_asset_types()
-        # 提取链路不支持 "ALL" 占位符，需展开为具体类型
-        if 'ALL' in asset_types:
-            asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
-        
-        if not asset_types:
-            messagebox.showwarning(t("common.tip"), t("message.missing_asset_type"))
-            return
-            
         unpack_atlas = self.app.unpack_atlas_var.get()
 
         # 校验 SpineViewer 路径（启用预览渲染时）
@@ -188,9 +179,9 @@ class AssetExtractorTab(TabFrame):
                 messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
                 return
 
-        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, asset_types, unpack_atlas)
+        self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, unpack_atlas)
 
-    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, asset_types: set[str], unpack_atlas=False):
+    def run_extraction(self, bundle_paths: list[Path], output_dir: Path, unpack_atlas=False):
         self.logger.status(t("status.extracting"))
 
         spine_options = self.app.build_spine_options(upgrade_mode=False)
@@ -199,7 +190,6 @@ class AssetExtractorTab(TabFrame):
         success, message = core.process_asset_extraction(
             bundle_path=bundle_paths,
             output_dir=output_dir,
-            asset_types_to_extract=asset_types,
             spine_options=spine_options,
             enable_unpack_atlas=unpack_atlas,
             scale_atlas=scale_atlas,

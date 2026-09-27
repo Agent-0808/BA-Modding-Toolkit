@@ -9,6 +9,7 @@ from ..searching import find_target_bundles, search_prefix, list_bundle_files, g
 from ..core import (
     SaveOptions,
     SkelConvertOptions,
+    EXTRACTABLE_ASSET_TYPES,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
@@ -529,12 +530,7 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     # 确保基础输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 处理资源类型
-    asset_types = set(args.asset_types)
-    if 'ALL' in asset_types:
-        asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
-
-    logger.log(f"Specified asset extraction types: {', '.join(asset_types)}")
+    logger.log(f"Extracting all supported asset types: {', '.join(sorted(EXTRACTABLE_ASSET_TYPES))}")
     logger.log(f"Bundles to process: {len(valid_bundles)}")
     for bp in valid_bundles:
         logger.log(f"  - {bp.name}")
@@ -575,7 +571,6 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     success, message = process_asset_extraction(
         bundle_path=valid_bundles,
         output_dir=final_output_dir,
-        asset_types_to_extract=asset_types,
         spine_options=spine_options,
         enable_unpack_atlas=args.unpack_atlas,
         log=logger.log

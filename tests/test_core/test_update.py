@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ba_modding_toolkit.core import (
     process_mod_update,
-    process_asset_extraction,
+    _extract_assets_from_bundle,
     SaveOptions,
 )
 from ba_modding_toolkit.bundle import Bundle
@@ -95,12 +95,8 @@ class TestModUpdate:
         # 提取旧 Mod 的资源用于对比
         old_extract_dir = tmp_path / "old_extracted"
         old_extract_dir.mkdir()
-        
-        process_asset_extraction(
-            bundle_path=old_mod_bundle_paths[0],
-            output_dir=old_extract_dir,
-            asset_types_to_extract={"Texture2D"},
-        )
+
+        _extract_assets_from_bundle([old_mod_bundle_paths[0]], old_extract_dir, {"Texture2D"})
         
         output_dir = tmp_path / "output"
         output_dir.mkdir()
@@ -124,11 +120,7 @@ class TestModUpdate:
         updated_bundle = output_dir / new_original_bundle_paths[0].name
         new_extract_dir = tmp_path / "new_extracted"
         new_extract_dir.mkdir()
-        
-        process_asset_extraction(
-            bundle_path=updated_bundle,
-            output_dir=new_extract_dir,
-            asset_types_to_extract={"Texture2D", "TextAsset"},
-        )
+
+        _extract_assets_from_bundle([updated_bundle], new_extract_dir, {"Texture2D", "TextAsset"})
         
         compare_directory_assets(old_extract_dir, new_extract_dir, MSE_THRESHOLD)

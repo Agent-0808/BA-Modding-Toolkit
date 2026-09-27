@@ -56,10 +56,13 @@ def _format_skel_conflicts(conflicts: list[SkelVersionConflict]) -> str:
 
 # ====== 资源处理相关 ======
 
+# 提取器支持的资源类型（公开提取接口默认全量提取）
+EXTRACTABLE_ASSET_TYPES = {"Texture2D", "TextAsset", "Mesh", "AnimationClip"}
+
 def _extract_assets_from_bundle(
     bundle_paths: list[Path],
     work_dir: Path,
-    asset_types_to_extract: set[ReplaceAssetType],
+    asset_types_to_extract: set[str],
     log: LogFunc = no_log,
 ) -> dict[AssetType, list[Path]]:
     """
@@ -68,7 +71,7 @@ def _extract_assets_from_bundle(
     Args:
         bundle_paths: bundle 文件路径列表
         work_dir: 工作目录（临时目录）
-        asset_types_to_extract: 需要提取的资源类型集合（字符串形式）
+        asset_types_to_extract: 需要提取的资源类型名称集合（字符串形式）
         log: 日志记录函数
     
     Returns:
@@ -78,7 +81,8 @@ def _extract_assets_from_bundle(
     extracted_files: dict[AssetType, list[Path]] = {
         AssetType.TextAsset: [],
         AssetType.Texture2D: [],
-        AssetType.Mesh: []
+        AssetType.Mesh: [],
+        AssetType.AnimationClip: []
     }
     
     for bundle_file in bundle_paths:
@@ -112,6 +116,9 @@ def _extract_assets_from_bundle(
                     dest_path = work_dir / f"{resource_name}.mesh.bytes"
                     mesh_bytes = obj.get_raw_data()
                     dest_path.write_bytes(mesh_bytes)
+                elif obj.type == AssetType.AnimationClip:
+                    dest_path = work_dir / f"{resource_name}.animationclip.dat"
+                    dest_path.write_bytes(obj.get_raw_data())
                 
                 if dest_path:
                     log(f"  - {dest_path.name}")
@@ -359,21 +366,19 @@ def process_asset_packing(
 def process_asset_extraction(
     bundle_path: Path | list[Path],
     output_dir: Path,
-    asset_types_to_extract: set[ReplaceAssetType],
     spine_options: SkelConvertOptions | None = None,
     enable_unpack_atlas: bool = False,
     scale_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
-    从指定的 Bundle 文件中提取选定类型的资源到输出目录。
-    支持 Texture2D (保存为 .png) 和 TextAsset (按原名保存)。
+    从指定的 Bundle 文件中提取全部支持的资源类型到输出目录（见 EXTRACTABLE_ASSET_TYPES）。
+    支持 Texture2D (保存为 .png)、TextAsset (按原名保存)、Mesh (.mesh.bytes)、AnimationClip (.animationclip.dat)。
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
 
     Args:
         bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
-        asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
         spine_options: Spine资源转换的选项。
         unpack_atlas: 是否解包Atlas为单独的PNG帧（同时保留原文件）。
         log: 日志记录函数。
@@ -392,7 +397,7 @@ def process_asset_extraction(
             log(t("log.extractor.starting_extraction_num", num=len(bundle_paths)))
             for bp in bundle_paths:
                 log(f"  - {bp.name}")
-        log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
+        log(t("log.extractor.extraction_types", types=', '.join(sorted(EXTRACTABLE_ASSET_TYPES))))
         log(f"{t('option.output_dir')}: {output_dir}")
 
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -405,7 +410,7 @@ def process_asset_extraction(
             # ========== 阶段 1: 提取资源 ==========
             log(f'\n--- {t("log.section.extract_to_temp")} ---')
             extracted_files = _extract_assets_from_bundle(
-                bundle_paths, work_dir, asset_types_to_extract, log
+                bundle_paths, work_dir, EXTRACTABLE_ASSET_TYPES, log
             )
             
             # 统计提取数量
