@@ -113,9 +113,8 @@ def _extract_assets_from_bundle(
                     dest_path = work_dir / f"{resource_name}.png"
                     data.image.convert("RGBA").save(dest_path)
                 elif obj.type == AssetType.Mesh:
-                    dest_path = work_dir / f"{resource_name}.mesh.bytes"
-                    mesh_bytes = obj.get_raw_data()
-                    dest_path.write_bytes(mesh_bytes)
+                    dest_path = work_dir / f"{resource_name}.mesh.dat"
+                    dest_path.write_bytes(obj.get_raw_data())
                 elif obj.type == AssetType.AnimationClip:
                     dest_path = work_dir / f"{resource_name}.animationclip.dat"
                     dest_path.write_bytes(obj.get_raw_data())
