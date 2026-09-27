@@ -21,9 +21,10 @@ from .models import (
     LogFunc, PatchResult, ReplaceAssetType,
     MatchStrategy, SaveOptions, SkelConvertOptions, AnimCheckOptions,
     AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
-    REPLACEABLE_ASSET_TYPES
+    RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
+from .naming import DUMP_FILE_EXTENSIONS, DUMP_TYPE_EXTENSIONS, parse_typed_dump_name
 from .searching import find_target_bundles
 
 
@@ -136,10 +137,11 @@ def process_asset_packing(
 ) -> tuple[bool, str, list[FilePair]]:
     """
     从指定文件夹或文件列表中，将同名的资源打包到一个或多个目标 Bundle 中。
-    支持 .png, .skel, .atlas 文件。
+    支持 .png, .skel, .atlas 以及带类型标记的 dump 文件（.dat或 .bytes）。
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
-    - .mesh.bytes 文件将替换同名的 Mesh 资源 (文件名格式为 {name}.mesh.bytes)。
+    - .{type}.bytes / .{type}.dat dump 文件将替换同名的对应类型资源，
+      如 {name}.mesh.bytes / {name}.mesh.dat 替换 Mesh，{name}.animationclip.dat 替换 AnimationClip。
     可选地升级 Spine 动画的 Skel 资源版本。
     可选地对 PNG 文件进行 Bleed 处理。
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
@@ -152,7 +154,7 @@ def process_asset_packing(
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
-        enable_rename_fix: 是否启用旧版 Spine 3.8 文件名修正
+        enable_rename_fix: 是否启用旧版 Spine 3 文件名修正
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
         skip_unchanged: 是否跳过未变化的文件
         log: 日志记录函数，默认为空函数
@@ -164,7 +166,7 @@ def process_asset_packing(
         # 1. 从所有资源路径中收集输入文件
         patch: Patch = {}
         skel_conflicts: list[SkelVersionConflict] = []
-        supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
+        supported_extensions = {".png", ".skel", ".atlas"} | DUMP_FILE_EXTENSIONS
         input_files: list[Path] = []
         
         for asset_path in asset_paths:
@@ -234,11 +236,22 @@ def process_asset_packing(
                     if conflict:
                         skel_conflicts.append(conflict)
                         continue
-            elif suffix == ".bytes" and file_path.name.endswith(".mesh.bytes"):
-                resource_name = file_path.name.removesuffix(".mesh.bytes")
-                asset_key = NameTypeKey(resource_name, AssetType.Mesh.name)
+            elif suffix in DUMP_FILE_EXTENSIONS:
+                parsed = parse_typed_dump_name(file_path.name)
+                if parsed is None:
+                    supported_dump = ', '.join(
+                        f'{{name}}.{ext}{file_ext}'
+                        for ext in DUMP_TYPE_EXTENSIONS for file_ext in DUMP_FILE_EXTENSIONS
+                    )
+                    raise ValueError(
+                        f"Cannot determine asset type from '{file_path.name}'. "
+                        f"Dump files must be named as: {supported_dump}"
+                    )
+                resource_name, asset_type = parsed
+                asset_key = NameTypeKey(resource_name, asset_type.name)
                 with open(file_path, "rb") as f:
-                    content = f.read()
+                    # 标记为 raw dump 内容，apply_patch 走 set_raw_data 原样替换
+                    content = RawAssetBytes(f.read())
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             patch[asset_key] = content
@@ -260,6 +273,10 @@ def process_asset_packing(
                 original_filenames[NameTypeKey(f.stem, AssetType.Texture2D.name)] = f.name
             elif s in {'.skel', '.atlas'}:
                 original_filenames[NameTypeKey(f.name, AssetType.TextAsset.name)] = f.name
+            elif s in DUMP_FILE_EXTENSIONS:
+                parsed = parse_typed_dump_name(f.name)
+                if parsed:
+                    original_filenames[NameTypeKey(parsed[0], parsed[1].name)] = f.name
 
         strategy_name = 'name_type'
 

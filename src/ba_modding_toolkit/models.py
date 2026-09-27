@@ -35,6 +35,9 @@ AssetKey = str | int | NameTypeKey | ContNameTypeKey
 # 资源的具体内容，可以是字节数据、PIL图像或None
 AssetContent = bytes | Image.Image | None  
 
+class RawAssetBytes(bytes):
+    """标记 raw dump 内容（完整序列化对象字节），apply_patch 走 set_raw_data 原样替换"""
+
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]
 

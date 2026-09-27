@@ -1,7 +1,8 @@
 import pytest
 from pathlib import Path
 
-from ba_modding_toolkit.naming import get_category_prefix, parse_filename
+from ba_modding_toolkit.models import AssetType
+from ba_modding_toolkit.naming import get_category_prefix, parse_filename, parse_typed_dump_name
 from ba_modding_toolkit.searching import search_prefix, search_core
 
 from conftest import (
@@ -79,6 +80,47 @@ class TestParseFilename:
         assert parsed.date == "2088-07-07"
         assert parsed.crc == "87654321"
         assert parsed.prefix.startswith("uis-09_common-99_minigame-cardgame")
+
+
+class TestTypedDumpName:
+    def test_parse_mesh_bytes(self):
+        name, asset_type = parse_typed_dump_name("ch0001_body.mesh.bytes")
+        assert name == "ch0001_body"
+        assert asset_type == AssetType.Mesh
+
+    def test_parse_texture2d_dat(self):
+        name, asset_type = parse_typed_dump_name("ch0001_body.texture2d.dat")
+        assert name == "ch0001_body"
+        assert asset_type == AssetType.Texture2D
+
+    def test_parse_animationclip_dat(self):
+        name, asset_type = parse_typed_dump_name("xxx.anim.animationclip.dat")
+        assert name == "xxx.anim"
+        assert asset_type == AssetType.AnimationClip
+
+    def test_parse_textasset_dat(self):
+        name, asset_type = parse_typed_dump_name("some_text.textasset.dat")
+        assert name == "some_text"
+        assert asset_type == AssetType.TextAsset
+
+    def test_parse_case_insensitive(self):
+        name, asset_type = parse_typed_dump_name("Body.Mesh.DAT")
+        assert name == "Body"
+        assert asset_type == AssetType.Mesh
+
+    def test_parse_invalid_returns_none(self):
+        assert parse_typed_dump_name("plain.dat") is None
+        assert parse_typed_dump_name("no_second_ext.bytes") is None
+        assert parse_typed_dump_name("foo.unknown.dat") is None
+        assert parse_typed_dump_name("onlyname") is None
+
+    def test_parse_filename_strips_dump_ext(self):
+        """parse_filename 对 dump 散件应剥离二级扩展名，保证 core 与资源名一致"""
+        parsed = parse_filename("ch0001_body.mesh.dat")
+        assert parsed.core == "ch0001_body"
+
+        parsed_bytes = parse_filename("ch0001_body.mesh.bytes")
+        assert parsed_bytes.core == "ch0001_body"
 
     def test_parse_filename_no_type(self):
         filename = "assets-_mx-category-corename-2024-01-01_11111111.bundle"
