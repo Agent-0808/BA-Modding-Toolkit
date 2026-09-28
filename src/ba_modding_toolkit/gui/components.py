@@ -1276,7 +1276,7 @@ class FileListbox:
             multiple=True,
             callback=lambda paths: self.add_files(paths),
             log=self.logger.log if self.logger else None,
-            parent=self
+            parent=self.frame
         )
 
     def _browse_add_folder(self):
@@ -1284,7 +1284,7 @@ class FileListbox:
         folder = select_directory(
             title = t("action.add_folder"),
             log = self.logger.log if self.logger else None,
-            parent = self
+            parent = self.frame
             )
 
         if folder:
