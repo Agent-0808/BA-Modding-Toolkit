@@ -514,6 +514,13 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.replace_mesh_info")
         )
 
+        SettingRow.create_switch(
+            section,
+            label=t("option.replace_animationclip"),
+            variable=self.app.replace_animationclip_var,
+            tooltip=t("option.replace_animationclip_info")
+        )
+
     def _init_skel_converter_settings(self):
         """初始化 Skel 转换器设置"""
         section = self._create_section(t("ui.settings.group_skel_converter"))

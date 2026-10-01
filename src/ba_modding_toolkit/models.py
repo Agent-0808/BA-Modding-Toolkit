@@ -53,7 +53,7 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
 
 # 资源类型名（ALL 表示全部支持类型）
-ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "ALL"]
+ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "AnimationClip", "ALL"]
 
 KeyFunc = Callable[[Obj], AssetKey]
 

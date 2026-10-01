@@ -78,6 +78,7 @@ class ConfigMixin:
     replace_texture2d_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_textasset_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_mesh_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
+    replace_animationclip_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_all_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", False)]
     
     # SpineConverter
