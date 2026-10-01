@@ -21,9 +21,10 @@ from .models import (
     LogFunc, PatchResult, ReplaceAssetType,
     MatchStrategy, SaveOptions, SkelConvertOptions, AnimCheckOptions,
     AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
-    REPLACEABLE_ASSET_TYPES
+    RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
 from .bundle import Bundle
+from .naming import DUMP_FILE_EXTENSIONS, DUMP_TYPE_EXTENSIONS, parse_typed_dump_name
 from .searching import find_target_bundles
 
 
@@ -55,10 +56,13 @@ def _format_skel_conflicts(conflicts: list[SkelVersionConflict]) -> str:
 
 # ====== 资源处理相关 ======
 
+# 提取器支持的资源类型（公开提取接口默认全量提取）
+EXTRACTABLE_ASSET_TYPES = {"Texture2D", "TextAsset", "Mesh", "AnimationClip"}
+
 def _extract_assets_from_bundle(
     bundle_paths: list[Path],
     work_dir: Path,
-    asset_types_to_extract: set[ReplaceAssetType],
+    asset_types_to_extract: set[str],
     log: LogFunc = no_log,
 ) -> dict[AssetType, list[Path]]:
     """
@@ -67,7 +71,7 @@ def _extract_assets_from_bundle(
     Args:
         bundle_paths: bundle 文件路径列表
         work_dir: 工作目录（临时目录）
-        asset_types_to_extract: 需要提取的资源类型集合（字符串形式）
+        asset_types_to_extract: 需要提取的资源类型名称集合（字符串形式）
         log: 日志记录函数
     
     Returns:
@@ -77,7 +81,8 @@ def _extract_assets_from_bundle(
     extracted_files: dict[AssetType, list[Path]] = {
         AssetType.TextAsset: [],
         AssetType.Texture2D: [],
-        AssetType.Mesh: []
+        AssetType.Mesh: [],
+        AssetType.AnimationClip: []
     }
     
     for bundle_file in bundle_paths:
@@ -108,9 +113,11 @@ def _extract_assets_from_bundle(
                     dest_path = work_dir / f"{resource_name}.png"
                     data.image.convert("RGBA").save(dest_path)
                 elif obj.type == AssetType.Mesh:
-                    dest_path = work_dir / f"{resource_name}.mesh.bytes"
-                    mesh_bytes = obj.get_raw_data()
-                    dest_path.write_bytes(mesh_bytes)
+                    dest_path = work_dir / f"{resource_name}.mesh.dat"
+                    dest_path.write_bytes(obj.get_raw_data())
+                elif obj.type == AssetType.AnimationClip:
+                    dest_path = work_dir / f"{resource_name}.animationclip.dat"
+                    dest_path.write_bytes(obj.get_raw_data())
                 
                 if dest_path:
                     log(f"  - {dest_path.name}")
@@ -136,10 +143,11 @@ def process_asset_packing(
 ) -> tuple[bool, str, list[FilePair]]:
     """
     从指定文件夹或文件列表中，将同名的资源打包到一个或多个目标 Bundle 中。
-    支持 .png, .skel, .atlas 文件。
+    支持 .png, .skel, .atlas 以及带类型标记的 dump 文件（.dat或 .bytes）。
     - .png 文件将替换同名的 Texture2D 资源 (文件名不含后缀)。
     - .skel 和 .atlas 文件将替换同名的 TextAsset 资源 (文件名含后缀)。
-    - .mesh.bytes 文件将替换同名的 Mesh 资源 (文件名格式为 {name}.mesh.bytes)。
+    - .{type}.bytes / .{type}.dat dump 文件将替换同名的对应类型资源，
+      如 {name}.mesh.bytes / {name}.mesh.dat 替换 Mesh，{name}.animationclip.dat 替换 AnimationClip。
     可选地升级 Spine 动画的 Skel 资源版本。
     可选地对 PNG 文件进行 Bleed 处理。
     此函数将生成的文件保存在工作目录中，以便后续进行"覆盖原文件"操作。
@@ -152,7 +160,7 @@ def process_asset_packing(
         output_dir: 输出目录，用于保存生成的更新后文件
         save_options: 保存和CRC修正的选项
         spine_options: Spine资源升级的选项
-        enable_rename_fix: 是否启用旧版 Spine 3.8 文件名修正
+        enable_rename_fix: 是否启用旧版 Spine 3 文件名修正
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
         skip_unchanged: 是否跳过未变化的文件
         log: 日志记录函数，默认为空函数
@@ -164,7 +172,7 @@ def process_asset_packing(
         # 1. 从所有资源路径中收集输入文件
         patch: Patch = {}
         skel_conflicts: list[SkelVersionConflict] = []
-        supported_extensions = {".png", ".skel", ".atlas", ".bytes"}
+        supported_extensions = {".png", ".skel", ".atlas"} | DUMP_FILE_EXTENSIONS
         input_files: list[Path] = []
         
         for asset_path in asset_paths:
@@ -234,11 +242,22 @@ def process_asset_packing(
                     if conflict:
                         skel_conflicts.append(conflict)
                         continue
-            elif suffix == ".bytes" and file_path.name.endswith(".mesh.bytes"):
-                resource_name = file_path.name.removesuffix(".mesh.bytes")
-                asset_key = NameTypeKey(resource_name, AssetType.Mesh.name)
+            elif suffix in DUMP_FILE_EXTENSIONS:
+                parsed = parse_typed_dump_name(file_path.name)
+                if parsed is None:
+                    supported_dump = ', '.join(
+                        f'{{name}}.{ext}{file_ext}'
+                        for ext in DUMP_TYPE_EXTENSIONS for file_ext in DUMP_FILE_EXTENSIONS
+                    )
+                    raise ValueError(
+                        f"Cannot determine asset type from '{file_path.name}'. "
+                        f"Dump files must be named as: {supported_dump}"
+                    )
+                resource_name, asset_type = parsed
+                asset_key = NameTypeKey(resource_name, asset_type.name)
                 with open(file_path, "rb") as f:
-                    content = f.read()
+                    # 标记为 raw dump 内容，apply_patch 走 set_raw_data 原样替换
+                    content = RawAssetBytes(f.read())
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             patch[asset_key] = content
@@ -260,6 +279,10 @@ def process_asset_packing(
                 original_filenames[NameTypeKey(f.stem, AssetType.Texture2D.name)] = f.name
             elif s in {'.skel', '.atlas'}:
                 original_filenames[NameTypeKey(f.name, AssetType.TextAsset.name)] = f.name
+            elif s in DUMP_FILE_EXTENSIONS:
+                parsed = parse_typed_dump_name(f.name)
+                if parsed:
+                    original_filenames[NameTypeKey(parsed[0], parsed[1].name)] = f.name
 
         strategy_name = 'name_type'
 
@@ -342,21 +365,19 @@ def process_asset_packing(
 def process_asset_extraction(
     bundle_path: Path | list[Path],
     output_dir: Path,
-    asset_types_to_extract: set[ReplaceAssetType],
     spine_options: SkelConvertOptions | None = None,
     enable_unpack_atlas: bool = False,
     scale_atlas: bool = False,
     log: LogFunc = no_log,
 ) -> tuple[bool, str]:
     """
-    从指定的 Bundle 文件中提取选定类型的资源到输出目录。
-    支持 Texture2D (保存为 .png) 和 TextAsset (按原名保存)。
+    从指定的 Bundle 文件中提取全部支持的资源类型到输出目录（见 EXTRACTABLE_ASSET_TYPES）。
+    支持 Texture2D (保存为 .png)、TextAsset (按原名保存)、Mesh (.mesh.bytes)、AnimationClip (.animationclip.dat)。
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
 
     Args:
         bundle_path: 目标 Bundle 文件的路径，可以是单个 Path 或 Path 列表。
         output_dir: 提取资源的保存目录。
-        asset_types_to_extract: 需要提取的资源类型集合 (如 {"Texture2D", "TextAsset"})。
         spine_options: Spine资源转换的选项。
         unpack_atlas: 是否解包Atlas为单独的PNG帧（同时保留原文件）。
         log: 日志记录函数。
@@ -375,7 +396,7 @@ def process_asset_extraction(
             log(t("log.extractor.starting_extraction_num", num=len(bundle_paths)))
             for bp in bundle_paths:
                 log(f"  - {bp.name}")
-        log(t("log.extractor.extraction_types", types=', '.join(asset_types_to_extract)))
+        log(t("log.extractor.extraction_types", types=', '.join(sorted(EXTRACTABLE_ASSET_TYPES))))
         log(f"{t('option.output_dir')}: {output_dir}")
 
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -388,7 +409,7 @@ def process_asset_extraction(
             # ========== 阶段 1: 提取资源 ==========
             log(f'\n--- {t("log.section.extract_to_temp")} ---')
             extracted_files = _extract_assets_from_bundle(
-                bundle_paths, work_dir, asset_types_to_extract, log
+                bundle_paths, work_dir, EXTRACTABLE_ASSET_TYPES, log
             )
             
             # 统计提取数量

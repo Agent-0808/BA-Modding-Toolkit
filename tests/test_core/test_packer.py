@@ -6,7 +6,7 @@ import shutil
 
 from ba_modding_toolkit.core import (
     process_asset_packing,
-    process_asset_extraction,
+    _extract_assets_from_bundle,
     SaveOptions,
 )
 from ba_modding_toolkit.bundle import Bundle
@@ -63,12 +63,8 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        process_asset_extraction(
-            bundle_path=packed_bundles,
-            output_dir=extract_dir,
-            asset_types_to_extract={"Texture2D"}
-        )
-        
+        _extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D"})
+
         extracted_png = extract_dir / sample_image_path.name
         if extracted_png.exists():
             extracted_img = Image.open(extracted_png)
@@ -113,19 +109,13 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        success, msg = process_asset_extraction(
-            bundle_path=packed_bundles,
-            output_dir=extract_dir,
-            asset_types_to_extract={"TextAsset", "Texture2D"}
-        )
-        
-        assert success is True, msg
-        
+        _extract_assets_from_bundle(packed_bundles, extract_dir, {"TextAsset"})
+
         extracted_skel = extract_dir / sample_skel_path.name
         assert extracted_skel.exists()
         extracted_skel_content = extracted_skel.read_bytes()
         assert extracted_skel_content == original_skel_content
-        
+
         extracted_atlas = extract_dir / sample_atlas_path.name
         assert extracted_atlas.exists()
         extracted_atlas_content = extracted_atlas.read_bytes()
@@ -173,14 +163,8 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
         
-        success, msg = process_asset_extraction(
-            bundle_path=packed_bundles,
-            output_dir=extract_dir,
-            asset_types_to_extract={"Texture2D", "TextAsset"}
-        )
-        
-        assert success is True, msg
-        
+        _extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D", "TextAsset"})
+
         extracted_png = extract_dir / sample_image_path.name
         assert extracted_png.exists()
         
@@ -198,6 +182,36 @@ class TestAssetPacking:
         assert extracted_atlas.exists()
         extracted_atlas_content = extracted_atlas.read_bytes()
         assert extracted_atlas_content == original_atlas_content
+
+    def test_pack_plain_bytes_rejected(
+        self,
+        sample_bundle_paths: list[Path],
+        tmp_path: Path,
+    ):
+        """没有类型标记二级扩展名的 .bytes/.dat 文件应报错并终止流程"""
+        asset_folder = tmp_path / "assets"
+        asset_folder.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        (asset_folder / "unknown_name.bytes").write_bytes(b"\x00\x01\x02")
+        (asset_folder / "plain_dump.dat").write_bytes(b"\x03\x04\x05")
+
+        save_options = SaveOptions(perform_crc=False, compression="none")
+
+        success, msg, file_pairs = process_asset_packing(
+            target_bundle_path=sample_bundle_paths,
+            assets=[asset_folder],
+            output_dir=output_dir,
+            save_options=save_options,
+        )
+
+        assert success is False
+        # 流程在遇到第一个非法文件名时终止，错误消息应包含该文件名
+        assert any(
+            name in msg for name in ("unknown_name.bytes", "plain_dump.dat")
+        ), msg
+        assert not list(output_dir.glob("*.bundle")), "报错时不应产生任何输出"
 
 
 @pytest.mark.skipif(
@@ -238,11 +252,7 @@ class TestLegacyRenameAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        process_asset_extraction(
-            bundle_path=packed_bundles[0],
-            output_dir=extract_dir,
-            asset_types_to_extract={"Texture2D", "TextAsset"},
-        )
+        _extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"Texture2D"})
 
         # 获取 Bundle 中期望的 Texture2D 名称
         bundle = Bundle.load(packed_bundles[0])
@@ -283,20 +293,12 @@ class TestLegacyRenameAssetPacking:
         # 但提取打包后的 bundle，PNG 数据应与原始 bundle 相同（未被替换）
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
-        process_asset_extraction(
-            bundle_path=file_pairs[0].output,
-            output_dir=extract_dir,
-            asset_types_to_extract={"Texture2D"},
-        )
+        _extract_assets_from_bundle([file_pairs[0].output], extract_dir, {"Texture2D"})
 
         # 从原始 bundle 提取 PNG 作对比
         original_extract_dir = tmp_path / "original"
         original_extract_dir.mkdir()
-        process_asset_extraction(
-            bundle_path=spine_new_bundle_path[0],
-            output_dir=original_extract_dir,
-            asset_types_to_extract={"Texture2D"},
-        )
+        _extract_assets_from_bundle([spine_new_bundle_path[0]], original_extract_dir, {"Texture2D"})
 
         # 打包后的 PNG 数据应与原始 bundle 的 PNG 数据一致（未被替换）
         for orig_png in original_extract_dir.glob("*.png"):
@@ -331,11 +333,7 @@ class TestLegacyRenameAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        process_asset_extraction(
-            bundle_path=packed_bundles[0],
-            output_dir=extract_dir,
-            asset_types_to_extract={"TextAsset"},
-        )
+        _extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"TextAsset"})
 
         for atlas_file in extract_dir.glob("*.atlas"):
             content = atlas_file.read_text(encoding='utf-8')

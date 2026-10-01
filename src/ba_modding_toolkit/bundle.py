@@ -20,7 +20,7 @@ from .models import (
     CompressionType, PatchResult, ReplaceAssetType,
     SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
     BundleFileInfo, ProgressCallback, SkelVersionConflict,
-    REPLACEABLE_ASSET_TYPES
+    RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
 
 
@@ -406,7 +406,10 @@ class Bundle:
                     matched_keys.append(asset_key)
                     resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
                     
-                    if obj.type == AssetType.Texture2D:
+                    # raw dump 内容（RawAssetBytes）：原样替换整个对象的序列化数据，优先于类型特定分支
+                    if isinstance(content, RawAssetBytes):
+                        obj.set_raw_data(content)
+                    elif obj.type == AssetType.Texture2D:
                         content: Image.Image
                         new_image = content
                         if (data.image.mode == new_image.mode

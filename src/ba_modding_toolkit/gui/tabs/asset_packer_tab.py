@@ -27,7 +27,7 @@ class AssetPackerTab(TabFrame):
             file_list=self.asset_paths,
             placeholder_text=t("ui.packer.placeholder_assets"),
             height=5,
-            allowed_suffixes={".png", ".skel", ".atlas", ".bytes"},
+            allowed_suffixes={".png", ".skel", ".atlas", ".bytes", ".dat"},
             logger=self.logger,
             on_files_added=self._on_assets_added
         )

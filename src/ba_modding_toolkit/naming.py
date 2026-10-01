@@ -3,7 +3,7 @@
 import csv
 import re
 from pathlib import Path
-from .models import ParsedFilename
+from .models import AssetType, ParsedFilename
 
 # -------- 文件名解析常量 --------
 
@@ -25,6 +25,37 @@ RESOURCE_TYPES_NUM = {
     '000', '001', '002', '003', '004', '005', '006', '007', '008', '009',
     '010', '011', '012', '013', '014', '015', '016', '017', '018', '019',
 }
+
+# 带类型标记的 dump 文件二级扩展名 → 资源类型（如 {name}.mesh.bytes / {name}.mesh.dat / {name}.animationclip.dat）
+# raw dump 内容统一走 set_raw_data 原样替换，要求 dump 字节为该类型的合法序列化数据且流数据内联（无外部 .resS 引用）
+DUMP_TYPE_EXTENSIONS: dict[str, AssetType] = {
+    'texture2d': AssetType.Texture2D,
+    'mesh': AssetType.Mesh,
+    'animationclip': AssetType.AnimationClip,
+    'textasset': AssetType.TextAsset,
+}
+
+# dump 文件允许的末级扩展名
+DUMP_FILE_EXTENSIONS = {'.bytes', '.dat'}
+
+
+def parse_typed_dump_name(filename: str) -> tuple[str, AssetType] | None:
+    """解析 {name}.{type}.{bytes|dat} 形式的 dump 文件名。
+
+    Args:
+        filename: 文件名字符串
+
+    Returns:
+        (资源名, 资源类型)；文件名不符合带类型标记的 dump 命名时返回 None
+    """
+    stem = filename.rsplit('.', 1)[0]
+    idx = stem.rfind('.')
+    if idx == -1:
+        return None
+    asset_type = DUMP_TYPE_EXTENSIONS.get(stem[idx + 1:].lower())
+    if asset_type is None:
+        return None
+    return stem[:idx], asset_type
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
@@ -72,6 +103,11 @@ def parse_filename(filename: str) -> ParsedFilename:
     # 1. 提取 CRC（从右向左切片）
     crc = ""
     stem = filename.rsplit('.', 1)[0]
+    # 剥离带类型标记的二级扩展名（如 .mesh.bytes / .animationclip.dat），使 core 与资源名一致
+    for ext in DUMP_TYPE_EXTENSIONS:
+        if stem.lower().endswith('.' + ext):
+            stem = stem[:-len(ext) - 1]
+            break
     crc_idx = stem.rfind('_')
     if crc_idx != -1:
         candidate_crc = stem[crc_idx + 1:]

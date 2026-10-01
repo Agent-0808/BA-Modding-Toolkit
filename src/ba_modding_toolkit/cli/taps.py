@@ -33,7 +33,7 @@ class UpdateTap(BaseTap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip']  # List of asset types to replace.
     compression: CompressionType = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
@@ -150,9 +150,6 @@ class ExtractTap(BaseTap):
     output_dir: Path = Path('./output/')  # Base directory to save the extracted assets.
     subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
 
-    # 资源类型参数
-    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
-
     # Spine转换参数
     skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine downgrade is enabled when provided.
     target_spine_version: str = '3.8.75'  # Target Spine version for downgrade (e.g., "3.8.75").
@@ -203,7 +200,7 @@ class BatchUpdateTap(BaseTap):
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip']  # List of asset types to replace.
     compression: CompressionType = 'lzma'  # Compression method.
 
     # Spine转换参数
