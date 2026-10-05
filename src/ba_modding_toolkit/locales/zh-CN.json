@@ -517,7 +517,8 @@
 		"backup": {
 			"start": "开始备份 Mod",
 			"found_mods": "发现 {count} 个 mod 文件",
-			"copying": "正在备份 ({current}/{total}): {filename}",
+			"companion_checking": "正在检查关联 textassets：{filename}",
+			"companion_matched": "发现需补充备份的 textassets：{filename}",
 			"done": "备份完成，共 {count} 个文件"
 		}
 	},

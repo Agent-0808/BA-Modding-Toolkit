@@ -19,7 +19,7 @@ from ..models import SaveOptions, SkelConvertOptions
 from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
-from ..bundle import analyze_trailing
+from ..bundle import analyze_trailing, find_textasset_companions
 from ..report import generate_mod_report, render_all_spine_previews, RENDER_CATEGORIES
 from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
 
@@ -765,6 +765,12 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
     if not mod_files:
         logger.log("❌ No modded files found.")
         return
+
+    # 2.5 Detect spine textassets companions to include (png-only mods leave textassets untouched)
+    companions = find_textasset_companions(mod_files, items, game_dir, logger.log)
+    if companions:
+        logger.log(f"Including {len(companions)} companion textassets bundle(s).")
+        mod_files.extend(companions)
 
     logger.log(f"Found {len(mod_files)} modded file(s).")
 

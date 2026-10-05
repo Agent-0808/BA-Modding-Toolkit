@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...searching import list_bundle_files
-from ...bundle import analyze_trailing
+from ...bundle import analyze_trailing, find_textasset_companions
 from ...utils import throttle_progress
 from ..utils import open_directory
 from ..components import SettingRow, UIComponents
@@ -168,6 +168,14 @@ class BackupDialog(StoppableDialog):
             self.after(0, lambda: self.backup_button.config(state=tk.NORMAL))
             return
 
+        # 2.5 检测需要补充备份的 spine textassets（直接改 png 的 mod 不会包含 textassets）
+        companions = find_textasset_companions(
+            mod_files, items, game_path,
+            log=self.app.logger.log, should_stop=self.should_stop,
+        )
+        if companions:
+            mod_files.extend(companions)
+
         self.app.logger.log(t("log.backup.found_mods", count=len(mod_files)))
 
         # 3. 复制 mod 文件到备份目录
@@ -189,11 +197,6 @@ class BackupDialog(StoppableDialog):
 
             # 复制文件（保留元数据）
             shutil.copy2(source_path, dest_path)
-
-            # 记录日志
-            self.app.logger.log(
-                t("log.backup.copying", current=i + 1, total=mod_total, filename=rel_path.name)
-            )
 
             # 更新进度
             self.after(0, lambda idx=i+1, tot=mod_total, name=rel_path.name:

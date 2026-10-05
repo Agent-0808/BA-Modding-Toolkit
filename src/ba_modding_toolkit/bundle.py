@@ -13,7 +13,7 @@ from PIL import Image
 from .i18n import t
 from .utils import CRCUtils, no_log, throttle_progress
 from .spine import SkelConverter, check_skel_animation_diff
-from .naming import parse_filename
+from .naming import RESOURCE_TYPES_NUM, parse_filename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
@@ -599,3 +599,89 @@ def analyze_bundles(
         for analyzer in analyzers:
             analyzer(item)
         progress_callback(i + 1, total, item.path.name)
+
+
+# 需要补充备份 textassets 的 Spine 相关分类（立绘 / 记忆大厅 / Spine 背景）
+SPINE_MOD_CATEGORIES = {"spinecharacters", "spinelobbies", "spinebackground"}
+
+# 同 prefix 候选的 res_type 初筛：JP 格式的 textassets + 现代格式的数字编码（类型需从内容判断）
+_TEXTASSET_CANDIDATE_RES_TYPES = {"textassets"} | RESOURCE_TYPES_NUM
+
+
+def find_textasset_companions(
+    mod_files: list[Path],
+    items: list[BundleFileInfo],
+    game_dir: Path,
+    log: LogFunc = no_log,
+    should_stop: Callable[[], bool] | None = None,
+) -> list[Path]:
+    """查找需要随 mod 一并补充备份的 textassets bundle。
+
+    直接修改 png 的 spine mod 不会改动对应的 textassets bundle（无 trailing bytes，
+    不会被 trailing 检测识别为 mod），但游戏更新后新版 textassets 会与已修改的贴图
+    失配（atlas 切分信息存于 textassets 中）。备份当前的 textassets 后，重新打包
+    一次即可恢复。
+
+    以 prefix 对 mod 文件聚类：组内不含 textassets 类型的 mod 文件、且分类属于
+    Spine 相关时，在游戏主目录中查找同 prefix 且实际包含 TextAsset 资产的 bundle，
+    纳入备份列表。
+
+    Args:
+        mod_files: 已检测出的 mod 文件路径列表
+        items: 全量 bundle 扫描结果（候选查找来源）
+        game_dir: 游戏资源主目录（仅在该目录范围内查找）
+        log: 日志记录函数
+        should_stop: 可选的停止检查函数，返回 True 时中止查找
+
+    Returns:
+        需要补充备份的 textassets bundle 路径列表
+    """
+    # 1. 按 prefix 聚类 mod 文件
+    grouped: dict[str, list[ParsedFilename]] = {}
+    for path in mod_files:
+        parsed = parse_filename(path.name)
+        grouped.setdefault(parsed.prefix, []).append(parsed)
+
+    mod_set = set(mod_files)
+
+    # 2. 一次遍历建立 prefix → 候选 索引（仅游戏主目录、非 mod 文件，res_type 初筛），
+    #    避免逐组重复解析全部文件名
+    candidates_by_prefix: dict[str, list[tuple[Path, ParsedFilename]]] = {}
+    for item in items:
+        path = item.path
+        if path in mod_set or not path.is_relative_to(game_dir):
+            continue
+        parsed = parse_filename(path.name)
+        if parsed.res_type not in _TEXTASSET_CANDIDATE_RES_TYPES:
+            continue
+        candidates_by_prefix.setdefault(parsed.prefix, []).append((path, parsed))
+
+    companions: list[Path] = []
+    for prefix, parsed_list in grouped.items():
+        if should_stop and should_stop():
+            break
+        # 组内已有 textassets 类型的 mod 文件则无需补充
+        if any(p.res_type == "textassets" for p in parsed_list):
+            continue
+        # 仅处理 Spine 相关分类
+        if not any(p.category in SPINE_MOD_CATEGORIES for p in parsed_list):
+            continue
+
+        for path, parsed in candidates_by_prefix.get(prefix, ()):
+            if should_stop and should_stop():
+                return companions
+
+            # 3. JP 命名格式的文件名已明确标注 textassets，直接纳入（避免逐个完整加载）
+            #    数字编码格式无法从文件名判断类型，才加载内容确认包含 TextAsset 资产
+            if parsed.res_type != "textassets":
+                log(t("log.backup.companion_checking", filename=path.name))
+                bundle = Bundle.load(path, log)
+                if bundle is None:
+                    continue
+                if not any(obj.type == AssetType.TextAsset for obj in bundle.env.objects):
+                    continue
+                log(t("log.backup.companion_matched", filename=path.name))
+
+            companions.append(path)
+
+    return companions
