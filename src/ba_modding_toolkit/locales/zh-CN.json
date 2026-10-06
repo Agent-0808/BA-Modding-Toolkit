@@ -79,7 +79,7 @@
 		"replace_mesh": "Mesh",
 		"replace_mesh_info": "3D 模型文件",
 		"replace_animationclip": "AnimationClip",
-		"replace_animationclip_info": "动画片段资源",
+		"replace_animationclip_info": "3D 模型的动画片段资源",
 		"replace_all": "ALL",
 		"replace_all_info": "替换所有类型资源\n测试性，不建议启用",
 		"spine_conversion": "启用 Spine 版本转换",

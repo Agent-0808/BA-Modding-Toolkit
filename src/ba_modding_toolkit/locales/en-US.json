@@ -78,6 +78,8 @@
 		"replace_textasset_info": ".skel and .atlas files, related to Spine animations.",
 		"replace_mesh": "Mesh",
 		"replace_mesh_info": "3D model files.",
+		"replace_animationclip": "AnimationClip",
+		"replace_animationclip_info": "Animation for models",
 		"replace_all": "ALL",
 		"replace_all_info": "Replaces resources of all types.\nExperimental, not recommended.",
 		"spine_conversion": "Enable Spine Version Conversion",
@@ -515,8 +517,9 @@
 		"backup": {
 			"start": "Starting mod backup",
 			"found_mods": "Found {count} mod files",
-			"copying": "Backing up ({current}/{total}): {filename}",
-			"done": "Backup complete, {count} files"
+			"done": "Backup complete, {count} files",
+			"companion_checking": "Checking associated textassets: {filename}",
+			"companion_matched": "Found associated textassets that need backup: {filename}"
 		}
 	},
 	"ui": {
