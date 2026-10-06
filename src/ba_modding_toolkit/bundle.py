@@ -447,6 +447,11 @@ class Bundle:
                         data.m_Script = content.decode("utf-8", "surrogateescape")
                         data.save()
                     else:
+                        # raw 类型（AnimationClip/Mesh 等）：内容相同则跳过，避免无效重存
+                        if obj.get_raw_data() == content:
+                            self.log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
+                            skipped_count += 1
+                            continue
                         obj.set_raw_data(content)
                     
                     applied_count += 1
