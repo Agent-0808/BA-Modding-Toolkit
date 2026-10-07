@@ -3,7 +3,7 @@
     <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/99332127fc5478e227a37d60bad12074c9472992/docs/title.png?raw=true/>
   </p>
   <p>
-    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <a href="https://www.gnu.org/licenses/gpl-3.0"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPL--3.0-orange.svg"></a>
     <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
     <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
@@ -95,6 +95,9 @@ This tool can communicate with Android devices. You can configure the path of `a
 
 - This feature requires an Android device to be connected and authorized for this program to access.
 - After setting the path to `adb.exe`, select the target Android device and corresponding file source in the "Settings" window.
+
+> [!TIP]
+> Check out the [ADB-Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/ADB-Usage) Page for detailed instructions.
 
 ## Subproject
 

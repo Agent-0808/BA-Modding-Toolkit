@@ -3,7 +3,7 @@
     <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/99332127fc5478e227a37d60bad12074c9472992/docs/title.png?raw=true/>
   </p>
   <p>
-    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <a href="https://www.gnu.org/licenses/gpl-3.0"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPL--3.0-orange.svg"></a>
     <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
     <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
@@ -95,6 +95,9 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 - 该功能需要您已连接 Android 设备，并且已授权该程序访问您的设备。
 - 设置 `adb.exe` 程序的路径后，在“设置”窗口内选择目标 Android 设备与对应的文件来源即可。
+
+> [!TIP]
+> 请查看 [ADB 使用方法](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/ADB%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95) 页面参考详细用法说明。
 
 ## 子项目
 
