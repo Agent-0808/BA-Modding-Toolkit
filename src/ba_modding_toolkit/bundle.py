@@ -1,12 +1,13 @@
 # bundle.py
 
+import re
 import traceback
 from functools import cached_property
 from pathlib import Path
 from typing import Callable
 
 import UnityPy
-from UnityPy.files import SerializedFile
+from UnityPy.files import File as UnityFile, SerializedFile
 from UnityPy.environment import Environment as Env
 from PIL import Image
 
@@ -22,6 +23,60 @@ from .models import (
     BundleFileInfo, ProgressCallback, SkelVersionConflict,
     RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
+
+# 对象序列化数据中的流式引用 basename（m_StreamData.path / m_Resource.m_Source，如 CAB-xxx.resS）
+STREAM_REF_PATTERN = re.compile(rb"[A-Za-z0-9_\-]+\.(?:resS|resource)")
+
+# 流引用完整路径前缀 archive:/<SerializedFile名>/，<SF名> 为包含该对象的内部 SerializedFile 名
+STREAM_REF_PREFIX_PATTERN = re.compile(rb"archive:/([A-Za-z0-9_\-]+)/(?=[A-Za-z0-9_\-]+\.(?:resS|resource))")
+
+
+def find_stream_refs(data: bytes) -> set[str]:
+    """提取序列化数据中引用的附属流文件名（.resS/.resource）"""
+    return {m.decode() for m in STREAM_REF_PATTERN.findall(data)}
+
+
+def rewrite_stream_ref_prefixes(data: bytes, target_cab: str, log: LogFunc = no_log) -> bytes:
+    """把流引用路径中的 SerializedFile 名段改写为目标 bundle 的 SF 名
+
+    'archive:/<SF名>/<resS名>' 的 <SF名> 必须与目标 bundle 的 SerializedFile 名一致，
+    游戏运行时才能解析（raw 替换内容残留源 bundle 的 SF 名，halo 等流式资源在游戏内不可见；
+    UnityPy 按 basename 兜底解析，因此仅靠 UnityPy 层测试不会暴露此问题）。
+    源/目标 SF 名均为 32 位 hex（等长），直接字节替换不影响序列化布局；
+    长度不一致时保留原值并告警（回退 basename 解析）。
+    """
+    dst = target_cab.encode()
+    result = data
+    for src in {m.group(1) for m in STREAM_REF_PREFIX_PATTERN.finditer(data)}:
+        if src == dst:
+            continue
+        if len(src) != len(dst):
+            log(f'  > ⚠️ {t("log.stream_prefix_skip", src=src.decode(), dst=target_cab)}')
+            continue
+        result = result.replace(b"archive:/" + src + b"/", b"archive:/" + dst + b"/")
+    return result
+
+
+def collect_stream_companions(raw: bytes, env_file: UnityFile) -> dict[str, bytes] | None:
+    """按 raw 内容中的引用 basename 从 bundle 内部文件收集附属流文件
+
+    引用藏在对象 raw 字节内而非序列化引用表，必须按内容匹配收集，
+    不能按 bundle 初始文件列表快照（二次提取需携带历史 companion）。
+
+    Returns:
+        {basename: 字节}；引用了 bundle 内不存在的文件时返回 None（悬空引用）
+    """
+    refs = find_stream_refs(raw)
+    if not refs:
+        return {}
+    files = {name: f for name, f in env_file.files.items() if not hasattr(f, "objects")}
+    companions: dict[str, bytes] = {}
+    for ref in refs:
+        entry = files.get(ref)
+        if entry is None:
+            return None
+        companions[ref] = entry.bytes
+    return companions
 
 
 class Bundle:
@@ -78,6 +133,30 @@ class Bundle:
     def is_empty(self) -> bool:
         """检查 Bundle 是否为空（不包含任何文件）"""
         return len(self.env.files) == 0
+
+    @cached_property
+    def sf_name(self) -> str:
+        """内部 SerializedFile 名（bundle 内唯一，如 CAB-xxxx）"""
+        return next(n for n, f in self.env.file.files.items() if hasattr(f, "objects"))
+
+    def install_raw_content(self, content: RawAssetBytes) -> RawAssetBytes:
+        """把 raw 替换内容安装进本 bundle：写入 companion 附属流文件并改写流引用前缀
+
+        - companion：使内嵌的 .resS/.resource 引用在目标 bundle 内闭合。
+          约束：多份 .resS 并存是设计要求（目标自己的与各代 companion 的分别服务不同对象）；
+          任何"清理未使用条目"优化不得将无序列化引用的 .resS 当孤儿删除
+          引用内嵌于对象 raw 字节，常规引用分析不可见，误删会破坏已分发的 mod。
+        - 前缀改写：流引用路径 archive:/<SF名>/ 的 <SF名> 段必须匹配本 bundle，否则游戏运行时无法解析。
+        """
+        for companion_name, companion_bytes in content.companions.items():
+            if companion_name in self.env.file.files:
+                self.log(f'  > ⏭️ {t("log.replace_companion_exists", name=companion_name)}')
+            else:
+                self.env.file.get_writeable_cab(companion_name).write(companion_bytes)
+        rewritten = rewrite_stream_ref_prefixes(content, self.sf_name, self.log)
+        if rewritten != content:
+            return RawAssetBytes(rewritten, content.companions)
+        return content
     
     # -------- 匹配策略相关 --------
     
@@ -408,7 +487,7 @@ class Bundle:
                     
                     # raw dump 内容（RawAssetBytes）：原样替换整个对象的序列化数据，优先于类型特定分支
                     if isinstance(content, RawAssetBytes):
-                        obj.set_raw_data(content)
+                        obj.set_raw_data(self.install_raw_content(content))
                     elif obj.type == AssetType.Texture2D:
                         content: Image.Image
                         new_image = content
@@ -455,7 +534,12 @@ class Bundle:
                         obj.set_raw_data(content)
                     
                     applied_count += 1
-                    self.log(f'  ✅ {t("log.replace_applied", type=obj.type.name, name=resource_name)}')
+                    # 有 companion 随行时在成功行内追加，便于排查流式资源丢失类问题
+                    companion_note = (
+                        f" ({t('log.replace_companion_attached', names=', '.join(content.companions))})"
+                        if isinstance(content, RawAssetBytes) and content.companions else ""
+                    )
+                    self.log(f'  ✅ {t("log.replace_applied", type=obj.type.name, name=resource_name)}{companion_note}')
                     key_display = str(asset_key)
                     log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
                     applied_assets_log.append(log_message)
@@ -530,7 +614,15 @@ class Bundle:
                     else:
                         content: bytes = asset_bytes
                 elif replace_all or obj.type.name in asset_types_to_replace:
-                    content: bytes = obj.get_raw_data()
+                    raw = obj.get_raw_data()
+                    companions = collect_stream_companions(raw, self.env.file)
+                    if companions is None:
+                        # 流引用悬空（如历史版本 raw 替换遗留的坏数据）：
+                        # 替换会把坏引用带进目标导致资源损坏，拒绝提取该对象
+                        self.log(f"  > ⚠️ {t('log.extractor.stream_ref_dangling', name=resource_name)}")
+                        continue
+                    # 有流引用时附带 companion 随 patch 走，apply 侧写入目标 bundle
+                    content: bytes = RawAssetBytes(raw, companions) if companions else raw
                 
                 if content is not None:
                     patch[asset_key] = content

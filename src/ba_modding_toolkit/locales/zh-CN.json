@@ -450,7 +450,9 @@
 			"using_temp_dir": "使用临时目录: {path}",
 			"skipping_unnamed": "跳过一个未命名的 {type} 资源",
 			"extraction_failed": "提取资源 {name} 时发生错误: {error}",
-			"processing_file": "正在处理：{name}"
+			"processing_file": "正在处理：{name}",
+			"stream_ref_dangling": "跳过提取 [{name}]：序列化数据引用了 bundle 内不存在的流数据文件（.resS），替换将导致资源损坏",
+			"stream_ref_export_unsupported": "跳过导出 [{name}]：含 .resS 流式引用的资源暂不支持导出为可重打包的 dump"
 		},
 		"mod_update": {
 			"all_processes_complete": "全部流程处理完成！共处理 {count} 个资源。",
@@ -492,6 +494,9 @@
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
 		"replace_applied": "已替换 [{type}] {name}",
 		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
+		"replace_companion_exists": "附属流文件 {name} 已存在，跳过附加",
+		"replace_companion_attached": "companion: {names}",
+		"stream_prefix_skip": "流引用前缀 {src} 与目标 SF 名 {dst} 长度不一致，跳过改写",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "未命名的 {type} 资源",
 		"adb": {
