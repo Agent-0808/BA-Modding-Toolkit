@@ -10,24 +10,23 @@ Bundle文件I/O测试
 
 import pytest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.models import SaveOptions
 from ba_modding_toolkit.utils import CRCUtils
-from conftest import has_sample_bundle
 
+if TYPE_CHECKING:
+    from conftest import SampleCase
 
-@pytest.mark.skipif(
-    not has_sample_bundle(),
-    reason="sample.bundle IS REQUIRED"
-)
+# 案例数据缺失时 conftest 参数化为空参数集，测试自动跳过
 class TestLoadBundle:
-    def test_load_bundle_basic(self, sample_bundle_path: Path):
-        bundle = Bundle.load(sample_bundle_path)
+    def test_load_bundle_basic(self, sample_case: "SampleCase"):
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
 
-    def test_load_bundle_read_assets(self, sample_bundle_path: Path):
-        bundle = Bundle.load(sample_bundle_path)
+    def test_load_bundle_read_assets(self, sample_case: "SampleCase"):
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         asset_count = 0
@@ -44,15 +43,11 @@ class TestLoadBundle:
         assert bundle is None
 
 
-@pytest.mark.skipif(
-    not has_sample_bundle(),
-    reason="sample.bundle IS REQUIRED"
-)
 class TestSaveBundle:
     def test_save_without_crc(
-        self, sample_bundle_path: Path, tmp_path: Path
+        self, sample_case: "SampleCase", tmp_path: Path
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         output_path = tmp_path / "output_no_crc.bundle"
@@ -68,9 +63,9 @@ class TestSaveBundle:
         assert actual_crc != 99999999
 
     def test_crc_fix_with_specific_target(
-        self, sample_bundle_path: Path, tmp_path: Path
+        self, sample_case: "SampleCase", tmp_path: Path
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         target_crc = 0xDEADBEEF
@@ -89,15 +84,11 @@ class TestSaveBundle:
         assert actual_crc == target_crc
 
 
-@pytest.mark.skipif(
-    not has_sample_bundle(),
-    reason="sample.bundle IS REQUIRED"
-)
 class TestExtraBytes:
     def test_save_with_extra_bytes(
-        self, sample_bundle_path: Path, tmp_path: Path
+        self, sample_case: "SampleCase", tmp_path: Path
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         target_crc = 87654321
@@ -120,9 +111,9 @@ class TestExtraBytes:
         assert output_data[-len(extra_bytes) - 4 : -4] == extra_bytes
 
     def test_save_with_extra_bytes_and_compression(
-        self, sample_bundle_path: Path, tmp_path: Path
+        self, sample_case: "SampleCase", tmp_path: Path
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         target_crc = 11223344
@@ -143,14 +134,10 @@ class TestExtraBytes:
         assert output_data[-len(extra_bytes) - 4 : -4] == extra_bytes
 
 
-@pytest.mark.skipif(
-    not has_sample_bundle(),
-    reason="sample.bundle IS REQUIRED"
-)
 class TestCompressBundle:
     @pytest.mark.parametrize("compression", ["lzma", "lz4", "none"])
-    def test_compress_bundle(self, sample_bundle_path: Path, compression: str):
-        bundle = Bundle.load(sample_bundle_path)
+    def test_compress_bundle(self, sample_case: "SampleCase", compression: str):
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         data = bundle.compress(compression)
@@ -159,9 +146,9 @@ class TestCompressBundle:
 
     @pytest.mark.parametrize("compression", ["lzma", "lz4", "none"])
     def test_full_roundtrip(
-        self, sample_bundle_path: Path, tmp_path: Path, compression: str
+        self, sample_case: "SampleCase", tmp_path: Path, compression: str
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         target_crc = 99887766
@@ -184,9 +171,9 @@ class TestCompressBundle:
 
     @pytest.mark.parametrize("compression", ["lzma", "lz4", "none"])
     def test_full_roundtrip_with_extra_bytes(
-        self, sample_bundle_path: Path, tmp_path: Path, compression: str
+        self, sample_case: "SampleCase", tmp_path: Path, compression: str
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         target_crc = 13579246
@@ -212,9 +199,9 @@ class TestCompressBundle:
         assert output_data[-len(extra_bytes) - 4 : -4] == extra_bytes
 
     def test_compression_lzma_smaller_than_none(
-        self, sample_bundle_path: Path, tmp_path: Path
+        self, sample_case: "SampleCase", tmp_path: Path
     ):
-        bundle = Bundle.load(sample_bundle_path)
+        bundle = Bundle.load(sample_case.bundle_paths[0])
         assert not bundle.is_empty()
         
         lzma_data = bundle.compress("lzma")

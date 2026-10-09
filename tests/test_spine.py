@@ -4,6 +4,8 @@ Spine 工具函数测试
 
 import pytest
 from pathlib import Path
+from typing import TYPE_CHECKING
+
 import shutil
 import SpineAtlas
 
@@ -17,7 +19,10 @@ from ba_modding_toolkit.spine import (
     )
 from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.models import NameTypeKey, AssetType
-from conftest import has_sample_skel, has_sample_atlas, has_spine_legacy_samples, file_list
+from conftest import find_all_files
+
+if TYPE_CHECKING:
+    from conftest import SampleCase, LegacyRenameCase
 
 
 # Bundle 中 Texture2D 的名称集合（不含后缀），模拟真实 bundle 场景
@@ -188,34 +193,26 @@ class TestGetSkelVersion:
         version = get_skel_version(b"")
         assert version is None
 
-    @pytest.mark.skipif(
-        not has_sample_skel(),
-        reason="sample.skel IS REQUIRED"
-    )
-    def test_get_version_from_file(self, sample_skel_path: Path):
+    def test_get_version_from_file(self, sample_case: "SampleCase"):
         """测试从文件中提取版本号"""
-        version = get_skel_version(sample_skel_path)
+        version = get_skel_version(sample_case.skel_path)
         assert version is not None
         assert "." in version
         assert len(version.split(".")) == 3
 
 
-@pytest.mark.skipif(
-    not has_sample_atlas(),
-    reason="sample.atlas IS REQUIRED"
-)
 class TestAtlasOperations:
     """测试 Atlas 相关操作"""
 
-    def test_process_atlas_downgrade(self, sample_atlas_path: Path, tmp_path: Path):
+    def test_process_atlas_downgrade(self, sample_case: "SampleCase", tmp_path: Path):
         """测试 atlas 降级处理"""
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
-        shutil.copy(sample_atlas_path, output_dir / sample_atlas_path.name)
+        shutil.copy(sample_case.atlas_path, output_dir / sample_case.atlas_path.name)
 
         atlas_downgrade(
-            sample_atlas_path, output_dir
+            sample_case.atlas_path, output_dir
         )
 
         files = list(output_dir.glob("*.atlas"))
@@ -223,27 +220,27 @@ class TestAtlasOperations:
         output_atlas = SpineAtlas.ReadAtlasFile(files[0])
         assert output_atlas.version == False # Spine 3
 
-    def test_unpack_atlas_frames(self, sample_atlas_path: Path, tmp_path: Path):
+    def test_unpack_atlas_frames(self, sample_case: "SampleCase", tmp_path: Path):
         """测试解包 atlas 帧"""
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
         # 读取 atlas 获取预期的帧名称
-        atlas = SpineAtlas.ReadAtlasFile(str(sample_atlas_path))
+        atlas = SpineAtlas.ReadAtlasFile(str(sample_case.atlas_path))
         expected_frame_names: set[str] = set()
         for tex in atlas.atlas:
             for frame in tex.frames:
                 expected_frame_names.add(frame.name)
 
         result = unpack_atlas(
-            sample_atlas_path, output_dir
+            sample_case.atlas_path, output_dir
         )
         assert result
 
         images_dir = output_dir / "images"
         assert images_dir.exists()
         assert images_dir.is_dir()
-        files = file_list(images_dir)
+        files = find_all_files(images_dir, "")
         assert len(files) > 1
         assert all(file.suffix == ".png" for file in files)
 
@@ -251,10 +248,6 @@ class TestAtlasOperations:
         actual_frame_names = {f.stem for f in files}
         assert actual_frame_names == expected_frame_names
 
-@pytest.mark.skipif(
-    not has_spine_legacy_samples(),
-    reason="spine/old_assets/ and spine/new_bundle/ ARE REQUIRED"
-)
 class TestLegacyRenameWithRealData:
     """使用真实 Spine 资产数据测试旧版文件名修正
 
@@ -262,10 +255,10 @@ class TestLegacyRenameWithRealData:
     """
 
     @pytest.fixture
-    def bundle_png_names(self, spine_new_bundle_dir: Path) -> set[str]:
+    def bundle_png_names(self, legacy_rename_case: "LegacyRenameCase") -> set[str]:
         """从真实 Bundle 中提取 Texture2D 名称"""
         names: set[str] = set()
-        for bundle_file in spine_new_bundle_dir.glob("*.bundle"):
+        for bundle_file in legacy_rename_case.bundle_paths:
             bundle = Bundle.load(bundle_file)
             if bundle:
                 for key in bundle.get_asset_keys(asset_types={AssetType.Texture2D}):
@@ -273,48 +266,48 @@ class TestLegacyRenameWithRealData:
                         names.add(key.name)
         return names
 
-    def test_old_assets_need_rename(self, spine_old_assets_dir: Path, bundle_png_names: set[str]):
+    def test_old_assets_need_rename(self, legacy_rename_case: "LegacyRenameCase", bundle_png_names: set[str]):
         """旧版磁盘文件与 Bundle 名称不匹配 → 需要重命名"""
         assert bundle_png_names, "Bundle 中未找到 Texture2D 资产"
-        assert check_legacy_rename_needed(spine_old_assets_dir, bundle_png_names) is True
+        assert check_legacy_rename_needed(legacy_rename_case.assets_dir, bundle_png_names) is True
 
-    def test_rename_old_png_to_match_bundle(self, spine_old_assets_dir: Path, bundle_png_names: set[str]):
+    def test_rename_old_png_to_match_bundle(self, legacy_rename_case: "LegacyRenameCase", bundle_png_names: set[str]):
         """旧版 PNG 被重命名为 Bundle 中的名称"""
         assert bundle_png_names, "Bundle 中未找到 Texture2D 资产"
 
-        result = normalize_legacy_assets(spine_old_assets_dir, bundle_png_names)
+        result = normalize_legacy_assets(legacy_rename_case.assets_dir, bundle_png_names)
 
         # Bundle 中应有带下划线的名称
         for name in bundle_png_names:
             assert (result / f"{name}.png").exists(), f"期望 {name}.png 存在"
 
         # 旧版名称不应存在（如果已被重命名）
-        old_stems = {f.stem for f in spine_old_assets_dir.iterdir() if f.suffix.lower() == '.png'}
+        old_stems = {f.stem for f in legacy_rename_case.assets_dir.iterdir() if f.suffix.lower() == '.png'}
         mapping = _build_rename_mapping(bundle_png_names, old_stems)
         for old_stem in mapping:
             assert not (result / f"{old_stem}.png").exists(), f"旧版 {old_stem}.png 不应存在"
 
-    def test_renamed_png_data_matches_original(self, spine_old_assets_dir: Path, bundle_png_names: set[str]):
+    def test_renamed_png_data_matches_original(self, legacy_rename_case: "LegacyRenameCase", bundle_png_names: set[str]):
         """重命名后的 PNG 数据应与原始文件一致"""
         assert bundle_png_names, "Bundle 中未找到 Texture2D 资产"
 
-        result = normalize_legacy_assets(spine_old_assets_dir, bundle_png_names)
+        result = normalize_legacy_assets(legacy_rename_case.assets_dir, bundle_png_names)
 
-        old_stems = {f.stem for f in spine_old_assets_dir.iterdir() if f.suffix.lower() == '.png'}
+        old_stems = {f.stem for f in legacy_rename_case.assets_dir.iterdir() if f.suffix.lower() == '.png'}
         mapping = _build_rename_mapping(bundle_png_names, old_stems)
 
         for old_stem, new_stem in mapping.items():
-            old_data = (spine_old_assets_dir / f"{old_stem}.png").read_bytes()
+            old_data = (legacy_rename_case.assets_dir / f"{old_stem}.png").read_bytes()
             new_data = (result / f"{new_stem}.png").read_bytes()
             assert old_data == new_data, f"{old_stem}.png 数据不匹配 {new_stem}.png"
 
-    def test_atlas_references_updated(self, spine_old_assets_dir: Path, bundle_png_names: set[str]):
+    def test_atlas_references_updated(self, legacy_rename_case: "LegacyRenameCase", bundle_png_names: set[str]):
         """旧版 atlas 中的旧版 PNG 引用应被更新为新版名称"""
         assert bundle_png_names, "Bundle 中未找到 Texture2D 资产"
 
-        result = normalize_legacy_assets(spine_old_assets_dir, bundle_png_names)
+        result = normalize_legacy_assets(legacy_rename_case.assets_dir, bundle_png_names)
 
-        old_stems = {f.stem for f in spine_old_assets_dir.iterdir() if f.suffix.lower() == '.png'}
+        old_stems = {f.stem for f in legacy_rename_case.assets_dir.iterdir() if f.suffix.lower() == '.png'}
         mapping = _build_rename_mapping(bundle_png_names, old_stems)
 
         for atlas_file in result.glob('*.atlas'):
@@ -322,12 +315,12 @@ class TestLegacyRenameWithRealData:
             for old_stem in mapping:
                 assert f"{old_stem}.png" not in content, f"Atlas 中仍包含旧版引用 {old_stem}.png"
 
-    def test_skel_not_modified(self, spine_old_assets_dir: Path, bundle_png_names: set[str]):
+    def test_skel_not_modified(self, legacy_rename_case: "LegacyRenameCase", bundle_png_names: set[str]):
         """skel 文件不受影响"""
         assert bundle_png_names, "Bundle 中未找到 Texture2D 资产"
 
-        result = normalize_legacy_assets(spine_old_assets_dir, bundle_png_names)
+        result = normalize_legacy_assets(legacy_rename_case.assets_dir, bundle_png_names)
 
-        for skel_file in spine_old_assets_dir.glob('*.skel'):
+        for skel_file in legacy_rename_case.assets_dir.glob('*.skel'):
             assert (result / skel_file.name).exists()
             assert (result / skel_file.name).read_bytes() == skel_file.read_bytes()
