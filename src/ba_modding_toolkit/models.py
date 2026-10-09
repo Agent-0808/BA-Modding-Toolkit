@@ -36,7 +36,17 @@ AssetKey = str | int | NameTypeKey | ContNameTypeKey
 AssetContent = bytes | Image.Image | None  
 
 class RawAssetBytes(bytes):
-    """标记 raw dump 内容（完整序列化对象字节），apply_patch 走 set_raw_data 原样替换"""
+    """标记 raw dump 内容（完整序列化对象字节），apply_patch 走 set_raw_data 原样替换
+
+    序列化数据中的流式引用（.resS/.resource）指向源 bundle 的内部附属文件，
+    companions 携带这些文件（{basename: 字节}），apply_patch 时一并写入目标 bundle，
+    避免替换后引用悬空导致游戏内资源丢失；无流引用时为空。
+    """
+
+    def __new__(cls, data: bytes = b"", companions: dict[str, bytes] | None = None) -> "RawAssetBytes":
+        obj = super().__new__(cls, data)
+        obj.companions = companions if companions is not None else {}
+        return obj
 
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]

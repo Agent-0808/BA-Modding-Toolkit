@@ -23,7 +23,7 @@ from .models import (
     AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
     RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
-from .bundle import Bundle
+from .bundle import Bundle, find_stream_refs
 from .naming import DUMP_FILE_EXTENSIONS, DUMP_TYPE_EXTENSIONS, parse_typed_dump_name
 from .searching import find_target_bundles
 
@@ -112,12 +112,15 @@ def _extract_assets_from_bundle(
                 elif obj.type == AssetType.Texture2D:
                     dest_path = work_dir / f"{resource_name}.png"
                     data.image.convert("RGBA").save(dest_path)
-                elif obj.type == AssetType.Mesh:
-                    dest_path = work_dir / f"{resource_name}.mesh.dat"
-                    dest_path.write_bytes(obj.get_raw_data())
-                elif obj.type == AssetType.AnimationClip:
-                    dest_path = work_dir / f"{resource_name}.animationclip.dat"
-                    dest_path.write_bytes(obj.get_raw_data())
+                elif obj.type in (AssetType.Mesh, AssetType.AnimationClip):
+                    # raw dump 导出；含流式引用（.resS）的数据脱离源 bundle 后无法重打包，跳过并告警
+                    raw = obj.get_raw_data()
+                    if find_stream_refs(raw):
+                        log(f"  > ⚠️ {t('log.extractor.stream_ref_export_unsupported', name=resource_name)}")
+                        continue
+                    ext = "mesh.dat" if obj.type == AssetType.Mesh else "animationclip.dat"
+                    dest_path = work_dir / f"{resource_name}.{ext}"
+                    dest_path.write_bytes(raw)
                 
                 if dest_path:
                     log(f"  - {dest_path.name}")
@@ -257,7 +260,15 @@ def process_asset_packing(
                 asset_key = NameTypeKey(resource_name, asset_type.name)
                 with open(file_path, "rb") as f:
                     # 标记为 raw dump 内容，apply_patch 走 set_raw_data 原样替换
-                    content = RawAssetBytes(f.read())
+                    raw = f.read()
+                    if find_stream_refs(raw):
+                        # dump 脱离了源 bundle，无 companion 可携带，流引用必然悬空
+                        raise ValueError(
+                            f"Dump file '{file_path.name}' contains .resS/.resource stream refs "
+                            f"and cannot be packed standalone. Export it from its source bundle "
+                            f"with the companion fix, or use a bundle as the mod source."
+                        )
+                    content = RawAssetBytes(raw)
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             patch[asset_key] = content

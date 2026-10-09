@@ -1,12 +1,13 @@
 # bundle.py
 
+import re
 import traceback
 from functools import cached_property
 from pathlib import Path
 from typing import Callable
 
 import UnityPy
-from UnityPy.files import SerializedFile
+from UnityPy.files import File, SerializedFile
 from UnityPy.environment import Environment as Env
 from PIL import Image
 
@@ -22,6 +23,36 @@ from .models import (
     BundleFileInfo, ProgressCallback, SkelVersionConflict,
     RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
+
+# 对象序列化数据中的流式引用 basename（m_StreamData.path / m_Resource.m_Source，如 CAB-xxx.resS）
+STREAM_REF_PATTERN = re.compile(rb"[A-Za-z0-9_\-]+\.(?:resS|resource)")
+
+
+def find_stream_refs(data: bytes) -> set[str]:
+    """提取序列化数据中引用的附属流文件名（.resS/.resource）"""
+    return {m.decode() for m in STREAM_REF_PATTERN.findall(data)}
+
+
+def collect_stream_companions(raw: bytes, env_file: File) -> dict[str, bytes] | None:
+    """按 raw 内容中的引用 basename 从 bundle 内部文件收集附属流文件
+
+    引用藏在对象 raw 字节内而非序列化引用表，必须按内容匹配收集，
+    不能按 bundle 初始文件列表快照（二次提取需携带历史 companion）。
+
+    Returns:
+        {basename: 字节}；引用了 bundle 内不存在的文件时返回 None（悬空引用）
+    """
+    refs = find_stream_refs(raw)
+    if not refs:
+        return {}
+    files = {name: f for name, f in env_file.files.items() if not hasattr(f, "objects")}
+    companions: dict[str, bytes] = {}
+    for ref in refs:
+        entry = files.get(ref)
+        if entry is None:
+            return None
+        companions[ref] = entry.bytes
+    return companions
 
 
 class Bundle:
@@ -408,6 +439,15 @@ class Bundle:
                     
                     # raw dump 内容（RawAssetBytes）：原样替换整个对象的序列化数据，优先于类型特定分支
                     if isinstance(content, RawAssetBytes):
+                        # 附属流文件（companion）随替换写入目标 bundle，使内嵌流引用闭合。
+                        # 约束：多份 .resS 并存是设计要求（目标自己的与各代 companion 的分别服务不同对象）；
+                        # 任何"清理未使用条目"优化不得将无序列化引用的 .resS 当孤儿删除
+                        # 引用内嵌于对象 raw 字节，常规引用分析不可见，误删会破坏已分发的 mod
+                        for companion_name, companion_bytes in content.companions.items():
+                            if companion_name in self.env.file.files:
+                                self.log(f'  > ⚠️ {t("log.replace_companion_exists", name=companion_name)}')
+                            else:
+                                self.env.file.get_writeable_cab(companion_name).write(companion_bytes)
                         obj.set_raw_data(content)
                     elif obj.type == AssetType.Texture2D:
                         content: Image.Image
@@ -530,7 +570,15 @@ class Bundle:
                     else:
                         content: bytes = asset_bytes
                 elif replace_all or obj.type.name in asset_types_to_replace:
-                    content: bytes = obj.get_raw_data()
+                    raw = obj.get_raw_data()
+                    companions = collect_stream_companions(raw, self.env.file)
+                    if companions is None:
+                        # 流引用悬空（如历史版本 raw 替换遗留的坏数据）：
+                        # 替换会把坏引用带进目标导致资源损坏，拒绝提取该对象
+                        self.log(f"  > ⚠️ {t('log.extractor.stream_ref_dangling', name=resource_name)}")
+                        continue
+                    # 有流引用时附带 companion 随 patch 走，apply 侧写入目标 bundle
+                    content: bytes = RawAssetBytes(raw, companions) if companions else raw
                 
                 if content is not None:
                     patch[asset_key] = content
