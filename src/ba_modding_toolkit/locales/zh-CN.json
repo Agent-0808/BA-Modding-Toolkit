@@ -495,6 +495,7 @@
 		"replace_applied": "已替换 [{type}] {name}",
 		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
 		"replace_companion_exists": "附属流文件 {name} 已存在，跳过附加",
+		"replace_companion_attached": "companion: {names}",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "未命名的 {type} 资源",
 		"adb": {

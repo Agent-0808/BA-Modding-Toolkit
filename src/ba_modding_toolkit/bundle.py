@@ -445,7 +445,7 @@ class Bundle:
                         # 引用内嵌于对象 raw 字节，常规引用分析不可见，误删会破坏已分发的 mod
                         for companion_name, companion_bytes in content.companions.items():
                             if companion_name in self.env.file.files:
-                                self.log(f'  > ⚠️ {t("log.replace_companion_exists", name=companion_name)}')
+                                self.log(f'  > ⏭️ {t("log.replace_companion_exists", name=companion_name)}')
                             else:
                                 self.env.file.get_writeable_cab(companion_name).write(companion_bytes)
                         obj.set_raw_data(content)
@@ -495,7 +495,12 @@ class Bundle:
                         obj.set_raw_data(content)
                     
                     applied_count += 1
-                    self.log(f'  ✅ {t("log.replace_applied", type=obj.type.name, name=resource_name)}')
+                    # 有 companion 随行时在成功行内追加，便于排查流式资源丢失类问题
+                    companion_note = (
+                        f" ({t('log.replace_companion_attached', names=', '.join(content.companions))})"
+                        if isinstance(content, RawAssetBytes) and content.companions else ""
+                    )
+                    self.log(f'  ✅ {t("log.replace_applied", type=obj.type.name, name=resource_name)}{companion_note}')
                     key_display = str(asset_key)
                     log_message = f"[{obj.type.name}] {resource_name} (key: {key_display})"
                     applied_assets_log.append(log_message)
