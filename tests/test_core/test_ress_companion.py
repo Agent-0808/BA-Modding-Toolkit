@@ -31,20 +31,30 @@ if TYPE_CHECKING:
 
 # 对象序列化数据中的流引用（m_StreamData.path / m_Resource.m_Source 的 basename）
 _RE_STREAM_REF = re.compile(rb"[A-Za-z0-9_\-]+\.(?:resS|resource)")
+# 流引用完整路径前缀 archive:/<SerializedFile名>/<文件名>，<SF名> 段必须与目标 bundle 的 SF 名一致
+# （UnityPy 按 basename 兜底解析，游戏引擎校验前缀段——实装输出 halo 不可见的根因）
+_RE_STREAM_REF_PREFIX = re.compile(rb"archive:/([A-Za-z0-9_\-]+)/[A-Za-z0-9_\-]+\.(?:resS|resource)")
 
 
 def assert_stream_refs_resolve(bundle_path: Path, watched_type: str = "Mesh") -> None:
     """断言 bundle 内所有对象的流引用都能在 bundle 内部解析（无悬空引用）。
 
-    两级验证：
+    三级验证：
     1. 名称级：raw 数据中引用的 .resS/.resource basename 必须存在于内部文件；
-    2. 数据级：对流式对象实际调用 ResourceReader.get_resource_data 验证可读。
+    2. 前缀级：archive:/<SF名>/ 前缀段必须等于本 bundle 的 SerializedFile 名
+       （游戏运行时要求，对应当年正常 mod（前缀=自身SF名）与实装输出（前缀=源SF名）的对比结论）；
+    3. 数据级：对流式对象实际调用 ResourceReader.get_resource_data 验证可读。
     """
     env = UnityPy.load(str(bundle_path))
     internal = {
         name
         for name, f in env.file.files.items()
         if not hasattr(f, "objects")
+    }
+    sf_names = {
+        name
+        for name, f in env.file.files.items()
+        if hasattr(f, "objects")
     }
 
     dangling: list[str] = []
@@ -58,6 +68,12 @@ def assert_stream_refs_resolve(bundle_path: Path, watched_type: str = "Mesh") ->
         missing = refs - internal
         if missing:
             dangling.append(f"{name} 引用 {sorted(missing)} 不在 bundle 内")
+            continue
+        # 前缀级：SF 名段必须属于本 bundle 的 SerializedFile（单 SF bundle 即等于自身 SF 名）
+        prefixes = {m.group(1).decode() for m in _RE_STREAM_REF_PREFIX.finditer(raw)}
+        bad_prefix = prefixes - sf_names
+        if bad_prefix:
+            dangling.append(f"{name} 流引用前缀 {sorted(bad_prefix)} 与 SF 名 {sorted(sf_names)} 不一致")
             continue
         # 名称闭合后做实际解析验证（仅流式对象，typetree 头小解析快）
         if refs:

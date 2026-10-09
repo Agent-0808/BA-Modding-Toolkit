@@ -27,10 +27,34 @@ from .models import (
 # 对象序列化数据中的流式引用 basename（m_StreamData.path / m_Resource.m_Source，如 CAB-xxx.resS）
 STREAM_REF_PATTERN = re.compile(rb"[A-Za-z0-9_\-]+\.(?:resS|resource)")
 
+# 流引用完整路径前缀 archive:/<SerializedFile名>/，<SF名> 为包含该对象的内部 SerializedFile 名
+STREAM_REF_PREFIX_PATTERN = re.compile(rb"archive:/([A-Za-z0-9_\-]+)/(?=[A-Za-z0-9_\-]+\.(?:resS|resource))")
+
 
 def find_stream_refs(data: bytes) -> set[str]:
     """提取序列化数据中引用的附属流文件名（.resS/.resource）"""
     return {m.decode() for m in STREAM_REF_PATTERN.findall(data)}
+
+
+def rewrite_stream_ref_prefixes(data: bytes, target_cab: str, log: LogFunc = no_log) -> bytes:
+    """把流引用路径中的 SerializedFile 名段改写为目标 bundle 的 SF 名
+
+    'archive:/<SF名>/<resS名>' 的 <SF名> 必须与目标 bundle 的 SerializedFile 名一致，
+    游戏运行时才能解析（raw 替换内容残留源 bundle 的 SF 名，halo 等流式资源在游戏内不可见；
+    UnityPy 按 basename 兜底解析，因此仅靠 UnityPy 层测试不会暴露此问题）。
+    源/目标 SF 名均为 32 位 hex（等长），直接字节替换不影响序列化布局；
+    长度不一致时保留原值并告警（回退 basename 解析）。
+    """
+    dst = target_cab.encode()
+    result = data
+    for src in {m.group(1) for m in STREAM_REF_PREFIX_PATTERN.finditer(data)}:
+        if src == dst:
+            continue
+        if len(src) != len(dst):
+            log(f'  > ⚠️ {t("log.stream_prefix_skip", src=src.decode(), dst=target_cab)}')
+            continue
+        result = result.replace(b"archive:/" + src + b"/", b"archive:/" + dst + b"/")
+    return result
 
 
 def collect_stream_companions(raw: bytes, env_file: File) -> dict[str, bytes] | None:
@@ -448,6 +472,11 @@ class Bundle:
                                 self.log(f'  > ⏭️ {t("log.replace_companion_exists", name=companion_name)}')
                             else:
                                 self.env.file.get_writeable_cab(companion_name).write(companion_bytes)
+                        # 流引用前缀段（SF 名）必须匹配目标 bundle，否则游戏运行时无法解析
+                        target_cab = next(n for n, f in self.env.file.files.items() if hasattr(f, "objects"))
+                        rewritten = rewrite_stream_ref_prefixes(content, target_cab, self.log)
+                        if rewritten != content:
+                            content = RawAssetBytes(rewritten, content.companions)
                         obj.set_raw_data(content)
                     elif obj.type == AssetType.Texture2D:
                         content: Image.Image
