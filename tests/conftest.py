@@ -1,5 +1,6 @@
 import pytest
 from pathlib import Path
+from typing import NamedTuple
 from PIL import Image
 
 ASSETS_DIR = Path(__file__).parent / "assets"
@@ -17,6 +18,44 @@ LEGACY_FORMAT_MODERN_DIR = LEGACY_FORMAT_DIR / "modern"
 SPINE_DIR = ASSETS_DIR / "spine"
 SPINE_OLD_ASSETS_DIR = SPINE_DIR / "old_assets"
 SPINE_NEW_BUNDLE_DIR = SPINE_DIR / "new_bundle"
+
+# .resS/.resource 流引用回归测试数据：每个案例一个文件夹，内含 mod/ 与 original/ 子目录
+RESS_REGRESS_DIR = ASSETS_DIR / "ress_regress"
+
+
+class RessRegressCase(NamedTuple):
+    """一组 ress 回归测试案例：mod 文件 + 对应原文件"""
+    name: str
+    mod_path: Path
+    original_path: Path
+
+
+def collect_ress_regress_cases() -> list[RessRegressCase]:
+    """扫描 ress_regress 下所有案例目录，自动发现 mod/original 文件对。
+
+    目录约定：<case>/mod/*.bundle 与 <case>/original/*.bundle(.backup)，
+    各取第一个文件；结构不完整的目录自动忽略。
+    """
+    cases: list[RessRegressCase] = []
+    if not RESS_REGRESS_DIR.exists():
+        return cases
+    for case_dir in sorted(p for p in RESS_REGRESS_DIR.iterdir() if p.is_dir()):
+        mods = find_all_files(case_dir / "mod", ".bundle")
+        originals = find_all_files(case_dir / "original", ".bundle*")
+        if mods and originals:
+            cases.append(RessRegressCase(case_dir.name, mods[0], originals[0]))
+    return cases
+
+
+def pytest_generate_tests(metafunc) -> None:
+    """为引用 ress_regress_case fixture 的测试按案例目录参数化"""
+    if "ress_regress_case" in metafunc.fixturenames:
+        cases = collect_ress_regress_cases()
+        metafunc.parametrize(
+            "ress_regress_case",
+            cases,
+            ids=[c.name for c in cases],
+        )
 
 
 def compare_images_mse(img1: Image.Image, img2: Image.Image) -> float:
