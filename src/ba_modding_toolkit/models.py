@@ -43,6 +43,10 @@ class RawAssetBytes(bytes):
     避免替换后引用悬空导致游戏内资源丢失；无流引用时为空。
     """
 
+    # bytes 子类不支持 __slots__，动态属性无法存储实例槽位；
+    # 仅作类型声明（供 IDE/类型检查器），实际赋值在 __new__
+    companions: dict[str, bytes]
+
     def __new__(cls, data: bytes = b"", companions: dict[str, bytes] | None = None) -> "RawAssetBytes":
         obj = super().__new__(cls, data)
         obj.companions = companions if companions is not None else {}
