@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 from ..utils import get_BA_path, EXE_DIR
 from ..i18n import t, i18n_manager
+from ..naming import CharacterInternalIDMap
 
 
 @dataclass
@@ -102,7 +103,7 @@ class ConfigMixin:
     # CharacterMap
     bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", str(EXE_DIR / "Addons" / "BA-Characters-Internal-ID.csv"))]
     character_index_column_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "file_id")]
-    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
+    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", CharacterInternalIDMap.DEFAULT_NAME_FIELD)]
 
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]

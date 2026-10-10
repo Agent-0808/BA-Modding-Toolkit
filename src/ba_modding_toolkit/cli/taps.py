@@ -249,7 +249,7 @@ class ReportTap(BaseTap):
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
     index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
-    name_field: str = "full_name"  # Character name field to display.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
 
     # 报告格式参数
     format: ReportFormat = 'list'  # Report output format.
@@ -354,7 +354,7 @@ class ParseTap(BaseTap):
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
     index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
-    name_field: str = "full_name"  # Character name field to display.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
 
     def configure(self) -> None:
         super().configure()

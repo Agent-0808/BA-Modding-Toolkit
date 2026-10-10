@@ -159,7 +159,7 @@ def generate_mod_report(
     game_dir: Path,
     output_path: Path,
     char_map: CharacterInternalIDMap | None = None,
-    char_name_field: str = "full_name",
+    char_name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD,
     enable_render: bool = False,
     viewer_path: Path | None = None,
     report_format: ReportFormat = "list",

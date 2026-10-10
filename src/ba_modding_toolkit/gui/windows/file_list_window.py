@@ -679,7 +679,7 @@ class FileListWindow(StoppableDialog):
         return {
             "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes is not None and item.trailing_bytes > 0),
             "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
-            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self.app.char_map.lookup(item.parsed_name.core, field="full_name") is not None),
+            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self.app.char_map.lookup(item.parsed_name.core, field="full_kivo") is not None),
             "common_mod": (t("ui.file_list.filter.common_mod"), lambda item: any(item.path.name.startswith(p) for p in COMMON_MOD_PREFIXES)),
         }
 

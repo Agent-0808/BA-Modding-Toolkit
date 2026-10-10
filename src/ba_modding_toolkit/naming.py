@@ -211,7 +211,11 @@ class CharacterInternalIDMap:
 
     # 默认索引列与名称字段（CSV 未加载时的回退值）
     DEFAULT_INDEX_COLUMN = "file_id"
-    NAME_FIELDS = ["full_name", "name_cn", "name_jp", "name_tw", "name_en", "name_kr"]
+    DEFAULT_NAME_FIELD = "full_en"
+    # 学生数据 CSV 语言后缀：kivo（基沃托斯语/官中风格）, jp, kr, en, tw, cn
+    NAME_FIELDS = [
+        "full_kivo", "full_jp", "full_kr", "full_en", "full_tw", "full_cn", 
+    ]
 
     def __init__(self):
         self._map: dict[str, dict[str, str]] = {}
@@ -257,16 +261,18 @@ class CharacterInternalIDMap:
         """映射表是否已加载"""
         return bool(self._map)
 
-    def lookup(self, core: str, field: str = "full_name") -> str | None:
+    def lookup(self, core: str, field: str | None = None) -> str | None:
         """根据 core 值查找角色名称
 
         Args:
             core: 解析后的 core 值（如 ch0808_spr）
-            field: 映射字段名（如 full_name, name_cn 等）
-        
+            field: 映射字段名（如 full_en, name_cn 等）；为 None 时使用默认字段
+
         Returns:
             角色名称，未找到则返回 None
         """
+        if field is None:
+            field = self.DEFAULT_NAME_FIELD
         core_lower = core.lower()
         # 先尝试原值匹配
         entry = self._map.get(core_lower)
@@ -279,4 +285,7 @@ class CharacterInternalIDMap:
         if entry is None:
             return None
         name = entry.get(field, "")
+        # 指定字段缺失（如旧配置残留已废弃的字段名）时回退到默认字段
+        if not name and field != self.DEFAULT_NAME_FIELD:
+            name = entry.get(self.DEFAULT_NAME_FIELD, "")
         return name if name else None
