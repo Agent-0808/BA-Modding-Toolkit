@@ -7,6 +7,7 @@ import urllib.request
 from dataclasses import dataclass, fields
 import ttkbootstrap as tb
 from pathlib import Path
+from PIL import ImageTk
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR
@@ -96,9 +97,23 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_icon(self, window: tk.Toplevel):
         """设置窗口图标"""
-        icon_path = self.root_path / "assets" / "eligma.ico"
-        if icon_path.exists():
-            window.iconbitmap(icon_path)
+        if sys.platform == "win32":
+            # Windows 下使用 iconbitmap 设置 .ico：映射前设置也会由 Tk 在创建
+            # wrapper 时应用，图标随窗口首次绘制立即显示（iconphoto 做不到这点）
+            icon_path = self.root_path / "assets" / "eligma.ico"
+            if not icon_path.exists():
+                print(f"图标文件不存在: {icon_path}")
+                return
+            window.iconbitmap(str(icon_path))
+        else:
+            # 非 Windows 平台使用 iconphoto 设置 png（iconbitmap 不支持 ico 格式）
+            icon_path = self.root_path / "assets" / "eligma.png"
+            if not icon_path.exists():
+                print(f"图标文件不存在: {icon_path}")
+                return
+            image = ImageTk.PhotoImage(master=window, file=str(icon_path))
+            window._icon_image = image  # 保留引用，防止被 GC 回收导致图标丢失
+            window.iconphoto(True, image)
 
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
