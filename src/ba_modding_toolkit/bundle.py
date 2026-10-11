@@ -227,30 +227,31 @@ class Bundle:
             int: 需要移除的尾部字节数（0 表示无需移除）
             None: 读取失败
         """
+        def read_cstring(f) -> bytes | None:
+            """读取以 null 结尾的字符串；EOF 视为无效文件返回 None"""
+            out = bytearray()
+            while True:
+                byte = f.read(1)
+                if byte == b'\x00':
+                    return bytes(out)
+                if not byte:
+                    return None
+                out.extend(byte)
+
         try:
             with open(bundle_path, 'rb') as f:
                 # 读取签名 (以 null 结尾)
-                signature = bytearray()
-                while True:
-                    byte = f.read(1)
-                    if byte == b'\x00':
-                        break
-                    signature.extend(byte)
-                
-                if signature != b'UnityFS':
+                signature = read_cstring(f)
+                if signature is None or signature != b'UnityFS':
                     return None
-                
+
                 # 读取 version (uint32)
                 f.read(4)
-                
-                # 读取 version_player (以 null 结尾的字符串)
-                while f.read(1) != b'\x00':
-                    pass
-                
-                # 读取 version_engine (以 null 结尾的字符串)
-                while f.read(1) != b'\x00':
-                    pass
-                
+
+                # 读取 version_player 与 version_engine (以 null 结尾的字符串)
+                if read_cstring(f) is None or read_cstring(f) is None:
+                    return None
+
                 # 读取 size (int64, big-endian)
                 size_bytes = f.read(8)
                 if len(size_bytes) != 8:
