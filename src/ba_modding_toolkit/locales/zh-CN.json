@@ -114,6 +114,8 @@
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
 		"check_animations": "检测动画差异",
 		"check_animations_info": "在替换 .skel 文件时，检测目标是否包含来源中不存在的动画\n需要配置 SpineViewerCLI 路径",
+		"mod_install_render_preview": "Mod 安装预览渲染",
+		"mod_install_render_preview_info": "在 Mod 安装确认弹窗中后台渲染 Spine 预览图与贴图\n关闭后仅展示元信息，弹窗秒开\n需要配置 SpineViewerCLI 路径",
 		"match_strategy": "匹配策略",
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "溢出",
@@ -640,7 +642,9 @@
 			"action_error": "错误",
 			"action_mixed": "混合",
 			"need_crc_fix": "需 CRC 修正",
-			"meta_size": "大小：{mod_size}（现有：{existing_size}）"
+			"meta_size": "大小：{mod_size}（现有：{existing_size}）",
+			"preview_rendering": "渲染中...",
+			"preview_failed": "渲染失败"
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",

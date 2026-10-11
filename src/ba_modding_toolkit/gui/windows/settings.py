@@ -578,6 +578,16 @@ class SettingsDialog(tb.Toplevel):
             on_click_disabled=self.app.show_spine_viewer_not_configured
         )
 
+        # Mod 安装确认弹窗的预览渲染开关
+        SettingRow.create_switch(
+            section,
+            label=t("option.mod_install_render_preview"),
+            variable=self.app.mod_install_render_preview_var,
+            tooltip=t("option.mod_install_render_preview_info"),
+            app=self.app,
+            on_click_disabled=self.app.show_spine_viewer_not_configured
+        )
+
         # 预览图缩略图尺寸（预览窗口中缩略图的最大边长）
         SettingRow.create_spinbox_row(
             section,
