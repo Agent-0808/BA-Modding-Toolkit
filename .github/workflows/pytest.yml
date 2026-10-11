@@ -53,5 +53,15 @@ jobs:
         shell: pwsh
         continue-on-error: true
 
+      # 下载外部测试工具（仓库 variables 配置 release 直链后启用；未配置时相关测试自动跳过）
+      - name: Download External Test Tools
+        if: vars.SKEL_CONVERTER_URL != ''
+        run: |
+          New-Item -ItemType Directory -Path "tests/assets/external_tools/converter" -Force
+          Invoke-WebRequest ${{ vars.SKEL_CONVERTER_URL }} -OutFile "tests/assets/external_tools/converter/SpineSkeletonDataConverter.exe"
+          Invoke-WebRequest ${{ vars.SPINE_VIEWER_URL }} -OutFile viewer.zip
+          Expand-Archive viewer.zip tests/assets/external_tools/viewer -Force
+        shell: pwsh
+
       - name: Run Tests
         run: uv run pytest -v

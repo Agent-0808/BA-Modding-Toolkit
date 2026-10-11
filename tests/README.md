@@ -38,4 +38,22 @@ legacy 重命名组：测试磁盘旧命名文件（如`XXX2.png`）与 bundle �
 
 流引用回归组：测试 mod update 后`.resS`/`.resource`流引用闭合
 
+### `assets/external_tools/`（可选）
+
+外部工具测试组（`tests/test_external/`）：依赖 SkelConverter 与 SpineViewerCLI 两个第三方 exe，
+未配置时相关测试自动跳过。
+
+本地使用：将 [paths.example.toml](external_tools/paths.example.toml) 复制为 `paths.toml` 并修改配置路径
+
+```toml
+converter = 'D:\Tools\SkelConverter\SpineSkeletonDataConverter.exe'
+viewer = 'D:\Tools\SpineViewer\SpineViewerCLI.exe'
+```
+
+CI 使用：仓库 variables 配置 `SKEL_CONVERTER_URL` / `SPINE_VIEWER_URL`（release 直链），
+workflow 自动下载解压到 `external_tools/converter/`、`external_tools/viewer/`，无需配置文件。
+
+测试素材的 skel 版本不固定：setup 时通过 `bootstrap_spine_assets` 现场自举到目标版本
+（游戏运行时 4.2.x / 本地编辑 3.8.x，副本操作不改动原始 asset，降级 3.x 时配套 atlas 降级）。
+
 *注：不提供文件时，引用案例数据的测试会以空参数集自动跳过*

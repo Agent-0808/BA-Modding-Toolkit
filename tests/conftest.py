@@ -1,7 +1,12 @@
+import shutil
+import tomllib
 import pytest
 from pathlib import Path
 from typing import NamedTuple
 from PIL import Image
+
+from ba_modding_toolkit.spine import SkelConverter, atlas_downgrade, get_skel_version
+from ba_modding_toolkit.utils import LogFunc, no_log
 
 # 测试数据统一约定（数据文件不入 git，仅 .gitkeep 跟踪目录结构）。
 # 目录按数据扮演的角色命名，不绑定具体角色素材；每组下按案例子目录组织，
@@ -198,3 +203,122 @@ def compare_directory_assets(
                 new_file = new_dir / old_file.name
                 if new_file.exists():
                     assert old_file.read_bytes() == new_file.read_bytes()
+
+
+# ---------------------------------------------------------------------------
+# 外部工具测试（SkelConverter / SpineViewerCLI）
+#
+# 工具路径解析约定：
+#   1. 本地：编辑 tests/assets/external_tools/paths.toml（gitignore 覆盖），
+#      填 exe 本体路径（与 GUI 设置一致）
+#   2. CI：workflow 从 release 下载解压到 external_tools/converter、external_tools/viewer，
+#      在约定目录两层以内按已知 exe 名查找，无需配置文件
+#   3. 都没有 → None → 引用 fixture 的测试自动跳过
+# ---------------------------------------------------------------------------
+
+EXTERNAL_TOOLS_DIR = ASSETS_DIR / "external_tools"
+PATHS_FILE = EXTERNAL_TOOLS_DIR / "paths.toml"
+
+CONVERTER_EXE_NAMES = ("SpineSkeletonDataConverter.exe",)
+VIEWER_EXE_NAMES = ("SpineViewerCLI.exe",)
+
+# Spine 版本自举基准：游戏运行时 skel 为 4.2.x，本地编辑通常为 3.8.x
+GAME_SPINE_VERSION = "4.2.33"
+EDIT_SPINE_VERSION = "3.8.75"
+
+
+class SpineAssetSet(NamedTuple):
+    """自举后的 Spine 三件套副本（skel/atlas/png 同名同目录）"""
+    dir: Path
+    skel_path: Path
+    atlas_path: Path
+    png_path: Path | None
+
+
+def _find_exe_in_dir(directory: Path, exe_names: tuple[str, ...], max_depth: int) -> Path | None:
+    """在目录内指定深度以内查找已知 exe 名（大小写不敏感）"""
+    if not directory.is_dir():
+        return None
+    wanted = {name.lower() for name in exe_names}
+    for exe in directory.rglob("*.exe"):
+        if exe.name.lower() in wanted and len(exe.relative_to(directory).parts) <= max_depth:
+            return exe
+    return None
+
+
+def resolve_external_tool(kind: str, exe_names: tuple[str, ...]) -> Path | None:
+    """解析外部工具的 exe 路径；找不到返回 None（调用方据此跳过测试）"""
+    # 1. paths.toml 配置（本地使用，填 exe 本体路径，与 GUI 设置一致）
+    if PATHS_FILE.exists():
+        try:
+            data = tomllib.loads(PATHS_FILE.read_text(encoding="utf-8-sig"))
+        except tomllib.TOMLDecodeError:
+            data = {}
+        configured = data.get(kind)
+        if configured:
+            path = Path(configured)
+            return path if path.is_file() else None  # 已配置但无效，不回退到约定目录
+
+    # 2. 无配置（CI 场景）：在约定子目录内查找
+    return _find_exe_in_dir(EXTERNAL_TOOLS_DIR / kind, exe_names, max_depth=2)
+
+
+@pytest.fixture(scope="session")
+def spine_converter_path() -> Path:
+    """SkelConverter exe 路径；未配置则跳过测试"""
+    path = resolve_external_tool("converter", CONVERTER_EXE_NAMES)
+    if path is None:
+        pytest.skip("未找到 SkelConverter（本地编辑 paths.toml 或在 CI 设置 SKEL_CONVERTER_URL），跳过外部工具测试")
+    return path
+
+
+@pytest.fixture(scope="session")
+def spine_viewer_path() -> Path:
+    """SpineViewerCLI exe 路径；未配置则跳过测试"""
+    path = resolve_external_tool("viewer", VIEWER_EXE_NAMES)
+    if path is None:
+        pytest.skip("未找到 SpineViewerCLI（本地编辑 paths.toml 或在 CI 设置 SPINE_VIEWER_URL），跳过外部工具测试")
+    return path
+
+
+def bootstrap_spine_assets(
+    assets_dir: Path,
+    target_version: str,
+    converter_path: Path,
+    output_dir: Path,
+    log: LogFunc = no_log,
+) -> SpineAssetSet | None:
+    """将三件套自举到目标版本（副本操作，不改动原始 asset）。
+
+    版本作为运行时属性现场自举：源 skel 已是目标版本（major.minor 一致）则直接复制；
+    否则 SkelConverter 就地转换副本，降级到 3.x 时配套 atlas 降级（png 不变）。
+    素材缺少 skel/atlas、版本探测失败或转换失败时返回 None（调用方跳过测试）。
+    """
+    if not assets_dir.is_dir():
+        return None
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for f in assets_dir.iterdir():
+        if f.is_file():
+            shutil.copy2(f, output_dir / f.name)
+
+    skel_path = find_first_file(output_dir, ".skel")
+    atlas_path = find_first_file(output_dir, ".atlas")
+    if skel_path is None or atlas_path is None:
+        return None
+
+    current = get_skel_version(skel_path, log)
+    if current is None:
+        return None
+
+    major_minor = ".".join(target_version.split(".")[:2])
+    if not current.startswith(major_minor):
+        if not SkelConverter.run(
+            skel_path, converter_path=converter_path, target_version=target_version, log=log
+        ):
+            return None
+        # 3.x skel 只能配 spine3 atlas，降级必须配套 atlas_downgrade
+        if major_minor == "3.8" and not atlas_downgrade(atlas_path, output_dir, log=log):
+            return None
+
+    return SpineAssetSet(output_dir, skel_path, atlas_path, find_first_file(output_dir, ".png"))
