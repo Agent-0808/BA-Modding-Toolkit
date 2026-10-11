@@ -11,9 +11,12 @@ CRC修正功能的测试用例
 import pytest
 from pathlib import Path
 import shutil
+from typing import TYPE_CHECKING
 
 from ba_modding_toolkit.utils import CRCUtils
-from conftest import has_sample_bundle
+
+if TYPE_CHECKING:
+    from conftest import SampleCase
 
 
 class TestComputeCrc32:
@@ -259,40 +262,36 @@ class TestCrcFixIntegration:
         assert len(corrected2) == len(corrected1) + 4
 
 
-@pytest.mark.skipif(
-    not has_sample_bundle(),
-    reason="sample.bundle IS REQUIRED"
-)
 class TestCrcWithBundle:
-    def test_compute_crc32_from_bundle(self, sample_bundle_path: Path):
-        crc = CRCUtils.compute_crc32(sample_bundle_path)
-        
+    def test_compute_crc32_from_bundle(self, sample_case: "SampleCase"):
+        crc = CRCUtils.compute_crc32(sample_case.bundle_paths[0])
+
         assert isinstance(crc, int)
         assert 0 <= crc <= 0xFFFFFFFF
 
-    def test_check_crc_match_same_bundle(self, sample_bundle_path: Path, tmp_path: Path):
+    def test_check_crc_match_same_bundle(self, sample_case: "SampleCase", tmp_path: Path):
         copy_file = tmp_path / "copy.bundle"
-        shutil.copy(sample_bundle_path, copy_file)
-        
-        match, crc1, crc2 = CRCUtils.check_crc_match(sample_bundle_path, copy_file)
-        
+        shutil.copy(sample_case.bundle_paths[0], copy_file)
+
+        match, crc1, crc2 = CRCUtils.check_crc_match(sample_case.bundle_paths[0], copy_file)
+
         assert match is True
         assert crc1 == crc2
 
-    def test_check_crc_match_modified_bundle(self, sample_bundle_path: Path, tmp_path: Path):
+    def test_check_crc_match_modified_bundle(self, sample_case: "SampleCase", tmp_path: Path):
         modified_file = tmp_path / "modified.bundle"
-        data = sample_bundle_path.read_bytes()
+        data = sample_case.bundle_paths[0].read_bytes()
         modified_data = data[:-1] + bytes([data[-1] ^ 0xFF])
         modified_file.write_bytes(modified_data)
-        
-        match, crc1, crc2 = CRCUtils.check_crc_match(sample_bundle_path, modified_file)
-        
+
+        match, crc1, crc2 = CRCUtils.check_crc_match(sample_case.bundle_paths[0], modified_file)
+
         assert match is False
         assert crc1 != crc2
 
-    def test_manipulate_bundle_crc(self, sample_bundle_path: Path, tmp_path: Path):
+    def test_manipulate_bundle_crc(self, sample_case: "SampleCase", tmp_path: Path):
         test_file = tmp_path / "test.bundle"
-        shutil.copy(sample_bundle_path, test_file)
+        shutil.copy(sample_case.bundle_paths[0], test_file)
         
         target_crc = 0x12345678
         
@@ -301,9 +300,9 @@ class TestCrcWithBundle:
         assert result is True
         assert CRCUtils.compute_crc32(test_file) == target_crc
 
-    def test_bundle_crc_fix_preserves_content(self, sample_bundle_path: Path, tmp_path: Path):
+    def test_bundle_crc_fix_preserves_content(self, sample_case: "SampleCase", tmp_path: Path):
         test_file = tmp_path / "test.bundle"
-        original_data = sample_bundle_path.read_bytes()
+        original_data = sample_case.bundle_paths[0].read_bytes()
         modified_data = original_data[:-4] + b"TEST"
         test_file.write_bytes(modified_data)
         
