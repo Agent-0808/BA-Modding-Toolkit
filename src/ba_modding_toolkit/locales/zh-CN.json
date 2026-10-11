@@ -249,7 +249,8 @@
 			"filename_parse_failed": "无法解析文件名: {filename}",
 			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}",
 			"no_game_dir": "未设置游戏资源目录，无法分析 Mod 与游戏文件的关系。",
-			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。"
+			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。",
+			"nothing_selected": "尚未选择任何要安装的组。"
 		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
@@ -477,7 +478,8 @@
 			"filter_latest_date": "存在多个日期版本，已选取最新: {date}",
 			"update_targets": "需要更新，匹配到 {count} 个目标文件: {names}",
 			"target_conflict": "目标文件冲突: {filename}",
-			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）"
+			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）",
+			"execute_start": "开始安装 {count} 个 Mod 组..."
 		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
@@ -621,7 +623,24 @@
 		},
 		"mod_install": {
 			"placeholder": "将 Mod 文件或文件夹拖放到此处...\n添加后将自动分析",
-			"install": "安装"
+			"view_details": "查看详情",
+			"dialog_title": "Mod 安装确认",
+			"prev_group": "◀ 上一组",
+			"next_group": "下一组 ▶",
+			"preview_current": "当前（游戏目录）",
+			"preview_new": "安装后（Mod）",
+			"preview_none": "暂无预览",
+			"meta_title": "元信息",
+			"decision_install": "安装此组",
+			"decision_skip": "跳过",
+			"confirm_install": "确认安装 ({install}/{total})",
+			"action_direct_replace": "直接替换",
+			"action_update": "更新后替换",
+			"action_not_found": "未找到对应文件",
+			"action_error": "错误",
+			"action_mixed": "混合",
+			"need_crc_fix": "需 CRC 修正",
+			"meta_size": "大小：{mod_size}（现有：{existing_size}）"
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",

@@ -6,9 +6,10 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ...mod_install import ModGroup, plan_mod_install
+from ...mod_install import InstallAction, ModGroup, plan_mod_install
 from ...searching import get_search_dirs
 from ..components import FileListbox, UIComponents, SettingRow
+from ..windows.mod_install_dialog import ModInstallDialog
 from .base_tab import TabFrame
 
 
@@ -58,10 +59,10 @@ class ModInstallTab(TabFrame):
         )
         self.analyze_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
-        # 安装主按钮（确认弹窗与执行逻辑在后续阶段接入）
+        # 查看详情主按钮：打开确认弹窗（逐组决策与执行在弹窗内完成）
         self.install_button = UIComponents.create_button(
-            action_button_frame, t("ui.mod_install.install"),
-            self._install_stub, bootstyle="success",
+            action_button_frame, t("ui.mod_install.view_details"),
+            self._open_confirm_dialog, bootstyle="success",
             state="disabled", style="large"
         )
         self.install_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
@@ -101,8 +102,27 @@ class ModInstallTab(TabFrame):
         )
         self._plan_running = False
         self.master.after(0, lambda: self.analyze_button.config(state=tk.NORMAL))
+        if self.groups:
+            self.master.after(0, lambda: self.install_button.config(state=tk.NORMAL))
         self.logger.status(t("status.done"))
 
-    def _install_stub(self):
-        """占位：确认弹窗与执行逻辑在后续阶段接入"""
-        pass
+    def _open_confirm_dialog(self):
+        """打开确认弹窗，收集逐组决策后执行安装（执行逻辑见 _execute_install）"""
+        if self._plan_running or not self.groups:
+            return
+        dialog = ModInstallDialog(self, self.app, self.groups)
+        self.wait_window(dialog)
+        if not dialog.confirmed:
+            return
+
+        selected = [
+            group for group, var in zip(self.groups, dialog.decision_vars)
+            if var.get() and dialog._installable(group)
+        ]
+        if not selected:
+            return
+        self._execute_install(selected)
+
+    def _execute_install(self, selected_groups: list[ModGroup]):
+        """执行安装（阶段5接入 execute_mod_install，当前仅记录决策）"""
+        self.logger.log(t("log.mod_install.execute_start", count=len(selected_groups)))
