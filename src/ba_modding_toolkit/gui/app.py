@@ -29,6 +29,7 @@ class Tabs:
     """
     mod_update: ModUpdateTab
     batch_update: BatchUpdateTab
+    mod_install: ModInstallTab
     crc_tool: CrcToolTab
     asset_packer: AssetPackerTab
     asset_extractor: AssetExtractorTab
@@ -40,6 +41,7 @@ class Tabs:
         titles = [
             t("ui.tabs.mod_update"),
             t("ui.tabs.batch_update"),
+            t("ui.tabs.mod_install"),
             t("ui.tabs.crc_tool"),
             t("ui.tabs.asset_packer"),
             t("ui.tabs.asset_extractor"),
@@ -553,6 +555,7 @@ class App(tb.Frame, ConfigMixin):
         self.tabs: Tabs = Tabs(
             mod_update=ModUpdateTab(self.content_frame, self),
             batch_update=BatchUpdateTab(self.content_frame, self),
+            mod_install=ModInstallTab(self.content_frame, self),
             crc_tool=CrcToolTab(self.content_frame, self),
             asset_packer=AssetPackerTab(self.content_frame, self),
             asset_extractor=AssetExtractorTab(self.content_frame, self),

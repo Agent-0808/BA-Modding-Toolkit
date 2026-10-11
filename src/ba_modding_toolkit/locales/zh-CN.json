@@ -247,7 +247,9 @@
 		},
 		"mod_install": {
 			"filename_parse_failed": "无法解析文件名: {filename}",
-			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}"
+			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}",
+			"no_game_dir": "未设置游戏资源目录，无法分析 Mod 与游戏文件的关系。",
+			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。"
 		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
@@ -545,6 +547,7 @@
 		"tabs": {
 			"mod_update": "Mod 更新",
 			"batch_update": "批量更新",
+			"mod_install": "Mod 安装",
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
@@ -615,6 +618,10 @@
 			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_not_found": "未找到匹配资源：{message}"
+		},
+		"mod_install": {
+			"placeholder": "将 Mod 文件或文件夹拖放到此处...\n添加后将自动分析",
+			"install": "安装"
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",
