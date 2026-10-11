@@ -10,6 +10,7 @@ import pytest
 from PIL import Image
 
 from ba_modding_toolkit.spine import SpineViewer
+from conftest import require_render_support
 
 if TYPE_CHECKING:
     from conftest import SampleCase
@@ -30,7 +31,7 @@ class TestSpineViewer:
         skel_path = _require_skel(sample_case)
 
         ok, info = SpineViewer.query(skel_path, spine_viewer_path)
-        assert ok
+        assert ok, info
         animations = info.get("animations")
         assert isinstance(animations, list)
         assert animations
@@ -42,6 +43,7 @@ class TestSpineViewer:
         tmp_path: Path,
     ):
         """render 输出 png 存在、尺寸合理、非纯空白"""
+        require_render_support()
         skel_path = _require_skel(sample_case)
         out_png = tmp_path / "preview.png"
 

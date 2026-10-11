@@ -72,7 +72,7 @@ class TestSkelConverter:
         version = get_skel_version(out_skel)
         assert version and version.startswith("4.2")
         ok, info = SpineViewer.query(out_skel, spine_viewer_path)
-        assert ok
+        assert ok, info
         assert info["animations"]
 
     def test_downgrade_42_to_38(
@@ -97,7 +97,7 @@ class TestSkelConverter:
         version = get_skel_version(out_skel)
         assert version and version.startswith("3.8")
         ok, info = SpineViewer.query(out_skel, spine_viewer_path)
-        assert ok
+        assert ok, info
         assert info["animations"]
 
     def test_roundtrip(

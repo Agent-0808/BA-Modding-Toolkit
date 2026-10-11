@@ -63,5 +63,9 @@ jobs:
           Expand-Archive viewer.zip tests/assets/external_tools/viewer -Force
         shell: pwsh
 
+      # SKIP_SPINE_RENDER：CI 软件渲染（llvmpipe）与 SFML 2.6 纹理回读不兼容（进程静默崩溃），
+      # 渲染类测试自动跳过；query / 版本转换不受影响，渲染正确性由本地硬件 GL 环境验证
       - name: Run Tests
         run: uv run pytest -v
+        env:
+          SKIP_SPINE_RENDER: '1'

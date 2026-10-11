@@ -312,7 +312,7 @@ class SpineViewer:
 
             if result.returncode != 0:
                 log(f'  ✗ {t("log.spine.query_failed")}: {result.stderr.strip()}')
-                return False, {}
+                return False, {"error": result.stderr.strip() or result.stdout.strip()}
 
             # 解析输出
             info = {
@@ -397,7 +397,7 @@ class SpineViewer:
         # 查询动画信息
         success, info = SpineViewer.query(skel_path, viewer_path, log)
         if not success:
-            return False, t("log.spine.query_failed")
+            return False, f'{t("log.spine.query_failed")}: {info.get("error", "")}'.rstrip(": ")
 
         # 选择动画（优先 Idle_01 > Dummy > 第一个）
         animation = None

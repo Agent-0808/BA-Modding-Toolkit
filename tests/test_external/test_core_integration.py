@@ -18,7 +18,7 @@ from ba_modding_toolkit.core import (
 )
 from ba_modding_toolkit.models import AnimCheckOptions, SkelConvertOptions
 from ba_modding_toolkit.spine import SpineViewer, get_skel_version
-from conftest import EDIT_SPINE_VERSION, GAME_SPINE_VERSION
+from conftest import EDIT_SPINE_VERSION, GAME_SPINE_VERSION, require_render_support
 
 if TYPE_CHECKING:
     from conftest import SampleCase, UpdateCase
@@ -158,6 +158,7 @@ class TestExternalCoreIntegration:
         tmp_path: Path,
     ):
         """asset extractor + spine preview：从 bundle 渲染预览图存在且非空白"""
+        require_render_support()
         ok, msg, rendered = render_spine_preview_from_bundle(
             sample_case.bundle_paths, tmp_path / "preview", spine_viewer_path
         )

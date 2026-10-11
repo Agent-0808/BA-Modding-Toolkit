@@ -1,3 +1,4 @@
+import os
 import shutil
 import tomllib
 import pytest
@@ -225,6 +226,17 @@ VIEWER_EXE_NAMES = ("SpineViewerCLI.exe",)
 # Spine 版本自举基准：游戏运行时 skel 为 4.2.x，本地编辑通常为 3.8.x
 GAME_SPINE_VERSION = "4.2.33"
 EDIT_SPINE_VERSION = "3.8.75"
+
+# 渲染类测试开关：CI 软件渲染（llvmpipe）与 SFML 2.6 纹理回读不兼容（进程静默崩溃），
+# workflow 中设置 SKIP_SPINE_RENDER=1 跳过渲染验证，渲染正确性由本地硬件 GL 环境验证；
+# query / 版本转换不依赖渲染目标，不受影响
+RENDER_SKIP_ENV = "SKIP_SPINE_RENDER"
+
+
+def require_render_support() -> None:
+    """渲染类测试入口：无渲染能力的环境自动跳过"""
+    if os.environ.get(RENDER_SKIP_ENV) == "1":
+        pytest.skip(f"{RENDER_SKIP_ENV}=1：无硬件 GL 环境，跳过渲染验证")
 
 
 class SpineAssetSet(NamedTuple):
