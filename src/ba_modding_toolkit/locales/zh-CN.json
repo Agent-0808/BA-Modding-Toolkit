@@ -643,6 +643,12 @@
 			"action_mixed": "混合",
 			"need_crc_fix": "需 CRC 修正",
 			"meta_size": "大小：{mod_size}（现有：{existing_size}）",
+			"node_mod_only": "仅存在于 Mod 的资产（无对比）",
+			"diff_unchanged": "✔ 无变化（执行时跳过）",
+			"diff_changed": "⚠ 有变化",
+			"diff_only_before": "仅目标侧存在",
+			"diff_only_after": "仅 mod 侧存在",
+			"preview_no_image": "该资产无图像预览",
 			"preview_rendering": "渲染中...",
 			"preview_failed": "渲染失败"
 		},
