@@ -21,8 +21,7 @@ if TYPE_CHECKING:
 from ...i18n import t
 from ...utils import no_log
 from ...models import AssetType, LogFunc
-from ...bundle import Bundle
-from ...mod_install import AssetDiff, DiffStatus, InstallAction, ModGroup
+from ...mod_install import InstallAction, ModGroup
 from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version
 from ...core import _extract_assets_from_bundle
 from ..components import UIComponents
@@ -37,14 +36,6 @@ _ACTION_KEYS = {
     InstallAction.MIXED: "ui.mod_install.action_mixed",
 }
 
-# 资产对比状态 → 展示键
-_DIFF_STATUS_KEYS = {
-    DiffStatus.UNCHANGED: "ui.mod_install.diff_unchanged",
-    DiffStatus.CHANGED: "ui.mod_install.diff_changed",
-    DiffStatus.ONLY_BEFORE: "ui.mod_install.diff_only_before",
-    DiffStatus.ONLY_AFTER: "ui.mod_install.diff_only_after",
-}
-
 
 def _fmt_size(n: int) -> str:
     """字节数 → 人类可读大小"""
@@ -55,29 +46,22 @@ def _fmt_size(n: int) -> str:
     return f"{n} B"
 
 
-def _sha(path: Path) -> str:
-    """文件内容短哈希（用于前后一致性判定）"""
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
-
-
 @dataclass
 class _SideAsset:
     """单侧提取出的一个资产（临时目录内的产物，仅流水线内使用）"""
     fname: str     # 提取文件名（含扩展名）
     type: str      # Texture2D / TextAsset
     detail: str    # "2220×3540" / "spine 4.2.33 · 45.6 KB"
-    sha: str
     path: Path
 
 
 @dataclass
 class GroupRenderResult:
     """单个组的渲染流水线产出（缓存与 UI 共用，不含临时目录内的路径）"""
-    current_image: Path | None = None                      # 当前侧预览图
-    new_image: Path | None = None                          # 安装后侧预览图
-    diffs: dict[Path, list[AssetDiff]] = field(default_factory=dict)  # 目标 bundle → 资产对比
-    mod_only: list[AssetDiff] = field(default_factory=list)           # 仅 mod 侧存在的资产
-    images: dict[str, Path] = field(default_factory=dict)  # 资产内容哈希 → 单资产预览图（Texture2D）
+    current_image: Path | None = None  # 当前侧预览图
+    new_image: Path | None = None      # 安装后侧预览图
+    # 目标 bundle → 同名资产前后描述对比（仅列出描述有变化的，如贴图分辨率 / spine 版本）
+    matched: dict[Path, list[tuple[str, str, str, str]]] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)   # current/new → 渲染失败原因
 
 
@@ -102,8 +86,8 @@ def _cache_key(bundle_paths: list[Path]) -> str:
 def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> list[_SideAsset]:
     """构建单 bundle 的资产描述（子目录隔离同名资源）
 
-    Texture2D/TextAsset 实际提取（渲染与详情需要文件）；Mesh/AnimationClip 仅需
-    元数据，直接从 env 读取 name/byte_size，不做落盘提取
+    仅提取渲染所需的 Texture2D/TextAsset；Mesh/AnimationClip 不参与预览，
+    是否有实际变化由执行阶段的 skip_unchanged 判定
     """
     extract_dir.mkdir(parents=True, exist_ok=True)  # _extract_assets_from_bundle 不自建目录
     extracted = _extract_assets_from_bundle([bundle], extract_dir, {"TextAsset", "Texture2D"}, log)
@@ -114,7 +98,7 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
                 detail = f"{im.width}×{im.height}"
         except Exception:
             detail = ""
-        assets.append(_SideAsset(png.name, "Texture2D", detail, _sha(png), png))
+        assets.append(_SideAsset(png.name, "Texture2D", detail, png))
     for txt in extracted[AssetType.TextAsset]:
         size = _fmt_size(txt.stat().st_size)
         if txt.suffix == ".skel":
@@ -122,22 +106,7 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
             detail = f"spine {version} · {size}"
         else:
             detail = size  # atlas 等其他 TextAsset
-        assets.append(_SideAsset(txt.name, "TextAsset", detail, _sha(txt), txt))
-
-    # Mesh/AnimationClip 元数据（伪哈希取 byte_size，仅用于前后一致性粗判；执行时以 skip_unchanged 为准）
-    meta_bundle = Bundle.load(bundle, no_log)
-    if meta_bundle is not None:
-        for obj in meta_bundle.env.objects:
-            type_name = obj.type.name
-            if type_name == "Mesh":
-                fname = f"{obj.peek_name() or obj.path_id}.mesh.bytes"
-                detail = _fmt_size(obj.byte_size)
-            elif type_name == "AnimationClip":
-                fname = f"{obj.peek_name() or obj.path_id}.animationclip.dat"
-                detail = _fmt_size(obj.byte_size)
-            else:
-                continue
-            assets.append(_SideAsset(fname, type_name, detail, f"m:{obj.byte_size}", Path()))
+        assets.append(_SideAsset(txt.name, "TextAsset", detail, txt))
     return assets
 
 
@@ -209,36 +178,21 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
             # mod 侧资产池（同名取后提取者）
             mod_pool: dict[str, _SideAsset] = {a.fname: a for a in mod_assets}
 
-            # 单资产预览图缓存目录（内容哈希寻址，Texture2D 才有图）
+            # 渲染输出目录（缓存键 md5 隔离各组的 current.png/new.png）
             out_dir = _get_cache_dir() / hashlib.md5(_cache_key(
                 [p for p in target_paths] + [f.mod_path for f in group.files]
             ).encode()).hexdigest()
             out_dir.mkdir(parents=True, exist_ok=True)
-            for a in list(mod_pool.values()) + [a for assets in target_assets.values() for a in assets]:
-                if a.type == "Texture2D" and a.sha not in result.images:
-                    img_path = out_dir / f"{a.sha}.png"
-                    shutil.copy2(a.path, img_path)
-                    result.images[a.sha] = img_path
 
-            # 逐目标 bundle 对比（before → after）
+            # 同名同类型资产前后描述对比（仅列出描述有变化的，如贴图分辨率 / spine 版本）
             for target, before_list in target_assets.items():
-                diffs: list[AssetDiff] = []
+                rows: list[tuple[str, str, str, str]] = []
                 for a in before_list:
                     b = mod_pool.get(a.fname)
-                    if b is None:
-                        diffs.append(AssetDiff(a.fname, a.type, a.detail, "", DiffStatus.ONLY_BEFORE, before_sha=a.sha))
-                    else:
-                        status = DiffStatus.UNCHANGED if a.sha == b.sha else DiffStatus.CHANGED
-                        diffs.append(AssetDiff(a.fname, a.type, a.detail, b.detail, status, a.sha, b.sha))
-                result.diffs[target] = diffs
-
-            # 仅 mod 侧存在的资产（任何目标 bundle 中都没有同名同类型）
-            target_fnames = {a.fname for assets in target_assets.values() for a in assets}
-            seen: set[str] = set()
-            for a in mod_assets:
-                if a.fname not in target_fnames and a.fname not in seen:
-                    seen.add(a.fname)
-                    result.mod_only.append(AssetDiff(a.fname, a.type, "", a.detail, DiffStatus.ONLY_AFTER, after_sha=a.sha))
+                    if b is not None and a.type == b.type and a.detail and a.detail != b.detail:
+                        rows.append((a.type, a.fname, a.detail, b.detail))
+                if rows:
+                    result.matched[target] = rows
 
             # 双侧渲染（每侧汇总到同一目录，保证 skel/atlas/texture 完整）
             current_image = _render_side(
@@ -282,7 +236,6 @@ class ModInstallDialog(StoppableDialog):
 
         self._results: dict[int, GroupRenderResult] = {}          # 组索引 → 流水线产出
         self._photo_refs: dict[tuple[int, str], ImageTk.PhotoImage] = {}  # 防止 PhotoImage 被回收
-        self._diff_nodes: dict[str, AssetDiff] = {}               # 资产对比节点 iid → 对比数据（点击预览用）
         self._task_queue: Queue[tuple[int, ModGroup]] = Queue()
 
         self._setup_window()
@@ -345,7 +298,6 @@ class ModInstallDialog(StoppableDialog):
         meta_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
 
         self.meta_tree = tb.Treeview(meta_frame, show="tree", selectmode="browse")
-        self.meta_tree.bind("<<TreeviewSelect>>", self._on_tree_select)
         meta_scroll = tb.Scrollbar(meta_frame, orient=tk.VERTICAL, command=self.meta_tree.yview)
         self.meta_tree.configure(yscrollcommand=meta_scroll.set)
         self.meta_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -423,16 +375,14 @@ class ModInstallDialog(StoppableDialog):
         self.after(0, lambda: self.set_task_running(False))
 
     def _apply_result(self, group_index: int, result: GroupRenderResult):
-        """主线程回调：缓存结果 + 写回对比数据 + 刷新当前页"""
+        """主线程回调：缓存结果 + 刷新当前页"""
         if not self.winfo_exists():
             return
         self._results[group_index] = result
-        group = self.groups[group_index]
-        group.asset_diffs = result.diffs  # 对比数据挂在组模型上（§5）
 
         if group_index == self.current_index:
             self._refresh_previews(result)
-            self._rebuild_meta_tree(group)
+            self._rebuild_meta_tree(self.groups[group_index])
 
     # --- 页面切换与刷新 ---
 
@@ -480,10 +430,6 @@ class ModInstallDialog(StoppableDialog):
             title += f" · {group.category}"
         self.title_label.configure(text=title)
 
-        # 取消资产级选中，恢复整组渲染预览
-        if self.meta_tree.selection():
-            self.meta_tree.selection_remove(*self.meta_tree.selection())
-
         # 预览区：已有结果显示贴图，否则按流水线状态显示占位文本
         result = self._results.get(self.current_index)
         if result is not None:
@@ -523,48 +469,9 @@ class ModInstallDialog(StoppableDialog):
             )
             label.configure(image="", text=t(text_key))
 
-    def _show_asset_previews(self, diff: AssetDiff):
-        """点击资产对比节点：左右两框分别显示该资产替换前/替换后的单资产图
-
-        仅 Texture2D 有图像；Mesh/AnimationClip 等显示文字说明
-        """
-        result = self._results.get(self.current_index)
-        if result is None:
-            return
-        for side, sha, detail in (
-            ("current", diff.before_sha, diff.before),
-            ("new", diff.after_sha, diff.after),
-        ):
-            label = self.preview_labels[0 if side == "current" else 1]
-            image = result.images.get(sha) if sha else None
-            if image is not None and image.exists():
-                try:
-                    with PILImage.open(image) as im:
-                        im.thumbnail((400, 280))
-                        photo = ImageTk.PhotoImage(im)
-                    self._photo_refs[(self.current_index, f"asset_{sha}")] = photo
-                    label.configure(image=photo, text="")
-                    continue
-                except Exception:
-                    pass  # 图片读取失败按文字说明处理
-            text = detail if detail else t("ui.mod_install.preview_no_image")
-            label.configure(image="", text=text)
-
-    def _on_tree_select(self, _event=None):
-        """树选中变化：资产对比节点 → 单资产预览；其他节点 → 恢复整组渲染"""
-        selection = self.meta_tree.selection()
-        diff = self._diff_nodes.get(selection[0]) if selection else None
-        if diff is not None:
-            self._show_asset_previews(diff)
-        else:
-            result = self._results.get(self.current_index)
-            if result is not None:
-                self._refresh_previews(result)
-
     def _rebuild_meta_tree(self, group: ModGroup):
-        """重建元信息树：目标 bundle（只列一次）→ 资产前后对比（可点击预览）"""
+        """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""
         self.meta_tree.delete(*self.meta_tree.get_children())
-        self._diff_nodes.clear()
         root = self.meta_tree.insert("", tk.END, text=self._group_display(group), open=True)
 
         # 目标节点：DIRECT_REPLACE 的同名文件 + UPDATE 的搜索目标（均只出现一次）
@@ -598,27 +505,17 @@ class ModInstallDialog(StoppableDialog):
                     text += f" · {f.note}"
                 self.meta_tree.insert(root, tk.END, text=f"📦 {f.mod_path.name} · {text}")
 
-        # 资产前后对比（流水线产出后追加，点击可单资产预览）
-        for target, diffs in group.asset_diffs.items():
-            node = target_nodes.get(target)
-            if node is None:
-                continue
-            for d in diffs:
-                if d.status == DiffStatus.ONLY_BEFORE:
-                    text = f"[{d.type}] {d.name} — {d.before} · {t(_DIFF_STATUS_KEYS[d.status])}"
-                else:
-                    text = f"[{d.type}] {d.name} — {d.before} → {d.after} · {t(_DIFF_STATUS_KEYS[d.status])}"
-                diff_node = self.meta_tree.insert(node, tk.END, text=text)
-                self._diff_nodes[diff_node] = d
-        # 仅 mod 侧存在的资产（组级）
+        # 同名资产前后描述对比（流水线产出后追加：贴图分辨率 / spine 版本等）
         result = self._results.get(self.current_index)
-        if result is not None and result.mod_only:
-            node = self.meta_tree.insert(
-                root, tk.END, text=t("ui.mod_install.node_mod_only"), open=True,
-            )
-            for d in result.mod_only:
-                diff_node = self.meta_tree.insert(node, tk.END, text=f"[{d.type}] {d.name} — {d.after}")
-                self._diff_nodes[diff_node] = d
+        if result is not None:
+            for target, rows in result.matched.items():
+                node = target_nodes.get(target)
+                if node is None:
+                    continue
+                for type_name, fname, before, after in rows:
+                    self.meta_tree.insert(
+                        node, tk.END, text=f"[{type_name}] {fname} — {before} → {after}",
+                    )
 
     def _update_confirm_text(self):
         install_count = sum(1 for i, g in enumerate(self.groups)

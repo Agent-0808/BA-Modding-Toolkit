@@ -29,31 +29,6 @@ class InstallAction(StrEnum):
     MIXED = "mixed"                          # 组内动作混合（仅组级汇总用）
 
 @dataclass
-class AssetInfo:
-    """资产级元信息（由解包/渲染流水线动态填充）"""
-    name: str      # 资产名
-    type: str      # Texture2D / TextAsset / Mesh / ...
-    detail: str    # "1024×1024" / "spine 4.2.42" 等描述
-
-class DiffStatus(StrEnum):
-    """资产前后对比状态"""
-    UNCHANGED = "unchanged"    # 内容一致（执行时被 skip_unchanged 跳过）
-    CHANGED = "changed"        # 内容有变化
-    ONLY_BEFORE = "only_before"  # 仅目标侧存在（mod 未提供）
-    ONLY_AFTER = "only_after"    # 仅 mod 侧存在（新增资产）
-
-@dataclass
-class AssetDiff:
-    """单个资产的前后对比（目标侧 → mod 侧）"""
-    name: str            # 提取文件名（含扩展名，如 CH0195_spr.skel / xxx.png）
-    type: str            # Texture2D / TextAsset / Mesh / AnimationClip
-    before: str          # 目标侧描述（"1024×2048" / "spine 4.2.33 · 45.6 KB"），不存在为 ""
-    after: str           # mod 侧描述，不存在为 ""
-    status: DiffStatus
-    before_sha: str = ""  # 目标侧内容哈希（用于点击预览定位缓存图，仅 Texture2D 有图）
-    after_sha: str = ""   # mod 侧内容哈希
-
-@dataclass
 class ModFilePlan:
     """组内单个 mod 文件的安装计划"""
     mod_path: Path
@@ -61,7 +36,6 @@ class ModFilePlan:
     action: InstallAction
     existing_path: Path | None = None   # DIRECT_REPLACE：游戏目录中的同名文件
     need_crc_fix: bool = False          # DIRECT_REPLACE：是否需 CRC 碰撞修正（由现有文件平台决定）
-    asset_infos: list[AssetInfo] = field(default_factory=list)
     note: str = ""                      # 附加说明（冲突 / 解析失败原因等）
 
 @dataclass
@@ -72,7 +46,6 @@ class ModGroup:
     core: str
     files: list[ModFilePlan]
     target_paths: list[Path] = field(default_factory=list)  # UPDATE：search_prefix 结果（组级）
-    asset_diffs: dict[Path, list[AssetDiff]] = field(default_factory=dict)  # 目标 bundle → 资产前后对比（流水线填充）
 
     @property
     def group_action(self) -> InstallAction:
