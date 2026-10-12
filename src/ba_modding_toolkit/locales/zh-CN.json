@@ -252,7 +252,9 @@
 			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}",
 			"no_game_dir": "未设置游戏资源目录，无法分析 Mod 与游戏文件的关系。",
 			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。",
-			"nothing_selected": "尚未选择任何要安装的组。"
+			"nothing_selected": "尚未选择任何要安装的组。",
+			"summary": "安装完成！\n成功: {installed} 组\n跳过（已安装）: {skipped} 组\n失败: {failed} 组",
+			"failed_detail": "失败明细:\n{details}"
 		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
@@ -481,7 +483,12 @@
 			"update_targets": "需要更新，匹配到 {count} 个目标文件: {names}",
 			"target_conflict": "目标文件冲突: {filename}",
 			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）",
-			"execute_start": "开始安装 {count} 个 Mod 组..."
+			"execute_start": "开始安装 {count} 个 Mod 组...",
+			"execute_group": "开始安装组 [{core}]...",
+			"crc_resave": "需 CRC 碰撞修正，重新保存: {filename}",
+			"replace_failed": "替换文件失败: {path} ({error})",
+			"already_installed": "组 [{core}] 所有资源均未变化，视为已安装，跳过",
+			"execute_done": "安装完成: 成功 {installed} 组 / 跳过 {skipped} 组 / 失败 {failed} 组"
 		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",

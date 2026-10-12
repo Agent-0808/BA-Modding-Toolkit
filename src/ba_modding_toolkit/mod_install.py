@@ -5,14 +5,24 @@
 """
 
 from pathlib import Path
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace as dc_replace
 from enum import StrEnum
 import os
+import shutil
 
 from .i18n import t
 from .utils import no_log
-from .models import LogFunc, ParsedFilename
+from .models import (
+    AnimCheckOptions,
+    LogFunc,
+    MatchStrategy,
+    ParsedFilename,
+    ReplaceAssetType,
+    SaveOptions,
+    SkelConvertOptions,
+)
 from .bundle import Bundle
+from .core import process_mod_update
 from .naming import parse_filename
 from .searching import search_prefix, _asset_match
 
@@ -239,3 +249,152 @@ def plan_mod_install(
     ))
 
     return groups
+
+
+# -------- execute（执行安装） ---------
+
+@dataclass
+class InstallResult:
+    """execute_mod_install 的返回结果"""
+    installed_groups: int = 0                                           # 成功安装组数
+    skipped_groups: int = 0                                             # 已安装跳过组数（全部资源未变化）
+    failed_groups: list[tuple[str, str]] = field(default_factory=list)  # (组名, 失败原因)
+    anim_diffs: dict[str, set[str]] = field(default_factory=dict)       # 动画差异汇总（warning 级，不算失败）
+
+
+def _backup_and_replace(src: Path, dst: Path, create_backup: bool, log: LogFunc) -> bool:
+    """备份并替换文件（.backup 后缀约定与 GUI replace_file 一致）"""
+    try:
+        if create_backup:
+            backup_path = dst.with_suffix(dst.suffix + ".backup")
+            shutil.copy2(dst, backup_path)
+            log(t("log.file.backed_up", path=backup_path))
+        log(t("log.file.overwritten", path=dst))
+        shutil.copy2(src, dst)
+        return True
+    except Exception as e:
+        log(f"❌ {t('log.mod_install.replace_failed', path=dst, error=e)}")
+        return False
+
+
+def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bool, log: LogFunc) -> bool:
+    """DIRECT_REPLACE 执行：需 CRC 碰撞修正时重存临时文件后替换，否则纯拷贝（§2.2）"""
+    if not f.need_crc_fix:
+        return _backup_and_replace(f.mod_path, f.existing_path, create_backup, log)
+
+    tmp_path = f.existing_path.with_name(f.existing_path.stem + ".mod_install_tmp")
+    try:
+        bundle = Bundle.load(f.mod_path, log)
+        if bundle is None:
+            log(f"❌ {t('message.load_failed')}: {f.mod_path.name}")
+            return False
+        ok, msg = bundle.save(tmp_path, dc_replace(save_options, perform_crc=True))
+        if not ok:
+            log(f"❌ {t('log.file.save_failed', path=tmp_path, error=msg)}")
+            return False
+        return _backup_and_replace(tmp_path, f.existing_path, create_backup, log)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def execute_mod_install(
+    groups: list[ModGroup],
+    output_dir: Path,
+    asset_types_to_replace: set[ReplaceAssetType],
+    save_options: SaveOptions,
+    spine_options: SkelConvertOptions | None = None,
+    match_strategy: MatchStrategy = 'cont_name_type',
+    anim_check: AnimCheckOptions | None = None,
+    create_backup: bool = True,
+    log: LogFunc = no_log,
+) -> InstallResult:
+    """
+    按用户决策逐组执行安装（见设计文档 §6）。
+
+    - DIRECT_REPLACE：备份 → 需要时 CRC 碰撞修正重存后替换，否则纯拷贝
+    - UPDATE：process_mod_update（skip_unchanged=True）生成后备份替换；
+      全部资源未变化 → 该组视为已安装跳过
+    - 单组失败不影响后续组；动画差异仅警告不视为失败
+
+    Args:
+        groups: 待安装的组列表（调用方已过滤决策与可安装性）
+        output_dir: UPDATE 生成文件的输出目录
+        asset_types_to_replace: 需要替换的资源类型集合
+        save_options: 保存与 CRC 修正选项（UPDATE 分支使用）
+        spine_options: Spine 版本转换选项
+        match_strategy: 匹配策略
+        anim_check: 动画差异检测选项
+        create_backup: 是否创建 .backup 备份
+        log: 日志记录函数
+
+    Returns:
+        InstallResult: 组级成功/跳过/失败统计与失败明细
+    """
+    result = InstallResult()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for group in groups:
+        direct_files = [f for f in group.files if f.action == InstallAction.DIRECT_REPLACE]
+        update_files = [f for f in group.files if f.action == InstallAction.UPDATE]
+        if not direct_files and not update_files:
+            continue
+
+        log("\n" + "-" * 50)
+        log(t("log.mod_install.execute_group", core=group.core))
+
+        group_failed = False
+        all_unchanged = True
+
+        # 1. DIRECT_REPLACE：同名直接替换
+        for f in direct_files:
+            if f.need_crc_fix:
+                log(t("log.mod_install.crc_resave", filename=f.mod_path.name))
+            if not _direct_replace(f, save_options, create_backup, log):
+                result.failed_groups.append((group.core, f.mod_path.name))
+                group_failed = True
+
+        # 2. UPDATE：process_mod_update 生成后备份替换
+        if update_files:
+            update_result = process_mod_update(
+                source_paths=[f.mod_path for f in update_files],
+                target_paths=group.target_paths,
+                output_dir=output_dir,
+                asset_types_to_replace=asset_types_to_replace,
+                save_options=save_options,
+                spine_options=spine_options,
+                skip_unchanged=True,
+                match_strategy=match_strategy,
+                anim_check=anim_check,
+                log=log,
+            )
+            if not update_result.success:
+                # skel 版本冲突等：本组中止，继续后续组
+                result.failed_groups.append((group.core, update_result.message))
+                group_failed = True
+            elif update_result.message == "all_targets_unchanged":
+                log(t("log.mod_install.already_installed", core=group.core))
+            else:
+                for pair in update_result.file_pairs:
+                    # FilePair: output = 生成文件，source = 游戏目录原文件
+                    if not _backup_and_replace(pair.output, pair.source, create_backup, log):
+                        result.failed_groups.append((group.core, pair.source.name))
+                        group_failed = True
+                all_unchanged = False
+                for name, anims in (update_result.anim_diffs or {}).items():
+                    result.anim_diffs.setdefault(name, set()).update(anims)
+
+        # 3. 组级统计（MIXED 组：直接替换已生效时仍按实际结果计）
+        if group_failed:
+            continue
+        if all_unchanged and not direct_files:
+            result.skipped_groups += 1
+        else:
+            result.installed_groups += 1
+
+    log("\n" + t(
+        "log.mod_install.execute_done",
+        installed=result.installed_groups,
+        skipped=result.skipped_groups,
+        failed=len(result.failed_groups),
+    ))
+    return result

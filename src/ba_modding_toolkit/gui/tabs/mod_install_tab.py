@@ -6,9 +6,10 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ...mod_install import InstallAction, ModGroup, plan_mod_install
+from ...mod_install import InstallAction, InstallResult, ModGroup, execute_mod_install, plan_mod_install
 from ...searching import get_search_dirs
 from ..components import FileListbox, UIComponents, SettingRow
+from ..utils import warn_anim_diffs
 from ..windows.mod_install_dialog import ModInstallDialog
 from .base_tab import TabFrame
 
@@ -124,5 +125,44 @@ class ModInstallTab(TabFrame):
         self._execute_install(selected)
 
     def _execute_install(self, selected_groups: list[ModGroup]):
-        """执行安装（阶段5接入 execute_mod_install，当前仅记录决策）"""
+        """执行安装（后台线程，日志走主窗口 logger，见设计文档 §6）"""
+        self.install_button.config(state=tk.DISABLED)
+        self.run_in_thread(self._install_worker, selected_groups)
+
+    def _install_worker(self, selected_groups: list[ModGroup]):
+        """后台安装：逐组 备份 → 替换/更新，完成后主线程弹汇总"""
         self.logger.log(t("log.mod_install.execute_start", count=len(selected_groups)))
+        first_target = next((p for g in selected_groups for p in g.target_paths), None)
+        result = execute_mod_install(
+            groups=selected_groups,
+            output_dir=self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BUNDLES),
+            asset_types_to_replace=self.app.get_asset_types(),
+            save_options=self.app.build_save_options(self.app.resolve_crc_setting(first_target)),
+            spine_options=self.app.build_spine_options(),
+            match_strategy=self.match_strategy_var.get(),
+            anim_check=self.app.build_anim_check_options(),
+            create_backup=self.app.create_backup_var.get(),
+            log=self.logger.log,
+        )
+        self.master.after(0, lambda: self._show_install_summary(result))
+
+    def _show_install_summary(self, result: InstallResult):
+        """安装汇总弹窗：成功 N 组 / 跳过 M 组 / 失败 K 组（失败列明细）"""
+        self.install_button.config(state=tk.NORMAL)
+        if result.anim_diffs:
+            warn_anim_diffs(result.anim_diffs, self.logger.log)
+
+        failed = len(result.failed_groups)
+        msg = t(
+            "message.mod_install.summary",
+            installed=result.installed_groups,
+            skipped=result.skipped_groups,
+            failed=failed,
+        )
+        if failed:
+            details = "\n".join(f"  [{name}] {reason}" for name, reason in result.failed_groups[:10])
+            msg += "\n" + t("message.mod_install.failed_detail", details=details)
+            messagebox.showwarning(t("common.warning"), msg)
+        else:
+            messagebox.showinfo(t("common.success"), msg)
+        self.logger.status(t("status.done"))
