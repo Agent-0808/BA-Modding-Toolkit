@@ -46,12 +46,18 @@ def _fmt_size(n: int) -> str:
     return f"{n} B"
 
 
+def _sha(path: Path) -> str:
+    """文件内容短哈希（提取产物已在磁盘上，仅用于前后一致性展示判定）"""
+    return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
+
+
 @dataclass
 class _SideAsset:
     """单侧提取出的一个资产（临时目录内的产物，仅流水线内使用）"""
     fname: str     # 提取文件名（含扩展名）
     type: str      # Texture2D / TextAsset
     detail: str    # "2220×3540" / "spine 4.2.33 · 45.6 KB"
+    sha: str       # 内容短哈希（detail 相同但内容有差异时仍能列出）
     path: Path
 
 
@@ -60,7 +66,7 @@ class GroupRenderResult:
     """单个组的渲染流水线产出（缓存与 UI 共用，不含临时目录内的路径）"""
     current_image: Path | None = None  # 当前侧预览图
     new_image: Path | None = None      # 安装后侧预览图
-    # 目标 bundle → 同名资产前后描述对比（仅列出描述有变化的，如贴图分辨率 / spine 版本）
+    # 目标 bundle → 同名资产前后对比行（type, fname, 前描述, 后描述；描述相同 → 内容有变化）
     matched: dict[Path, list[tuple[str, str, str, str]]] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)   # current/new → 渲染失败原因
 
@@ -98,7 +104,7 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
                 detail = f"{im.width}×{im.height}"
         except Exception:
             detail = ""
-        assets.append(_SideAsset(png.name, "Texture2D", detail, png))
+        assets.append(_SideAsset(png.name, "Texture2D", detail, _sha(png), png))
     for txt in extracted[AssetType.TextAsset]:
         size = _fmt_size(txt.stat().st_size)
         if txt.suffix == ".skel":
@@ -106,7 +112,7 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
             detail = f"spine {version} · {size}"
         else:
             detail = size  # atlas 等其他 TextAsset
-        assets.append(_SideAsset(txt.name, "TextAsset", detail, txt))
+        assets.append(_SideAsset(txt.name, "TextAsset", detail, _sha(txt), txt))
     return assets
 
 
@@ -184,12 +190,12 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
             ).encode()).hexdigest()
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            # 同名同类型资产前后描述对比（仅列出描述有变化的，如贴图分辨率 / spine 版本）
+            # 同名同类型资产前后对比（内容哈希一致 → 不列出；描述相同但内容有差异 → 标注"内容有变化"）
             for target, before_list in target_assets.items():
                 rows: list[tuple[str, str, str, str]] = []
                 for a in before_list:
                     b = mod_pool.get(a.fname)
-                    if b is not None and a.type == b.type and a.detail and a.detail != b.detail:
+                    if b is not None and a.type == b.type and a.sha != b.sha:
                         rows.append((a.type, a.fname, a.detail, b.detail))
                 if rows:
                     result.matched[target] = rows
@@ -394,10 +400,11 @@ class ModInstallDialog(StoppableDialog):
         )
 
     def _group_display(self, group: ModGroup) -> str:
-        """跳转列表项展示：core（角色名）"""
+        """跳转列表项/页面标题展示：[category] 角色名 (core)"""
         char_field = self.app.character_name_field_var.get()
         char_name = self.app.char_map.lookup(group.core, char_field) or ""
-        return f"{group.core}（{char_name}）" if char_name else group.core
+        name = f"{char_name} ({group.core})" if char_name else group.core
+        return f"[{group.category}] {name}" if group.category else name
 
     def _decision_mark(self, index: int) -> str:
         """跳转列表的决策标记：✔ 安装 / ✘ 跳过 / – 不可安装"""
@@ -424,11 +431,8 @@ class ModInstallDialog(StoppableDialog):
             state=tk.NORMAL if self.current_index < len(self.groups) - 1 else tk.DISABLED
         )
 
-        # 标题：core（角色名） · category
-        title = self._group_display(group)
-        if group.category:
-            title += f" · {group.category}"
-        self.title_label.configure(text=title)
+        # 标题：[category] 角色名 (core)
+        self.title_label.configure(text=self._group_display(group))
 
         # 预览区：已有结果显示贴图，否则按流水线状态显示占位文本
         result = self._results.get(self.current_index)
@@ -505,7 +509,7 @@ class ModInstallDialog(StoppableDialog):
                     text += f" · {f.note}"
                 self.meta_tree.insert(root, tk.END, text=f"📦 {f.mod_path.name} · {text}")
 
-        # 同名资产前后描述对比（流水线产出后追加：贴图分辨率 / spine 版本等）
+        # 同名资产前后对比（流水线产出后追加：分辨率 / spine 版本 / 内容变化）
         result = self._results.get(self.current_index)
         if result is not None:
             for target, rows in result.matched.items():
@@ -513,9 +517,11 @@ class ModInstallDialog(StoppableDialog):
                 if node is None:
                     continue
                 for type_name, fname, before, after in rows:
-                    self.meta_tree.insert(
-                        node, tk.END, text=f"[{type_name}] {fname} — {before} → {after}",
-                    )
+                    if before != after:
+                        text = f"[{type_name}] {fname} — {before} → {after}"
+                    else:
+                        text = f"[{type_name}] {fname} — {before} · {t('ui.mod_install.diff_content_changed')}"
+                    self.meta_tree.insert(node, tk.END, text=text)
 
     def _update_confirm_text(self):
         install_count = sum(1 for i, g in enumerate(self.groups)
