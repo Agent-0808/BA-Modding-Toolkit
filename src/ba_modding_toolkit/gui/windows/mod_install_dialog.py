@@ -6,6 +6,7 @@ from tkinter import messagebox
 from pathlib import Path
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
+from enum import StrEnum
 from queue import Queue
 from threading import Thread
 import hashlib
@@ -13,7 +14,6 @@ import shutil
 import tempfile
 
 from PIL import Image as PILImage
-from PIL import ImageTk
 
 if TYPE_CHECKING:
     from ..app import App
@@ -25,7 +25,7 @@ from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
 from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version
 from ...core import _extract_assets_from_bundle
-from ..components import UIComponents
+from ..components import UIComponents, ZoomableCanvas
 from .base import StoppableDialog
 
 # 组/文件动作 → 元信息"安装方式"展示键
@@ -35,6 +35,20 @@ _ACTION_KEYS = {
     InstallAction.NOT_FOUND: "ui.mod_install.action_not_found",
     InstallAction.ERROR: "ui.mod_install.action_error",
     InstallAction.MIXED: "ui.mod_install.action_mixed",
+}
+
+
+class _RowTag(StrEnum):
+    """元信息树资产行的状态标签（Treeview tag，用于整行着色）"""
+    DIFF = "diff"        # 内容哈希有差异（前后描述对比 / 内容有变化）
+    SAME = "same"        # 内容哈希一致（无变化）
+    REPLACE = "replace"  # 将被替换（Mesh/AnimationClip 交集）
+
+
+_ROW_TAG_COLORS: dict[_RowTag, str] = {
+    _RowTag.DIFF: "#e67e22",     # 橙：有差异
+    _RowTag.SAME: "#95a5a6",     # 灰：无变化
+    _RowTag.REPLACE: "#3498db",  # 蓝：将被替换
 }
 
 
@@ -67,8 +81,8 @@ class GroupRenderResult:
     """单个组的渲染流水线产出（缓存与 UI 共用，不含临时目录内的路径）"""
     current_image: Path | None = None  # 当前侧预览图
     new_image: Path | None = None      # 安装后侧预览图
-    # 目标 bundle → 资产级行文本（前后对比 / 将被替换，流水线产出即展示文本）
-    matched: dict[Path, list[str]] = field(default_factory=dict)
+    # 目标 bundle → 资产级行 (文本, 状态标签)，流水线产出即展示文本
+    matched: dict[Path, list[tuple[str, _RowTag]]] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)   # current/new → 渲染失败原因
 
 
@@ -199,29 +213,30 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
             for f in group.files:
                 non_preview_mod |= Bundle.list_asset_names(f.mod_path, _non_preview_types)
             for target, before_list in target_assets.items():
-                rows: list[str] = []
+                # (类型名, 名字, 展示文本, 标签)：先收集再按"类型→名字"统一排序
+                rows: list[tuple[str, str, str, _RowTag]] = []
                 for a in before_list:
                     b = mod_pool.get(a.fname)
                     if b is None or a.type != b.type:
                         continue
                     if a.sha != b.sha:
                         if a.detail != b.detail:
-                            rows.append(f"[{a.type}] {a.fname} — {a.detail} → {b.detail}")
+                            rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {a.detail} → {b.detail}", _RowTag.DIFF))
                         else:
-                            rows.append(
+                            rows.append((a.type, a.fname, (
                                 f"[{a.type}] {a.fname} — {a.detail} · "
                                 f"{t('ui.mod_install.diff_content_changed')}"
-                            )
+                            ), _RowTag.DIFF))
                     else:
-                        rows.append(
+                        rows.append((a.type, a.fname, (
                             f"[{a.type}] {a.fname} — {a.detail} · "
                             f"{t('ui.mod_install.diff_unchanged')}"
-                        )
+                        ), _RowTag.SAME))
                 non_preview_target = Bundle.list_asset_names(target, _non_preview_types)
-                for name, type_name in sorted(non_preview_target & non_preview_mod):
-                    rows.append(f"[{type_name}] {name} — {t('ui.mod_install.diff_will_replace')}")
-                if rows:
-                    result.matched[target] = rows
+                for name, type_name in non_preview_target & non_preview_mod:
+                    rows.append((type_name, name, f"[{type_name}] {name} — {t('ui.mod_install.diff_will_replace')}", _RowTag.REPLACE))
+                rows.sort(key=lambda r: (r[0], r[1]))
+                result.matched[target] = [(text, tag) for _, _, text, tag in rows]
 
             # 双侧渲染（每侧汇总到同一目录，保证 skel/atlas/texture 完整）
             current_image = _render_side(
@@ -265,7 +280,6 @@ class ModInstallDialog(StoppableDialog):
 
         self._results: dict[int, GroupRenderResult] = {}          # 组索引 → 流水线产出
         self._render_done = 0                                     # 已完成渲染的组数（进度展示）
-        self._photo_refs: dict[tuple[int, str], ImageTk.PhotoImage] = {}  # 防止 PhotoImage 被回收
         self._task_queue: Queue[tuple[int, ModGroup]] = Queue()
 
         self._setup_window()
@@ -312,34 +326,42 @@ class ModInstallDialog(StoppableDialog):
         self.title_label = tb.Label(main_frame, font=("", 12, "bold"), anchor=tk.CENTER)
         self.title_label.pack(fill=tk.X, pady=(0, 5))
 
-        # 3. 预览区：当前（游戏目录） / 安装后（mod） 左右并排
+        # 3. 预览区：当前（游戏目录） / 安装后（mod） 左右并排（滚轮缩放、拖拽平移）
         preview_frame = tb.Frame(main_frame)
         preview_frame.pack(fill=tk.X, pady=(0, 5))
         preview_frame.grid_columnconfigure((0, 1), weight=1)
 
-        self.preview_labels: list[tb.Label] = []
+        self.preview_canvases: list[ZoomableCanvas] = []
         for col, key in enumerate(("ui.mod_install.preview_current", "ui.mod_install.preview_new")):
             lf = tb.Labelframe(preview_frame, text=t(key), padding=5)
             lf.grid(row=0, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
-            label = tb.Label(lf, text=t("ui.mod_install.preview_none"), anchor=tk.CENTER)
-            label.configure(width=40)
-            label.pack(fill=tk.BOTH, expand=True)
-            self.preview_labels.append(label)
+            canvas = ZoomableCanvas(lf, width=400, height=280)
+            canvas.pack(fill=tk.BOTH, expand=True)
+            self.preview_canvases.append(canvas)
 
-        # 4. 元信息区（Treeview 树形：目标 bundle → 来源 mod → 资产对比）
+        # 4. 底部锚定：决策区与确认按钮自下而上排列，元信息区不抢占剩余空间
+        # （side=BOTTOM 先打包者贴底，故先确认按钮后决策区）
+        bottom_frame = tb.Frame(main_frame)
+        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        bottom_frame.grid_columnconfigure((0, 1), weight=1)
+
+        decision_frame = tb.Frame(main_frame)
+        decision_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(0, 5))
+
+        # 5. 元信息区（Treeview 树形：目标 bundle → 来源 mod → 资产对比，行数随内容自适应）
         meta_frame = tb.Labelframe(main_frame, text=t("ui.mod_install.meta_title"), padding=5)
-        meta_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        meta_frame.pack(fill=tk.X, pady=(0, 5))
 
         self.meta_tree = tb.Treeview(meta_frame, show="tree", selectmode="browse")
+        # 资产行状态整行着色
+        for tag, color in _ROW_TAG_COLORS.items():
+            self.meta_tree.tag_configure(tag, foreground=color)
         meta_scroll = tb.Scrollbar(meta_frame, orient=tk.VERTICAL, command=self.meta_tree.yview)
         self.meta_tree.configure(yscrollcommand=meta_scroll.set)
         self.meta_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         meta_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # 5. 决策区：安装此组 / 跳过（绑定当前页组的决策变量）
-        decision_frame = tb.Frame(main_frame)
-        decision_frame.pack(fill=tk.X, pady=(0, 5))
-
+        # 6. 决策区：安装此组 / 跳过（绑定当前页组的决策变量）
         self.decision_var = tk.BooleanVar(value=True)  # 当前页的临时绑定，切页时写入 decision_vars
         self.install_radio = tb.Radiobutton(
             decision_frame, text=t("ui.mod_install.decision_install"),
@@ -354,11 +376,7 @@ class ModInstallDialog(StoppableDialog):
         )
         self.skip_radio.pack(side=tk.LEFT)
 
-        # 6. 底部按钮：确认安装（N/M） / 取消
-        bottom_frame = tb.Frame(main_frame)
-        bottom_frame.pack(fill=tk.X)
-        bottom_frame.grid_columnconfigure((0, 1), weight=1)
-
+        # 7. 底部按钮：确认安装（N/M） / 取消
         self.confirm_button = UIComponents.create_button(
             bottom_frame, "", self._on_confirm,
             bootstyle="success", style="large"
@@ -481,8 +499,8 @@ class ModInstallDialog(StoppableDialog):
         else:
             waiting = self.app.mod_install_render_preview_var.get() and not self._task_queue.empty()
             text_key = "ui.mod_install.preview_rendering" if waiting else "ui.mod_install.preview_none"
-            for label in self.preview_labels:
-                label.configure(image="", text=t(text_key))
+            for canvas in self.preview_canvases:
+                canvas.set_image(None, t(text_key))
 
         # 决策单选（不可安装组禁用"安装此组"）
         decision = self.decision_vars[self.current_index]
@@ -494,24 +512,15 @@ class ModInstallDialog(StoppableDialog):
         self._update_confirm_text()
 
     def _refresh_previews(self, result: GroupRenderResult):
-        """双侧预览刷新为整组渲染图（PhotoImage 须在主线程创建）"""
+        """双侧预览刷新为整组渲染图（缩放平移由 ZoomableCanvas 处理，仅主线程调用）"""
         for side, image in (("current", result.current_image), ("new", result.new_image)):
-            label = self.preview_labels[0 if side == "current" else 1]
-            if image is not None and image.exists():
-                try:
-                    with PILImage.open(image) as im:
-                        im.thumbnail((400, 280))
-                        photo = ImageTk.PhotoImage(im)
-                    self._photo_refs[(self.current_index, side)] = photo
-                    label.configure(image=photo, text="")
-                    continue
-                except Exception:
-                    pass  # 图片读取失败按无预览处理
-            text_key = (
+            canvas = self.preview_canvases[0 if side == "current" else 1]
+            path = image if image is not None and image.exists() else None
+            placeholder_key = (
                 "ui.mod_install.preview_failed" if side in result.errors
                 else "ui.mod_install.preview_none"
             )
-            label.configure(image="", text=t(text_key))
+            canvas.set_image(path, t(placeholder_key))
 
     def _rebuild_meta_tree(self, group: ModGroup):
         """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""
@@ -549,15 +558,23 @@ class ModInstallDialog(StoppableDialog):
                     text += f" · {f.note}"
                 self.meta_tree.insert(root, tk.END, text=f"📦 {f.mod_path.name} · {text}")
 
-        # 同名资产前后对比 / 将被替换（流水线产出后追加的现成行文本）
+        # 同名资产前后对比 / 将被替换（流水线产出后追加的 (行文本, 状态标签)）
         result = self._results.get(self.current_index)
         if result is not None:
             for target, rows in result.matched.items():
                 node = target_nodes.get(target)
                 if node is None:
                     continue
-                for text in rows:
-                    self.meta_tree.insert(node, tk.END, text=text)
+                for text, tag in rows:
+                    self.meta_tree.insert(node, tk.END, text=text, tags=(tag,))
+
+        # 行数随内容自适应（上限 20 行，超出走滚动条；下方留白由布局让出）
+        def _visible_rows(item: str) -> int:
+            count = 0
+            for child in self.meta_tree.get_children(item):
+                count += 1 + _visible_rows(child)
+            return count
+        self.meta_tree.configure(height=max(1, min(1 + _visible_rows(root), 20)))
 
     def _update_confirm_text(self):
         install_count = sum(1 for i, g in enumerate(self.groups)

@@ -35,6 +35,7 @@ class ModInstallTab(TabFrame):
             logger=self.logger,
             display_formatter=lambda p: f"{p.parent.name} / {p.name}",
             on_files_added=self._on_files_added,
+            allowed_suffixes={".bundle", ".backup"}
         )
         self.mod_file_listbox.get_frame().pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 

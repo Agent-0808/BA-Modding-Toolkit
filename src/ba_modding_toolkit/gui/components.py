@@ -5,6 +5,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.widgets.tooltip import ToolTip
 from ttkbootstrap.widgets.scrolled import ScrolledText
 from tkinterdnd2 import DND_FILES
+from PIL import Image as PILImage, ImageTk
 from pathlib import Path
 from typing import Callable, Any, TYPE_CHECKING
 
@@ -1356,3 +1357,85 @@ class FileListbox:
     def get_listbox(self):
         """获取列表框控件,用于直接操作"""
         return self.listbox
+
+
+class ZoomableCanvas(tb.Canvas):
+    """可滚轮缩放、拖拽平移的图片预览画布（无图时显示占位文本）
+
+    - 滚轮缩放（以画布中心为基准）、左键拖拽平移、双击复位适配
+    - set_image 传入 Path 自动加载；加载失败或传 None 时显示占位文本
+    """
+
+    def __init__(self, master, placeholder: str = "", **kwargs):
+        super().__init__(master, highlightthickness=0, **kwargs)
+        self._pil: PILImage.Image | None = None
+        self._photo: ImageTk.PhotoImage | None = None  # 防止 PhotoImage 被回收
+        self._scale = 1.0
+        self._drag_start: tuple[int, int] | None = None
+        self._img_id = self.create_image(0, 0, anchor="nw")
+        self._text_id = self.create_text(0, 0, text=placeholder, fill="#888888")
+        self.bind("<Configure>", lambda _e: self._refit())
+        self.bind("<MouseWheel>", self._on_wheel)
+        self.bind("<ButtonPress-1>", self._on_press)
+        self.bind("<B1-Motion>", self._on_motion)
+        self.bind("<Double-Button-1>", lambda _e: self._refit())
+
+    def set_image(self, image: Path | None, placeholder: str = ""):
+        """设置图片或清空；每次设置后重新适配窗口大小"""
+        if image is not None:
+            try:
+                with PILImage.open(image) as im:
+                    self._pil = im.convert("RGBA")
+            except Exception:
+                self._pil = None
+        else:
+            self._pil = None
+        if self._pil is None:
+            self.itemconfigure(self._text_id, text=placeholder)
+            self.itemconfigure(self._img_id, image="")
+            self._photo = None
+        else:
+            self.itemconfigure(self._text_id, text="")
+            self._refit()
+
+    def _refit(self):
+        """重新适配窗口（缩放 = 恰好填满画布，不放大超过原图）"""
+        cw, ch = self.winfo_width(), self.winfo_height()
+        if self._pil is None:
+            if cw > 10 and ch > 10:
+                self.coords(self._text_id, cw // 2, ch // 2)
+            return
+        if cw < 10 or ch < 10:
+            return
+        iw, ih = self._pil.size
+        self._scale = min(cw / iw, ch / ih)
+        self._render()
+
+    def _render(self):
+        """按当前缩放重新采样并居中绘制"""
+        assert self._pil is not None
+        iw, ih = self._pil.size
+        size = (max(1, int(iw * self._scale)), max(1, int(ih * self._scale)))
+        self._photo = ImageTk.PhotoImage(self._pil.resize(size, PILImage.BILINEAR))
+        cw, ch = self.winfo_width(), self.winfo_height()
+        self.coords(self._img_id, (cw - size[0]) // 2, (ch - size[1]) // 2)
+        self.itemconfigure(self._img_id, image=self._photo)
+
+    def _on_wheel(self, event):
+        """滚轮缩放（Windows delta ±120）"""
+        if self._pil is None:
+            return
+        factor = 1.1 if event.delta > 0 else 1 / 1.1
+        new_scale = min(max(self._scale * factor, 0.05), 8.0)
+        if new_scale != self._scale:
+            self._scale = new_scale
+            self._render()
+
+    def _on_press(self, event):
+        self._drag_start = (event.x, event.y)
+
+    def _on_motion(self, event):
+        """左键拖拽平移"""
+        if self._drag_start is not None:
+            self.move(self._img_id, event.x - self._drag_start[0], event.y - self._drag_start[1])
+            self._drag_start = (event.x, event.y)
