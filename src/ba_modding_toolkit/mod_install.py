@@ -187,6 +187,9 @@ def plan_mod_install(
 
     # 3. 逐组判定
     groups = list(group_map.values())
+    # need_crc 全 plan 判定一次：目的都是安装到同一游戏，目标平台一致，
+    # 无需逐文件加载现有 bundle 判定（StandaloneWindows64 需要碰撞修正）
+    need_crc_cache: bool | None = None
     for group in groups:
         log("\n" + "-" * 50)
         log(t("log.mod_install.group_info", core=group.core, count=len(group.files)))
@@ -197,8 +200,9 @@ def plan_mod_install(
                 continue
             f.action = InstallAction.DIRECT_REPLACE
             f.existing_path = existing
-            # 是否需 CRC 修正由现有文件的平台决定（StandaloneWindows64 需要碰撞修正）
-            f.need_crc_fix = Bundle.check_need_crc(existing, log)
+            if need_crc_cache is None:
+                need_crc_cache = Bundle.check_need_crc(existing, log)
+            f.need_crc_fix = need_crc_cache
             log(t("log.mod_install.same_name_found", filename=f.mod_path.name))
 
         update_files = [f for f in group.files if f.action == InstallAction.NOT_FOUND]

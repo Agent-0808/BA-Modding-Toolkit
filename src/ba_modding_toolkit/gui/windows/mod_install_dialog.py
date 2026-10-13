@@ -264,6 +264,7 @@ class ModInstallDialog(StoppableDialog):
         self.confirmed = False  # True = 用户点击确认，Tab 据此收集决策执行
 
         self._results: dict[int, GroupRenderResult] = {}          # 组索引 → 流水线产出
+        self._render_done = 0                                     # 已完成渲染的组数（进度展示）
         self._photo_refs: dict[tuple[int, str], ImageTk.PhotoImage] = {}  # 防止 PhotoImage 被回收
         self._task_queue: Queue[tuple[int, ModGroup]] = Queue()
 
@@ -276,7 +277,7 @@ class ModInstallDialog(StoppableDialog):
 
     def _setup_window(self):
         self.title(t("ui.mod_install.dialog_title"))
-        self.geometry("900x720")
+        self.geometry("900x1000")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -297,6 +298,9 @@ class ModInstallDialog(StoppableDialog):
         self.jump_combo = tb.Combobox(nav_frame, state="readonly")
         self.jump_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.jump_combo.bind("<<ComboboxSelected>>", self._on_jump_selected)
+
+        # 渲染进度条（流水线启动时才显示）
+        self.progress_bar = tb.Progressbar(main_frame, mode="determinate")
 
         self.next_button = UIComponents.create_button(
             nav_frame, t("ui.mod_install.next_group"),
@@ -378,6 +382,10 @@ class ModInstallDialog(StoppableDialog):
 
         if self._task_queue.empty():
             return
+        # 进度条 + 主窗口状态（渲染在后台逐组进行，进度在 _apply_result 回调中推进）
+        self.progress_bar.configure(maximum=len(self.groups), value=0)
+        self.progress_bar.pack(fill=tk.X, pady=(0, 5))
+        self.app.logger.status(t("status.render_progress", done=0, total=len(self.groups)))
         self.set_task_running(True)
         Thread(target=self._pipeline_worker, daemon=True).start()
 
@@ -404,10 +412,19 @@ class ModInstallDialog(StoppableDialog):
         self.after(0, lambda: self.set_task_running(False))
 
     def _apply_result(self, group_index: int, result: GroupRenderResult):
-        """主线程回调：缓存结果 + 刷新当前页"""
+        """主线程回调：缓存结果 + 推进渲染进度 + 刷新当前页"""
         if not self.winfo_exists():
             return
         self._results[group_index] = result
+
+        # 渲染进度：弹窗内进度条 + 主窗口状态栏
+        total = len(self.groups)
+        self._render_done += 1
+        self.progress_bar.configure(value=self._render_done)
+        self.app.logger.status(t("status.render_progress", done=self._render_done, total=total))
+        if self._render_done >= total:
+            self.progress_bar.pack_forget()
+            self.app.logger.status(t("status.done"))
 
         if group_index == self.current_index:
             self._refresh_previews(result)
