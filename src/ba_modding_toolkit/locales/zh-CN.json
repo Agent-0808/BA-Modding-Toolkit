@@ -651,6 +651,7 @@
 			"need_crc_fix": "需 CRC 修正",
 			"meta_size": "大小：{mod_size}（现有：{existing_size}）",
 			"diff_content_changed": "内容有变化",
+			"diff_unchanged": "无变化",
 			"diff_will_replace": "将被替换",
 			"preview_rendering": "渲染中...",
 			"preview_failed": "渲染失败"

@@ -191,9 +191,9 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
             ).encode()).hexdigest()
             out_dir.mkdir(parents=True, exist_ok=True)
 
-            # 同名同类型资产前后对比（内容哈希一致 → 不列出；描述相同但内容有差异 → 标注"内容有变化"）
-            # Mesh/AnimationClip 不提取，仅枚举两侧交集（UPDATE 下 apply_patch 只替换 patch 键
-            # 在目标侧也存在的资产），列出"将被替换"让用户得知模型/动画类 mod 的替换范围
+            # 同名同类型资产全部列出（UPDATE 下 apply_patch 只替换两侧交集），
+            # 内容哈希有差异的行标注前后变化，无差异的标注"无变化"
+            # Mesh/AnimationClip 不提取，仅枚举两侧交集并列出"将被替换"
             _non_preview_types = {AssetType.Mesh, AssetType.AnimationClip}
             non_preview_mod: set[tuple[str, str]] = set()
             for f in group.files:
@@ -202,7 +202,9 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
                 rows: list[str] = []
                 for a in before_list:
                     b = mod_pool.get(a.fname)
-                    if b is not None and a.type == b.type and a.sha != b.sha:
+                    if b is None or a.type != b.type:
+                        continue
+                    if a.sha != b.sha:
                         if a.detail != b.detail:
                             rows.append(f"[{a.type}] {a.fname} — {a.detail} → {b.detail}")
                         else:
@@ -210,6 +212,11 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
                                 f"[{a.type}] {a.fname} — {a.detail} · "
                                 f"{t('ui.mod_install.diff_content_changed')}"
                             )
+                    else:
+                        rows.append(
+                            f"[{a.type}] {a.fname} — {a.detail} · "
+                            f"{t('ui.mod_install.diff_unchanged')}"
+                        )
                 non_preview_target = Bundle.list_asset_names(target, _non_preview_types)
                 for name, type_name in sorted(non_preview_target & non_preview_mod):
                     rows.append(f"[{type_name}] {name} — {t('ui.mod_install.diff_will_replace')}")
