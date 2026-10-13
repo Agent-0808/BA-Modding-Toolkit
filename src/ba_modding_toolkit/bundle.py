@@ -360,9 +360,43 @@ class Bundle:
         
         platform, unity_version = bundle.platform_info
         log(t("log.platform_info", platform=platform, version=unity_version))
-        
+
         return bundle.need_crc()
-    
+
+    @classmethod
+    def list_asset_names(
+        cls,
+        bundle_path: Path,
+        asset_types: set[AssetType],
+        log: LogFunc = no_log,
+    ) -> set[tuple[str, str]]:
+        """
+        枚举 bundle 内指定类型资产的 (名字, 类型名) 集合。
+
+        供替换范围展示等场景：仅取名不解码内容，peek_name 惰性取名
+        避免反序列化对象数据（如网格顶点），失败时回退 read()。
+        """
+        bundle = cls.load(bundle_path, log=log)
+        if bundle is None:
+            return set()
+        env = bundle.env
+
+        out: set[tuple[str, str]] = set()
+        for obj in env.objects:
+            if obj.type not in asset_types:
+                continue
+            name: str | None = None
+            try:
+                name = obj.peek_name()
+            except Exception:
+                try:
+                    name = obj.read().m_Name
+                except Exception:
+                    continue
+            if name:
+                out.add((name, obj.type.name))
+        return out
+
     def compress(self, compression: CompressionType = "none") -> bytes:
         """
         从 UnityPy.Environment 对象生成 bundle 文件的字节数据。

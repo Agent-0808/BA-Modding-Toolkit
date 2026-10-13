@@ -9,6 +9,7 @@ from dataclasses import dataclass, field, replace as dc_replace
 from enum import StrEnum
 import os
 import shutil
+import tempfile
 
 from .i18n import t
 from .utils import no_log
@@ -64,11 +65,6 @@ class ModGroup:
         if len(actions) == 1:
             return actions.pop()
         return InstallAction.MIXED if actions else InstallAction.ERROR
-
-    @property
-    def display_name(self) -> str:
-        """弹窗行头展示名"""
-        return self.core
 
 
 # -------- plan（分析聚类） ---------
@@ -282,8 +278,9 @@ def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bo
     if not f.need_crc_fix:
         return _backup_and_replace(f.mod_path, f.existing_path, create_backup, log)
 
-    tmp_path = f.existing_path.with_name(f.existing_path.stem + ".mod_install_tmp")
-    try:
+    # 临时文件放系统临时目录（保持原文件名含扩展名），避免污染游戏目录且自动清理
+    with tempfile.TemporaryDirectory() as td:
+        tmp_path = Path(td) / f.existing_path.name
         bundle = Bundle.load(f.mod_path, log)
         if bundle is None:
             log(f"❌ {t('message.load_failed')}: {f.mod_path.name}")
@@ -293,8 +290,6 @@ def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bo
             log(f"❌ {t('log.file.save_failed', path=tmp_path, error=msg)}")
             return False
         return _backup_and_replace(tmp_path, f.existing_path, create_backup, log)
-    finally:
-        tmp_path.unlink(missing_ok=True)
 
 
 def execute_mod_install(

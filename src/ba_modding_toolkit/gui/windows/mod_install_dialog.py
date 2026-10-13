@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 from ...i18n import t
 from ...utils import no_log
 from ...models import AssetType, LogFunc
+from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
 from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version
 from ...core import _extract_assets_from_bundle
@@ -66,8 +67,8 @@ class GroupRenderResult:
     """单个组的渲染流水线产出（缓存与 UI 共用，不含临时目录内的路径）"""
     current_image: Path | None = None  # 当前侧预览图
     new_image: Path | None = None      # 安装后侧预览图
-    # 目标 bundle → 同名资产前后对比行（type, fname, 前描述, 后描述；描述相同 → 内容有变化）
-    matched: dict[Path, list[tuple[str, str, str, str]]] = field(default_factory=dict)
+    # 目标 bundle → 资产级行文本（前后对比 / 将被替换，流水线产出即展示文本）
+    matched: dict[Path, list[str]] = field(default_factory=dict)
     errors: dict[str, str] = field(default_factory=dict)   # current/new → 渲染失败原因
 
 
@@ -191,12 +192,27 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
             out_dir.mkdir(parents=True, exist_ok=True)
 
             # 同名同类型资产前后对比（内容哈希一致 → 不列出；描述相同但内容有差异 → 标注"内容有变化"）
+            # Mesh/AnimationClip 不提取，仅枚举两侧交集（UPDATE 下 apply_patch 只替换 patch 键
+            # 在目标侧也存在的资产），列出"将被替换"让用户得知模型/动画类 mod 的替换范围
+            _non_preview_types = {AssetType.Mesh, AssetType.AnimationClip}
+            non_preview_mod: set[tuple[str, str]] = set()
+            for f in group.files:
+                non_preview_mod |= Bundle.list_asset_names(f.mod_path, _non_preview_types)
             for target, before_list in target_assets.items():
-                rows: list[tuple[str, str, str, str]] = []
+                rows: list[str] = []
                 for a in before_list:
                     b = mod_pool.get(a.fname)
                     if b is not None and a.type == b.type and a.sha != b.sha:
-                        rows.append((a.type, a.fname, a.detail, b.detail))
+                        if a.detail != b.detail:
+                            rows.append(f"[{a.type}] {a.fname} — {a.detail} → {b.detail}")
+                        else:
+                            rows.append(
+                                f"[{a.type}] {a.fname} — {a.detail} · "
+                                f"{t('ui.mod_install.diff_content_changed')}"
+                            )
+                non_preview_target = Bundle.list_asset_names(target, _non_preview_types)
+                for name, type_name in sorted(non_preview_target & non_preview_mod):
+                    rows.append(f"[{type_name}] {name} — {t('ui.mod_install.diff_will_replace')}")
                 if rows:
                     result.matched[target] = rows
 
@@ -509,18 +525,14 @@ class ModInstallDialog(StoppableDialog):
                     text += f" · {f.note}"
                 self.meta_tree.insert(root, tk.END, text=f"📦 {f.mod_path.name} · {text}")
 
-        # 同名资产前后对比（流水线产出后追加：分辨率 / spine 版本 / 内容变化）
+        # 同名资产前后对比 / 将被替换（流水线产出后追加的现成行文本）
         result = self._results.get(self.current_index)
         if result is not None:
             for target, rows in result.matched.items():
                 node = target_nodes.get(target)
                 if node is None:
                     continue
-                for type_name, fname, before, after in rows:
-                    if before != after:
-                        text = f"[{type_name}] {fname} — {before} → {after}"
-                    else:
-                        text = f"[{type_name}] {fname} — {before} · {t('ui.mod_install.diff_content_changed')}"
+                for text in rows:
                     self.meta_tree.insert(node, tk.END, text=text)
 
     def _update_confirm_text(self):
