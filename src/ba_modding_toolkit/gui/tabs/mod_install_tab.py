@@ -58,6 +58,16 @@ class ModInstallTab(TabFrame):
             tooltip=t("option.match_strategy_info")
         )
 
+        # 预览渲染开关（自设置页移入，仅影响确认弹窗；依赖 SpineViewerCLI 路径）
+        SettingRow.create_switch(
+            option_frame,
+            label=t("option.mod_install_render_preview"),
+            variable=self.app.mod_install_render_preview_var,
+            tooltip=t("option.mod_install_render_preview_info"),
+            app=self.app,
+            on_click_disabled=self.app.show_spine_viewer_not_configured
+        )
+
         # 3. 操作按钮区域
         action_button_frame = tb.Frame(self)
         action_button_frame.pack(fill=tk.X, pady=10)

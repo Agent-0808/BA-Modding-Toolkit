@@ -23,7 +23,7 @@ from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
-from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version, check_skel_animation_diff
+from ...spine import RENDER_PRESET_HIGH, SpineViewer, get_skel_version, check_skel_animation_diff
 from ...core import _extract_assets_from_bundle
 from ..components import UIComponents, ZoomableCanvas
 from .base import StoppableDialog
@@ -155,7 +155,7 @@ def _render_side(
             skel_path=skel,
             output_path=out_path,
             viewer_path=viewer_path,
-            render_options=RENDER_PRESET_LOW,
+            render_options=RENDER_PRESET_HIGH,  # 高画质：耗时与低画质接近，临时文件体积可忽略
             log=log,
         )
         return (out_path if ok else None), (None if ok else msg)
@@ -351,7 +351,8 @@ class ModInstallDialog(StoppableDialog):
         # （side=BOTTOM 先打包者贴底，故先确认按钮后决策区）
         bottom_frame = tb.Frame(main_frame)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
-        bottom_frame.grid_columnconfigure((0, 1), weight=1)
+        # uniform 使两列严格等宽（不随文本长度偏移）
+        bottom_frame.grid_columnconfigure((0, 1), weight=1, uniform="bottom")
 
         decision_frame = tb.Frame(main_frame)
         decision_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(0, 5))
@@ -369,20 +370,24 @@ class ModInstallDialog(StoppableDialog):
         self.meta_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         meta_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # 6. 决策区：安装此组 / 跳过（绑定当前页组的决策变量）
+        # 6. 决策区：安装此组 / 跳过（大按钮式单选，选中侧蓝色高亮，绑定当前页组的决策变量）
         self.decision_var = tk.BooleanVar(value=True)  # 当前页的临时绑定，切页时写入 decision_vars
+        # uniform 使两列严格等宽（不随文本长度偏移）
+        decision_frame.grid_columnconfigure((0, 1), weight=1, uniform="decision")
         self.install_radio = tb.Radiobutton(
-            decision_frame, text=t("ui.mod_install.decision_install"),
+            decision_frame, text=f"✔ {t('ui.mod_install.decision_install')}",
             variable=self.decision_var, value=True,
             command=self._on_decision_change,
+            bootstyle="outline-toolbutton",
         )
-        self.install_radio.pack(side=tk.LEFT, padx=(0, 20))
+        self.install_radio.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         self.skip_radio = tb.Radiobutton(
-            decision_frame, text=t("ui.mod_install.decision_skip"),
+            decision_frame, text=f"✘ {t('ui.mod_install.decision_skip')}",
             variable=self.decision_var, value=False,
             command=self._on_decision_change,
+            bootstyle="outline-toolbutton",
         )
-        self.skip_radio.pack(side=tk.LEFT)
+        self.skip_radio.grid(row=0, column=1, sticky="ew")
 
         # 7. 底部按钮：确认安装（N/M） / 取消
         self.confirm_button = UIComponents.create_button(
