@@ -20,10 +20,10 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...utils import no_log
-from ...models import AssetType, LogFunc
+from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
-from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version
+from ...spine import RENDER_PRESET_LOW, SpineViewer, get_skel_version, check_skel_animation_diff
 from ...core import _extract_assets_from_bundle
 from ..components import UIComponents, ZoomableCanvas
 from .base import StoppableDialog
@@ -71,7 +71,7 @@ class _SideAsset:
     """单侧提取出的一个资产（临时目录内的产物，仅流水线内使用）"""
     fname: str     # 提取文件名（含扩展名）
     type: str      # Texture2D / TextAsset
-    detail: str    # "2220×3540" / "spine 4.2.33 · 45.6 KB"
+    detail: str    # "2220×3540" / "spine 4.2.33"（skel 行省略 size 段，动画差异在行组装时追加）
     sha: str       # 内容短哈希（detail 相同但内容有差异时仍能列出）
     path: Path
 
@@ -121,12 +121,11 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
             detail = ""
         assets.append(_SideAsset(png.name, "Texture2D", detail, _sha(png), png))
     for txt in extracted[AssetType.TextAsset]:
-        size = _fmt_size(txt.stat().st_size)
         if txt.suffix == ".skel":
-            version = get_skel_version(txt, no_log) or "?"
-            detail = f"spine {version} · {size}"
+            # size 段信息量低（一位小数，字节级差异也显示相同大小），省略
+            detail = f"spine {get_skel_version(txt, no_log) or '?'}"
         else:
-            detail = size  # atlas 等其他 TextAsset
+            detail = _fmt_size(txt.stat().st_size)  # atlas 等其他 TextAsset
         assets.append(_SideAsset(txt.name, "TextAsset", detail, _sha(txt), txt))
     return assets
 
@@ -170,7 +169,9 @@ def _render_side(
     return None, None
 
 
-def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> GroupRenderResult:
+def _process_group(
+    group: ModGroup, viewer_path: Path | None, anim_check: AnimCheckOptions, log: LogFunc,
+) -> GroupRenderResult:
     """组级流水线：两侧解包 → 资产哈希对比 → 双侧渲染（后台线程调用，禁止 tk 操作）
 
     mod 侧资产按组池化后与每个目标 bundle 逐一对比（不做文件级精确配对，
@@ -225,12 +226,15 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
                         continue
                     if a.sha != b.sha:
                         if a.detail != b.detail:
-                            rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {a.detail} → {b.detail}", _RowTag.DIFF))
+                            detail = f"{a.detail} → {b.detail}"
                         else:
-                            rows.append((a.type, a.fname, (
-                                f"[{a.type}] {a.fname} — {a.detail} · "
-                                f"{t('ui.mod_install.diff_content_changed')}"
-                            ), _RowTag.DIFF))
+                            detail = f"{a.detail} · {t('ui.mod_install.diff_content_changed')}"
+                        # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
+                        if a.fname.endswith(".skel") and anim_check.is_valid():
+                            missing = check_skel_animation_diff(b.path, a.path, anim_check.viewer_path, log)
+                            if missing:
+                                detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
+                        rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))
                     else:
                         rows.append((a.type, a.fname, (
                             f"[{a.type}] {a.fname} — {a.detail} · "
@@ -415,6 +419,7 @@ class ModInstallDialog(StoppableDialog):
         """后台依次消费任务队列；窗口关闭（should_stop）时停止后续任务"""
         viewer_str = self.app.spine_viewer_path_var.get().strip()
         viewer_path = Path(viewer_str) if viewer_str else None
+        anim_check = self.app.build_anim_check_options()
 
         while not self._task_queue.empty() and not self.should_stop():
             group_index, group = self._task_queue.get()
@@ -425,7 +430,7 @@ class ModInstallDialog(StoppableDialog):
             )
             result = _render_cache.get(key)
             if result is None:
-                result = _process_group(group, viewer_path, self.app.logger.log)
+                result = _process_group(group, viewer_path, anim_check, self.app.logger.log)
                 _render_cache[key] = result
             if self.should_stop():
                 break
