@@ -202,4 +202,11 @@ class ModInstallTab(TabFrame):
             removed = self.mod_file_listbox.remove_files(result.installed_files)
             if removed:
                 self.logger.log(t("log.mod_install.list_cleaned", count=removed))
+
+        # 列表已变更，旧的分析结果（含已安装组）过期，重新分析剩余文件
+        self.groups = []
+        self.install_button.config(state=tk.DISABLED)
+        self.mod_file_listbox.set_annotations(None)
+        if self.mod_file_list:
+            self.run_plan_thread()
         self.logger.status(t("status.done"))
