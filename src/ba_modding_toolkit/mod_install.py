@@ -18,6 +18,7 @@ from .models import (
     LogFunc,
     MatchStrategy,
     ParsedFilename,
+    ProgressCallback,
     ReplaceAssetType,
     SaveOptions,
     SkelConvertOptions,
@@ -260,6 +261,7 @@ class InstallResult:
     skipped_groups: int = 0                                             # 已安装跳过组数（全部资源未变化）
     failed_groups: list[tuple[str, str]] = field(default_factory=list)  # (组名, 失败原因)
     anim_diffs: dict[str, set[str]] = field(default_factory=dict)       # 动画差异汇总（warning 级，不算失败）
+    installed_files: list[Path] = field(default_factory=list)           # 成功组（含已安装跳过）的 mod 文件，供调用方清理列表
 
 
 def _backup_and_replace(src: Path, dst: Path, create_backup: bool, log: LogFunc) -> bool:
@@ -306,6 +308,7 @@ def execute_mod_install(
     anim_check: AnimCheckOptions | None = None,
     create_backup: bool = True,
     log: LogFunc = no_log,
+    progress_callback: ProgressCallback | None = None,
 ) -> InstallResult:
     """
     按用户决策逐组执行安装（见设计文档 §6）。
@@ -325,6 +328,7 @@ def execute_mod_install(
         anim_check: 动画差异检测选项
         create_backup: 是否创建 .backup 备份
         log: 日志记录函数
+        progress_callback: 可选的进度回调，接收 (当前组序号, 总组数, 组名)
 
     Returns:
         InstallResult: 组级成功/跳过/失败统计与失败明细
@@ -332,7 +336,10 @@ def execute_mod_install(
     result = InstallResult()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for group in groups:
+    for i, group in enumerate(groups, 1):
+        if progress_callback:
+            progress_callback(i, len(groups), group.core)
+
         direct_files = [f for f in group.files if f.action == InstallAction.DIRECT_REPLACE]
         update_files = [f for f in group.files if f.action == InstallAction.UPDATE]
         if not direct_files and not update_files:
@@ -389,6 +396,8 @@ def execute_mod_install(
             result.skipped_groups += 1
         else:
             result.installed_groups += 1
+        # 成功组（含已安装跳过）记录 mod 文件，供调用方清理待安装列表；失败组保留便于重试
+        result.installed_files.extend(f.mod_path for f in group.files)
 
     log("\n" + t(
         "log.mod_install.execute_done",

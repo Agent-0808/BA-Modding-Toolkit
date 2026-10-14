@@ -330,7 +330,7 @@ class ModInstallDialog(StoppableDialog):
         )
         self.next_button.pack(side=tk.RIGHT)
 
-        # 2. 标题：core（角色名） · category
+        # 2. 标题：prefix（+ 疑似已安装标记）
         self.title_label = tb.Label(main_frame, font=("", 12, "bold"), anchor=tk.CENTER)
         self.title_label.pack(fill=tk.X, pady=(0, 5))
 
@@ -456,6 +456,9 @@ class ModInstallDialog(StoppableDialog):
         if group_index == self.current_index:
             self._refresh_previews(result)
             self._rebuild_meta_tree(self.groups[group_index])
+            # 「疑似已安装」标记依赖流水线产出，结果到达后刷新标题与跳转列表
+            self._refresh_title()
+            self._refresh_jump_list()
 
     # --- 页面切换与刷新 ---
 
@@ -479,9 +482,26 @@ class ModInstallDialog(StoppableDialog):
             return "–"
         return "✔" if self.decision_vars[index].get() else "✘"
 
+    def _likely_installed(self, index: int) -> bool:
+        """「疑似已安装」：流水线产出的全部资产对比行均为无变化（Mesh/AnimationClip
+        未参与哈希对比，权威判定仍在执行阶段的 skip_unchanged）"""
+        result = self._results.get(index)
+        if result is None or not result.matched:
+            return False
+        rows = [tag for rows_ in result.matched.values() for _, tag in rows_]
+        return bool(rows) and all(tag == _RowTag.SAME for tag in rows)
+
+    def _refresh_title(self):
+        """标题：prefix（+ 疑似已安装标记）"""
+        title = self.groups[self.current_index].prefix or self.groups[self.current_index].core
+        if self._likely_installed(self.current_index):
+            title += f" · {t('ui.mod_install.likely_installed')}"
+        self.title_label.configure(text=title)
+
     def _refresh_jump_list(self):
         values = [
             f"{self._decision_mark(i)} {self._group_display(g)}"
+            + (" ≈" if self._likely_installed(i) else "")  # 疑似已安装标记
             for i, g in enumerate(self.groups)
         ]
         self.jump_combo.configure(values=values)
@@ -498,8 +518,8 @@ class ModInstallDialog(StoppableDialog):
             state=tk.NORMAL if self.current_index < len(self.groups) - 1 else tk.DISABLED
         )
 
-        # 标题：[category] 角色名 (core)
-        self.title_label.configure(text=self._group_display(group))
+        # 标题：prefix（+ 疑似已安装标记）
+        self._refresh_title()
 
         # 预览区：已有结果显示贴图，否则按流水线状态显示占位文本
         result = self._results.get(self.current_index)
@@ -532,7 +552,8 @@ class ModInstallDialog(StoppableDialog):
     def _rebuild_meta_tree(self, group: ModGroup):
         """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""
         self.meta_tree.delete(*self.meta_tree.get_children())
-        root = self.meta_tree.insert("", tk.END, text=self._group_display(group), open=True)
+        # 根节点与页面标题一致，用 prefix（category 仅保留在跳转下拉）
+        root = self.meta_tree.insert("", tk.END, text=group.prefix or group.core, open=True)
 
         # 目标节点：DIRECT_REPLACE 的同名文件 + UPDATE 的搜索目标（均只出现一次）
         target_nodes: dict[Path, str] = {}  # 目标路径 → 树节点 id

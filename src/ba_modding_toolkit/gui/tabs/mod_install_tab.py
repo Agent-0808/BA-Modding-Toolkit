@@ -10,8 +10,16 @@ from ...mod_install import InstallAction, InstallResult, ModGroup, execute_mod_i
 from ...searching import get_search_dirs
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import warn_anim_diffs
-from ..windows.mod_install_dialog import ModInstallDialog
+from ..windows.mod_install_dialog import ModInstallDialog, _ACTION_KEYS
 from .base_tab import TabFrame
+
+# 文件级标注：动作 → 前景色（🟢 可直接替换 / 🟡 需更新 / 🔴 未找到 / ⚫ 错误）
+_ACTION_COLORS = {
+    InstallAction.DIRECT_REPLACE: "#27ae60",
+    InstallAction.UPDATE: "#e67e22",
+    InstallAction.NOT_FOUND: "#c0392b",
+    InstallAction.ERROR: "#95a5a6",
+}
 
 
 class ModInstallTab(TabFrame):
@@ -106,7 +114,16 @@ class ModInstallTab(TabFrame):
         self.master.after(0, lambda: self.analyze_button.config(state=tk.NORMAL))
         if self.groups:
             self.master.after(0, lambda: self.install_button.config(state=tk.NORMAL))
+        self.master.after(0, self._apply_file_annotations)
         self.logger.status(t("status.done"))
+
+    def _apply_file_annotations(self):
+        """分析后给列表文件标注动作状态（NOT_FOUND/ERROR 无需进弹窗即可发现）"""
+        annotations = {
+            f.mod_path: (f" · {t(_ACTION_KEYS[f.action])}", _ACTION_COLORS[f.action])
+            for g in self.groups for f in g.files
+        }
+        self.mod_file_listbox.set_annotations(annotations)
 
     def _open_confirm_dialog(self):
         """打开确认弹窗，收集逐组决策后执行安装（执行逻辑见 _execute_install）"""
@@ -144,6 +161,9 @@ class ModInstallTab(TabFrame):
             anim_check=self.app.build_anim_check_options(),
             create_backup=self.app.create_backup_var.get(),
             log=self.logger.log,
+            progress_callback=lambda i, total, core: self.logger.status(
+                t("status.processing_batch", current=i, total=total, filename=core)
+            ),
         )
         self.master.after(0, lambda: self._show_install_summary(result))
 
@@ -166,4 +186,10 @@ class ModInstallTab(TabFrame):
             messagebox.showwarning(t("common.warning"), msg)
         else:
             messagebox.showinfo(t("common.success"), msg)
+
+        # 汇总弹窗关闭后清理已安装文件（失败组文件保留便于重试）
+        if result.installed_files:
+            removed = self.mod_file_listbox.remove_files(result.installed_files)
+            if removed:
+                self.logger.log(t("log.mod_install.list_cleaned", count=removed))
         self.logger.status(t("status.done"))

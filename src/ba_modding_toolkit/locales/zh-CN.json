@@ -489,7 +489,8 @@
 			"crc_resave": "需 CRC 碰撞修正，重新保存: {filename}",
 			"replace_failed": "替换文件失败: {path} ({error})",
 			"already_installed": "组 [{core}] 所有资源均未变化，视为已安装，跳过",
-			"execute_done": "安装完成: 成功 {installed} 组 / 跳过 {skipped} 组 / 失败 {failed} 组"
+			"execute_done": "安装完成: 成功 {installed} 组 / 跳过 {skipped} 组 / 失败 {failed} 组",
+			"list_cleaned": "已从列表移除 {count} 个已安装文件"
 		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
@@ -635,6 +636,7 @@
 			"placeholder": "将 Mod 文件或文件夹拖放到此处...\n添加后将自动分析",
 			"view_details": "查看详情",
 			"dialog_title": "Mod 安装确认",
+			"likely_installed": "疑似已安装",
 			"prev_group": "◀ 上一组",
 			"next_group": "下一组 ▶",
 			"preview_current": "当前（游戏目录）",

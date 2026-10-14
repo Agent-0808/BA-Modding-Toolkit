@@ -1093,7 +1093,8 @@ class FileListbox:
         self.display_formatter = display_formatter
         self.on_files_added = on_files_added
         self.allowed_suffixes = allowed_suffixes
-        
+        self._annotations: dict[Path, tuple[str, str]] = {}  # path → (标注文本, 前景色)
+
         self._create_widgets(title)
         
     def _create_widgets(self, title):
@@ -1208,6 +1209,33 @@ class FileListbox:
         
         return real_file_count if real_file_count < len(self.file_list) else None
     
+    def _item_text(self, path: Path) -> str:
+        """listbox 项显示文本：文件名（或格式化文本）+ 标注"""
+        base = self.display_formatter(path) if self.display_formatter else path.name
+        ann = self._annotations.get(path)
+        return f"{base}{ann[0]}" if ann else base
+
+    def _apply_annotation_colors(self):
+        """按当前 file_list 重涂各行前景色（Listbox 的 itemconfigure 按索引定位，
+        增删项后颜色不会随内容移动，需结构性变更后重涂）"""
+        for i in range(self.listbox.size()):
+            file_index = self._get_file_index_by_listbox_index(i)
+            ann = self._annotations.get(self.file_list[file_index]) if file_index is not None else None
+            self.listbox.itemconfigure(i, foreground=ann[1] if ann else Theme.TEXT_NORMAL)
+
+    def set_annotations(self, annotations: dict[Path, tuple[str, str]] | None = None) -> None:
+        """设置文件级标注（通用 API）：path → (标注文本, 前景色)；传 None 清除全部标注
+
+        Args:
+            annotations: 标注映射。文本会追加在显示文本之后，颜色作用于整行；
+                仅对当前列表内的文件生效，列表为空的文件忽略
+        """
+        self._annotations = annotations or {}
+        for i, path in enumerate(self.file_list):
+            self.listbox.delete(i)
+            self.listbox.insert(i, self._item_text(path))
+        self._apply_annotation_colors()
+
     def add_files(self, paths: list[Path]):
         """
         添加文件到列表
@@ -1224,17 +1252,12 @@ class FileListbox:
             if path not in self.file_list:
                 self.file_list.append(path)
                 added_paths.append(path)  # 记录新添加的文件
-                
-                # 格式化显示文本
-                if self.display_formatter:
-                    display_text = self.display_formatter(path)
-                else:
-                    display_text = path.name
-                
-                self.listbox.insert(tk.END, display_text)
+
+                self.listbox.insert(tk.END, self._item_text(path))
                 added_count += 1
-        
+
         if added_count > 0:
+            self._apply_annotation_colors()
             if self.logger:
                 self.logger.log(t('log.file.added_count', count=added_count))
             
@@ -1333,11 +1356,13 @@ class FileListbox:
             self.listbox.delete(listbox_index)
             if file_index < len(self.file_list):
                 del self.file_list[file_index]
-        
+
         # 如果列表为空，添加占位符
         if not self.file_list and self.listbox.size() == 0:
             self._add_placeholder()
-        
+        else:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+
         if self.logger:
             self.logger.log(t('log.file.removed_count', count=len(items_to_remove)))
     
@@ -1346,9 +1371,35 @@ class FileListbox:
         self.file_list.clear()
         self.listbox.delete(0, tk.END)
         self._add_placeholder()
-        
+
         if self.logger:
             self.logger.log(t('log.file.list_cleared'))
+
+    def remove_files(self, paths: list[Path]) -> int:
+        """移除指定文件（同时删除 listbox 项与 file_list 条目）
+
+        Args:
+            paths: 待移除的文件路径列表
+
+        Returns:
+            int: 实际移除的数量
+        """
+        targets = set(paths)
+        removed = 0
+        # 从后往前删除，避免索引变动
+        for listbox_index in range(self.listbox.size() - 1, -1, -1):
+            file_index = self._get_file_index_by_listbox_index(listbox_index)
+            if file_index is not None and self.file_list[file_index] in targets:
+                self.listbox.delete(listbox_index)
+                del self.file_list[file_index]
+                removed += 1
+
+        # 如果列表为空，添加占位符
+        if not self.file_list and self.listbox.size() == 0:
+            self._add_placeholder()
+        elif removed:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+        return removed
     
     def get_frame(self):
         """获取组件框架，用于布局"""
