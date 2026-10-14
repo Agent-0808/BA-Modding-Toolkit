@@ -137,8 +137,12 @@ def _render_side(
     out_path: Path,
     viewer_path: Path | None,
     log: LogFunc,
-) -> Path | None:
-    """渲染单侧预览图：skel/atlas/texture 须位于同一目录（返回 None = 无图/失败）"""
+) -> tuple[Path | None, str | None]:
+    """渲染单侧预览图：skel/atlas/texture 须位于同一目录
+
+    Returns:
+        tuple[Path | None, str | None]: (预览图路径, 失败原因)；无图或未配置 viewer 时原因可能为 None
+    """
     render_dir.mkdir(exist_ok=True)
     for a in assets:
         if a.type in ("Texture2D", "TextAsset"):  # 元数据型资产（Mesh 等）无文件，不参与渲染
@@ -147,23 +151,23 @@ def _render_side(
     skel = next((f for f in render_dir.glob("*.skel")), None)
     if skel is not None:
         if viewer_path is None or not viewer_path.exists():
-            return None
-        ok, _msg = SpineViewer.render_preview(
+            return None, None
+        ok, msg = SpineViewer.render_preview(
             skel_path=skel,
             output_path=out_path,
             viewer_path=viewer_path,
             render_options=RENDER_PRESET_LOW,
             log=log,
         )
-        return out_path if ok else None
+        return (out_path if ok else None), (None if ok else msg)
 
     # 纯贴图回退：取最大 Texture2D 导出图
     textures = [a for a in assets if a.type == "Texture2D"]
     if textures:
         biggest = max(textures, key=lambda a: a.path.stat().st_size)
         PILImage.open(biggest.path).convert("RGBA").save(out_path)
-        return out_path
-    return None
+        return out_path, None
+    return None, None
 
 
 def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> GroupRenderResult:
@@ -239,19 +243,19 @@ def _process_group(group: ModGroup, viewer_path: Path | None, log: LogFunc) -> G
                 result.matched[target] = [(text, tag) for _, _, text, tag in rows]
 
             # 双侧渲染（每侧汇总到同一目录，保证 skel/atlas/texture 完整）
-            current_image = _render_side(
+            current_image, err = _render_side(
                 [a for assets in target_assets.values() for a in assets],
                 work_dir / "cur_render", out_dir / "current.png", viewer_path, log,
             )
             if current_image is None:
-                result.errors["current"] = t("log.spine.preview_failed")
+                result.errors["current"] = err or t("ui.mod_install.preview_failed")
             result.current_image = current_image
 
-            new_image = _render_side(
+            new_image, err = _render_side(
                 mod_assets, work_dir / "new_render", out_dir / "new.png", viewer_path, log,
             )
             if new_image is None:
-                result.errors["new"] = t("log.spine.preview_failed")
+                result.errors["new"] = err or t("ui.mod_install.preview_failed")
             result.new_image = new_image
 
     except Exception as e:
@@ -335,7 +339,7 @@ class ModInstallDialog(StoppableDialog):
         for col, key in enumerate(("ui.mod_install.preview_current", "ui.mod_install.preview_new")):
             lf = tb.Labelframe(preview_frame, text=t(key), padding=5)
             lf.grid(row=0, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
-            canvas = ZoomableCanvas(lf, width=400, height=280)
+            canvas = ZoomableCanvas(lf, width=400, height=500)
             canvas.pack(fill=tk.BOTH, expand=True)
             self.preview_canvases.append(canvas)
 
@@ -516,11 +520,9 @@ class ModInstallDialog(StoppableDialog):
         for side, image in (("current", result.current_image), ("new", result.new_image)):
             canvas = self.preview_canvases[0 if side == "current" else 1]
             path = image if image is not None and image.exists() else None
-            placeholder_key = (
-                "ui.mod_install.preview_failed" if side in result.errors
-                else "ui.mod_install.preview_none"
-            )
-            canvas.set_image(path, t(placeholder_key))
+            # 失败时优先显示真实原因（msg 已本地化），无原因时回退到通用占位
+            placeholder = result.errors.get(side) or t("ui.mod_install.preview_none")
+            canvas.set_image(path, placeholder)
 
     def _rebuild_meta_tree(self, group: ModGroup):
         """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""
