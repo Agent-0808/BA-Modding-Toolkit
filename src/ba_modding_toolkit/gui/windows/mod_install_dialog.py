@@ -566,8 +566,6 @@ class ModInstallDialog(StoppableDialog):
             if f.existing_path is None or f.existing_path in target_nodes:
                 continue
             detail = t(_ACTION_KEYS[f.action])
-            if f.need_crc_fix:
-                detail += f" · {t('ui.mod_install.need_crc_fix')}"
             detail += f" · {t('ui.mod_install.meta_size', mod_size=_fmt_size(f.mod_path.stat().st_size), existing_size=_fmt_size(f.existing_path.stat().st_size))}"
             node = self.meta_tree.insert(
                 root, tk.END, text=f"📦 {f.existing_path.name} · {detail}", open=True,
