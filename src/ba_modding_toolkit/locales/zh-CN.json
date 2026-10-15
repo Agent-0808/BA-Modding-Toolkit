@@ -114,6 +114,8 @@
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
 		"check_animations": "检测动画差异",
 		"check_animations_info": "在替换 .skel 文件时，检测目标是否包含来源中不存在的动画\n需要配置 SpineViewerCLI 路径",
+		"mod_install_render_preview": "渲染预览图",
+		"mod_install_render_preview_info": "在 Mod 安装确认弹窗中后台渲染 Spine 预览图与贴图\n关闭后仅展示文件与资产，弹窗秒开\n需要配置 SpineViewerCLI 路径",
 		"match_strategy": "匹配策略",
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "溢出",
@@ -245,6 +247,15 @@
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
+		"mod_install": {
+			"filename_parse_failed": "无法解析文件名: {filename}",
+			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}",
+			"no_game_dir": "未设置游戏资源目录，无法分析 Mod 与游戏文件的关系。",
+			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。",
+			"nothing_selected": "尚未选择任何要安装的组。",
+			"summary": "安装完成！\n成功: {installed} 组\n跳过（已安装）: {skipped} 组\n失败: {failed} 组",
+			"failed_detail": "失败明细:\n{details}"
+		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
 		"batch": {
@@ -297,7 +308,8 @@
 		"error": "错误：{error}",
 		"loaded": "已加载 {type}",
 		"calculation_done": "计算完成",
-		"extracting": "正在提取资源..."
+		"extracting": "正在提取资源...",
+		"render_progress": "渲染预览 ({done}/{total})..."
 	},
 	"log": {
 		"file": {
@@ -464,6 +476,22 @@
 			"target_processed": "目标文件处理完成: {name}（替换 {applied} 个资源）",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
+		"mod_install": {
+			"plan_start": "开始分析 {count} 个 Mod 文件...",
+			"group_info": "分组 [{core}]（{count} 个文件）",
+			"same_name_found": "找到同名文件: {filename}，将直接替换",
+			"filter_latest_date": "存在多个日期版本，已选取最新: {date}",
+			"update_targets": "需要更新，匹配到 {count} 个目标文件: {names}",
+			"target_conflict": "目标文件冲突: {filename}",
+			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）",
+			"execute_start": "开始安装 {count} 个 Mod 组...",
+			"execute_group": "开始安装组 [{core}]...",
+			"crc_resave": "需 CRC 碰撞修正，重新保存: {filename}",
+			"replace_failed": "替换文件失败: {path} ({error})",
+			"already_installed": "组 [{core}] 所有资源均未变化，视为已安装，跳过",
+			"execute_done": "安装完成: 成功 {installed} 组 / 跳过 {skipped} 组 / 失败 {failed} 组",
+			"list_cleaned": "已从列表移除 {count} 个已安装文件"
+		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
 			"start": "开始批量处理...",
@@ -532,6 +560,7 @@
 		"tabs": {
 			"mod_update": "Mod 更新",
 			"batch_update": "批量更新",
+			"mod_install": "Mod 安装",
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
@@ -602,6 +631,33 @@
 			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_not_found": "未找到匹配资源：{message}"
+		},
+		"mod_install": {
+			"placeholder": "将待安装的 mod 文件拖放到此处...",
+			"view_details": "查看详情",
+			"dialog_title": "Mod 安装确认",
+			"likely_installed": "疑似已安装",
+			"prev_group": "◀ 上一组",
+			"next_group": "下一组 ▶",
+			"preview_current": "现有文件",
+			"preview_new": "待安装",
+			"preview_none": "暂无预览",
+			"meta_title": "文件与资产",
+			"decision_install": "安装此组",
+			"decision_skip": "跳过",
+			"confirm_install": "确认安装 ({install}/{total})",
+			"action_direct_replace": "直接替换",
+			"action_update": "更新后替换",
+			"action_not_found": "未找到对应文件",
+			"action_error": "错误",
+			"action_mixed": "混合",
+			"meta_size": "{mod_size} → {existing_size}",
+			"diff_content_changed": "内容有变化",
+			"diff_unchanged": "无变化",
+			"diff_missing_anims": "缺失 {count} 个动画",
+			"diff_will_replace": "将被替换",
+			"preview_rendering": "渲染中...",
+			"preview_failed": "渲染失败"
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",

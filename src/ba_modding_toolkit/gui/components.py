@@ -5,6 +5,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.widgets.tooltip import ToolTip
 from ttkbootstrap.widgets.scrolled import ScrolledText
 from tkinterdnd2 import DND_FILES
+from PIL import Image as PILImage, ImageTk
 from pathlib import Path
 from typing import Callable, Any, TYPE_CHECKING
 
@@ -1092,7 +1093,8 @@ class FileListbox:
         self.display_formatter = display_formatter
         self.on_files_added = on_files_added
         self.allowed_suffixes = allowed_suffixes
-        
+        self._annotations: dict[Path, tuple[str, str]] = {}  # path → (标注文本, 前景色)
+
         self._create_widgets(title)
         
     def _create_widgets(self, title):
@@ -1207,6 +1209,33 @@ class FileListbox:
         
         return real_file_count if real_file_count < len(self.file_list) else None
     
+    def _item_text(self, path: Path) -> str:
+        """listbox 项显示文本：文件名（或格式化文本）+ 标注"""
+        base = self.display_formatter(path) if self.display_formatter else path.name
+        ann = self._annotations.get(path)
+        return f"{base}{ann[0]}" if ann else base
+
+    def _apply_annotation_colors(self):
+        """按当前 file_list 重涂各行前景色（Listbox 的 itemconfigure 按索引定位，
+        增删项后颜色不会随内容移动，需结构性变更后重涂）"""
+        for i in range(self.listbox.size()):
+            file_index = self._get_file_index_by_listbox_index(i)
+            ann = self._annotations.get(self.file_list[file_index]) if file_index is not None else None
+            self.listbox.itemconfigure(i, foreground=ann[1] if ann else Theme.TEXT_NORMAL)
+
+    def set_annotations(self, annotations: dict[Path, tuple[str, str]] | None = None) -> None:
+        """设置文件级标注（通用 API）：path → (标注文本, 前景色)；传 None 清除全部标注
+
+        Args:
+            annotations: 标注映射。文本会追加在显示文本之后，颜色作用于整行；
+                仅对当前列表内的文件生效，列表为空的文件忽略
+        """
+        self._annotations = annotations or {}
+        for i, path in enumerate(self.file_list):
+            self.listbox.delete(i)
+            self.listbox.insert(i, self._item_text(path))
+        self._apply_annotation_colors()
+
     def add_files(self, paths: list[Path]):
         """
         添加文件到列表
@@ -1223,17 +1252,12 @@ class FileListbox:
             if path not in self.file_list:
                 self.file_list.append(path)
                 added_paths.append(path)  # 记录新添加的文件
-                
-                # 格式化显示文本
-                if self.display_formatter:
-                    display_text = self.display_formatter(path)
-                else:
-                    display_text = path.name
-                
-                self.listbox.insert(tk.END, display_text)
+
+                self.listbox.insert(tk.END, self._item_text(path))
                 added_count += 1
-        
+
         if added_count > 0:
+            self._apply_annotation_colors()
             if self.logger:
                 self.logger.log(t('log.file.added_count', count=added_count))
             
@@ -1332,11 +1356,13 @@ class FileListbox:
             self.listbox.delete(listbox_index)
             if file_index < len(self.file_list):
                 del self.file_list[file_index]
-        
+
         # 如果列表为空，添加占位符
         if not self.file_list and self.listbox.size() == 0:
             self._add_placeholder()
-        
+        else:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+
         if self.logger:
             self.logger.log(t('log.file.removed_count', count=len(items_to_remove)))
     
@@ -1345,9 +1371,35 @@ class FileListbox:
         self.file_list.clear()
         self.listbox.delete(0, tk.END)
         self._add_placeholder()
-        
+
         if self.logger:
             self.logger.log(t('log.file.list_cleared'))
+
+    def remove_files(self, paths: list[Path]) -> int:
+        """移除指定文件（同时删除 listbox 项与 file_list 条目）
+
+        Args:
+            paths: 待移除的文件路径列表
+
+        Returns:
+            int: 实际移除的数量
+        """
+        targets = set(paths)
+        removed = 0
+        # 从后往前删除，避免索引变动
+        for listbox_index in range(self.listbox.size() - 1, -1, -1):
+            file_index = self._get_file_index_by_listbox_index(listbox_index)
+            if file_index is not None and self.file_list[file_index] in targets:
+                self.listbox.delete(listbox_index)
+                del self.file_list[file_index]
+                removed += 1
+
+        # 如果列表为空，添加占位符
+        if not self.file_list and self.listbox.size() == 0:
+            self._add_placeholder()
+        elif removed:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+        return removed
     
     def get_frame(self):
         """获取组件框架，用于布局"""
@@ -1356,3 +1408,85 @@ class FileListbox:
     def get_listbox(self):
         """获取列表框控件,用于直接操作"""
         return self.listbox
+
+
+class ZoomableCanvas(tb.Canvas):
+    """可滚轮缩放、拖拽平移的图片预览画布（无图时显示占位文本）
+
+    - 滚轮缩放（以画布中心为基准）、左键拖拽平移、双击复位适配
+    - set_image 传入 Path 自动加载；加载失败或传 None 时显示占位文本
+    """
+
+    def __init__(self, master, placeholder: str = "", **kwargs):
+        super().__init__(master, highlightthickness=0, **kwargs)
+        self._pil: PILImage.Image | None = None
+        self._photo: ImageTk.PhotoImage | None = None  # 防止 PhotoImage 被回收
+        self._scale = 1.0
+        self._drag_start: tuple[int, int] | None = None
+        self._img_id = self.create_image(0, 0, anchor="nw")
+        self._text_id = self.create_text(0, 0, text=placeholder, fill="#888888")
+        self.bind("<Configure>", lambda _e: self._refit())
+        self.bind("<MouseWheel>", self._on_wheel)
+        self.bind("<ButtonPress-1>", self._on_press)
+        self.bind("<B1-Motion>", self._on_motion)
+        self.bind("<Double-Button-1>", lambda _e: self._refit())
+
+    def set_image(self, image: Path | None, placeholder: str = ""):
+        """设置图片或清空；每次设置后重新适配窗口大小"""
+        if image is not None:
+            try:
+                with PILImage.open(image) as im:
+                    self._pil = im.convert("RGBA")
+            except Exception:
+                self._pil = None
+        else:
+            self._pil = None
+        if self._pil is None:
+            self.itemconfigure(self._text_id, text=placeholder)
+            self.itemconfigure(self._img_id, image="")
+            self._photo = None
+        else:
+            self.itemconfigure(self._text_id, text="")
+            self._refit()
+
+    def _refit(self):
+        """重新适配窗口（缩放 = 恰好填满画布，不放大超过原图）"""
+        cw, ch = self.winfo_width(), self.winfo_height()
+        if self._pil is None:
+            if cw > 10 and ch > 10:
+                self.coords(self._text_id, cw // 2, ch // 2)
+            return
+        if cw < 10 or ch < 10:
+            return
+        iw, ih = self._pil.size
+        self._scale = min(cw / iw, ch / ih)
+        self._render()
+
+    def _render(self):
+        """按当前缩放重新采样并居中绘制"""
+        assert self._pil is not None
+        iw, ih = self._pil.size
+        size = (max(1, int(iw * self._scale)), max(1, int(ih * self._scale)))
+        self._photo = ImageTk.PhotoImage(self._pil.resize(size, PILImage.BILINEAR))
+        cw, ch = self.winfo_width(), self.winfo_height()
+        self.coords(self._img_id, (cw - size[0]) // 2, (ch - size[1]) // 2)
+        self.itemconfigure(self._img_id, image=self._photo)
+
+    def _on_wheel(self, event):
+        """滚轮缩放（Windows delta ±120）"""
+        if self._pil is None:
+            return
+        factor = 1.1 if event.delta > 0 else 1 / 1.1
+        new_scale = min(max(self._scale * factor, 0.05), 8.0)
+        if new_scale != self._scale:
+            self._scale = new_scale
+            self._render()
+
+    def _on_press(self, event):
+        self._drag_start = (event.x, event.y)
+
+    def _on_motion(self, event):
+        """左键拖拽平移"""
+        if self._drag_start is not None:
+            self.move(self._img_id, event.x - self._drag_start[0], event.y - self._drag_start[1])
+            self._drag_start = (event.x, event.y)
