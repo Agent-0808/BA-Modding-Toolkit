@@ -375,14 +375,14 @@ class ModInstallDialog(StoppableDialog):
         # uniform 使两列严格等宽（不随文本长度偏移）
         decision_frame.grid_columnconfigure((0, 1), weight=1, uniform="decision")
         self.install_radio = tb.Radiobutton(
-            decision_frame, text=f"✔ {t('ui.mod_install.decision_install')}",
+            decision_frame, text=f"✔ {t('action.install')}",
             variable=self.decision_var, value=True,
             command=self._on_decision_change,
             bootstyle="outline-toolbutton",
         )
         self.install_radio.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         self.skip_radio = tb.Radiobutton(
-            decision_frame, text=f"✘ {t('ui.mod_install.decision_skip')}",
+            decision_frame, text=f"✘ {t('action.skip')}",
             variable=self.decision_var, value=False,
             command=self._on_decision_change,
             bootstyle="outline-toolbutton",

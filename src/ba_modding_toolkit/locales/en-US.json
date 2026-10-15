@@ -44,6 +44,8 @@
 		"refresh": "Refresh",
 		"filter": "Filter",
 		"analyze": "Analyze",
+		"install": "Install",
+		"skip": "Skip",
 		"open_in_explorer": "Open in Explorer",
 		"copy_filename": "Copy Filename",
 		"render_preview": "Render Preview",
@@ -114,6 +116,8 @@
 		"spine_viewer_path_info": "Path to the SpineViewerCLI.exe file.",
 		"check_animations": "Detect Animation Differences",
 		"check_animations_info": "When replacing .skel files, detect whether the target contains animations not present in the source\nRequires configuring the SpineViewerCLI path",
+		"mod_install_render_preview": "Render Preview",
+		"mod_install_render_preview_info": "Render Spine previews and textures in the background within the Mod install confirmation dialog\nWhen disabled, only files & assets are shown and the dialog opens instantly\nRequires configuring the SpineViewerCLI path",
 		"match_strategy": "Match Strategy",
 		"match_strategy_info": "Select the strategy for matching resources:\n- path_id: Best for same-version files, exact match\n- cont_name_type: Best for cross-version migration (between Global and Japanese servers) with container+name+type matching\n- name_type: name+type matching",
 		"enable_bleed": "Bleed",
@@ -245,6 +249,15 @@
 			"no_targets_processed": "No target files were successfully processed",
 			"all_targets_unchanged": "All target files are unchanged, no update needed"
 		},
+		"mod_install": {
+			"filename_parse_failed": "Failed to parse filename: {filename}",
+			"target_conflict": "Multiple Mod groups target the same file: {filename}",
+			"no_game_dir": "No game resource directory set; cannot analyze the relationship between Mods and game files.",
+			"adb_unsupported": "Mod Install does not support ADB mode yet. Please switch to a local file source.",
+			"nothing_selected": "No groups selected for installation.",
+			"summary": "Installation complete!\nSuccess: {installed} groups\nSkipped (already installed): {skipped} groups\nFailed: {failed} groups",
+			"failed_detail": "Failed details:\n{details}"
+		},
 		"save_error": "Error saving file: {error}",
 		"replace_result": "Replacement completed!\nSuccess: {success} files, Failure: {fail} files",
 		"batch": {
@@ -297,7 +310,8 @@
 		"error": "Error: {error}",
 		"loaded": "Loaded {type}",
 		"calculation_done": "Calculation done",
-		"extracting": "Extracting resources..."
+		"extracting": "Extracting resources...",
+		"render_progress": "Rendering previews ({done}/{total})..."
 	},
 	"log": {
 		"file": {
@@ -450,7 +464,9 @@
 			"using_temp_dir": "Using temp directory: {path}",
 			"skipping_unnamed": "Skipping an unnamed {type} asset",
 			"extraction_failed": "Error extracting asset {name}: {error}",
-			"processing_file": "Processing: {name}"
+			"processing_file": "Processing: {name}",
+			"stream_ref_dangling": "Skipping extraction [{name}]: serialized data references a stream data file (.resS) missing from the bundle; replacing would corrupt the asset",
+			"stream_ref_export_unsupported": "Skipping export [{name}]: assets with .resS stream references cannot yet be exported as repackable dumps"
 		},
 		"mod_update": {
 			"all_processes_complete": "All processes completed!",
@@ -461,6 +477,22 @@
 			"target_unchanged": "Target unchanged: {name} ({count} assets), skipping",
 			"target_processed": "Target processed: {name} ({applied} assets replaced)",
 			"all_targets_unchanged": "All target files are unchanged, no update needed"
+		},
+		"mod_install": {
+			"plan_start": "Analyzing {count} Mod files...",
+			"group_info": "Group [{core}] ({count} files)",
+			"same_name_found": "Found a file with the same name: {filename}; will replace directly",
+			"filter_latest_date": "Multiple dated versions found; using the latest: {date}",
+			"update_targets": "Update needed; matched {count} target files: {names}",
+			"target_conflict": "Target file conflict: {filename}",
+			"plan_done": "Analysis complete: {total} files / {groups} groups (direct replace {direct}, update {update}, not found {not_found}, error {error})",
+			"execute_start": "Installing {count} Mod groups...",
+			"execute_group": "Installing group [{core}]...",
+			"crc_resave": "CRC collision fix required; re-saving: {filename}",
+			"replace_failed": "Failed to replace file: {path} ({error})",
+			"already_installed": "All assets in group [{core}] are unchanged; treated as already installed, skipping",
+			"execute_done": "Installation complete: {installed} groups succeeded / {skipped} skipped / {failed} failed",
+			"list_cleaned": "Removed {count} installed files from the list"
 		},
 		"batch": {
 			"summary": "Batch processing complete!\nTotal: {total}, Success: {success}, Failed: {fail}",
@@ -492,6 +524,9 @@
 		"replace_resource_failed": "Error replacing resource [{type}] {name}: {error}",
 		"replace_applied": "Replaced [{type}] {name}",
 		"replace_skipped_same_content": "Skipped replacement for [{type}] {name}: content identical to original",
+		"replace_companion_exists": "Companion stream file {name} already exists; skipping attach",
+		"replace_companion_attached": "companions: {names}",
+		"stream_prefix_skip": "Stream reference prefix {src} differs in length from target SF name {dst}; skipping rewrite",
 		"platform_info": "Target Platform: {platform} (Unity {version})",
 		"unnamed_resource": "Unnamed {type} asset",
 		"adb": {
@@ -527,6 +562,7 @@
 		"tabs": {
 			"mod_update": "Mod Update",
 			"batch_update": "Batch Update",
+			"mod_install": "Mod Install",
 			"crc_tool": "CRC Tool",
 			"asset_packer": "Asset Packer",
 			"asset_extractor": "Asset Extractor",
@@ -598,6 +634,31 @@
 			"placeholder_batch": "Drag and drop files or folders here...",
 			"status_not_found": "Matching resource not found: {message}"
 		},
+		"mod_install": {
+			"placeholder": "Drop Mod files to install here...",
+			"view_details": "View Details",
+			"dialog_title": "Mod Install Confirmation",
+			"likely_installed": "Likely installed",
+			"prev_group": "◀ Prev",
+			"next_group": "Next ▶",
+			"preview_current": "Current",
+			"preview_new": "After Install",
+			"preview_none": "No preview yet",
+			"meta_title": "Files & Assets",
+			"confirm_install": "Install ({install}/{total})",
+			"action_direct_replace": "Direct Replace",
+			"action_update": "Replace After Update",
+			"action_not_found": "No matching file found",
+			"action_error": "Error",
+			"action_mixed": "Mixed",
+			"meta_size": "{mod_size} → {existing_size}",
+			"diff_content_changed": "Content changed",
+			"diff_unchanged": "Unchanged",
+			"diff_missing_anims": "Missing {count} animations",
+			"diff_will_replace": "Will be replaced",
+			"preview_rendering": "Rendering...",
+			"preview_failed": "Render failed"
+		},
 		"crc_tool": {
 			"placeholder_modified": "Drag and drop Bundle to correct CRC here\nOr click the button below to select",
 			"placeholder_origin": "Selecting a file to correct will auto-search for the original\nOr drag/browse manually"
@@ -626,7 +687,7 @@
 			"double_click_hint": "Double-click the image to view the full-size version"
 		},
 		"label": {
-			"mod_file": "Mod File to Process",
+			"mod_file": "Mod Files to Process",
 			"search_path": "Search Path:",
 			"assets_to_pack": "Assets to Pack",
 			"target_bundle_file": "Target Bundle File",
