@@ -281,7 +281,8 @@ def _backup_and_replace(src: Path, dst: Path, create_backup: bool, log: LogFunc)
 
 def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bool, log: LogFunc) -> bool:
     """DIRECT_REPLACE 执行：需 CRC 碰撞修正时重存临时文件后替换，否则纯拷贝（§2.2）"""
-    if not f.need_crc_fix:
+    # 无需修正，或实际 CRC 已与文件名一致 → 纯拷贝即可
+    if not f.need_crc_fix or Bundle.check_crc_match(f.mod_path):
         return _backup_and_replace(f.mod_path, f.existing_path, create_backup, log)
 
     # 临时文件放系统临时目录（保持原文件名含扩展名），避免污染游戏目录且自动清理

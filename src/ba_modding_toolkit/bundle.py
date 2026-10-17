@@ -364,6 +364,17 @@ class Bundle:
         return bundle.need_crc()
 
     @classmethod
+    def check_crc_match(cls, bundle_path: Path) -> bool:
+        """
+        检查 bundle 实际 CRC 是否已与文件名中的 CRC 一致（一致则无需修正重存）。
+        仅需文件名解析与整文件 CRC 计算，无需加载 bundle。
+        """
+        crc_str = parse_filename(bundle_path.name).crc
+        if not crc_str or not crc_str.isdigit():
+            return False
+        return CRCUtils.compute_crc32(bundle_path) == int(crc_str)
+
+    @classmethod
     def list_asset_names(
         cls,
         bundle_path: Path,
