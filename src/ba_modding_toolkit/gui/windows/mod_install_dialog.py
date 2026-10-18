@@ -313,7 +313,7 @@ class ModInstallDialog(StoppableDialog):
 
         self.prev_button = UIComponents.create_button(
             nav_frame, t("ui.mod_install.prev_group"),
-            self._prev_group, bootstyle="secondary", width=10
+            self._prev_group, bootstyle="primary", width=10
         )
         self.prev_button.pack(side=tk.LEFT)
 
@@ -326,7 +326,7 @@ class ModInstallDialog(StoppableDialog):
 
         self.next_button = UIComponents.create_button(
             nav_frame, t("ui.mod_install.next_group"),
-            self._next_group, bootstyle="secondary", width=10
+            self._next_group, bootstyle="primary", width=10
         )
         self.next_button.pack(side=tk.RIGHT)
 
@@ -370,24 +370,35 @@ class ModInstallDialog(StoppableDialog):
         self.meta_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         meta_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # 6. 决策区：安装此组 / 跳过（大按钮式单选，选中侧蓝色高亮，绑定当前页组的决策变量）
+        # 6. 决策区：跳过 / 安装（大按钮式单选，选中侧蓝色高亮，绑定当前页组的决策变量）
+        # 左右列序与预览区一致：左=现有文件（保留→跳过），右=待安装（应用→安装）
         self.decision_var = tk.BooleanVar(value=True)  # 当前页的临时绑定，切页时写入 decision_vars
         # uniform 使两列严格等宽（不随文本长度偏移）
         decision_frame.grid_columnconfigure((0, 1), weight=1, uniform="decision")
-        self.install_radio = tb.Radiobutton(
-            decision_frame, text=f"✔ {t('action.install')}",
-            variable=self.decision_var, value=True,
-            command=self._on_decision_change,
-            bootstyle="outline-toolbutton",
-        )
-        self.install_radio.grid(row=0, column=0, sticky="ew", padx=(0, 5))
         self.skip_radio = tb.Radiobutton(
             decision_frame, text=f"✘ {t('action.skip')}",
             variable=self.decision_var, value=False,
             command=self._on_decision_change,
-            bootstyle="outline-toolbutton",
+            bootstyle="outline-toolbutton-danger",
         )
-        self.skip_radio.grid(row=0, column=1, sticky="ew")
+        self.skip_radio.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+        self.install_radio = tb.Radiobutton(
+            decision_frame, text=f"✔ {t('action.install')}",
+            variable=self.decision_var, value=True,
+            command=self._on_decision_change,
+            bootstyle="outline-toolbutton-success",
+        )
+        self.install_radio.grid(row=0, column=1, sticky="ew")
+
+        # 批量设置行：与上方单选同列对齐（仅作用于可安装组）
+        UIComponents.create_button(
+            decision_frame, t('action.skip_all'),
+            lambda: self._set_all_decisions(False), bootstyle="secondary",
+        ).grid(row=1, column=0, sticky="ew", padx=(0, 5), pady=(5, 0))
+        UIComponents.create_button(
+            decision_frame, t('action.install_all'),
+            lambda: self._set_all_decisions(True), bootstyle="secondary",
+        ).grid(row=1, column=1, sticky="ew", pady=(5, 0))
 
         # 7. 底部按钮：确认安装（N/M） / 取消
         self.confirm_button = UIComponents.create_button(
@@ -400,7 +411,7 @@ class ModInstallDialog(StoppableDialog):
             bottom_frame, t("common.cancel"), self.destroy,
             bootstyle="secondary", style="large"
         )
-        cancel_button.grid(row=0, column=1, sticky="ew", padx=(5, 0))
+        cancel_button.grid(row=0, column=1, sticky="ew")
 
     # --- 渲染流水线（§4.3：全量入队、后台依次处理、不做按页预取） ---
 
@@ -631,6 +642,16 @@ class ModInstallDialog(StoppableDialog):
     def _on_decision_change(self):
         """决策变更：写回当前组 + 刷新跳转列表标记与确认按钮统计"""
         self.decision_vars[self.current_index].set(self.decision_var.get())
+        self._refresh_jump_list()
+        self._update_confirm_text()
+
+    def _set_all_decisions(self, value: bool):
+        """批量设置全部组的决策（仅可安装组，NOT_FOUND/ERROR 保持跳过）"""
+        for i, g in enumerate(self.groups):
+            if self._installable(g):
+                self.decision_vars[i].set(value)
+        if self._installable(self.groups[self.current_index]):
+            self.decision_var.set(value)
         self._refresh_jump_list()
         self._update_confirm_text()
 

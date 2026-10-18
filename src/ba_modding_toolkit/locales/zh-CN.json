@@ -46,6 +46,8 @@
 		"analyze": "分析",
 		"install": "安装",
 		"skip": "跳过",
+		"install_all": "全部安装",
+		"skip_all": "全部跳过",
 		"open_in_explorer": "打开所在目录",
 		"copy_filename": "复制文件名",
 		"render_preview": "渲染预览图",
