@@ -658,8 +658,7 @@
 			"diff_unchanged": "无变化",
 			"diff_missing_anims": "缺失 {count} 个动画",
 			"diff_will_replace": "将被替换",
-			"preview_rendering": "渲染中...",
-			"preview_failed": "渲染失败"
+			"preview_rendering": "渲染中..."
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",

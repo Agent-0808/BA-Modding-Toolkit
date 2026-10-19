@@ -23,8 +23,8 @@ from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
-from ...spine import RENDER_PRESET_HIGH, SpineViewer, get_skel_version, check_skel_animation_diff
-from ...core import _extract_assets_from_bundle
+from ...spine import RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
+from ...core import _extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, ZoomableCanvas
 from .base import StoppableDialog
 
@@ -75,15 +75,23 @@ class _SideAsset:
     sha: str       # 内容短哈希（detail 相同但内容有差异时仍能列出）
     path: Path
 
+@dataclass
+class _PreviewPair:
+    """单个预览对（skel 渲染图或原始解包贴图，双侧路径 + 失败原因）"""
+    label: str                          # 下拉项展示名（🎬 skel 渲染 / 🖼 原始贴图）
+    current_image: Path | None = None   # 现有侧图片
+    new_image: Path | None = None       # 安装后侧图片
+    current_error: str | None = None    # 现有侧失败原因（图片缺失时显示）
+    new_error: str | None = None        # 安装后侧失败原因
+
 
 @dataclass
 class GroupRenderResult:
     """单个组的渲染流水线产出（缓存与 UI 共用，不含临时目录内的路径）"""
-    current_image: Path | None = None  # 当前侧预览图
-    new_image: Path | None = None      # 安装后侧预览图
+    previews: list[_PreviewPair] = field(default_factory=list)  # 预览对：skel 渲染图在前、原始贴图在后
+    error: str | None = None  # 流水线异常（预览区占位显示）
     # 目标 bundle → 资产级行 (文本, 状态标签)，流水线产出即展示文本
     matched: dict[Path, list[tuple[str, _RowTag]]] = field(default_factory=dict)
-    errors: dict[str, str] = field(default_factory=dict)   # current/new → 渲染失败原因
 
 
 # 渲染缓存（会话级）：key = 组内全部 bundle 路径+mtime 组合 → 流水线产出，弹窗重复打开时直接复用
@@ -130,45 +138,6 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
     return assets
 
 
-def _render_side(
-    assets: list[_SideAsset],
-    render_dir: Path,
-    out_path: Path,
-    viewer_path: Path | None,
-    log: LogFunc,
-) -> tuple[Path | None, str | None]:
-    """渲染单侧预览图：skel/atlas/texture 须位于同一目录
-
-    Returns:
-        tuple[Path | None, str | None]: (预览图路径, 失败原因)；无图或未配置 viewer 时原因可能为 None
-    """
-    render_dir.mkdir(exist_ok=True)
-    for a in assets:
-        if a.type in ("Texture2D", "TextAsset"):  # 元数据型资产（Mesh 等）无文件，不参与渲染
-            shutil.copy2(a.path, render_dir / a.fname)
-
-    skel = next((f for f in render_dir.glob("*.skel")), None)
-    if skel is not None:
-        if viewer_path is None or not viewer_path.exists():
-            return None, None
-        ok, msg = SpineViewer.render_preview(
-            skel_path=skel,
-            output_path=out_path,
-            viewer_path=viewer_path,
-            render_options=RENDER_PRESET_HIGH,  # 高画质：耗时与低画质接近，临时文件体积可忽略
-            log=log,
-        )
-        return (out_path if ok else None), (None if ok else msg)
-
-    # 纯贴图回退：取最大 Texture2D 导出图
-    textures = [a for a in assets if a.type == "Texture2D"]
-    if textures:
-        biggest = max(textures, key=lambda a: a.path.stat().st_size)
-        PILImage.open(biggest.path).convert("RGBA").save(out_path)
-        return out_path, None
-    return None, None
-
-
 def _process_group(
     group: ModGroup, viewer_path: Path | None, anim_check: AnimCheckOptions, log: LogFunc,
 ) -> GroupRenderResult:
@@ -204,7 +173,7 @@ def _process_group(
             # mod 侧资产池（同名取后提取者）
             mod_pool: dict[str, _SideAsset] = {a.fname: a for a in mod_assets}
 
-            # 渲染输出目录（缓存键 md5 隔离各组的 current.png/new.png）
+            # 渲染输出目录（缓存键 md5 隔离各组；current/new 存 skel 渲染图，*_tex 存原始贴图）
             out_dir = _get_cache_dir() / hashlib.md5(_cache_key(
                 [p for p in target_paths] + [f.mod_path for f in group.files]
             ).encode()).hexdigest()
@@ -246,25 +215,58 @@ def _process_group(
                 rows.sort(key=lambda r: (r[0], r[1]))
                 result.matched[target] = [(text, tag) for _, _, text, tag in rows]
 
-            # 双侧渲染（每侧汇总到同一目录，保证 skel/atlas/texture 完整）
-            current_image, err = _render_side(
-                [a for assets in target_assets.values() for a in assets],
-                work_dir / "cur_render", out_dir / "current.png", viewer_path, log,
-            )
-            if current_image is None:
-                result.errors["current"] = err or t("ui.mod_install.preview_failed")
-            result.current_image = current_image
+            # 双侧 skel 渲染：复用 core 渲染流程，output_filename=None 使输出名 = skel 文件名，
+            # 便于两侧按名配对（viewer 未配置或无 skel 时跳过渲染，条目内显示占位）
+            cur_skels = {a.fname.removesuffix(".skel")
+                         for assets in target_assets.values() for a in assets
+                         if a.fname.endswith(".skel")}
+            new_skels = {a.fname.removesuffix(".skel")
+                         for a in mod_pool.values() if a.fname.endswith(".skel")}
+            rendered: dict[str, dict[str, Path]] = {"current": {}, "new": {}}
+            side_errors: dict[str, str | None] = {"current": None, "new": None}
+            if viewer_path is not None and viewer_path.exists():
+                side_bundles = {"current": target_paths, "new": [f.mod_path for f in group.files]}
+                for side, bundles in side_bundles.items():
+                    if not (cur_skels if side == "current" else new_skels):
+                        continue
+                    ok, msg, paths = render_spine_preview_from_bundle(
+                        bundles, out_dir / side, viewer_path,
+                        render_options=RENDER_PRESET_HIGH,  # 高画质：耗时与低画质接近，临时文件体积可忽略
+                        log=log,
+                    )
+                    rendered[side] = {p.stem: p for p in paths}
+                    if not ok:
+                        side_errors[side] = msg
+            for stem in sorted(cur_skels | new_skels):
+                result.previews.append(_PreviewPair(
+                    label=f"🎬 {stem}",
+                    current_image=rendered["current"].get(stem),
+                    new_image=rendered["new"].get(stem),
+                    current_error=side_errors["current"],
+                    new_error=side_errors["new"],
+                ))
 
-            new_image, err = _render_side(
-                mod_assets, work_dir / "new_render", out_dir / "new.png", viewer_path, log,
-            )
-            if new_image is None:
-                result.errors["new"] = err or t("ui.mod_install.preview_failed")
-            result.new_image = new_image
+            # 原始解包贴图：拷贝到缓存目录（临时目录销毁后仍可显示），按文件名配对双侧
+            tex_map: dict[str, dict[str, _SideAsset]] = {"current": {}, "new": {}}
+            for assets in target_assets.values():
+                tex_map["current"].update((a.fname, a) for a in assets if a.type == "Texture2D")
+            tex_map["new"].update((a.fname, a) for a in mod_pool.values() if a.type == "Texture2D")
+            tex_dirs = {"current": out_dir / "current_tex", "new": out_dir / "new_tex"}
+            for side, mapping in tex_map.items():
+                tex_dirs[side].mkdir(exist_ok=True)
+                for a in mapping.values():
+                    shutil.copy2(a.path, tex_dirs[side] / a.fname)
+                    a.path = tex_dirs[side] / a.fname  # 指向缓存副本（临时目录销毁后原路径失效）
+            for fname in sorted(tex_map["current"].keys() | tex_map["new"].keys()):
+                cur_a, new_a = tex_map["current"].get(fname), tex_map["new"].get(fname)
+                result.previews.append(_PreviewPair(
+                    label=f"🖼 {fname}",
+                    current_image=cur_a.path if cur_a else None,
+                    new_image=new_a.path if new_a else None,
+                ))
 
     except Exception as e:
-        result.errors["current"] = str(e)
-        result.errors["new"] = str(e)
+        result.error = str(e)
     return result
 
 
@@ -289,6 +291,8 @@ class ModInstallDialog(StoppableDialog):
         self._results: dict[int, GroupRenderResult] = {}          # 组索引 → 流水线产出
         self._render_done = 0                                     # 已完成渲染的组数（进度展示）
         self._task_queue: Queue[tuple[int, ModGroup]] = Queue()
+        self._preview_pairs: list[_PreviewPair] = []              # 当前页预览对（下拉切换）
+        self._preview_index = 0
 
         self._setup_window()
         self._create_widgets()
@@ -334,15 +338,21 @@ class ModInstallDialog(StoppableDialog):
         self.title_label = tb.Label(main_frame, font=("", 12, "bold"), anchor=tk.CENTER)
         self.title_label.pack(fill=tk.X, pady=(0, 5))
 
-        # 3. 预览区：当前（游戏目录） / 安装后（mod） 左右并排（滚轮缩放、拖拽平移）
+        # 3. 预览区：多预览对下拉切换（skel 渲染图 / 原始贴图）+ 左右并排画布（滚轮缩放、拖拽平移）
         preview_frame = tb.Frame(main_frame)
         preview_frame.pack(fill=tk.X, pady=(0, 5))
         preview_frame.grid_columnconfigure((0, 1), weight=1)
 
+        # 多预览对（>1）时显示，单对隐藏
+        self.preview_combo = tb.Combobox(preview_frame, state="readonly")
+        self.preview_combo.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 5))
+        self.preview_combo.bind("<<ComboboxSelected>>", self._on_preview_selected)
+        self.preview_combo.grid_remove()
+
         self.preview_canvases: list[ZoomableCanvas] = []
         for col, key in enumerate(("ui.mod_install.preview_current", "ui.mod_install.preview_new")):
             lf = tb.Labelframe(preview_frame, text=t(key), padding=5)
-            lf.grid(row=0, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
+            lf.grid(row=1, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
             canvas = ZoomableCanvas(lf, width=400, height=500)
             canvas.pack(fill=tk.BOTH, expand=True)
             self.preview_canvases.append(canvas)
@@ -537,11 +547,13 @@ class ModInstallDialog(StoppableDialog):
         # 标题：prefix（+ 疑似已安装标记）
         self._refresh_title()
 
-        # 预览区：已有结果显示贴图，否则按流水线状态显示占位文本
+        # 预览区：已有结果显示预览对，否则按流水线状态显示占位文本
         result = self._results.get(self.current_index)
         if result is not None:
             self._refresh_previews(result)
         else:
+            self._preview_pairs = []
+            self.preview_combo.grid_remove()
             waiting = self.app.mod_install_render_preview_var.get() and not self._task_queue.empty()
             text_key = "ui.mod_install.preview_rendering" if waiting else "ui.mod_install.preview_none"
             for canvas in self.preview_canvases:
@@ -557,13 +569,39 @@ class ModInstallDialog(StoppableDialog):
         self._update_confirm_text()
 
     def _refresh_previews(self, result: GroupRenderResult):
-        """双侧预览刷新为整组渲染图（缩放平移由 ZoomableCanvas 处理，仅主线程调用）"""
-        for side, image in (("current", result.current_image), ("new", result.new_image)):
-            canvas = self.preview_canvases[0 if side == "current" else 1]
+        """预览对刷新：重建下拉选择器并应用当前选中项（缩放平移由 ZoomableCanvas 处理，仅主线程调用）"""
+        self._preview_pairs = result.previews
+        self._preview_index = 0
+        if result.error or len(self._preview_pairs) < 2:
+            self.preview_combo.grid_remove()
+        else:
+            self.preview_combo.configure(values=[p.label for p in self._preview_pairs])
+            self.preview_combo.current(0)
+            self.preview_combo.grid()
+        if result.error:
+            for canvas in self.preview_canvases:
+                canvas.set_image(None, result.error)
+            return
+        self._apply_pair()
+
+    def _apply_pair(self):
+        """左右 canvas 应用当前选中的预览对（图片缺失时显示失败原因或通用占位）"""
+        pair = self._preview_pairs[self._preview_index] if self._preview_pairs else None
+        for side, canvas in enumerate(self.preview_canvases):
+            if pair is None:
+                canvas.set_image(None, t("ui.mod_install.preview_none"))
+                continue
+            image = pair.current_image if side == 0 else pair.new_image
+            error = pair.current_error if side == 0 else pair.new_error
             path = image if image is not None and image.exists() else None
-            # 失败时优先显示真实原因（msg 已本地化），无原因时回退到通用占位
-            placeholder = result.errors.get(side) or t("ui.mod_install.preview_none")
-            canvas.set_image(path, placeholder)
+            canvas.set_image(path, error or t("ui.mod_install.preview_none"))
+
+    def _on_preview_selected(self, _event=None):
+        """下拉切换预览对：左右 canvas 同步换图"""
+        index = self.preview_combo.current()
+        if 0 <= index < len(self._preview_pairs):
+            self._preview_index = index
+            self._apply_pair()
 
     def _rebuild_meta_tree(self, group: ModGroup):
         """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""
