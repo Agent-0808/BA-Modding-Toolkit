@@ -239,7 +239,7 @@ def _process_group(
                         side_errors[side] = msg
             for stem in sorted(cur_skels | new_skels):
                 result.previews.append(_PreviewPair(
-                    label=f"🎬 {stem}",
+                    label=f"{t('ui.mod_install.preview_tag_render')} {stem}",
                     current_image=rendered["current"].get(stem),
                     new_image=rendered["new"].get(stem),
                     current_error=side_errors["current"],
@@ -260,7 +260,7 @@ def _process_group(
             for fname in sorted(tex_map["current"].keys() | tex_map["new"].keys()):
                 cur_a, new_a = tex_map["current"].get(fname), tex_map["new"].get(fname)
                 result.previews.append(_PreviewPair(
-                    label=f"🖼 {fname}",
+                    label=f"{t('ui.mod_install.preview_tag_extract')} {fname}",
                     current_image=cur_a.path if cur_a else None,
                     new_image=new_a.path if new_a else None,
                 ))

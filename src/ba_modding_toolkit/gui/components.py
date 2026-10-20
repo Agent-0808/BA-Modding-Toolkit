@@ -1,6 +1,7 @@
 # gui/components.py
 
 import tkinter as tk
+import math
 import ttkbootstrap as tb
 from ttkbootstrap.widgets.tooltip import ToolTip
 from ttkbootstrap.widgets.scrolled import ScrolledText
@@ -1410,6 +1411,13 @@ class FileListbox:
         return self.listbox
 
 
+# ZoomableCanvas 渲染参数：交互期代理图最长边 / 高清渲染像素上限（防超大帧冻结 UI）
+_PROXY_MAX_SIDE = 1024
+_MAX_RENDER_PIXELS = 16_000_000
+_INTERACTIVE_INTERVAL_MS = 33  # 交互期快速渲染最小间隔（约 30fps）
+_QUALITY_DEBOUNCE_MS = 120     # 停止缩放后高清重渲染的防抖延迟
+
+
 class CanvasSyncGroup:
     """ZoomableCanvas 同步组：共享画布列表与同步开关（关闭后各画布独立缩放平移）"""
 
@@ -1422,6 +1430,7 @@ class ZoomableCanvas(tb.Canvas):
     """可滚轮缩放、拖拽平移的图片预览画布（无图时显示占位文本）
 
     - 滚轮缩放（以画布中心为基准）、左键拖拽平移、双击复位适配
+    - 缩放渲染经节流/防抖调度：交互期代理图最近邻快渲染，停止后原图双线性重渲染
     - set_image 传入 Path 自动加载；加载失败或传 None 时显示占位文本
     - sync_group 传入共享组后，组内画布缩放/平移状态互通
       （缩放为相对各自适配基准的倍率，两侧图片尺寸不同时仍保持视觉一致）
@@ -1431,10 +1440,14 @@ class ZoomableCanvas(tb.Canvas):
         super().__init__(master, highlightthickness=0, **kwargs)
         self._pil: PILImage.Image | None = None
         self._photo: ImageTk.PhotoImage | None = None  # 防止 PhotoImage 被回收
+        self._proxy: PILImage.Image | None = None  # 交互期快速渲染用代理图（限制最长边）
         self._fit = 1.0   # 适配窗口的基础缩放（set_image/_refit 时更新）
         self._zoom = 1.0  # 相对基础缩放的倍率（同步组内共享）
         self._scale = 1.0
+        self._scale_max = 8.0  # 缩放上限（受渲染像素预算约束，set_image 时更新）
         self._drag_start: tuple[int, int] | None = None
+        self._interactive_job: str | None = None  # 交互渲染节流任务
+        self._quality_job: str | None = None      # 高清重渲染防抖任务
         self._sync_group = sync_group or CanvasSyncGroup()  # 同步组：滚轮缩放/拖拽平移时组内其他画布跟随
         self._sync_group.canvases.append(self)
         self._img_id = self.create_image(0, 0, anchor="nw")
@@ -1456,10 +1469,20 @@ class ZoomableCanvas(tb.Canvas):
         else:
             self._pil = None
         if self._pil is None:
+            self._proxy = None
             self.itemconfigure(self._text_id, text=placeholder)
             self.itemconfigure(self._img_id, image="")
             self._photo = None
         else:
+            # 交互期快速渲染代理图（缩小源图，最近邻采样成本低）
+            w, h = self._pil.size
+            if max(w, h) > _PROXY_MAX_SIDE:
+                k = _PROXY_MAX_SIDE / max(w, h)
+                self._proxy = self._pil.resize((max(1, int(w * k)), max(1, int(h * k))), PILImage.BILINEAR)
+            else:
+                self._proxy = self._pil
+            # 缩放上限随分辨率收紧（如 2220×3540 原图约 1.4 倍封顶），避免高清渲染出天文数字尺寸冻结 UI
+            self._scale_max = min(8.0, math.sqrt(_MAX_RENDER_PIXELS / (w * h)))
             self.itemconfigure(self._text_id, text="")
             self._refit()
 
@@ -1483,12 +1506,16 @@ class ZoomableCanvas(tb.Canvas):
                 if canvas is not self:
                     canvas._apply_zoom(1.0)
 
-    def _render(self):
-        """按当前缩放重新采样并居中绘制"""
+    def _render(self, fast: bool = False):
+        """按当前缩放重新采样并居中绘制
+
+        fast=True 交互期快速渲染：代理图 + 最近邻（停止缩放后由防抖任务重绘高清）
+        """
         assert self._pil is not None
         iw, ih = self._pil.size
         size = (max(1, int(iw * self._scale)), max(1, int(ih * self._scale)))
-        self._photo = ImageTk.PhotoImage(self._pil.resize(size, PILImage.BILINEAR))
+        src, resample = (self._proxy, PILImage.NEAREST) if fast else (self._pil, PILImage.BILINEAR)
+        self._photo = ImageTk.PhotoImage(src.resize(size, resample))
         cw, ch = self.winfo_width(), self.winfo_height()
         self.coords(self._img_id, (cw - size[0]) // 2, (ch - size[1]) // 2)
         self.itemconfigure(self._img_id, image=self._photo)
@@ -1501,19 +1528,41 @@ class ZoomableCanvas(tb.Canvas):
         self._apply_zoom(self._zoom * factor, sync=True)
 
     def _apply_zoom(self, zoom: float, sync: bool = False):
-        """按相对适配基准的倍率缩放（绝对缩放限制在 0.05–8.0），sync 时组内其他画布跟随"""
-        if self._pil is None:
+        """按相对适配基准的倍率缩放（渲染经节流/防抖调度），sync 时组内其他画布跟随"""
+        if self._pil is None or not self.winfo_exists():
             return
-        new_scale = min(max(self._fit * zoom, 0.05), 8.0)
+        new_scale = min(max(self._fit * zoom, 0.05), self._scale_max)
         if new_scale == self._scale:
             return
         self._zoom = new_scale / self._fit
         self._scale = new_scale
-        self._render()
+        self._schedule_render()
         if sync and self._sync_group.enabled:
             for canvas in self._sync_group.canvases:
                 if canvas is not self:
                     canvas._apply_zoom(self._zoom)
+
+    def _schedule_render(self):
+        """合并连续缩放事件：交互期低清快渲染（节流）+ 停止后高清重渲染（防抖）"""
+        # 节流：已排队的快渲染不重复排队，单帧耗时再长也不会积压事件
+        if self._interactive_job is None:
+            self._interactive_job = self.after(_INTERACTIVE_INTERVAL_MS, self._render_interactive)
+        # 防抖：每次滚动重置高清渲染计时器
+        if self._quality_job is not None:
+            self.after_cancel(self._quality_job)
+        self._quality_job = self.after(_QUALITY_DEBOUNCE_MS, self._render_quality)
+
+    def _render_interactive(self):
+        """交互期快速渲染（代理图最近邻，约 30fps 上限）"""
+        self._interactive_job = None
+        if self._pil is not None and self.winfo_exists():
+            self._render(fast=True)
+
+    def _render_quality(self):
+        """停止缩放后高清重渲染（原图双线性）"""
+        self._quality_job = None
+        if self._pil is not None and self.winfo_exists():
+            self._render()
 
     def _on_press(self, event):
         self._drag_start = (event.x, event.y)

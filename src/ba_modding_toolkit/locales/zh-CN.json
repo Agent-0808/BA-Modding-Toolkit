@@ -647,6 +647,8 @@
 			"preview_new": "待安装",
 			"preview_none": "暂无预览",
 			"sync_view": "同步视角",
+			"preview_tag_render": "[渲染]",
+			"preview_tag_extract": "[提取]",
 			"meta_title": "文件与资产",
 			"confirm_install": "确认安装 ({install}/{total})",
 			"action_direct_replace": "直接替换",
