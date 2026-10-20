@@ -25,7 +25,7 @@ from ...bundle import Bundle
 from ...mod_install import InstallAction, ModGroup
 from ...spine import RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
 from ...core import _extract_assets_from_bundle, render_spine_preview_from_bundle
-from ..components import UIComponents, ZoomableCanvas
+from ..components import UIComponents, DualZoomableCanvas
 from .base import StoppableDialog
 
 # 组/文件动作 → 元信息"安装方式"展示键
@@ -338,7 +338,8 @@ class ModInstallDialog(StoppableDialog):
         self.title_label = tb.Label(main_frame, font=("", 12, "bold"), anchor=tk.CENTER)
         self.title_label.pack(fill=tk.X, pady=(0, 5))
 
-        # 3. 预览区：多预览对下拉切换（skel 渲染图 / 原始贴图）+ 左右并排画布（滚轮缩放、拖拽平移）
+        # 3. 预览区：多预览对下拉切换（skel 渲染图 / 原始贴图）+ 左右并排画布
+        # （滚轮缩放、拖拽平移，双侧状态同步便于前后对比）
         preview_frame = tb.Frame(main_frame)
         preview_frame.pack(fill=tk.X, pady=(0, 5))
         preview_frame.grid_columnconfigure((0, 1), weight=1)
@@ -349,13 +350,13 @@ class ModInstallDialog(StoppableDialog):
         self.preview_combo.bind("<<ComboboxSelected>>", self._on_preview_selected)
         self.preview_combo.grid_remove()
 
-        self.preview_canvases: list[ZoomableCanvas] = []
-        for col, key in enumerate(("ui.mod_install.preview_current", "ui.mod_install.preview_new")):
-            lf = tb.Labelframe(preview_frame, text=t(key), padding=5)
-            lf.grid(row=1, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
-            canvas = ZoomableCanvas(lf, width=400, height=500)
-            canvas.pack(fill=tk.BOTH, expand=True)
-            self.preview_canvases.append(canvas)
+        self.dual_canvas = DualZoomableCanvas(
+            preview_frame,
+            left_label=t("ui.mod_install.preview_current"),
+            right_label=t("ui.mod_install.preview_new"),
+        )
+        self.dual_canvas.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.preview_canvases = self.dual_canvas.canvases
 
         # 4. 底部锚定：决策区与确认按钮自下而上排列，元信息区不抢占剩余空间
         # （side=BOTTOM 先打包者贴底，故先确认按钮后决策区）
@@ -586,15 +587,17 @@ class ModInstallDialog(StoppableDialog):
 
     def _apply_pair(self):
         """左右 canvas 应用当前选中的预览对（图片缺失时显示失败原因或通用占位）"""
+        none_text = t("ui.mod_install.preview_none")
         pair = self._preview_pairs[self._preview_index] if self._preview_pairs else None
-        for side, canvas in enumerate(self.preview_canvases):
-            if pair is None:
-                canvas.set_image(None, t("ui.mod_install.preview_none"))
-                continue
-            image = pair.current_image if side == 0 else pair.new_image
-            error = pair.current_error if side == 0 else pair.new_error
-            path = image if image is not None and image.exists() else None
-            canvas.set_image(path, error or t("ui.mod_install.preview_none"))
+        if pair is None:
+            self.dual_canvas.set_images(None, None, none_text, none_text)
+            return
+        left = pair.current_image if pair.current_image is not None and pair.current_image.exists() else None
+        right = pair.new_image if pair.new_image is not None and pair.new_image.exists() else None
+        self.dual_canvas.set_images(
+            left, right,
+            pair.current_error or none_text, pair.new_error or none_text,
+        )
 
     def _on_preview_selected(self, _event=None):
         """下拉切换预览对：左右 canvas 同步换图"""

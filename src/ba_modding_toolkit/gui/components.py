@@ -1415,14 +1415,21 @@ class ZoomableCanvas(tb.Canvas):
 
     - 滚轮缩放（以画布中心为基准）、左键拖拽平移、双击复位适配
     - set_image 传入 Path 自动加载；加载失败或传 None 时显示占位文本
+    - sync_group 传入共享列表后，组内画布缩放/平移状态互通
+      （缩放为相对各自适配基准的倍率，两侧图片尺寸不同时仍保持视觉一致）
     """
 
-    def __init__(self, master, placeholder: str = "", **kwargs):
+    def __init__(self, master, placeholder: str = "", sync_group: list["ZoomableCanvas"] | None = None, **kwargs):
         super().__init__(master, highlightthickness=0, **kwargs)
         self._pil: PILImage.Image | None = None
         self._photo: ImageTk.PhotoImage | None = None  # 防止 PhotoImage 被回收
+        self._fit = 1.0   # 适配窗口的基础缩放（set_image/_refit 时更新）
+        self._zoom = 1.0  # 相对基础缩放的倍率（同步组内共享）
         self._scale = 1.0
         self._drag_start: tuple[int, int] | None = None
+        self._sync_group = sync_group  # 同步组：滚轮缩放/拖拽平移时组内其他画布跟随
+        if sync_group is not None:
+            sync_group.append(self)
         self._img_id = self.create_image(0, 0, anchor="nw")
         self._text_id = self.create_text(0, 0, text=placeholder, fill="#888888")
         self.bind("<Configure>", lambda _e: self._refit())
@@ -1450,7 +1457,7 @@ class ZoomableCanvas(tb.Canvas):
             self._refit()
 
     def _refit(self):
-        """重新适配窗口（缩放 = 恰好填满画布，不放大超过原图）"""
+        """重新适配窗口（复位缩放为适配基准并居中，双击复位同样走这里）"""
         cw, ch = self.winfo_width(), self.winfo_height()
         if self._pil is None:
             if cw > 10 and ch > 10:
@@ -1459,8 +1466,14 @@ class ZoomableCanvas(tb.Canvas):
         if cw < 10 or ch < 10:
             return
         iw, ih = self._pil.size
-        self._scale = min(cw / iw, ch / ih)
+        self._fit = min(cw / iw, ch / ih)
+        self._zoom = 1.0
+        self._scale = self._fit
         self._render()
+        # 复位/窗口变化时同步组内其他画布回到适配基准
+        for canvas in self._sync_group or ():
+            if canvas is not self:
+                canvas._apply_zoom(1.0)
 
     def _render(self):
         """按当前缩放重新采样并居中绘制"""
@@ -1473,20 +1486,65 @@ class ZoomableCanvas(tb.Canvas):
         self.itemconfigure(self._img_id, image=self._photo)
 
     def _on_wheel(self, event):
-        """滚轮缩放（Windows delta ±120）"""
+        """滚轮缩放（Windows delta ±120），并同步到组内其他画布"""
         if self._pil is None:
             return
         factor = 1.1 if event.delta > 0 else 1 / 1.1
-        new_scale = min(max(self._scale * factor, 0.05), 8.0)
-        if new_scale != self._scale:
-            self._scale = new_scale
-            self._render()
+        self._apply_zoom(self._zoom * factor, sync=True)
+
+    def _apply_zoom(self, zoom: float, sync: bool = False):
+        """按相对适配基准的倍率缩放（绝对缩放限制在 0.05–8.0），sync 时组内其他画布跟随"""
+        if self._pil is None:
+            return
+        new_scale = min(max(self._fit * zoom, 0.05), 8.0)
+        if new_scale == self._scale:
+            return
+        self._zoom = new_scale / self._fit
+        self._scale = new_scale
+        self._render()
+        if sync:
+            for canvas in self._sync_group or ():
+                if canvas is not self:
+                    canvas._apply_zoom(self._zoom)
 
     def _on_press(self, event):
         self._drag_start = (event.x, event.y)
 
     def _on_motion(self, event):
-        """左键拖拽平移"""
+        """左键拖拽平移（同步组内其他画布跟随相同位移）"""
         if self._drag_start is not None:
-            self.move(self._img_id, event.x - self._drag_start[0], event.y - self._drag_start[1])
+            dx, dy = event.x - self._drag_start[0], event.y - self._drag_start[1]
+            self.move(self._img_id, dx, dy)
+            for canvas in self._sync_group or ():
+                if canvas is not self and canvas._pil is not None:
+                    canvas.move(canvas._img_id, dx, dy)
             self._drag_start = (event.x, event.y)
+
+
+class DualZoomableCanvas(tb.Frame):
+    """左右并排、状态同步（缩放/平移互通）的双 ZoomableCanvas 对比组件
+
+    两侧各自独立加载图片（尺寸可不同），缩放按相对各自适配基准的倍率、
+    平移按相同位移保持视觉一致；无图一侧显示占位文本。
+    """
+
+    def __init__(self, master, left_label: str = "", right_label: str = "", **kwargs):
+        super().__init__(master, **kwargs)
+        self.grid_columnconfigure((0, 1), weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        sync_group: list[ZoomableCanvas] = []
+        self.canvases: list[ZoomableCanvas] = []
+        for col, label in enumerate((left_label, right_label)):
+            lf = tb.Labelframe(self, text=label, padding=5)
+            lf.grid(row=0, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
+            canvas = ZoomableCanvas(lf, width=400, height=500, sync_group=sync_group)
+            canvas.pack(fill=tk.BOTH, expand=True)
+            self.canvases.append(canvas)
+
+    def set_images(self, left: Path | None, right: Path | None,
+                   left_placeholder: str = "", right_placeholder: str = ""):
+        """同时设置左右图片或清空（每次设置后各自重新适配，缩放同步从基准开始）"""
+        for canvas, image, placeholder in zip(
+            self.canvases, (left, right), (left_placeholder, right_placeholder),
+        ):
+            canvas.set_image(image, placeholder)
