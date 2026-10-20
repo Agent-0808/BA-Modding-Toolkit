@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 from enum import StrEnum
-from queue import Queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Thread
 import hashlib
 import shutil
@@ -290,7 +290,7 @@ class ModInstallDialog(StoppableDialog):
 
         self._results: dict[int, GroupRenderResult] = {}          # 组索引 → 流水线产出
         self._render_done = 0                                     # 已完成渲染的组数（进度展示）
-        self._task_queue: Queue[tuple[int, ModGroup]] = Queue()
+        self._pipeline_running = False                            # 渲染流水线是否进行中
         self._preview_pairs: list[_PreviewPair] = []              # 当前页预览对（下拉切换）
         self._preview_index = 0
 
@@ -432,45 +432,54 @@ class ModInstallDialog(StoppableDialog):
         )
         cancel_button.grid(row=0, column=1, sticky="ew")
 
-    # --- 渲染流水线（§4.3：全量入队、后台依次处理、不做按页预取） ---
+    # --- 渲染流水线（§4.3：全量提交后台并行处理、不做按页预取） ---
 
     def _start_pipeline(self):
-        """构建组级任务队列并启动后台线程；渲染开关关闭时不启动（§4.4 纯元信息展示）"""
-        if not self.app.mod_install_render_preview_var.get():
+        """构建组级渲染任务并启动后台线程池；渲染开关关闭时不启动（§4.4 纯元信息展示）"""
+        if not self.app.mod_install_render_preview_var.get() or not self.groups:
             return
-        for i, group in enumerate(self.groups):
-            self._task_queue.put((i, group))
-
-        if self._task_queue.empty():
-            return
-        # 进度条 + 主窗口状态（渲染在后台逐组进行，进度在 _apply_result 回调中推进）
+        # 进度条 + 主窗口状态（渲染在后台并行进行，进度在 _apply_result 回调中推进）
         self.progress_bar.configure(maximum=len(self.groups), value=0)
         self.progress_bar.pack(fill=tk.X, pady=(0, 5))
         self.app.logger.status(t("status.render_progress", done=0, total=len(self.groups)))
+        self._pipeline_running = True
         self.set_task_running(True)
         Thread(target=self._pipeline_worker, daemon=True).start()
 
     def _pipeline_worker(self):
-        """后台依次消费任务队列；窗口关闭（should_stop）时停止后续任务"""
+        """后台并行处理组渲染任务；窗口关闭（should_stop）时不再回填结果"""
         viewer_str = self.app.spine_viewer_path_var.get().strip()
         viewer_path = Path(viewer_str) if viewer_str else None
         anim_check = self.app.build_anim_check_options()
 
-        while not self._task_queue.empty() and not self.should_stop():
-            group_index, group = self._task_queue.get()
-            key = _cache_key(
-                [f.mod_path for f in group.files]
-                + [f.existing_path for f in group.files if f.existing_path is not None]
-                + list(group.target_paths)
-            )
-            result = _render_cache.get(key)
-            if result is None:
-                result = _process_group(group, viewer_path, anim_check, self.app.logger.log)
-                _render_cache[key] = result
-            if self.should_stop():
-                break
-            self.after(0, self._apply_result, group_index, result)
+        with ThreadPoolExecutor(max_workers=max(1, self.app.max_workers_var.get())) as executor:
+            futures = {}
+            for i, group in enumerate(self.groups):
+                key = _cache_key(
+                    [f.mod_path for f in group.files]
+                    + [f.existing_path for f in group.files if f.existing_path is not None]
+                    + list(group.target_paths)
+                )
+                cached = _render_cache.get(key)
+                if cached is not None:
+                    self.after(0, self._apply_result, i, cached)
+                    continue
+                future = executor.submit(_process_group, group, viewer_path, anim_check, self.app.logger.log)
+                futures[future] = (i, key)
 
+            # 收集循环单线程执行：缓存写入与 after 回调均在此线程，无需加锁
+            for future in as_completed(futures):
+                if self.should_stop():
+                    break
+                group_index, key = futures[future]
+                try:
+                    result = future.result()
+                except Exception as e:
+                    result = GroupRenderResult(error=str(e))
+                _render_cache[key] = result
+                self.after(0, self._apply_result, group_index, result)
+
+        self._pipeline_running = False
         self.after(0, lambda: self.set_task_running(False))
 
     def _apply_result(self, group_index: int, result: GroupRenderResult):
@@ -563,7 +572,7 @@ class ModInstallDialog(StoppableDialog):
         else:
             self._preview_pairs = []
             self.preview_combo.grid_remove()
-            waiting = self.app.mod_install_render_preview_var.get() and not self._task_queue.empty()
+            waiting = self.app.mod_install_render_preview_var.get() and self._pipeline_running
             text_key = "ui.mod_install.preview_rendering" if waiting else "ui.mod_install.preview_none"
             for canvas in self.preview_canvases:
                 canvas.set_image(None, t(text_key))

@@ -170,6 +170,7 @@ class ModInstallTab(TabFrame):
             match_strategy=self.match_strategy_var.get(),
             anim_check=self.app.build_anim_check_options(),
             create_backup=self.app.create_backup_var.get(),
+            max_workers=self.app.max_workers_var.get(),
             log=self.logger.log,
             progress_callback=lambda i, total, core: self.logger.status(
                 t("status.processing_batch", current=i, total=total, filename=core)

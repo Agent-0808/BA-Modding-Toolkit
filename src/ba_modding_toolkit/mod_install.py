@@ -7,9 +7,11 @@
 from pathlib import Path
 from dataclasses import dataclass, field, replace as dc_replace
 from enum import StrEnum
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import shutil
 import tempfile
+import threading
 
 from .i18n import t
 from .utils import no_log
@@ -299,6 +301,73 @@ def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bo
         return _backup_and_replace(tmp_path, f.existing_path, create_backup, log)
 
 
+def _execute_group(
+    group: ModGroup,
+    output_dir: Path,
+    asset_types_to_replace: set[ReplaceAssetType],
+    save_options: SaveOptions,
+    spine_options: SkelConvertOptions | None,
+    match_strategy: MatchStrategy,
+    anim_check: AnimCheckOptions | None,
+    create_backup: bool,
+    log: LogFunc,
+) -> tuple[list[tuple[str, str]], dict[str, set[str]], bool, bool]:
+    """
+    执行单组安装（DIRECT_REPLACE + UPDATE），供串行/并行路径复用。
+
+    Returns:
+        tuple: (失败明细 (组名, 原因) 列表, 动画差异, 是否全部资源未变化, 是否有可执行内容)
+    """
+    direct_files = [f for f in group.files if f.action == InstallAction.DIRECT_REPLACE]
+    update_files = [f for f in group.files if f.action == InstallAction.UPDATE]
+    if not direct_files and not update_files:
+        return [], {}, True, False
+
+    failures: list[tuple[str, str]] = []
+    anim_diffs: dict[str, set[str]] = {}
+
+    log("\n" + "-" * 50)
+    log(t("log.mod_install.execute_group", core=group.core))
+
+    all_unchanged = True
+
+    # 1. DIRECT_REPLACE：同名直接替换
+    for f in direct_files:
+        if f.need_crc_fix:
+            log(t("log.mod_install.crc_resave", filename=f.mod_path.name))
+        if not _direct_replace(f, save_options, create_backup, log):
+            failures.append((group.core, f.mod_path.name))
+
+    # 2. UPDATE：process_mod_update 生成后备份替换
+    if update_files:
+        update_result = process_mod_update(
+            source_paths=[f.mod_path for f in update_files],
+            target_paths=group.target_paths,
+            output_dir=output_dir,
+            asset_types_to_replace=asset_types_to_replace,
+            save_options=save_options,
+            spine_options=spine_options,
+            skip_unchanged=True,
+            match_strategy=match_strategy,
+            anim_check=anim_check,
+            log=log,
+        )
+        if not update_result.success:
+            # skel 版本冲突等：本组中止，继续后续组
+            failures.append((group.core, update_result.message))
+        elif update_result.message == "all_targets_unchanged":
+            log(t("log.mod_install.already_installed", core=group.core))
+        else:
+            for pair in update_result.file_pairs:
+                # FilePair: output = 生成文件，source = 游戏目录原文件
+                if not _backup_and_replace(pair.output, pair.source, create_backup, log):
+                    failures.append((group.core, pair.source.name))
+            all_unchanged = False
+            anim_diffs = dict(update_result.anim_diffs or {})
+
+    return failures, anim_diffs, all_unchanged, True
+
+
 def execute_mod_install(
     groups: list[ModGroup],
     output_dir: Path,
@@ -310,6 +379,7 @@ def execute_mod_install(
     create_backup: bool = True,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
+    max_workers: int = 1,
 ) -> InstallResult:
     """
     按用户决策逐组执行安装（见设计文档 §6）。
@@ -318,6 +388,7 @@ def execute_mod_install(
     - UPDATE：process_mod_update（skip_unchanged=True）生成后备份替换；
       全部资源未变化 → 该组视为已安装跳过
     - 单组失败不影响后续组；动画差异仅警告不视为失败
+    - max_workers > 1 时组级并行（plan 冲突检测已保证组间目标不重叠，写盘安全）
 
     Args:
         groups: 待安装的组列表（调用方已过滤决策与可安装性）
@@ -329,76 +400,66 @@ def execute_mod_install(
         anim_check: 动画差异检测选项
         create_backup: 是否创建 .backup 备份
         log: 日志记录函数
-        progress_callback: 可选的进度回调，接收 (当前组序号, 总组数, 组名)
+        progress_callback: 可选的进度回调，接收 (已完成组数, 总组数, 组名)
+        max_workers: 并行处理的线程数，默认为 1（串行）
 
     Returns:
         InstallResult: 组级成功/跳过/失败统计与失败明细
     """
     result = InstallResult()
     output_dir.mkdir(parents=True, exist_ok=True)
+    total = len(groups)
 
-    for i, group in enumerate(groups, 1):
-        if progress_callback:
-            progress_callback(i, len(groups), group.core)
+    def run_group(group: ModGroup):
+        return _execute_group(
+            group, output_dir, asset_types_to_replace, save_options,
+            spine_options, match_strategy, anim_check, create_backup, log,
+        )
 
-        direct_files = [f for f in group.files if f.action == InstallAction.DIRECT_REPLACE]
-        update_files = [f for f in group.files if f.action == InstallAction.UPDATE]
-        if not direct_files and not update_files:
-            continue
-
-        log("\n" + "-" * 50)
-        log(t("log.mod_install.execute_group", core=group.core))
-
-        group_failed = False
-        all_unchanged = True
-
-        # 1. DIRECT_REPLACE：同名直接替换
-        for f in direct_files:
-            if f.need_crc_fix:
-                log(t("log.mod_install.crc_resave", filename=f.mod_path.name))
-            if not _direct_replace(f, save_options, create_backup, log):
-                result.failed_groups.append((group.core, f.mod_path.name))
-                group_failed = True
-
-        # 2. UPDATE：process_mod_update 生成后备份替换
-        if update_files:
-            update_result = process_mod_update(
-                source_paths=[f.mod_path for f in update_files],
-                target_paths=group.target_paths,
-                output_dir=output_dir,
-                asset_types_to_replace=asset_types_to_replace,
-                save_options=save_options,
-                spine_options=spine_options,
-                skip_unchanged=True,
-                match_strategy=match_strategy,
-                anim_check=anim_check,
-                log=log,
-            )
-            if not update_result.success:
-                # skel 版本冲突等：本组中止，继续后续组
-                result.failed_groups.append((group.core, update_result.message))
-                group_failed = True
-            elif update_result.message == "all_targets_unchanged":
-                log(t("log.mod_install.already_installed", core=group.core))
-            else:
-                for pair in update_result.file_pairs:
-                    # FilePair: output = 生成文件，source = 游戏目录原文件
-                    if not _backup_and_replace(pair.output, pair.source, create_backup, log):
-                        result.failed_groups.append((group.core, pair.source.name))
-                        group_failed = True
-                all_unchanged = False
-                for name, anims in (update_result.anim_diffs or {}).items():
-                    result.anim_diffs.setdefault(name, set()).update(anims)
-
-        # 3. 组级统计（MIXED 组：直接替换已生效时仍按实际结果计）
-        if group_failed:
-            continue
-        if all_unchanged and not direct_files:
+    def collect(group: ModGroup, group_result) -> None:
+        """组级结果聚合到 InstallResult（并行路径需外部加锁）"""
+        failures, anims, all_unchanged, has_work = group_result
+        if not has_work:
+            return
+        for name, diff in anims.items():
+            result.anim_diffs.setdefault(name, set()).update(diff)
+        if failures:
+            result.failed_groups.extend(failures)
+            return
+        # 组级统计（MIXED 组：直接替换已生效时仍按实际结果计）
+        has_direct = any(f.action == InstallAction.DIRECT_REPLACE for f in group.files)
+        if all_unchanged and not has_direct:
             result.skipped_groups += 1
         else:
             result.installed_groups += 1
         # 成功组（含已安装跳过）记录 mod 文件，供调用方清理待安装列表；失败组保留便于重试
         result.installed_files.extend(f.mod_path for f in group.files)
+
+    if max_workers <= 1:
+        # 串行处理
+        for i, group in enumerate(groups, 1):
+            if progress_callback:
+                progress_callback(i, total, group.core)
+            collect(group, run_group(group))
+    else:
+        # 并行处理
+        lock = threading.Lock()
+        completed = 0
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(run_group, g): g for g in groups}
+            for future in as_completed(futures):
+                group = futures[future]
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total, group.core)
+                try:
+                    group_result = future.result()
+                except Exception as e:
+                    log(f"❌ {t('log.process_failed', error=e)}")
+                    group_result = ([(group.core, str(e))], {}, False, True)
+                with lock:
+                    collect(group, group_result)
 
     log("\n" + t(
         "log.mod_install.execute_done",
