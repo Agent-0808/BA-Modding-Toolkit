@@ -342,13 +342,21 @@ class ModInstallDialog(StoppableDialog):
         # （滚轮缩放、拖拽平移，双侧状态同步便于前后对比）
         preview_frame = tb.Frame(main_frame)
         preview_frame.pack(fill=tk.X, pady=(0, 5))
-        preview_frame.grid_columnconfigure((0, 1), weight=1)
+        preview_frame.grid_columnconfigure(0, weight=1)
 
         # 多预览对（>1）时显示，单对隐藏
         self.preview_combo = tb.Combobox(preview_frame, state="readonly")
-        self.preview_combo.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 5))
+        self.preview_combo.grid(row=0, column=0, sticky="ew", pady=(0, 5))
         self.preview_combo.bind("<<ComboboxSelected>>", self._on_preview_selected)
         self.preview_combo.grid_remove()
+
+        # 双侧视角同步开关（下拉框右侧，靠右对齐；关闭后两侧独立缩放平移）
+        self.sync_var = tk.BooleanVar(value=True)
+        tb.Checkbutton(
+            preview_frame, text=t("ui.mod_install.sync_view"),
+            variable=self.sync_var, command=self._on_sync_toggle,
+            bootstyle="primary",
+        ).grid(row=0, column=1, sticky="e", padx=(5, 0), pady=(0, 5))
 
         self.dual_canvas = DualZoomableCanvas(
             preview_frame,
@@ -605,6 +613,10 @@ class ModInstallDialog(StoppableDialog):
         if 0 <= index < len(self._preview_pairs):
             self._preview_index = index
             self._apply_pair()
+
+    def _on_sync_toggle(self):
+        """切换双侧视角同步开关"""
+        self.dual_canvas.set_sync(self.sync_var.get())
 
     def _rebuild_meta_tree(self, group: ModGroup):
         """重建元信息树：目标 bundle（只列一次）→ 同名资产前后描述对比"""

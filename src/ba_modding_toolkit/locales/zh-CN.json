@@ -646,6 +646,7 @@
 			"preview_current": "现有文件",
 			"preview_new": "待安装",
 			"preview_none": "暂无预览",
+			"sync_view": "同步视角",
 			"meta_title": "文件与资产",
 			"confirm_install": "确认安装 ({install}/{total})",
 			"action_direct_replace": "直接替换",
