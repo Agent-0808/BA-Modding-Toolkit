@@ -46,6 +46,8 @@
 		"analyze": "Analyze",
 		"install": "Install",
 		"skip": "Skip",
+		"install_all": "Install All",
+		"skip_all": "Skip All",
 		"open_in_explorer": "Open in Explorer",
 		"copy_filename": "Copy Filename",
 		"render_preview": "Render Preview",
@@ -374,7 +376,7 @@
 			"rendering_preview": "Rendering preview for: {name} (animation: {anim})",
 			"render_success": "Preview rendered: {path}",
 			"render_failed": "Preview render failed: {error}",
-			"render_file_not_found": "Preview render completed but output file not found: {path}",
+			"render_file_not_found": "Preview render completed but output file not found",
 			"no_skel_found": "No .skel file found",
 			"no_animation_found": "No available animations found: {name}",
 			"using_first_animation": "No Idle_01 or Dummy found, using first animation found: {anim}",
@@ -469,7 +471,7 @@
 			"stream_ref_export_unsupported": "Skipping export [{name}]: assets with .resS stream references cannot yet be exported as repackable dumps"
 		},
 		"mod_update": {
-			"all_processes_complete": "All processes completed!",
+			"all_processes_complete": "All processes completed! {count} resources processed.",
 			"updating": "Updating...",
 			"source_files": "Source group ({count} files)",
 			"target_files": "Target group ({count} files)",
@@ -644,6 +646,9 @@
 			"preview_current": "Current",
 			"preview_new": "After Install",
 			"preview_none": "No preview yet",
+			"sync_view": "Sync View",
+			"preview_tag_render": "[Render]",
+			"preview_tag_extract": "[Extract]",
 			"meta_title": "Files & Assets",
 			"confirm_install": "Install ({install}/{total})",
 			"action_direct_replace": "Direct Replace",
@@ -656,8 +661,7 @@
 			"diff_unchanged": "Unchanged",
 			"diff_missing_anims": "Missing {count} animations",
 			"diff_will_replace": "Will be replaced",
-			"preview_rendering": "Rendering...",
-			"preview_failed": "Render failed"
+			"preview_rendering": "Rendering..."
 		},
 		"crc_tool": {
 			"placeholder_modified": "Drag and drop Bundle to correct CRC here\nOr click the button below to select",
