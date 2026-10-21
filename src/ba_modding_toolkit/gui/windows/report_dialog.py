@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
-from ...report import generate_mod_report
+from ...core.report import generate_mod_report
 from ..components import SettingRow, UIComponents
 from ..utils import open_in_os
 from .base import StoppableDialog

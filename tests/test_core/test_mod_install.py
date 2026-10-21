@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 from typing import TYPE_CHECKING
 
-from ba_modding_toolkit.mod_install import plan_mod_install, InstallAction
+from ba_modding_toolkit.core.mod_install import plan_mod_install, InstallAction
 from ba_modding_toolkit.bundle import Bundle
 
 if TYPE_CHECKING:

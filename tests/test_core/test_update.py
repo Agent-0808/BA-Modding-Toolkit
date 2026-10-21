@@ -2,10 +2,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ba_modding_toolkit.core import (
+    extract_assets_from_bundle,
     process_mod_update,
-    _extract_assets_from_bundle,
-    SaveOptions,
 )
+from ba_modding_toolkit.models import SaveOptions
 from ba_modding_toolkit.bundle import Bundle
 from conftest import compare_directory_assets
 
@@ -93,7 +93,7 @@ class TestModUpdate:
         old_extract_dir = tmp_path / "old_extracted"
         old_extract_dir.mkdir()
 
-        _extract_assets_from_bundle([update_case.old_paths[0]], old_extract_dir, {"Texture2D"})
+        extract_assets_from_bundle([update_case.old_paths[0]], old_extract_dir, {"Texture2D"})
         
         output_dir = tmp_path / "output"
         output_dir.mkdir()
@@ -118,6 +118,6 @@ class TestModUpdate:
         new_extract_dir = tmp_path / "new_extracted"
         new_extract_dir.mkdir()
 
-        _extract_assets_from_bundle([updated_bundle], new_extract_dir, {"Texture2D", "TextAsset"})
+        extract_assets_from_bundle([updated_bundle], new_extract_dir, {"Texture2D", "TextAsset"})
         
         compare_directory_assets(old_extract_dir, new_extract_dir, MSE_THRESHOLD)

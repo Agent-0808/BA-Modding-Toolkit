@@ -125,7 +125,7 @@ def search_core(
     return candidates, ""
 
 
-def _asset_match(
+def asset_match(
     source_paths: list[Path],
     candidates: list[Path],
     log: LogFunc = no_log,
@@ -200,7 +200,7 @@ def find_target_bundles(
     if not candidates:
         return [], err_msg
 
-    return _asset_match(source_paths, candidates, log)
+    return asset_match(source_paths, candidates, log)
 
 
 SEARCH_DIR_SUFFIXES = [
@@ -402,7 +402,7 @@ def find_target_bundles_remote(
         log(f'  > {t("common.fail")}: {msg}')
         return [], msg
 
-    matched_local, msg = _asset_match(source_paths, local_candidates, log)
+    matched_local, msg = asset_match(source_paths, local_candidates, log)
 
     # 将本地路径映射回远程路径
     local_to_remote = dict(zip(local_candidates, candidates))

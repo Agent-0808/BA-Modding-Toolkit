@@ -6,11 +6,11 @@ from tkinter import messagebox
 from pathlib import Path
 
 from ...i18n import t
-from ...mod_install import InstallAction, InstallResult, ModGroup, execute_mod_install, plan_mod_install
+from ...core.mod_install import InstallAction, InstallResult, ModGroup, execute_mod_install, plan_mod_install, _ACTION_KEYS
 from ...searching import get_search_dirs
 from ..components import FileListbox, UIComponents, SettingRow
 from ..utils import warn_anim_diffs
-from ..windows.mod_install_dialog import ModInstallDialog, _ACTION_KEYS
+from ..windows.mod_install_dialog import ModInstallDialog
 from .base_tab import TabFrame
 
 # 文件级标注：动作 → 前景色（🟢 可直接替换 / 🟡 需更新 / 🔴 未找到 / ⚫ 错误）

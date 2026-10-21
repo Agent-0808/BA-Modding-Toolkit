@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
-from ...report import render_all_spine_previews
+from ...core.preview import render_all_spine_previews
 from ..components import SettingRow, UIComponents
 from ..utils import open_directory
 from .base import StoppableDialog

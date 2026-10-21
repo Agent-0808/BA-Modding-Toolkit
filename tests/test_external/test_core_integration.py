@@ -10,13 +10,12 @@ import pytest
 from PIL import Image
 
 from ba_modding_toolkit.core import (
-    SaveOptions,
-    _extract_assets_from_bundle,
+    extract_assets_from_bundle,
     process_asset_packing,
     process_mod_update,
     render_spine_preview_from_bundle,
 )
-from ba_modding_toolkit.models import AnimCheckOptions, SkelConvertOptions
+from ba_modding_toolkit.models import AnimCheckOptions, SaveOptions, SkelConvertOptions
 from ba_modding_toolkit.spine import SpineViewer, get_skel_version
 from conftest import EDIT_SPINE_VERSION, GAME_SPINE_VERSION, require_render_support
 
@@ -74,7 +73,7 @@ class TestExternalCoreIntegration:
         # 动态探测 old mod 内 skel 版本，preset 取不同值保证转换必被触发
         probe_dir = tmp_path / "probe"
         probe_dir.mkdir()
-        _extract_assets_from_bundle(update_case.old_paths, probe_dir, {"TextAsset"})
+        extract_assets_from_bundle(update_case.old_paths, probe_dir, {"TextAsset"})
         probe_skels = list(probe_dir.glob("*.skel"))
         if not probe_skels:
             pytest.skip("旧 mod 中无 skel 资源")
@@ -101,7 +100,7 @@ class TestExternalCoreIntegration:
         # 从输出 bundle 提取 skel 验证版本
         out_extract = tmp_path / "out_extract"
         out_extract.mkdir()
-        _extract_assets_from_bundle(
+        extract_assets_from_bundle(
             [pair.output for pair in result.file_pairs], out_extract, {"TextAsset"}
         )
         assert list(out_extract.glob("*.skel")), "输出 bundle 中未找到 skel"
@@ -141,7 +140,7 @@ class TestExternalCoreIntegration:
         # 从输出 bundle 提取同名 skel 验证版本 + viewer query 可读
         out_extract = tmp_path / "out_extract"
         out_extract.mkdir()
-        _extract_assets_from_bundle([pair.output for pair in pairs], out_extract, {"TextAsset"})
+        extract_assets_from_bundle([pair.output for pair in pairs], out_extract, {"TextAsset"})
         packed_skel = out_extract / sample_case.skel_path.name
         assert packed_skel.exists(), "输出 bundle 中未找到同名 skel"
 

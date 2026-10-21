@@ -7,8 +7,6 @@ from pathlib import Path
 from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
-    SaveOptions,
-    SkelConvertOptions,
     EXTRACTABLE_ASSET_TYPES,
     process_mod_update,
     process_asset_packing,
@@ -20,7 +18,8 @@ from ..utils import compute_crc32, get_BA_path, get_environment_info, manipulate
 from ..searching import get_search_dirs
 from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
 from ..bundle import analyze_trailing, find_textasset_companions
-from ..report import generate_mod_report, render_all_spine_previews, RENDER_CATEGORIES
+from ..core.report import generate_mod_report, RENDER_CATEGORIES
+from ..core.preview import render_all_spine_previews
 from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
 
 class Logger:

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 from ..models import ReplaceAssetType, CompressionType, MatchStrategy
-from ..report import ReportFormat
+from ..core.report import ReportFormat
 from ..utils import BARegion
 from ..naming import CharacterInternalIDMap
 

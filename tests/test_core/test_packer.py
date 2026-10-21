@@ -7,12 +7,11 @@ from PIL import Image
 import shutil
 
 from ba_modding_toolkit.core import (
+    extract_assets_from_bundle,
     process_asset_packing,
-    _extract_assets_from_bundle,
-    SaveOptions,
 )
+from ba_modding_toolkit.models import NameTypeKey, AssetType, SaveOptions
 from ba_modding_toolkit.bundle import Bundle
-from ba_modding_toolkit.models import NameTypeKey, AssetType
 from conftest import compare_images_mse
 
 if TYPE_CHECKING:
@@ -60,7 +59,7 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        _extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D"})
+        extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D"})
 
         extracted_png = extract_dir / sample_case.image_path.name
         if extracted_png.exists():
@@ -104,7 +103,7 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        _extract_assets_from_bundle(packed_bundles, extract_dir, {"TextAsset"})
+        extract_assets_from_bundle(packed_bundles, extract_dir, {"TextAsset"})
 
         extracted_skel = extract_dir / sample_case.skel_path.name
         assert extracted_skel.exists()
@@ -155,7 +154,7 @@ class TestAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
         
-        _extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D", "TextAsset"})
+        extract_assets_from_bundle(packed_bundles, extract_dir, {"Texture2D", "TextAsset"})
 
         extracted_png = extract_dir / sample_case.image_path.name
         assert extracted_png.exists()
@@ -239,7 +238,7 @@ class TestLegacyRenameAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        _extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"Texture2D"})
+        extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"Texture2D"})
 
         # 获取 Bundle 中期望的 Texture2D 名称
         bundle = Bundle.load(packed_bundles[0])
@@ -279,12 +278,12 @@ class TestLegacyRenameAssetPacking:
         # 但提取打包后的 bundle，PNG 数据应与原始 bundle 相同（未被替换）
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
-        _extract_assets_from_bundle([file_pairs[0].output], extract_dir, {"Texture2D"})
+        extract_assets_from_bundle([file_pairs[0].output], extract_dir, {"Texture2D"})
 
         # 从原始 bundle 提取 PNG 作对比
         original_extract_dir = tmp_path / "original"
         original_extract_dir.mkdir()
-        _extract_assets_from_bundle([legacy_rename_case.bundle_paths[0]], original_extract_dir, {"Texture2D"})
+        extract_assets_from_bundle([legacy_rename_case.bundle_paths[0]], original_extract_dir, {"Texture2D"})
 
         # 打包后的 PNG 数据应与原始 bundle 的 PNG 数据一致（未被替换）
         for orig_png in original_extract_dir.glob("*.png"):
@@ -318,7 +317,7 @@ class TestLegacyRenameAssetPacking:
         extract_dir = tmp_path / "extracted"
         extract_dir.mkdir()
 
-        _extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"TextAsset"})
+        extract_assets_from_bundle([packed_bundles[0]], extract_dir, {"TextAsset"})
 
         for atlas_file in extract_dir.glob("*.atlas"):
             content = atlas_file.read_text(encoding='utf-8')

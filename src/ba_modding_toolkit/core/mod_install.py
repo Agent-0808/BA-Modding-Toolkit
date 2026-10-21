@@ -1,4 +1,4 @@
-# mod_install.py
+# core/mod_install.py
 """Mod 安装核心逻辑（GUI/CLI 共用）。
 
 包含安装计划数据模型、plan（分析聚类）与 execute（执行替换）流程
@@ -13,9 +13,9 @@ import shutil
 import tempfile
 import threading
 
-from .i18n import t
-from .utils import no_log
-from .models import (
+from ..i18n import t
+from ..utils import no_log
+from ..models import (
     AnimCheckOptions,
     LogFunc,
     MatchStrategy,
@@ -25,10 +25,10 @@ from .models import (
     SaveOptions,
     SkelConvertOptions,
 )
-from .bundle import Bundle
-from .core import process_mod_update
-from .naming import parse_filename
-from .searching import search_prefix, _asset_match
+from ..bundle import Bundle
+from .mod_update import process_mod_update
+from ..naming import parse_filename
+from ..searching import search_prefix, asset_match
 
 
 # -------- 安装计划数据模型 ---------
@@ -41,6 +41,15 @@ class InstallAction(StrEnum):
     NOT_FOUND = "not_found"                  # 游戏目录中找不到对应文件
     ERROR = "error"                          # 解析失败 / 冲突等
     MIXED = "mixed"                          # 组内动作混合（仅组级汇总用）
+
+# 组/文件动作 → 元信息"安装方式"展示键
+_ACTION_KEYS = {
+    InstallAction.DIRECT_REPLACE: "ui.mod_install.action_direct_replace",
+    InstallAction.UPDATE: "ui.mod_install.action_update",
+    InstallAction.NOT_FOUND: "ui.mod_install.action_not_found",
+    InstallAction.ERROR: "ui.mod_install.action_error",
+    InstallAction.MIXED: "ui.mod_install.action_mixed",
+}
 
 @dataclass
 class ModFilePlan:
@@ -130,7 +139,7 @@ def _search_latest_targets(
     if len(filtered) != len(candidates):
         log(f'  > {t("log.mod_install.filter_latest_date", date=latest_date)}')
 
-    return _asset_match(source_paths, filtered, log)
+    return asset_match(source_paths, filtered, log)
 
 
 def plan_mod_install(

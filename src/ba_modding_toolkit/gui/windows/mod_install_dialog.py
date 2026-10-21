@@ -22,20 +22,11 @@ from ...i18n import t
 from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
-from ...mod_install import InstallAction, ModGroup
+from ...core.mod_install import InstallAction, ModGroup
 from ...spine import RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
-from ...core import _extract_assets_from_bundle, render_spine_preview_from_bundle
+from ...core import extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, DualZoomableCanvas
 from .base import StoppableDialog
-
-# 组/文件动作 → 元信息"安装方式"展示键
-_ACTION_KEYS = {
-    InstallAction.DIRECT_REPLACE: "ui.mod_install.action_direct_replace",
-    InstallAction.UPDATE: "ui.mod_install.action_update",
-    InstallAction.NOT_FOUND: "ui.mod_install.action_not_found",
-    InstallAction.ERROR: "ui.mod_install.action_error",
-    InstallAction.MIXED: "ui.mod_install.action_mixed",
-}
 
 
 class _RowTag(StrEnum):
@@ -118,8 +109,8 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
     仅提取渲染所需的 Texture2D/TextAsset；Mesh/AnimationClip 不参与预览，
     是否有实际变化由执行阶段的 skip_unchanged 判定
     """
-    extract_dir.mkdir(parents=True, exist_ok=True)  # _extract_assets_from_bundle 不自建目录
-    extracted = _extract_assets_from_bundle([bundle], extract_dir, {"TextAsset", "Texture2D"}, log)
+    extract_dir.mkdir(parents=True, exist_ok=True)  # extract_assets_from_bundle 不自建目录
+    extracted = extract_assets_from_bundle([bundle], extract_dir, {"TextAsset", "Texture2D"}, log)
     assets: list[_SideAsset] = []
     for png in extracted[AssetType.Texture2D]:
         try:
