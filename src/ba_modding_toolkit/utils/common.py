@@ -19,6 +19,8 @@ def no_log(message):
 
 LogFunc = Callable[[str], None]
 
+ProgressCallback = Callable[[int, int, str], None]
+
 
 def parse_hex_bytes(hex_str: str | None) -> bytes | None:
     """将字符串转换为 bytes
@@ -61,7 +63,7 @@ def timing(func: Callable[_P, _R]) -> Callable[_P, _R]:
     return wrapper
 
 
-def throttle_progress(callback: Callable[[int, int, str], None], interval: float = 0.1) -> Callable[[int, int, str], None]:
+def throttle_progress(callback: ProgressCallback, interval: float = 0.1) -> ProgressCallback:
     """为进度回调 (current, total, filename) 添加时间节流
 
     interval 秒内最多实际调用一次回调，最后一次（current >= total）必定调用，

@@ -4,6 +4,7 @@
 from .common import (
     CREATE_NO_WINDOW,
     LogFunc,
+    ProgressCallback,
     no_log,
     parse_hex_bytes,
     throttle_progress,
@@ -24,6 +25,7 @@ __all__ = [
     "LogFunc",
     "no_log",
     "parse_hex_bytes",
+    "ProgressCallback",
     "throttle_progress",
     "timing",
     "apply_crc_fix",

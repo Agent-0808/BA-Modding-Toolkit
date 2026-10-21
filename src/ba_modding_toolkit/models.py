@@ -55,10 +55,8 @@ class RawAssetBytes(bytes):
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]
 
-# 日志函数类型
-LogFunc = Callable[[str], None]  
-
-ProgressCallback = Callable[[int, int, str], None]
+# 日志/进度回调类型：定义在 utils.common，此处 re-export 供既有调用方使用
+from .utils import LogFunc, ProgressCallback
 
 # 压缩类型
 CompressionType = Literal["lzma", "lz4", "original", "none"]  
