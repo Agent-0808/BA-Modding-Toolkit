@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.models import SaveOptions
-from ba_modding_toolkit.utils import CRCUtils
+from ba_modding_toolkit.utils import compute_crc32
 
 if TYPE_CHECKING:
     from conftest import SampleCase
@@ -59,7 +59,7 @@ class TestSaveBundle:
         success, msg = bundle.save(output_path, save_options)
         assert success is True, msg
         
-        actual_crc = CRCUtils.compute_crc32(output_path)
+        actual_crc = compute_crc32(output_path)
         assert actual_crc != 99999999
 
     def test_crc_fix_with_specific_target(
@@ -80,7 +80,7 @@ class TestSaveBundle:
         success, msg = bundle.save(output_path, save_options)
         assert success is True, msg
         
-        actual_crc = CRCUtils.compute_crc32(output_path)
+        actual_crc = compute_crc32(output_path)
         assert actual_crc == target_crc
 
 
@@ -106,7 +106,7 @@ class TestExtraBytes:
         assert success is True, msg
         
         output_data = output_path.read_bytes()
-        actual_crc = CRCUtils.compute_crc32(output_path)
+        actual_crc = compute_crc32(output_path)
         assert actual_crc == target_crc
         assert output_data[-len(extra_bytes) - 4 : -4] == extra_bytes
 
@@ -166,7 +166,7 @@ class TestCompressBundle:
         reloaded_bundle = Bundle.load(output_path)
         assert not reloaded_bundle.is_empty()
         
-        actual_crc = CRCUtils.compute_crc32(output_path)
+        actual_crc = compute_crc32(output_path)
         assert actual_crc == target_crc
 
     @pytest.mark.parametrize("compression", ["lzma", "lz4", "none"])
@@ -194,7 +194,7 @@ class TestCompressBundle:
         assert not reloaded_bundle.is_empty()
         
         output_data = output_path.read_bytes()
-        actual_crc = CRCUtils.compute_crc32(output_data)
+        actual_crc = compute_crc32(output_data)
         assert actual_crc == target_crc
         assert output_data[-len(extra_bytes) - 4 : -4] == extra_bytes
 

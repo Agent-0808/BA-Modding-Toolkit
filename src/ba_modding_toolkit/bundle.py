@@ -12,7 +12,7 @@ from UnityPy.environment import Environment as Env
 from PIL import Image
 
 from .i18n import t
-from .utils import CRCUtils, no_log, throttle_progress
+from .utils import apply_crc_fix, compute_crc32, no_log, throttle_progress
 from .spine import SkelConverter, check_skel_animation_diff
 from .naming import RESOURCE_TYPES_NUM, parse_filename
 from .models import (
@@ -372,7 +372,7 @@ class Bundle:
         crc_str = parse_filename(bundle_path.name).crc
         if not crc_str or not crc_str.isdigit():
             return False
-        return CRCUtils.compute_crc32(bundle_path) == int(crc_str)
+        return compute_crc32(bundle_path) == int(crc_str)
 
     @classmethod
     def list_asset_names(
@@ -466,7 +466,7 @@ class Bundle:
                 if save_options.extra_bytes:
                     compressed_data += save_options.extra_bytes
                 
-                corrected_data = CRCUtils.apply_crc_fix(
+                corrected_data = apply_crc_fix(
                     compressed_data, target_crc
                 )
                 
@@ -703,7 +703,7 @@ def analyze_naming(item: BundleFileInfo) -> None:
 
 def analyze_crc(item: BundleFileInfo) -> None:
     """计算实际 CRC32"""
-    item.crc_actual = CRCUtils.compute_crc32(item.path)
+    item.crc_actual = compute_crc32(item.path)
 
 
 BUNDLE_ANALYZERS: dict[str, BundleAnalyzer] = {

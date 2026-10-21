@@ -13,7 +13,7 @@ import ttkbootstrap as tb
 from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 
 from ...i18n import t
-from ...utils import CRCUtils
+from ...utils import compute_crc32
 from ...naming import parse_filename, CharacterInternalIDMap, COMMON_MOD_PREFIXES
 from ...searching import list_bundle_files, list_bundle_files_remote, search_prefix, search_prefix_remote, get_search_dirs
 from ...bundle import analyze_bundles
@@ -891,7 +891,7 @@ class FileListWindow(StoppableDialog):
                     item.parsed_name = parse_filename(item.path.name)
 
                 if item.crc_actual is None:
-                    item.crc_actual = CRCUtils.compute_crc32(item.effective_path)
+                    item.crc_actual = compute_crc32(item.effective_path)
 
                 row = self.table.get_row(iid=str(item.path))
                 if row:

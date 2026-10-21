@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from PIL import Image
 
 from .i18n import t
-from .utils import ImageUtils, no_log
+from .utils import bleed_image, no_log
 from .spine import (
     SkelConverter, SpineViewer, atlas_downgrade,
     check_legacy_rename_needed, normalize_legacy_assets,
@@ -228,7 +228,7 @@ def process_asset_packing(
                 asset_key = NameTypeKey(file_path.stem, AssetType.Texture2D.name)
                 content = Image.open(file_path).convert("RGBA")
                 if enable_bleed:
-                    content = ImageUtils.bleed_image(content)
+                    content = bleed_image(content)
                     log(f"  > {t('log.packer.bleed_processed', name=file_path.stem)}")
             elif suffix in {".skel", ".atlas"}:
                 asset_key = NameTypeKey(file_path.name, AssetType.TextAsset.name)

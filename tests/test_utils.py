@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 
 from ba_modding_toolkit.utils import (
-    ImageUtils,
+    bleed_image,
     parse_hex_bytes,
 )
 
@@ -35,7 +35,7 @@ class TestParseHexBytes:
 class TestImageUtils:
     def test_bleed_image_basic(self):
         img = Image.new("RGBA", (100, 100), (255, 0, 0, 255))
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         
         assert result.size == img.size
         assert result.mode == "RGBA"
@@ -44,13 +44,13 @@ class TestImageUtils:
         img = Image.new("RGBA", (50, 50), (0, 255, 0, 128))
         original_alpha = img.getchannel("A")
         
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         result_alpha = result.getchannel("A")
         
         assert list(original_alpha.getdata()) == list(result_alpha.getdata())
 
     def test_bleed_image_no_transparent_pixels(self):
         img = Image.new("RGBA", (10, 10), (255, 255, 255, 255))
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         
         assert result == img

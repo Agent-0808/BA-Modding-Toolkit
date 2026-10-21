@@ -16,7 +16,7 @@ from ..core import (
     process_batch_mod_update,
 )
 from ..models import SaveOptions, SkelConvertOptions
-from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
+from ..utils import compute_crc32, get_BA_path, get_environment_info, manipulate_file_crc, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
 from ..bundle import analyze_trailing, find_textasset_companions
@@ -342,7 +342,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
         """计算文件 CRC32 的十六进制字符串，读取失败时返回空字符串。"""
         try:
             with open(path, "rb") as f:
-                return f"{CRCUtils.compute_crc32(f.read()):08X}"
+                return f"{compute_crc32(f.read()):08X}"
         except Exception as e:
             logger.log(f"❌ Error computing CRC: {e}")
             return ""
@@ -448,7 +448,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
 
         # 检查当前 CRC 是否已匹配
         with open(modified_path, "rb") as f:
-            current_crc = CRCUtils.compute_crc32(f.read())
+            current_crc = compute_crc32(f.read())
         
         if current_crc == target_crc:
             logger.log("⚠ CRC values already match, no fix needed.")
@@ -461,7 +461,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
             shutil.copy2(modified_path, backup_path)
             logger.log(f"  > Backup file created: {backup_path.name}")
 
-        success = CRCUtils.manipulate_file_crc(modified_path, target_crc, parse_hex_bytes(args.extra_bytes))
+        success = manipulate_file_crc(modified_path, target_crc, parse_hex_bytes(args.extra_bytes))
 
         if success:
             logger.log("✅ CRC Fix Successful! The modified file has been updated.")

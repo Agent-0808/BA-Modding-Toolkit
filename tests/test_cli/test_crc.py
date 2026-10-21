@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 from ba_modding_toolkit.cli.taps import CrcTap
 from ba_modding_toolkit.cli.handlers import handle_crc
-from ba_modding_toolkit.utils import CRCUtils
+from ba_modding_toolkit.utils import compute_crc32
 
 if TYPE_CHECKING:
     from conftest import SampleCase
@@ -56,7 +56,7 @@ class TestCrcCommand:
         handle_crc(args)
 
         with open(modified_file, "rb") as f:
-            assert CRCUtils.compute_crc32(f.read()) == 0
+            assert compute_crc32(f.read()) == 0
 
     def test_crc_fix_from_filename(
         self,
@@ -74,7 +74,7 @@ class TestCrcCommand:
         handle_crc(args)
 
         with open(modified_file, "rb") as f:
-            assert CRCUtils.compute_crc32(f.read()) == 1234567890
+            assert compute_crc32(f.read()) == 1234567890
         assert modified_file.with_suffix(modified_file.suffix + '.backup').is_file()
 
     def test_crc_fix_no_backup(
@@ -94,5 +94,5 @@ class TestCrcCommand:
         handle_crc(args)
 
         with open(modified_file, "rb") as f:
-            assert CRCUtils.compute_crc32(f.read()) == 1234567890
+            assert compute_crc32(f.read()) == 1234567890
         assert not modified_file.with_suffix(modified_file.suffix + '.backup').exists()

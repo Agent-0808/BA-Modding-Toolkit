@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import ImageTk
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
-from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR
+from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR, PACKAGE_DIR
 from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
@@ -83,14 +83,8 @@ class App(tb.Frame, ConfigMixin):
         # 设置路径
         # exe_dir: 程序所在目录（打包后为 exe 目录，开发环境为项目根目录）
         self.exe_dir = EXE_DIR
-        if "__compiled__" in globals():
-            # 打包环境（nuitka onefile）
-            # root_path: nuitka 解压的资源目录（temp 目录下）
-            self.root_path = Path(sys.executable).parent / "ba_modding_toolkit"
-        else:
-            # 开发环境
-            # root_path：src/ba_modding_toolkit/
-            self.root_path = Path(__file__).parents[1]
+        # root_path: 包资源根目录（打包后为 nuitka 解压的资源目录，开发环境为 src/ba_modding_toolkit/）
+        self.root_path = PACKAGE_DIR
 
         # 设置窗口图标
         print(f"exe_dir: {self.exe_dir}")

@@ -13,7 +13,7 @@ def get_locale_dir() -> Path:
     2. 开发环境：包内部的 locales 文件夹
     """
     # 1. 优先查找 exe 同级目录下的 locales 文件夹（打包环境下 EXE_DIR 为 exe 所在目录）
-    from .utils import EXE_DIR
+    from .utils.paths import EXE_DIR
     external_locales = EXE_DIR / "locales"
     if external_locales.is_dir():
         return external_locales
