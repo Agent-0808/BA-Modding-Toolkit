@@ -6,9 +6,9 @@ import os
 
 from .i18n import t
 from .utils import no_log
-from .naming import parse_filename, get_category_prefix
-from .models import LogFunc, AssetKey, AssetType, BundleFileInfo
-from .bundle import Bundle
+from .naming import parse_filename, parse_asset_core, get_category_prefix
+from .bundle import Bundle, BundleFileInfo
+from .models import LogFunc, AssetKey, AssetType
 
 if TYPE_CHECKING:
     from .adb.file_source import ADBFileSource
@@ -76,15 +76,15 @@ def search_core(
     目标文件后缀固定为 .bundle。
 
     Args:
-        source_path: 源文件路径
+        source_path: 源文件路径（散件资产，如 dump/图片/skel）
         search_dirs: 搜索目录列表
         log: 日志记录函数
 
     Returns:
         tuple[list[Path], str]: (候选文件路径列表, 错误消息)
     """
-    parsed = parse_filename(str(source_path.name))
-    core = parsed.core
+    # 源文件是散件资产而非 bundle，走散件命名域解析 core
+    core = parse_asset_core(str(source_path.name))
 
     if not core:
         msg = t("message.search.filename_parse_failed")
@@ -317,7 +317,7 @@ def search_core_remote(
     """在 ADB 远程目录中按文件名核心部分(core)匹配搜索 bundle 文件
 
     Args:
-        source_path: 源文件路径（本地）
+        source_path: 源文件路径（本地，散件资产）
         search_dirs: 远程搜索目录列表
         file_source: ADB 文件源适配器
         log: 日志函数
@@ -325,8 +325,8 @@ def search_core_remote(
     Returns:
         tuple[list[str], str]: (匹配的远程路径列表, 状态消息)
     """
-    parsed = parse_filename(str(source_path.name))
-    core = parsed.core
+    # 源文件是散件资产而非 bundle，走散件命名域解析 core
+    core = parse_asset_core(str(source_path.name))
 
     if not core:
         msg = t("message.search.filename_parse_failed")

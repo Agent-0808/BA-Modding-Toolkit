@@ -19,7 +19,6 @@ from ..models import (
     AnimCheckOptions,
     LogFunc,
     MatchStrategy,
-    ParsedFilename,
     ProgressCallback,
     ReplaceAssetType,
     SaveOptions,
@@ -27,7 +26,7 @@ from ..models import (
 )
 from ..bundle import Bundle
 from .mod_update import process_mod_update
-from ..naming import parse_filename
+from ..naming import parse_filename, ParsedFilename
 from ..searching import search_prefix, asset_match
 
 

@@ -6,9 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from ..bundle import analyze_trailing, analyze_naming
+from ..bundle import BundleFileInfo, analyze_trailing, analyze_naming
 from ..i18n import t
-from ..models import BundleFileInfo, LogFunc, ProgressCallback
+from ..models import LogFunc, ProgressCallback
 from ..naming import CharacterInternalIDMap
 from ..spine import RenderOptions, RENDER_PRESET_LOW
 from ..utils import no_log, throttle_progress

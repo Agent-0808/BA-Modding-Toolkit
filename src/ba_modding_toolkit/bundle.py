@@ -2,6 +2,7 @@
 
 import re
 import traceback
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Callable
@@ -14,15 +15,36 @@ from PIL import Image
 from .i18n import t
 from .utils import apply_crc_fix, compute_crc32, no_log, throttle_progress
 from .spine import SkelConverter, check_skel_animation_diff
-from .naming import RESOURCE_TYPES_NUM, parse_filename
+from .naming import RESOURCE_TYPES_NUM, parse_filename, ParsedFilename
 from .models import (
     AssetKey, AssetContent, AssetType, Patch, KeyFunc,
     NameTypeKey, ContNameTypeKey, MatchStrategy, LogFunc,
     CompressionType, PatchResult, ReplaceAssetType,
-    SaveOptions, SkelConvertOptions, AnimCheckOptions, ParsedFilename,
-    BundleFileInfo, ProgressCallback, SkelVersionConflict,
+    SaveOptions, SkelConvertOptions, AnimCheckOptions,
+    ProgressCallback, SkelVersionConflict,
     RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
+
+
+@dataclass
+class BundleFileInfo:
+    """扫描结果中单个 bundle 文件的信息"""
+    path: Path
+    file_size: int
+    modified_time: float = 0.0
+    trailing_bytes: int | None = None
+    trailing_content: bytes | None = None
+    parsed_name: ParsedFilename | None = None
+    crc_actual: int | None = None
+    # ADB 支持
+    local_cache_path: Path | None = None  # ADB 模式下的本地缓存路径
+    source: str = "local"                  # "local" | "adb"
+
+    @property
+    def effective_path(self) -> Path:
+        """获取实际用于文件操作的本地路径"""
+        return self.local_cache_path if self.local_cache_path is not None else self.path
+
 
 # 对象序列化数据中的流式引用 basename（m_StreamData.path / m_Resource.m_Source，如 CAB-xxx.resS）
 STREAM_REF_PATTERN = re.compile(rb"[A-Za-z0-9_\-]+\.(?:resS|resource)")

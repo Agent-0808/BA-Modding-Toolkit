@@ -17,7 +17,7 @@ from ...utils import compute_crc32
 from ...naming import parse_filename, CharacterInternalIDMap, COMMON_MOD_PREFIXES
 from ...searching import list_bundle_files, list_bundle_files_remote, search_prefix, search_prefix_remote, get_search_dirs
 from ...bundle import analyze_bundles
-from ...models import BundleFileInfo
+from ...bundle import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
 from ..utils import reveal_in_explorer, select_directory

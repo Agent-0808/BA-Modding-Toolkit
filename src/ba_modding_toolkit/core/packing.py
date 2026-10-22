@@ -163,7 +163,7 @@ def process_asset_packing(
                         f"Dump files must be named as: {supported_dump}"
                     )
                 resource_name, asset_type = parsed
-                asset_key = NameTypeKey(resource_name, asset_type.name)
+                asset_key = NameTypeKey(resource_name, asset_type)
                 with open(file_path, "rb") as f:
                     # 标记为 raw dump 内容，apply_patch 走 set_raw_data 原样替换
                     raw = f.read()

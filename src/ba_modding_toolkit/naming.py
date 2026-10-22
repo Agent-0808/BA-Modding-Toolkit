@@ -3,7 +3,7 @@
 import csv
 import re
 from pathlib import Path
-from .models import AssetType, ParsedFilename
+from typing import NamedTuple
 
 # -------- 文件名解析常量 --------
 
@@ -26,27 +26,28 @@ RESOURCE_TYPES_NUM = {
     '010', '011', '012', '013', '014', '015', '016', '017', '018', '019',
 }
 
-# 带类型标记的 dump 文件二级扩展名 → 资源类型（如 {name}.mesh.bytes / {name}.mesh.dat / {name}.animationclip.dat）
-# raw dump 内容统一走 set_raw_data 原样替换，要求 dump 字节为该类型的合法序列化数据且流数据内联（无外部 .resS 引用）
-DUMP_TYPE_EXTENSIONS: dict[str, AssetType] = {
-    'texture2d': AssetType.Texture2D,
-    'mesh': AssetType.Mesh,
-    'animationclip': AssetType.AnimationClip,
-    'textasset': AssetType.TextAsset,
+# 带类型标记的 dump 文件二级扩展名 → 资源类型名（如 {name}.mesh.bytes / {name}.mesh.dat / {name}.animationclip.dat）
+# 值为 AssetType（UnityPy ClassIDType）成员名，raw dump 内容统一走 set_raw_data 原样替换，
+# 要求 dump 字节为该类型的合法序列化数据且流数据内联（无外部 .resS 引用）
+DUMP_TYPE_EXTENSIONS: dict[str, str] = {
+    'texture2d': 'Texture2D',
+    'mesh': 'Mesh',
+    'animationclip': 'AnimationClip',
+    'textasset': 'TextAsset',
 }
 
 # dump 文件允许的末级扩展名
 DUMP_FILE_EXTENSIONS = {'.bytes', '.dat'}
 
 
-def parse_typed_dump_name(filename: str) -> tuple[str, AssetType] | None:
+def parse_typed_dump_name(filename: str) -> tuple[str, str] | None:
     """解析 {name}.{type}.{bytes|dat} 形式的 dump 文件名。
 
     Args:
         filename: 文件名字符串
 
     Returns:
-        (资源名, 资源类型)；文件名不符合带类型标记的 dump 命名时返回 None
+        (资源名, 资源类型名)；文件名不符合带类型标记的 dump 命名时返回 None
     """
     stem = filename.rsplit('.', 1)[0]
     idx = stem.rfind('.')
@@ -56,6 +57,22 @@ def parse_typed_dump_name(filename: str) -> tuple[str, AssetType] | None:
     if asset_type is None:
         return None
     return stem[:idx], asset_type
+
+
+def parse_asset_core(filename: str) -> str:
+    """从散件资产文件名提取 core（供打包器根据资源名自动定位同名 bundle）。
+
+    输入为散件资产（如 {name}.mesh.bytes / {name}.animationclip.dat / {name}.skel / {name}.png），
+    与 bundle 命名解析（parse_filename）是两个独立的命名域。
+
+    Args:
+        filename: 散件资产文件名字符串
+
+    Returns:
+        core（资源核心名，如 ch0808_spr）；无有效内容时返回空字符串
+    """
+    parsed = parse_typed_dump_name(filename)
+    return (parsed[0] if parsed else filename.rsplit('.', 1)[0]).strip('-_')
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
@@ -90,6 +107,26 @@ def get_category_prefix(core: str) -> str:
     return _DEFAULT_SEARCH_PREFIX
 
 
+class ParsedFilename(NamedTuple):
+    """
+    解析后的文件名结构。
+
+    Attributes:
+        category: 资源分类 (如 spinecharacters)，可能为 None
+        core:     核心名称 (如 ch0808_spr)，必须有值
+        res_type: 资源类型 (如 textassets)，可能为 None
+        date:     日期字符串 (YYYY-MM-DD)
+        crc:      CRC32 校验码
+        prefix:   用于搜索同组文件的前缀
+    """
+    category: str | None
+    core: str
+    res_type: str | None
+    date: str
+    crc: str
+    prefix: str
+
+
 def parse_filename(filename: str) -> ParsedFilename:
     """
     解析文件名，提取各个组成部分。
@@ -103,11 +140,6 @@ def parse_filename(filename: str) -> ParsedFilename:
     # 1. 提取 CRC（从右向左切片）
     crc = ""
     stem = filename.rsplit('.', 1)[0]
-    # 剥离带类型标记的二级扩展名（如 .mesh.bytes / .animationclip.dat），使 core 与资源名一致
-    for ext in DUMP_TYPE_EXTENSIONS:
-        if stem.lower().endswith('.' + ext):
-            stem = stem[:-len(ext) - 1]
-            break
     crc_idx = stem.rfind('_')
     if crc_idx != -1:
         candidate_crc = stem[crc_idx + 1:]

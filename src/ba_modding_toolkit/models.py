@@ -162,45 +162,6 @@ class PatchResult(NamedTuple):
         """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
 
-class ParsedFilename(NamedTuple):
-    """
-    解析后的文件名结构。
-
-    Attributes:
-        category: 资源分类 (如 spinecharacters)，可能为 None
-        core: 核心名称 (如 ch0808_spr)，必须有值
-        res_type: 资源类型 (如 textassets)，可能为 None
-        date: 日期字符串 (YYYY-MM-DD)
-        crc: CRC32 校验码
-        prefix: 用于搜索新版文件的前缀
-    """
-    category: str | None
-    core: str
-    res_type: str | None
-    date: str
-    crc: str
-    prefix: str
-
-@dataclass
-class BundleFileInfo:
-    """扫描结果中单个 bundle 文件的信息"""
-    path: Path
-    file_size: int
-    modified_time: float = 0.0
-    trailing_bytes: int | None = None
-    trailing_content: bytes | None = None
-    parsed_name: ParsedFilename | None = None
-    crc_actual: int | None = None
-    # ADB 支持
-    local_cache_path: Path | None = None  # ADB 模式下的本地缓存路径
-    source: str = "local"                  # "local" | "adb"
-
-    @property
-    def effective_path(self) -> Path:
-        """获取实际用于文件操作的本地路径"""
-        return self.local_cache_path if self.local_cache_path is not None else self.path
-
-
 # 可替换的资源类型白名单
 REPLACEABLE_ASSET_TYPES: set[AssetType] = {
     # 纹理类

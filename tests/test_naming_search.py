@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ba_modding_toolkit.models import AssetType
-from ba_modding_toolkit.naming import get_category_prefix, parse_filename, parse_typed_dump_name
+from ba_modding_toolkit.naming import get_category_prefix, parse_filename, parse_asset_core, parse_typed_dump_name
 from ba_modding_toolkit.searching import search_prefix, search_core
 
 if TYPE_CHECKING:
@@ -79,27 +78,27 @@ class TestTypedDumpName:
     def test_parse_mesh_bytes(self):
         name, asset_type = parse_typed_dump_name("ch0001_body.mesh.bytes")
         assert name == "ch0001_body"
-        assert asset_type == AssetType.Mesh
+        assert asset_type == "Mesh"
 
     def test_parse_texture2d_dat(self):
         name, asset_type = parse_typed_dump_name("ch0001_body.texture2d.dat")
         assert name == "ch0001_body"
-        assert asset_type == AssetType.Texture2D
+        assert asset_type == "Texture2D"
 
     def test_parse_animationclip_dat(self):
         name, asset_type = parse_typed_dump_name("xxx.anim.animationclip.dat")
         assert name == "xxx.anim"
-        assert asset_type == AssetType.AnimationClip
+        assert asset_type == "AnimationClip"
 
     def test_parse_textasset_dat(self):
         name, asset_type = parse_typed_dump_name("some_text.textasset.dat")
         assert name == "some_text"
-        assert asset_type == AssetType.TextAsset
+        assert asset_type == "TextAsset"
 
     def test_parse_case_insensitive(self):
         name, asset_type = parse_typed_dump_name("Body.Mesh.DAT")
         assert name == "Body"
-        assert asset_type == AssetType.Mesh
+        assert asset_type == "Mesh"
 
     def test_parse_invalid_returns_none(self):
         assert parse_typed_dump_name("plain.dat") is None
@@ -107,13 +106,16 @@ class TestTypedDumpName:
         assert parse_typed_dump_name("foo.unknown.dat") is None
         assert parse_typed_dump_name("onlyname") is None
 
-    def test_parse_filename_strips_dump_ext(self):
-        """parse_filename 对 dump 散件应剥离二级扩展名，保证 core 与资源名一致"""
-        parsed = parse_filename("ch0001_body.mesh.dat")
-        assert parsed.core == "ch0001_body"
+    def test_parse_asset_core_strips_dump_ext(self):
+        """parse_asset_core 对 dump 散件应剥离二级扩展名，保证 core 与资源名一致"""
+        assert parse_asset_core("ch0001_body.mesh.dat") == "ch0001_body"
+        assert parse_asset_core("ch0001_body.mesh.bytes") == "ch0001_body"
+        assert parse_asset_core("xxx.anim.animationclip.dat") == "xxx.anim"
 
-        parsed_bytes = parse_filename("ch0001_body.mesh.bytes")
-        assert parsed_bytes.core == "ch0001_body"
+    def test_parse_asset_core_loose_assets(self):
+        """parse_asset_core 对 png/skel 等无类型标记散件应正确提取 core"""
+        assert parse_asset_core("ch1437_home.skel") == "ch1437_home"
+        assert parse_asset_core("ch0808_spr.png") == "ch0808_spr"
 
     def test_parse_filename_no_type(self):
         filename = "assets-_mx-category-corename-2024-01-01_11111111.bundle"
@@ -356,9 +358,16 @@ class TestSearchCore:
         assert err != ""
 
     def test_search_mod_update_by_core(self, update_case: "UpdateCase"):
-        """使用真实测试文件测试 core 搜索（mod update 场景）"""
-        # 从旧 bundle 搜索新 bundle
-        candidates, err = search_core(update_case.old_paths[0], [update_case.new_paths[0].parent])
+        """使用真实测试文件测试 core 搜索（打包器自动定位场景）
+
+        search_core 的源是散件资产而非 bundle（bundle→bundle 场景由 search_prefix 覆盖），
+        故从旧 bundle 名提取 core 构造散件作为搜索源。
+        """
+        core = parse_filename(update_case.old_paths[0].name).core
+        source = update_case.old_paths[0].parent / f"{core}.png"
+        source.write_bytes(b"fake asset")
+
+        candidates, err = search_core(source, [update_case.new_paths[0].parent])
 
         assert err == ""
         assert len(candidates) >= 1
