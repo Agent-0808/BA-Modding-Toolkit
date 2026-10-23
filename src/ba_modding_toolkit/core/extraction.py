@@ -16,7 +16,8 @@ from ..models import (
     SkelConvertOptions,
     REPLACEABLE_ASSET_TYPES
 )
-from ..bundle import Bundle, find_stream_refs
+from ..asset import find_stream_refs
+from ..bundle import Bundle
 
 # 提取器支持的资源类型（公开提取接口默认全量提取）
 EXTRACTABLE_ASSET_TYPES = {"Texture2D", "TextAsset", "Mesh", "AnimationClip"}

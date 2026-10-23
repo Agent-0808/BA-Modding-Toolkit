@@ -20,7 +20,8 @@ from ..models import (
     SaveOptions, SkelConvertOptions, AnimCheckOptions,
     SkelVersionConflict,
 )
-from ..bundle import Bundle, find_stream_refs
+from ..asset import find_stream_refs
+from ..bundle import Bundle
 from ..naming import DUMP_FILE_EXTENSIONS, DUMP_TYPE_EXTENSIONS, parse_typed_dump_name
 from .mod_update import _format_skel_conflicts
 
