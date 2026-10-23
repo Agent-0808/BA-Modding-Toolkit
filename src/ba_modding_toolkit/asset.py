@@ -30,8 +30,14 @@ class ApplyContext:
     """应用补丁内容的上下文"""
     env: Env                                        # 目标 bundle 环境（companion 写入用）
     anim_check: AnimCheckOptions | None             # skel 动画差异检测选项
-    anim_diffs: dict[str, list[str]]                # 动画差异累计输出（原地更新）
     log: LogFunc
+
+
+@dataclass(frozen=True)
+class ApplyOutcome:
+    """单个对象的补丁应用结果"""
+    applied: bool                            # False = 内容相同被跳过
+    missing_anims: list[str] | None = None   # 仅 TextAsset(.skel) 分支产生：目标缺失的动画列表
 
 
 # -------- 流式引用辅助（.resS/.resource） --------
@@ -161,8 +167,8 @@ def extract_asset(obj, ctx: ExtractContext) -> tuple[AssetContent | None, list[S
     return content, []
 
 
-def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> bool:
-    """把补丁内容应用到目标对象；返回 False 表示内容相同被跳过
+def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
+    """把补丁内容应用到目标对象；applied=False 表示内容相同被跳过
 
     raw dump 内容（RawAssetBytes）：原样替换整个对象的序列化数据，优先于类型特定分支。
     """
@@ -171,27 +177,28 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> bool:
 
     if isinstance(content, RawAssetBytes):
         if obj.get_raw_data() == content:
-            return False
+            return ApplyOutcome(applied=False)
         obj.set_raw_data(install_raw_content(content, ctx.env, ctx.log))
-        return True
+        return ApplyOutcome(applied=True)
 
     if obj.type == AssetType.Texture2D:
         new_image = content
         if (data.image.mode == new_image.mode
                 and data.image.size == new_image.size
                 and data.image.tobytes() == new_image.tobytes()):
-            return False
+            return ApplyOutcome(applied=False)
         data.image = new_image
         data.save()
-        return True
+        return ApplyOutcome(applied=True)
 
     if obj.type == AssetType.TextAsset:
         content: bytes
         target_bytes = data.m_Script.encode("utf-8", "surrogateescape")
 
         if target_bytes == content:
-            return False
+            return ApplyOutcome(applied=False)
 
+        missing_anims: list[str] | None = None
         # 就地检测动画差异
         if ctx.anim_check and ctx.anim_check.is_valid() and resource_name.lower().endswith('.skel'):
             ctx.log(f"  🔍 {t('log.spine.anim_check_comparing', name=resource_name)}")
@@ -202,17 +209,16 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> bool:
                 log=ctx.log
             )
             if missing_anims:
-                ctx.anim_diffs[resource_name] = missing_anims
                 ctx.log(f"  ⚠️ {t('log.spine.anim_check_new_animations', name=resource_name, animations=', '.join(missing_anims))}")
             else:
                 ctx.log(f"  ✓ {t('log.spine.anim_check_no_diff', name=resource_name)}")
 
         data.m_Script = content.decode("utf-8", "surrogateescape")
         data.save()
-        return True
+        return ApplyOutcome(applied=True, missing_anims=missing_anims)
 
     # raw 类型（AnimationClip/Mesh 等）：内容相同则跳过，避免无效重存
     if obj.get_raw_data() == content:
-        return False
+        return ApplyOutcome(applied=False)
     obj.set_raw_data(content)
-    return True
+    return ApplyOutcome(applied=True)

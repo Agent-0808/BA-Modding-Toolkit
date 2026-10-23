@@ -454,8 +454,7 @@ class Bundle:
         applied_assets_log = []
         matched_keys: list[AssetKey] = []
         anim_diffs: dict[str, list[str]] = {}
-        ctx = ApplyContext(env=self.env, anim_check=anim_check,
-                           anim_diffs=anim_diffs, log=self.log)
+        ctx = ApplyContext(env=self.env, anim_check=anim_check, log=self.log)
         
         tasks = patch.copy()
         
@@ -478,11 +477,15 @@ class Bundle:
                     matched_keys.append(asset_key)
                     resource_name = getattr(data, 'm_Name', t("log.unnamed_resource", type=obj.type.name))
                     
-                    # 各资产类型的替换语义见 asset.apply_asset；返回 False 表示内容相同跳过
-                    if not apply_asset(obj, content, ctx):
+                    # 各资产类型的替换语义见 asset.apply_asset
+                    outcome = apply_asset(obj, content, ctx)
+                    if not outcome.applied:
                         self.log(f'  ⏭️ {t("log.replace_skipped_same_content", type=obj.type.name, name=resource_name)}')
                         skipped_count += 1
                         continue
+                    
+                    if outcome.missing_anims:
+                        anim_diffs[resource_name] = outcome.missing_anims
                     
                     applied_count += 1
                     # 有 companion 随行时在成功行内追加，便于排查流式资源丢失类问题
