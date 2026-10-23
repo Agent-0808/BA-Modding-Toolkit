@@ -84,6 +84,8 @@
 		"replace_mesh_info": "3D 模型文件",
 		"replace_animationclip": "AnimationClip",
 		"replace_animationclip_info": "3D 模型的动画片段资源",
+		"replace_font": "Font",
+		"replace_font_info": "字体资源文件\n仅搬运字体数据与家族名，保留目标字体的度量字段",
 		"replace_all": "ALL",
 		"replace_all_info": "替换所有类型资源\n测试性，不建议启用",
 		"spine_conversion": "启用 Spine 版本转换",
@@ -468,6 +470,7 @@
 			"extraction_failed": "提取资源 {name} 时发生错误: {error}",
 			"processing_file": "正在处理：{name}",
 			"stream_ref_dangling": "跳过提取 [{name}]：序列化数据引用了 bundle 内不存在的流数据文件（.resS），替换将导致资源损坏",
+			"no_image_data": "跳过提取 [{name}]：纹理无像素数据（空 StreamData 且无内联数据），疑似残缺资源",
 			"stream_ref_export_unsupported": "跳过导出 [{name}]：含 .resS 流式引用的资源暂不支持导出为可重打包的 dump"
 		},
 		"mod_update": {

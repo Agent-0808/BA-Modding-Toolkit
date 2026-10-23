@@ -32,8 +32,18 @@ class ContNameTypeKey(NamedTuple):
 
 AssetKey = str | int | NameTypeKey | ContNameTypeKey
 
-# 资源的具体内容，可以是字节数据、PIL图像或None
-AssetContent = bytes | Image.Image | None  
+@dataclass(frozen=True)
+class FontAssetData:
+    """Font 特判替换内容：仅搬运字体数据与家族名，apply 时保留目标对象其余字段
+
+    不走 raw 整对象搬运，避免跨版本 Font 类 typetree 布局变化导致坏对象，
+    同时不覆盖目标侧的度量字段（m_LineSpacing 等）。
+    """
+    font_data: bytes          # 字体文件字节（ttf/otf）
+    font_names: list[str]     # 写入 m_FontNames 的家族名列表
+
+# 资源的具体内容，可以是字节数据、PIL图像、Font特判数据或None
+AssetContent = bytes | Image.Image | FontAssetData | None
 
 class RawAssetBytes(bytes):
     """标记 raw dump 内容（完整序列化对象字节），apply_patch 走 set_raw_data 原样替换
@@ -65,7 +75,7 @@ CompressionType = Literal["lzma", "lz4", "original", "none"]
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
 
 # 资源类型名（ALL 表示全部支持类型）
-ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "AnimationClip", "ALL"]
+ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "AnimationClip", "Font", "ALL"]
 
 KeyFunc = Callable[[Obj], AssetKey]
 

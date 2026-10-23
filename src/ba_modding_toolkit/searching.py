@@ -136,7 +136,7 @@ def asset_match(
     Returns:
         tuple[list[Path], str]: (匹配的文件路径列表, 状态消息)
     """
-    comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh, AssetType.AnimationClip}
+    comparable_types = {AssetType.Texture2D, AssetType.TextAsset, AssetType.Mesh, AssetType.AnimationClip, AssetType.Font}
     strategy = 'name_type'
 
     source_assets: set[AssetKey] = set()

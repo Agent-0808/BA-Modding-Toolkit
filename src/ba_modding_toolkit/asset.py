@@ -10,6 +10,7 @@ from .i18n import t
 from .models import (
     AssetContent, AssetType, AnimCheckOptions, LogFunc,
     RawAssetBytes, SkelConvertOptions, SkelVersionConflict,
+    FontAssetData,
 )
 from .spine import SkelConverter, check_skel_animation_diff
 from .utils import no_log
@@ -120,11 +121,15 @@ def install_raw_content(content: RawAssetBytes, env: Env, log: LogFunc) -> RawAs
 
 # -------- 类型分发 --------
 
+# Font 字形缓存字段（不同包版本字段名不同，按存在性清空，避免旧缓存干扰新字体）
+_CHAR_CACHE_FIELDS = ("m_CharacterRects", "m_CharacterInfo")
+
 def extract_asset(obj, ctx: ExtractContext) -> tuple[AssetContent | None, list[SkelVersionConflict]]:
     """按资产类型提取单个对象的补丁内容
 
     - Texture2D：解码为 PIL 图像
     - TextAsset：m_Script 字节；.skel 走 Spine 版本转换
+    - Font：仅提取 m_FontData/m_FontNames，apply 时保留目标其余字段
     - 其余类型：raw 整对象字节（携带流附属 companion）
 
     Returns:
@@ -136,6 +141,19 @@ def extract_asset(obj, ctx: ExtractContext) -> tuple[AssetContent | None, list[S
     resource_name = data.m_Name
 
     if obj.type == AssetType.Texture2D:
+        # 像素数据不可解析时拒绝提取：UnityPy 对 StreamData 只判对象存在性，
+        # 空路径无内联数据、或引用的 resS 不在 bundle 内时，会按依赖名落盘解析
+        # （空名甚至被解析到工作目录，打开目录报 PermissionError），必须提前拦截
+        sd = getattr(data, "m_StreamData", None)
+        if sd is not None and not sd.path and not getattr(data, "image_data", None):
+            # 空路径 StreamData 且无内联数据：残缺纹理（如旧字体替换工具遗留的 Font Texture）
+            ctx.log(f"  > ⚠️ {t('log.extractor.no_image_data', name=resource_name)}")
+            return None, []
+        if sd is not None and sd.path:
+            basename = sd.path.replace("\\", "/").rsplit("/", 1)[-1]
+            if basename not in ctx.env_file.files:
+                ctx.log(f"  > ⚠️ {t('log.extractor.stream_ref_dangling', name=resource_name)}")
+                return None, []
         content: AssetContent = data.image
         return content, []
 
@@ -152,6 +170,14 @@ def extract_asset(obj, ctx: ExtractContext) -> tuple[AssetContent | None, list[S
                 return None, [conflict]
             return content, []
         content: AssetContent = asset_bytes
+        return content, []
+
+    if obj.type == AssetType.Font:
+        # Font 特判：仅提取字体数据与家族名，apply 时保留目标其余字段
+        content: AssetContent = FontAssetData(
+            font_data=bytes(data.m_FontData),
+            font_names=list(data.m_FontNames),
+        )
         return content, []
 
     # raw 类型（AnimationClip/Mesh 等）：整对象字节
@@ -216,6 +242,21 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
         data.m_Script = content.decode("utf-8", "surrogateescape")
         data.save()
         return ApplyOutcome(applied=True, missing_anims=missing_anims)
+
+    if obj.type == AssetType.Font:
+        content: FontAssetData
+        # Font 特判：typetree 编辑替换，保留目标对象度量字段等其余内容
+        tree = obj.read_typetree()
+        if (bytes(tree.get("m_FontData") or b"") == content.font_data
+                and list(tree.get("m_FontNames") or []) == content.font_names):
+            return ApplyOutcome(applied=False)
+        tree["m_FontData"] = content.font_data
+        tree["m_FontNames"] = content.font_names
+        for field in _CHAR_CACHE_FIELDS:
+            if field in tree:
+                tree[field] = []
+        obj.save_typetree(tree)
+        return ApplyOutcome(applied=True)
 
     # raw 类型（AnimationClip/Mesh 等）：内容相同则跳过，避免无效重存
     if obj.get_raw_data() == content:

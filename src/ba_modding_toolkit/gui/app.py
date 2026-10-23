@@ -200,6 +200,8 @@ class App(tb.Frame, ConfigMixin):
             asset_types.add("Mesh")
         if self.replace_animationclip_var.get():
             asset_types.add("AnimationClip")
+        if self.replace_font_var.get():
+            asset_types.add("Font")
         return asset_types
 
     def has_any_asset_type(self) -> bool:
