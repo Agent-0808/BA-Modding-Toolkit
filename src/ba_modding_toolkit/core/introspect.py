@@ -56,8 +56,8 @@ def _make_graph(
 ) -> BundleGraph:
     """为给定 bundle 组构建可跨包解析的对象图。
 
-    先按目标 bundle 的 externals 用 find_cab_bundles 定位（prolog 优先 + 缓存），
-    再挂一个"全量索引"fallback 兜底，覆盖间接引用的 CAB。
+    先按目标 bundle 的 externals 用 find_cab_bundles 定位（同组优先 → prolog → 全量兜底，
+    带缓存），再挂一个"全量索引"fallback 兜底，覆盖间接引用的 CAB。
     """
     cabs: set[str] = set()
     for bundle in bundles:
@@ -65,7 +65,9 @@ def _make_graph(
 
     index: dict[str, Path] = {}
     if search_dirs and cabs:
-        index = find_cab_bundles(cabs, search_dirs, log, cache_path=cache_path)
+        # 同组先验以第一个 bundle 为准（多 bundle 时组名可能不同，但取其一即可受益）
+        index = find_cab_bundles(cabs, search_dirs, log, cache_path=cache_path,
+                                 hint_path=bundles[0].path)
 
     fallback: Callable[[], dict[str, Path]] | None = None
     if search_dirs:

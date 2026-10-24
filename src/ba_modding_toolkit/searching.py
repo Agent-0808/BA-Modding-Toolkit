@@ -7,15 +7,12 @@ import os
 
 from .i18n import t
 from .utils import no_log
-from .naming import parse_filename, parse_asset_core, get_category_prefix
+from .naming import parse_filename, parse_asset_core, get_category_prefix, PRELOAD_PREFIX
 from .bundle import Bundle, BundleFileInfo, get_cab_names
 from .models import LogFunc, AssetKey, AssetType
 
 if TYPE_CHECKING:
     from .adb.file_source import ADBFileSource
-
-# prolog 组前缀（引用外部 CAB 的包大多位于 prolog 组，优先扫描）
-PROLOG_PREFIXES = ("prologgroup-", "prologdepengroup-")
 
 
 def search_prefix(
@@ -273,13 +270,15 @@ def find_cab_bundles(
     log: LogFunc = no_log,
     max_bundle_size: int = 64 * 1024 * 1024,
     cache_path: Path | None = None,
+    hint_path: Path | None = None,
 ) -> dict[str, Path]:
     """
     在搜索目录的全部 bundle 中查找内部 SerializedFile 名（CAB-xxx）匹配的物理 bundle。
 
     优先用轻量头部解析（get_cab_names，不解压数据块），解析失败时回退 Bundle.load；
-    扫描分两批：先扫 prolog 前缀包（跨包引用大多位于 prolog 组），
-    未命中时警告并回退全量扫描；找到全部目标后提前退出。
+    扫描分三批：先扫与 hint_path 同组（parse_filename 前缀一致）的包——trace 场景的
+    引用目标多为同组兄弟包；其次扫 prolog 前缀包（shaders 等公共 MonoScript 源），
+    未命中时警告并回退全量扫描（大小升序）；找到全部目标后提前退出。
     提供 cache_path 时先查缓存（按路径+大小+mtime 校验有效性，不符则重扫），
     扫描结果写回缓存。
 
@@ -289,6 +288,7 @@ def find_cab_bundles(
         log: 日志记录函数
         max_bundle_size: 单个 bundle 的大小上限（字节），超过则跳过
         cache_path: CAB 映射缓存文件路径；None 表示不使用缓存
+        hint_path: 引用方 bundle 路径，用于派生"同组优先"扫描批次；None 表示不启用
 
     Returns:
         {CAB 名: 物理 bundle 路径}；未命中的 CAB 不在结果中
@@ -352,16 +352,28 @@ def find_cab_bundles(
                     if cache is not None:
                         cache.update({cab: bundle_path for cab in hit})
 
-        # 第一批：prolog 前缀初筛（正常情况下被引用的包多在此，毫秒级）
-        primary = [p for p in candidates if p.name.startswith(PROLOG_PREFIXES)]
-        scan(primary, "prolog")
+        # 分批：同组（与引用 bundle 同 prefix）→ prolog 前缀 → 其余全量（大小升序）
+        def group_key(p: Path) -> str | None:
+            """同组标识 = 搜索前缀（复用 parse_filename）；无前缀的散包不参与同组批次"""
+            return parse_filename(p.name).prefix or None
 
-        # 兜底：第一批未命中说明目标包位置随版本变动，警告后全量扫描
-        if remaining:
-            log(f"  > ⚠️ {len(remaining)} CAB target(s) not found in prolog bundles, "
-                f"falling back to full scan (unexpected).")
-            primary_set = set(primary)
-            scan([p for p in candidates if p not in primary_set], "remaining")
+        batches: list[tuple[list[Path], str]] = []
+        if hint_path is not None:
+            hint_key = group_key(hint_path)
+            if hint_key:
+                batches.append(([p for p in candidates if group_key(p) == hint_key], "same-group"))
+        # prolog 前缀批（naming.PRELOAD_PREFIX）：shaders 等公共 MonoScript 源常在此
+        prolog_batch = [p for p in candidates if p.name.startswith(PRELOAD_PREFIX)]
+        batches.append((prolog_batch, "prolog"))
+        scanned = {p for batch, _ in batches for p in batch}
+        batches.append(([p for p in candidates if p not in scanned], "remaining"))
+
+        for batch, label in batches:
+            if remaining and batch:
+                if label == "remaining":
+                    log(f"  > ⚠️ {len(remaining)} CAB target(s) not found in prior batches, "
+                        f"falling back to full scan (unexpected).")
+                scan(batch, label)
 
         if remaining:
             log(f"  > ⚠️ CAB target(s) not found: {', '.join(sorted(remaining))}")
