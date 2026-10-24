@@ -153,7 +153,7 @@ def inspect_bundles(
         if container:
             log(f"Container ({len(container)}):")
             for container_path, obj in container.items():
-                log(f"  - {container_path} [{obj.type.name}]")
+                log(f"  - {container_path} [{obj.type.name}] (path_id {obj.path_id})")
 
 
 def trace_bundle(
