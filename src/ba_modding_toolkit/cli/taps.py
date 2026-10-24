@@ -1,5 +1,7 @@
 # cli/taps.py
-from argparse import RawTextHelpFormatter
+import argparse
+import textwrap
+from argparse import RawTextHelpFormatter, _SubParsersAction
 from tap import Tap, Positional
 from pathlib import Path
 from typing import Literal
@@ -9,12 +11,46 @@ from ..core.report import ReportFormat
 from ..utils import BARegion
 from ..naming import CharacterInternalIDMap
 
+# 主帮助中子命令的分组显示：(分组标题, 命令列表)
+COMMAND_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ('Console output', ('parse', 'inspect', 'trace', 'env')),
+    ('File output', ('update', 'batch-update', 'pack', 'extract', 'crc', 'backup')),
+    ('Report output', ('report', 'batch-preview')),
+]
+
+
+class GroupedHelpFormatter(RawTextHelpFormatter):
+    """主帮助输出中将子命令按 COMMAND_GROUPS 分组显示。"""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        # 仅主解析器存在 subparsers action，其余 action 走默认渲染
+        if isinstance(action, _SubParsersAction):
+            return self._format_grouped_subparsers(action)
+        return super()._format_action(action)
+
+    def _format_grouped_subparsers(self, action: _SubParsersAction) -> str:
+        # _choices_actions 是 argparse 内部结构，按注册顺序保存各子命令的 name/help
+        helps: dict[str, str] = {pa.metavar: pa.help or '' for pa in action._choices_actions}
+        # 未登记分组的新子命令兜底归入 Other，避免从帮助中消失
+        grouped = {cmd for _, cmds in COMMAND_GROUPS for cmd in cmds}
+        ungrouped = tuple(name for name in helps if name not in grouped)
+        groups = [*COMMAND_GROUPS, *(('Other:', ungrouped) if ungrouped else ())]
+        width = max(len(cmd) for _, cmds in COMMAND_GROUPS for cmd in cmds)
+        indent = ' ' * self._current_indent
+        blocks = []
+        for title, cmds in groups:
+            lines = [f'{title}:']
+            lines += [f'  {cmd:<{width}}  {helps.get(cmd, "")}' for cmd in cmds]
+            blocks.append('\n'.join(lines))
+        return textwrap.indent('\n\n'.join(blocks), indent) + '\n'
+
+
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
 
     def configure(self) -> None:
         self.description = "BA Modding Toolkit - Command Line Interface."
-        self.formatter_class = RawTextHelpFormatter
+        self.formatter_class = GroupedHelpFormatter
         self._underscores_to_dashes = True
 
 
