@@ -13,6 +13,8 @@ from .handlers import (
     handle_report,
     handle_batch_preview,
     handle_backup,
+    handle_inspect,
+    handle_trace,
 )
 
 # --- 命令映射 ---
@@ -28,6 +30,8 @@ COMMAND_HANDLERS = {
     'report': handle_report,
     'batch-preview': handle_batch_preview,
     'backup': handle_backup,
+    'inspect': handle_inspect,
+    'trace': handle_trace,
 }
 
 def _resolve_language(lang: str) -> str:

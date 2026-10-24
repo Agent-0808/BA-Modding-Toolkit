@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap
+from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap, InspectTap, TraceTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     EXTRACTABLE_ASSET_TYPES,
@@ -20,7 +20,9 @@ from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
 from ..bundle import analyze_trailing, find_textasset_companions
 from ..core.report import generate_mod_report, RENDER_CATEGORIES
 from ..core.preview import render_all_spine_previews
+from ..core.introspect import inspect_bundles, trace_bundle
 from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
+from ..utils.paths import EXE_DIR
 
 class Logger:
     """日志记录器基类。"""
@@ -802,3 +804,68 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
 
     logger.log("\n" + "="*50)
     logger.log(f"✅ Backup complete: {mod_total} file(s) saved to {backup_dir.resolve()}")
+
+
+def _resolve_cab_cache(args: InspectTap | TraceTap) -> Path | None:
+    """解析 CAB 映射缓存路径：--no-cache 禁用；未指定 --cab-cache 时用默认位置"""
+    if getattr(args, 'no_cache', False):
+        return None
+    return args.cab_cache or (EXE_DIR / "Addons" / "cab_cache.json")
+
+
+def handle_inspect(args: InspectTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'inspect' 命令的逻辑。"""
+    logger.log("--- Start Bundle Inspection ---")
+
+    # 验证输入文件
+    bundle_paths = [Path(p) for p in args.bundle]
+    valid_paths = []
+    for p in bundle_paths:
+        if p.is_file():
+            valid_paths.append(p)
+        else:
+            logger.log(f"❌ Error: Bundle file '{p}' does not exist.")
+    if not valid_paths:
+        logger.log("❌ Error: No valid bundle files provided.")
+        return
+
+    # 跨包解析目录（可选）
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+
+    if resource_dir:
+        logger.log(f"Game resource directory: {resource_dir}")
+    else:
+        logger.log("Cross-bundle resolution disabled (no resource directory).")
+
+    inspect_bundles(
+        valid_paths,
+        log=logger.log,
+        resource_dir=Path(resource_dir) if resource_dir else None,
+        cache_path=_resolve_cab_cache(args),
+    )
+
+
+def handle_trace(args: TraceTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'trace' 命令的逻辑。"""
+    logger.log("--- Start Bundle Reference Tracing ---")
+
+    bundle_path = Path(args.bundle)
+    if not bundle_path.is_file():
+        logger.log(f"❌ Error: Bundle file '{bundle_path}' does not exist.")
+        return
+
+    # 跨包解析目录（可选）
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+
+    if resource_dir:
+        logger.log(f"Game resource directory: {resource_dir}")
+    else:
+        logger.log("Cross-bundle resolution disabled (no resource directory).")
+
+    trace_bundle(
+        bundle_path,
+        log=logger.log,
+        path_id=args.path_id,
+        resource_dir=Path(resource_dir) if resource_dir else None,
+        cache_path=_resolve_cab_cache(args),
+    )
