@@ -42,7 +42,7 @@ class InstallAction(StrEnum):
     MIXED = "mixed"                          # 组内动作混合（仅组级汇总用）
 
 # 组/文件动作 → 元信息"安装方式"展示键
-_ACTION_KEYS = {
+ACTION_KEYS = {
     InstallAction.DIRECT_REPLACE: "ui.mod_install.action_direct_replace",
     InstallAction.UPDATE: "ui.mod_install.action_update",
     InstallAction.NOT_FOUND: "ui.mod_install.action_not_found",

@@ -22,7 +22,7 @@ from ...i18n import t
 from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
-from ...core.mod_install import InstallAction, ModGroup
+from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
 from ...spine import RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
 from ...core import extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, DualZoomableCanvas
@@ -629,7 +629,7 @@ class ModInstallDialog(StoppableDialog):
         for f in group.files:
             if f.existing_path is None or f.existing_path in target_nodes:
                 continue
-            detail = t(_ACTION_KEYS[f.action])
+            detail = t(ACTION_KEYS[f.action])
             detail += f" · {t('ui.mod_install.meta_size', mod_size=_fmt_size(f.mod_path.stat().st_size), existing_size=_fmt_size(f.existing_path.stat().st_size))}"
             node = self.meta_tree.insert(
                 root, tk.END, text=f"📦 {f.existing_path.name} · {detail}", open=True,
@@ -640,7 +640,7 @@ class ModInstallDialog(StoppableDialog):
                 continue
             node = self.meta_tree.insert(
                 root, tk.END,
-                text=f"📦 {target.name} · {t(_ACTION_KEYS[InstallAction.UPDATE])}",
+                text=f"📦 {target.name} · {t(ACTION_KEYS[InstallAction.UPDATE])}",
                 open=True,
             )
             target_nodes[target] = node
@@ -648,7 +648,7 @@ class ModInstallDialog(StoppableDialog):
         # NOT_FOUND/ERROR 文件（无目标可对比）
         for f in group.files:
             if f.action in (InstallAction.NOT_FOUND, InstallAction.ERROR):
-                text = t(_ACTION_KEYS[f.action])
+                text = t(ACTION_KEYS[f.action])
                 if f.note:
                     text += f" · {f.note}"
                 self.meta_tree.insert(root, tk.END, text=f"📦 {f.mod_path.name} · {text}")
