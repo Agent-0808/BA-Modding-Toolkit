@@ -450,10 +450,8 @@ class DropZone(tb.Labelframe):
             field = self._app.character_name_field_var.get()
             char_name = self._app.char_map.lookup(parsed.core, field) or ""
 
-            # 格式化显示文本（逐个拼接）
-            ui_text = parsed.core
-            if char_name:
-                ui_text += f"（{char_name}）"
+            # 格式化显示文本（解析到角色名时显示为 "name (core)"，否则仅显示 core）
+            ui_text = f"{char_name} ({parsed.core})" if char_name else parsed.core
             ui_text += f"\n({t('ui.drop_zone.contains', count=len(self._paths), types=type_str)})"
 
             self.set_success(ui_text)
