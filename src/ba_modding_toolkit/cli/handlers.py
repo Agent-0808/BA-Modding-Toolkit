@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BatchPreviewTap, BackupTap, InspectTap, TraceTap
+from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, InstallTap, ReportTap, BatchPreviewTap, BackupTap, InspectTap, TraceTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
     EXTRACTABLE_ASSET_TYPES,
@@ -13,7 +13,8 @@ from ..core import (
     process_asset_extraction,
     process_batch_mod_update,
 )
-from ..models import SaveOptions, SkelConvertOptions
+from ..core.mod_install import InstallAction, ModGroup, execute_mod_install, plan_mod_install
+from ..models import AnimCheckOptions, SaveOptions, SkelConvertOptions
 from ..utils import compute_crc32, get_BA_path, get_environment_info, manipulate_file_crc, parse_hex_bytes
 from ..searching import get_search_dirs
 from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
@@ -256,6 +257,176 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         logger.log(f"\n❌ Failed tasks:")
         for task in result.failed_tasks:
             logger.log(f"  - {task}")
+
+    logger.log("="*50)
+
+
+# 安装动作 → 英文展示标签（CLI 自身输出不本地化）
+_ACTION_LABELS: dict[InstallAction, str] = {
+    InstallAction.DIRECT_REPLACE: "replace same-name",
+    InstallAction.UPDATE: "update existing",
+    InstallAction.NOT_FOUND: "target not found",
+    InstallAction.ERROR: "error",
+    InstallAction.MIXED: "mixed",
+}
+
+
+def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'install' 命令的逻辑（复用 core/mod_install 的 plan + execute）。"""
+    logger.log("--- Start Mod Install ---")
+
+    # 验证输入文件（.bundle / .backup，与 GUI 一致）
+    mod_paths = [Path(p) for p in args.mods]
+    valid_paths: list[Path] = []
+    for p in mod_paths:
+        if not p.is_file():
+            logger.log(f"❌ Error: Mod file '{p}' does not exist.")
+        elif p.suffix.lower() not in (".bundle", ".backup"):
+            logger.log(f"❌ Error: Unsupported file type '{p.name}' (expected .bundle or .backup).")
+        else:
+            valid_paths.append(p)
+    if not valid_paths:
+        logger.log("❌ Error: No valid mod files provided.")
+        return
+
+    # 定位游戏目录（install 必须有游戏目录）
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 加载角色映射（可选，加载失败降级为无映射，不中止）
+    char_map: CharacterInternalIDMap | None = None
+    if args.bacii_path:
+        bacii_path = Path(args.bacii_path)
+        if bacii_path.exists():
+            char_map = CharacterInternalIDMap()
+            if not char_map.load(bacii_path, index_column=args.index_column):
+                logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
+                char_map = None
+        else:
+            logger.log(f"⚠️ Warning: BACII file not found: {bacii_path}")
+
+    def group_display(group: ModGroup) -> str:
+        """组名展示：[category] name (core)，无映射或查不到时回退 core（对齐 GUI）。"""
+        name = (char_map.lookup(group.core, args.name_field) if char_map else "") or ""
+        display = f"{name} ({group.core})" if name else group.core
+        return f"[{group.category}] {display}" if group.category else display
+
+    # 分析（纯读不写盘）
+    groups = plan_mod_install(valid_paths, get_search_dirs(game_dir), logger.log)
+
+    def installable(group: ModGroup) -> bool:
+        """组是否可安装（NOT_FOUND/ERROR 不可安装，与 GUI 判定一致）。"""
+        return group.group_action in (
+            InstallAction.DIRECT_REPLACE, InstallAction.UPDATE, InstallAction.MIXED,
+        )
+
+    # 打印组摘要
+    logger.log(f"\nFound {len(groups)} group(s):")
+    total = len(groups)
+    for i, group in enumerate(groups, 1):
+        logger.log(f"[{i}/{total}] {group_display(group)} ({len(group.files)} file(s)) - {_ACTION_LABELS[group.group_action]}")
+        for f in group.files:
+            note = f" - {f.note}" if f.note else ""
+            logger.log(f"    - {f.mod_path.name} ({_ACTION_LABELS[f.action]}){note}")
+
+    # 收集决策：--yes 全部安装可安装组，否则逐组确认
+    if args.yes:
+        selected = [g for g in groups if installable(g)]
+    else:
+        selected: list[ModGroup] = []
+        install_all = False
+        # 逐组确认选项说明（仅打印一次）
+        logger.log("\nChoices: [Y] install this group (default), [n] skip, [a] install this and all remaining groups, [q] cancel.")
+        for i, group in enumerate(groups, 1):
+            if not installable(group):
+                logger.log(f"Skip group [{i}/{total}] {group_display(group)} (not installable).")
+                continue
+            try:
+                answer = (
+                    'y' if install_all
+                    else input(f"Install group [{i}/{total}] {group_display(group)}? [Y/n/a/q]: ").strip().lower()
+                )
+            except (EOFError, KeyboardInterrupt):
+                answer = 'q'  # 管道/脚本场景下视作中止
+            if answer == 'q':
+                logger.log("❌ Operation cancelled.")
+                return
+            if answer == 'a':
+                install_all = True
+            if answer in ('', 'y', 'a'):
+                selected.append(group)
+            else:
+                logger.log(f"  > Skipped group {group_display(group)}.")
+    if not selected:
+        logger.log("Nothing to install.")
+        return
+
+    logger.log(f"\nInstalling {len(selected)} group(s)...")
+
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    spine_options = SkelConvertOptions(
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
+        target_version=args.target_spine_version or None,
+    )
+
+    # 动画缺失预检（提供 SpineViewerCLI 路径即启用，内部 is_valid() 再校验文件存在）
+    anim_check = AnimCheckOptions(
+        enabled=args.spine_viewer_path is not None,
+        viewer_path=Path(args.spine_viewer_path) if args.spine_viewer_path else None,
+    )
+
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Installing: {filename}"
+    )
+
+    # 调用核心安装函数
+    result = execute_mod_install(
+        groups=selected,
+        output_dir=output_dir,
+        asset_types_to_replace=set(args.asset_types),
+        save_options=save_options,
+        spine_options=spine_options,
+        match_strategy=args.strategy,
+        anim_check=anim_check,
+        create_backup=not args.no_backup,
+        log=logger.log,
+        progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
+    )
+
+    # 输出结果摘要
+    logger.log("\n" + "="*50)
+    logger.log("Install Summary:")
+    logger.log(f"  Installed: {result.installed_groups} group(s)")
+    logger.log(f"  Skipped:   {result.skipped_groups} group(s)")
+    logger.log(f"  Failed:    {len(result.failed_groups)} group(s)")
+
+    if result.failed_groups:
+        logger.log("\n❌ Failed groups:")
+        display_map = {g.core: group_display(g) for g in selected}
+        for core, reason in result.failed_groups:
+            logger.log(f"  - [{display_map.get(core, core)}] {reason}")
+
+    if result.anim_diffs:
+        logger.log("\n⚠️ Missing animations detected (warning only, not a failure):")
+        for name, missing in result.anim_diffs.items():
+            logger.log(f"  - {name}: {', '.join(missing)}")
 
     logger.log("="*50)
 

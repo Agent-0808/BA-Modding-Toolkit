@@ -14,7 +14,7 @@ from ..naming import CharacterInternalIDMap
 # 主帮助中子命令的分组显示：(分组标题, 命令列表)
 COMMAND_GROUPS: list[tuple[str, tuple[str, ...]]] = [
     ('Console output', ('parse', 'inspect', 'trace', 'env')),
-    ('File output', ('update', 'batch-update', 'pack', 'extract', 'crc', 'backup')),
+    ('File output', ('update', 'batch-update', 'install', 'pack', 'extract', 'crc', 'backup')),
     ('Report output', ('report', 'batch-preview')),
 ]
 
@@ -221,6 +221,64 @@ class EnvTap(BaseTap):
     def configure(self) -> None:
         super().configure()
         self.description = 'Display system information and library versions of the current environment.'
+
+class InstallTap(BaseTap):
+    """Install命令的参数解析器 - 用于一键安装Mod到游戏目录。"""
+
+    # 基本参数
+    mods: Positional[list[Path]]  # Path(s) to the mod bundle file(s) (.bundle / .backup).
+
+    # 目标定位参数
+    output_dir: Path = Path('./output/')  # Directory to save files generated during update-type installs.
+    resource_dir: Path | None = None      # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip', 'Font']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
+
+    # Spine转换参数（仅 skel 版本转换，不做预览渲染）
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
+    target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
+
+    # 安装行为参数
+    strategy: MatchStrategy = 'cont_name_type'  # Match strategy for update-type installs.
+    no_backup: bool = False  # Do not create a backup (.backup) before replacing files in the game directory.
+    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe. Enables missing-animation pre-check when provided (no preview rendering).
+    max_workers: int = 1  # Number of parallel worker threads for group installs (1 = sequential).
+    yes: bool = False  # Install all installable groups without interactive confirmation.
+
+    # 角色映射参数
+    bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Analyze mod file(s) and install them into the game directory.
+
+Same-name bundles are directly replaced; others are installed by updating the latest
+matching game bundles. Installable groups are confirmed one by one unless --yes is given.
+
+Examples:
+  # Interactive install with auto-detected game directory
+  bamt-cli install "C:\\path\\to\\mod1.bundle" "C:\\path\\to\\mod2.bundle"
+
+  # Install all installable groups without confirmation
+  bamt-cli install "mod1.bundle" --yes
+
+  # Specify game resource directory and disable backup
+  bamt-cli install "mod.bundle" --resource-dir "C:\\game\\resources" --no-backup
+
+  # Show character names with the BACII mapping
+  bamt-cli install "mod.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
+
+  # Enable missing-animation pre-check (no preview rendering)
+  bamt-cli install "mod.bundle" --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+'''
+
 
 class BatchUpdateTap(BaseTap):
     """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
@@ -478,6 +536,7 @@ class MainTap(BaseTap):
         self.add_subparsers(dest='command', help='Available commands')
         self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
         self.add_subparser('batch-update', BatchUpdateTap, help='Batch update multiple Mod files from an input directory.')
+        self.add_subparser('install', InstallTap, help='Analyze mod file(s) and install them into the game directory (per-group confirmation).')
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')

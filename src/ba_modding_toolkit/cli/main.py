@@ -10,6 +10,7 @@ from .handlers import (
     handle_env,
     handle_extract,
     handle_batch_update,
+    handle_install,
     handle_report,
     handle_batch_preview,
     handle_backup,
@@ -22,6 +23,7 @@ from .handlers import (
 COMMAND_HANDLERS = {
     'update': handle_update,
     'batch-update': handle_batch_update,
+    'install': handle_install,
     'pack': handle_asset_packing,
     'crc': handle_crc,
     'parse': handle_parse,
