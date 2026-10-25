@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 from ...i18n import t
 from ...searching import list_bundle_files
-from ...utils import manipulate_file_crc, throttle_progress
+from ...utils import compute_crc32, manipulate_file_crc, throttle_progress
 from ...bundle import analyze_trailing, analyze_naming
 from .base import StoppableDialog
 
@@ -189,7 +189,7 @@ class AbnormalCheckDialog(StoppableDialog):
             if item.parsed_name and item.parsed_name.crc:
                 try:
                     target_crc = int(item.parsed_name.crc)
-                    actual_crc = (item.path)
+                    actual_crc = compute_crc32(item.path)
 
                     if target_crc != actual_crc:
                         # 获取角色名
@@ -295,7 +295,7 @@ class AbnormalCheckDialog(StoppableDialog):
 
                 if success:
                     # 验证修复结果
-                    actual_crc = (item.path)
+                    actual_crc = compute_crc32(item.path)
                     if actual_crc == item.target_crc:
                         self.app.logger.log(t("log.abnormal_check.fix_success", filename=item.filename))
                     else:
