@@ -7,14 +7,14 @@ from typing import NamedTuple
 
 # -------- 文件名解析常量 --------
 
-PRELOAD_PREFIX = [
+PRELOAD_PREFIX = (
     "prologgroup-",
     "prologdepengroup-"
-]
+)
 
-FIXED_PREFIX = [
+FIXED_PREFIX = (
     "assets-_mx-",
-]
+)
 
 # 日服版额外的资源类型后缀
 RESOURCE_TYPES_TEXT = {

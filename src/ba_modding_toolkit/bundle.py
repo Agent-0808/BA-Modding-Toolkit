@@ -1,5 +1,6 @@
 # bundle.py
 
+import struct
 import traceback
 from dataclasses import dataclass
 from functools import cached_property
@@ -8,7 +9,9 @@ from typing import Callable
 
 import UnityPy
 from UnityPy.files import SerializedFile
+from UnityPy.files.BundleFile import ArchiveFlags, ArchiveFlagsOld
 from UnityPy.environment import Environment as Env
+from UnityPy.helpers import CompressionHelper
 
 from .asset import ApplyContext, ExtractContext, apply_asset, extract_asset
 from .i18n import t
@@ -46,6 +49,107 @@ class BundleFileInfo:
 
 # 流式引用辅助（STREAM_REF_* / find_stream_refs / rewrite_stream_ref_prefixes /
 # collect_stream_companions / install_raw_content）已迁移至 asset.py
+
+
+# -------- 轻量 CAB 名解析（不解压数据块） --------
+
+def _read_cstring(f) -> bytes:
+    """读取以 null 结尾的字符串（读到 EOF 返回已读部分）"""
+    out = bytearray()
+    while True:
+        byte = f.read(1)
+        if not byte or byte == b'\x00':
+            return bytes(out)
+        out.extend(byte)
+
+
+def _parse_engine_version(version_str: bytes) -> tuple[int, ...]:
+    """把引擎版本字符串（如 b'2022.3.55f1'）解析为数字元组，失败返回空元组"""
+    parts: list[int] = []
+    for token in version_str.decode("ascii", "ignore").split("."):
+        digits = ""
+        for ch in token:
+            if not ch.isdigit():
+                break
+            digits += ch
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def get_cab_names(bundle_path: Path) -> set[str] | None:
+    """
+    仅解析 UnityFS 头部与 blockinfo，返回内部文件名集合（如 {"CAB-xxx"}）。
+
+    内部文件名表位于 blockinfo（通常仅几百字节），无需像 Bundle.load 那样
+    解压全部数据块——全目录 CAB 扫描因此从分钟级降到秒级。
+    含 4 字节 CRC 修正尾的原版/产物文件均可正确解析（定位用头部 size 字段）。
+
+    Returns:
+        内部文件名集合；加密包/未知格式/损坏文件返回 None（调用方回退 Bundle.load）
+    """
+    try:
+        with open(bundle_path, 'rb') as f:
+            signature = _read_cstring(f)
+            if signature != b'UnityFS':
+                return None
+
+            version = struct.unpack(">I", f.read(4))[0]
+            _version_player = _read_cstring(f)
+            version_engine = _read_cstring(f)
+            size = struct.unpack(">q", f.read(8))[0]
+            compressed_size, uncompressed_size, flags_value = struct.unpack(">III", f.read(12))
+
+            # 与 UnityPy read_fs 一致：按引擎版本区分新旧 flags 语义
+            engine_version = _parse_engine_version(version_engine)
+            use_old_flags = (
+                engine_version < (2020,)
+                or (engine_version[0] == 2020 and engine_version < (2020, 3, 34))
+                or (engine_version[0] == 2021 and engine_version < (2021, 3, 2))
+                or (engine_version[0] == 2022 and engine_version < (2022, 1, 1))
+            )
+            flags: ArchiveFlagsOld | ArchiveFlags = ArchiveFlagsOld(flags_value) if use_old_flags else ArchiveFlags(flags_value)
+
+            # 加密包无法离线解析 blockinfo
+            if flags & flags.UsesAssetBundleEncryption:
+                return None
+
+            if flags & ArchiveFlags.BlocksInfoAtTheEnd:
+                # 定位以头部 size 字段为准，避开 mod 产物尾部的 CRC 修正字节
+                f.seek(size - compressed_size)
+            else:
+                # 头部版本 7+（及 2019.4.15+）的 blockinfo 起 16 字节对齐
+                if version >= 7 or engine_version >= (2019, 4, 15):
+                    f.seek((f.tell() + 15) & ~15)
+            blocks_info = f.read(compressed_size)
+
+        compression = flags_value & ArchiveFlags.CompressionTypeMask
+        if compression == 0:
+            data = blocks_info
+        elif compression == 1:
+            data = CompressionHelper.decompress_lzma(blocks_info, True)
+        elif compression in (2, 3):  # lz4 / lz4hc
+            data = CompressionHelper.decompress_lz4(blocks_info, uncompressed_size)
+        else:
+            return None
+
+        # blockinfo 布局：hash(16B) + 块表（每条 u32+u32+u16=10B）+ 节点表（{offset: i64, size: i64, flags: u32, name: cstring}）
+        pos = 16
+        blocks_count = struct.unpack_from(">i", data, pos)[0]
+        pos += 4 + blocks_count * 10
+        nodes_count = struct.unpack_from(">i", data, pos)[0]
+        pos += 4
+        names: set[str] = set()
+        for _ in range(nodes_count):
+            pos += 20  # offset + size + flags
+            end = data.index(b'\x00', pos)
+            names.add(data[pos:end].decode("utf-8", "replace"))
+            pos = end + 1
+        return names
+
+    except Exception:
+        return None
 
 
 class Bundle:

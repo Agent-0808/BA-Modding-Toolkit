@@ -1,5 +1,7 @@
 # cli/taps.py
-from argparse import RawTextHelpFormatter
+import argparse
+import textwrap
+from argparse import RawTextHelpFormatter, _SubParsersAction
 from tap import Tap, Positional
 from pathlib import Path
 from typing import Literal
@@ -9,12 +11,46 @@ from ..core.report import ReportFormat
 from ..utils import BARegion
 from ..naming import CharacterInternalIDMap
 
+# 主帮助中子命令的分组显示：(分组标题, 命令列表)
+COMMAND_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ('Console output', ('parse', 'inspect', 'trace', 'env')),
+    ('File output', ('update', 'batch-update', 'pack', 'extract', 'crc', 'backup')),
+    ('Report output', ('report', 'batch-preview')),
+]
+
+
+class GroupedHelpFormatter(RawTextHelpFormatter):
+    """主帮助输出中将子命令按 COMMAND_GROUPS 分组显示。"""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        # 仅主解析器存在 subparsers action，其余 action 走默认渲染
+        if isinstance(action, _SubParsersAction):
+            return self._format_grouped_subparsers(action)
+        return super()._format_action(action)
+
+    def _format_grouped_subparsers(self, action: _SubParsersAction) -> str:
+        # _choices_actions 是 argparse 内部结构，按注册顺序保存各子命令的 name/help
+        helps: dict[str, str] = {pa.metavar: pa.help or '' for pa in action._choices_actions}
+        # 未登记分组的新子命令兜底归入 Other，避免从帮助中消失
+        grouped = {cmd for _, cmds in COMMAND_GROUPS for cmd in cmds}
+        ungrouped = tuple(name for name in helps if name not in grouped)
+        groups = [*COMMAND_GROUPS, *(('Other:', ungrouped) if ungrouped else ())]
+        width = max(len(cmd) for _, cmds in COMMAND_GROUPS for cmd in cmds)
+        indent = ' ' * self._current_indent
+        blocks = []
+        for title, cmds in groups:
+            lines = [f'{title}:']
+            lines += [f'  {cmd:<{width}}  {helps.get(cmd, "")}' for cmd in cmds]
+            blocks.append('\n'.join(lines))
+        return textwrap.indent('\n\n'.join(blocks), indent) + '\n'
+
+
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
 
     def configure(self) -> None:
         self.description = "BA Modding Toolkit - Command Line Interface."
-        self.formatter_class = RawTextHelpFormatter
+        self.formatter_class = GroupedHelpFormatter
         self._underscores_to_dashes = True
 
 
@@ -372,6 +408,65 @@ Examples:
 '''
 
 
+class InspectTap(BaseTap):
+    """Inspect命令的参数解析器 - 用于bundle内省。"""
+
+    # 基本参数
+    bundle: Positional[list[Path]]  # Path(s) to the bundle file(s) to inspect.
+
+    # 跨包解析参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Enables cross-bundle resolution (MonoScript class names, external CAB locations).
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+    cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
+    no_cache: bool = False  # Disable the CAB mapping cache.
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Inspect bundle file(s): platform info, asset type stats, external references,
+MonoBehaviour list grouped by MonoScript class name, and container entries.
+
+Examples:
+  # Inspect a single bundle
+  bamt-cli inspect "assets-_mx-spinelobbies-ch0242_home-_mxdependency-2025-07-10_002_assets_all_4117045409.bundle"
+
+  # Enable cross-bundle MonoScript class name resolution
+  bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Disable the CAB mapping cache
+  bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game" --no-cache
+'''
+
+
+class TraceTap(BaseTap):
+    """Trace命令的参数解析器 - 用于bundle引用追踪。"""
+
+    # 基本参数
+    bundle: Positional[Path]  # Path to the bundle file to trace.
+
+    # 跨包解析参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Enables cross-bundle reference resolution.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+    path_id: int | None = None  # Only trace the object with this path ID (default: trace all objects).
+    cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
+    no_cache: bool = False  # Disable the CAB mapping cache.
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Trace all references of objects inside a bundle and resolve each pointer
+(m_FileID, m_PathID) to its target object, locating external CAB references in the game directory.
+
+Examples:
+  # Trace all references without cross-bundle resolution
+  bamt-cli trace "assets-_mx-spinelobbies-ch0242_home-_mxdependency-2025-07-10_002_assets_all_4117045409.bundle"
+
+  # Resolve external references against the game directory
+  bamt-cli trace "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Trace a single object
+  bamt-cli trace "bundle.bundle" --path-id 123456
+'''
+
+
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
 
@@ -390,4 +485,6 @@ class MainTap(BaseTap):
         self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
         self.add_subparser('batch-preview', BatchPreviewTap, help='Batch render Spine preview images for all Spine resources.')
         self.add_subparser('backup', BackupTap, help='Backup all modded bundle files.')
+        self.add_subparser('inspect', InspectTap, help='Inspect bundle file(s): type stats, externals, MonoBehaviour list, container.')
+        self.add_subparser('trace', TraceTap, help='Trace object references inside a bundle and resolve external CAB targets.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')
