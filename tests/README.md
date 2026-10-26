@@ -36,7 +36,8 @@ legacy 重命名组：测试磁盘旧命名文件（如`XXX2.png`）与 bundle �
 - `mod/*.bundle`
 - `original/*.bundle`
 
-流引用回归组：测试 mod update 后`.resS`/`.resource`流引用闭合
+流引用回归组：测试 mod update 后`.resS`/`.resource`流引用闭合；`test_introspect.py` 亦用它覆盖
+inspect 的外部引用标注（prolog 包含依赖）
 
 ### `assets/external_tools/`（可选）
 

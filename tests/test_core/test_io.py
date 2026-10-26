@@ -11,6 +11,7 @@ Bundle文件I/O测试
 import pytest
 from pathlib import Path
 from typing import TYPE_CHECKING
+import shutil
 
 from ba_modding_toolkit.bundle import Bundle
 from ba_modding_toolkit.models import SaveOptions
@@ -41,6 +42,43 @@ class TestLoadBundle:
         bundle = Bundle.load(nonexistent)
         # 不存在的文件应该返回 None
         assert bundle is None
+
+
+class TestTrailingBytes:
+    """尾部字节检测的蜕变测试：对 tmp_path 中的真实素材副本做追加/还原"""
+
+    def test_baseline_non_negative(self, sample_case: "SampleCase"):
+        """合法 bundle 的检测值非负，且与实际可读回的尾部内容长度一致"""
+        source = sample_case.bundle_paths[0]
+        baseline = Bundle.get_trailing_bytes(source)
+        assert baseline is not None
+        assert baseline >= 0
+        # 检测到的尾部字节数 == 实际读回内容的长度（两 API 自洽）
+        content = Bundle.get_trailing_content(source, baseline)
+        assert len(content) == baseline
+
+    def test_append_and_truncate(self, sample_case: "SampleCase", tmp_path: Path):
+        """追加 N 字节 → 检测值 +N 且内容可读回；截断还原 → 回到基线（可逆性）"""
+
+        source = sample_case.bundle_paths[0]
+        assert Bundle.load(source) is not None, "素材应可加载"
+        work = tmp_path / source.name
+        shutil.copy2(source, work)
+        baseline = Bundle.get_trailing_bytes(work)
+        assert baseline is not None
+
+        extra = b"BA-MODDING-TOOLKIT"
+        with open(work, "ab") as f:
+            f.write(extra)
+        assert Bundle.get_trailing_bytes(work) == baseline + len(extra)
+        assert Bundle.get_trailing_content(work, len(extra)) == extra  # 读回 == 追加内容
+
+        # max_bytes 截断：读取尾部最后 8 字节（尾部内容取自文件末尾）
+        assert Bundle.get_trailing_content(work, len(extra), max_bytes=8) == extra[-8:]
+
+        # 截断还原：文件字节恢复原样 → 检测值回到基线
+        work.write_bytes(work.read_bytes()[:-len(extra)])
+        assert Bundle.get_trailing_bytes(work) == baseline
 
 
 class TestSaveBundle:
