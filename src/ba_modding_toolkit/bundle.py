@@ -128,7 +128,9 @@ def get_cab_names(bundle_path: Path) -> set[str] | None:
         if compression == 0:
             data = blocks_info
         elif compression == 1:
-            data = CompressionHelper.decompress_lzma(blocks_info, True)
+            # UnityFS 的 blockinfo LZMA 流不含 8 字节 size 头，须按 offset=5 解压
+            # （与 UnityPy read_fs 的 DECOMPRESSION_MAP 一致；True 语义仅适用于 UnityWeb 数据）
+            data = CompressionHelper.decompress_lzma(blocks_info)
         elif compression in (2, 3):  # lz4 / lz4hc
             data = CompressionHelper.decompress_lz4(blocks_info, uncompressed_size)
         else:
