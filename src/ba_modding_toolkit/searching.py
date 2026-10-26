@@ -280,7 +280,7 @@ def find_cab_bundles(
     引用目标多为同组兄弟包；其次扫 prolog 前缀包（shaders 等公共 MonoScript 源），
     未命中时警告并回退全量扫描（大小升序）；找到全部目标后提前退出。
     提供 cache_path 时先查缓存（按路径+大小+mtime 校验有效性，不符则重扫），
-    扫描结果写回缓存。
+    命中的结果即时写回缓存（中断不丢进度）。
 
     Args:
         target_cabs: 目标 CAB 名集合（如 {"CAB-a657a..."}）
@@ -351,6 +351,8 @@ def find_cab_bundles(
                         log(f"  > CAB match: {cab} -> {bundle_path.name}")
                     if cache is not None:
                         cache.update({cab: bundle_path for cab in hit})
+                        # 命中即落盘：中断（Ctrl-C/管道截断）后进度保留，下次续扫
+                        cache.save()
 
         # 分批：同组（与引用 bundle 同 prefix）→ prolog 前缀 → 其余全量（大小升序）
         def group_key(p: Path) -> str | None:

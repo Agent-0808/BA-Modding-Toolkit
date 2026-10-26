@@ -1000,19 +1000,23 @@ def handle_inspect(args: InspectTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log("❌ Error: No valid bundle files provided.")
         return
 
-    # 跨包解析目录（可选）
-    resource_dir = args.resource_dir or get_BA_path(args.region)
-
-    if resource_dir:
-        logger.log(f"Game resource directory: {resource_dir}")
+    # 跨包解析目录（可选；--local-only 时跳过探测）
+    resource_dir = None
+    if args.local_only:
+        logger.log("Local-only mode: cross-bundle resolution disabled.")
     else:
-        logger.log("Cross-bundle resolution disabled (no resource directory).")
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if resource_dir:
+            logger.log(f"Game resource directory: {resource_dir}")
+        else:
+            logger.log("Cross-bundle resolution disabled (no resource directory).")
 
     inspect_bundles(
         valid_paths,
         log=logger.log,
         resource_dir=Path(resource_dir) if resource_dir else None,
         cache_path=_resolve_cab_cache(args),
+        local_only=args.local_only,
     )
 
 
@@ -1025,13 +1029,16 @@ def handle_trace(args: TraceTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"❌ Error: Bundle file '{bundle_path}' does not exist.")
         return
 
-    # 跨包解析目录（可选）
-    resource_dir = args.resource_dir or get_BA_path(args.region)
-
-    if resource_dir:
-        logger.log(f"Game resource directory: {resource_dir}")
+    # 跨包解析目录（可选；--local-only 时跳过探测）
+    resource_dir = None
+    if args.local_only:
+        logger.log("Local-only mode: cross-bundle resolution disabled.")
     else:
-        logger.log("Cross-bundle resolution disabled (no resource directory).")
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if resource_dir:
+            logger.log(f"Game resource directory: {resource_dir}")
+        else:
+            logger.log("Cross-bundle resolution disabled (no resource directory).")
 
     trace_bundle(
         bundle_path,
@@ -1039,4 +1046,5 @@ def handle_trace(args: TraceTap, logger: Logger = NULL_LOGGER) -> None:
         path_id=args.path_id,
         resource_dir=Path(resource_dir) if resource_dir else None,
         cache_path=_resolve_cab_cache(args),
+        local_only=args.local_only,
     )

@@ -477,10 +477,11 @@ class InspectTap(BaseTap):
     region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
     cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
     no_cache: bool = False  # Disable the CAB mapping cache.
+    local_only: bool = False  # Only resolve locally: skip cross-bundle resolution even if a resource directory is available (external references are labeled unresolved).
 
     def configure(self) -> None:
         super().configure()
-        self.description = '''Inspect bundle file(s): platform info, asset type stats, external references,
+        self.description = '''Inspect bundle file(s): platform info, self CAB name(s), asset type stats, external references,
 MonoBehaviour list grouped by MonoScript class name, and container entries.
 
 Examples:
@@ -489,6 +490,9 @@ Examples:
 
   # Enable cross-bundle MonoScript class name resolution
   bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Inspect locally without touching the game directory (fast, no scanning)
+  bamt-cli inspect "bundle.bundle" --local-only
 
   # Disable the CAB mapping cache
   bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game" --no-cache
@@ -507,6 +511,7 @@ class TraceTap(BaseTap):
     path_id: int | None = None  # Only trace the object with this path ID (default: trace all objects).
     cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
     no_cache: bool = False  # Disable the CAB mapping cache.
+    local_only: bool = False  # Only resolve locally: skip cross-bundle resolution even if a resource directory is available (unresolved pointers are labeled).
 
     def configure(self) -> None:
         super().configure()
@@ -519,6 +524,9 @@ Examples:
 
   # Resolve external references against the game directory
   bamt-cli trace "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Trace locally without touching the game directory (fast, no scanning)
+  bamt-cli trace "bundle.bundle" --local-only
 
   # Trace a single object
   bamt-cli trace "bundle.bundle" --path-id 123456

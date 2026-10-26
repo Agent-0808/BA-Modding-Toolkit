@@ -30,6 +30,12 @@ def _collect_externals(bundle: Bundle) -> set[str]:
     return cabs
 
 
+def _self_cabs(bundle: Bundle) -> list[str]:
+    """收集 bundle 内全部 SerializedFile 的自身 CAB 名（多 SF bundle 取全部）"""
+    names = [getattr(sf, "name", "") for sf in bundle.env.assets]
+    return [name for name in names if name]
+
+
 def _build_full_index(search_dirs: list[Path], log: LogFunc) -> dict[str, Path]:
     """全量 CAB 索引：轻量解析所有 bundle 的头部文件名表（秒级，不解压数据块）"""
     index: dict[str, Path] = {}
@@ -94,9 +100,10 @@ def inspect_bundles(
     log: LogFunc = no_log,
     resource_dir: Path | None = None,
     cache_path: Path | None = None,
+    local_only: bool = False,
 ) -> None:
-    """输出 bundle 内省信息：平台、类型统计、外部引用、MonoBehaviour 清单、容器条目。"""
-    search_dirs = _resolve_game_dirs(resource_dir)
+    """输出 bundle 内省信息：平台、自身 CAB、类型统计、外部引用、MonoBehaviour 清单、容器条目。"""
+    search_dirs = [] if local_only else _resolve_game_dirs(resource_dir)
 
     bundles: list[Bundle] = []
     for path in bundle_paths:
@@ -114,6 +121,9 @@ def inspect_bundles(
         log(f"\n=== {bundle.path.name} ===")
         platform, unity_version = bundle.platform_info
         log(f"Platform: {platform} | Unity: {unity_version}")
+        self_cabs = _self_cabs(bundle)
+        if self_cabs:
+            log(f"Self CAB: {', '.join(self_cabs)}")
 
         objects = list(bundle.env.objects)
         if not objects:
@@ -130,7 +140,12 @@ def inspect_bundles(
         log(f"External references ({len(externals)}):")
         for cab in externals:
             target = graph.index.get(cab.lower())
-            suffix = f" -> {Path(target).name}" if target else ""
+            if target:
+                suffix = f" -> {Path(target).name}"
+            elif local_only:
+                suffix = " [unresolved (local-only)]"
+            else:
+                suffix = ""
             log(f"  - {cab}{suffix}")
 
         # MonoBehaviour 按 MonoScript 类名分组
@@ -164,6 +179,7 @@ def trace_bundle(
     path_id: int | None = None,
     resource_dir: Path | None = None,
     cache_path: Path | None = None,
+    local_only: bool = False,
 ) -> None:
     """追踪 bundle 内对象的全部引用，解析每个指针的落点。
 
@@ -172,13 +188,14 @@ def trace_bundle(
         path_id: 只追踪指定 path_id 的对象；None 表示追踪全部对象
         resource_dir: 游戏资源根目录（用于跨包解析；不提供则仅限本地与索引内解析）
         cache_path: CAB 映射缓存文件路径
+        local_only: 仅本地解析，跳过跨包定位（未解析指针标注 local-only）
     """
     bundle = Bundle.load(bundle_path, log)
     if bundle is None:
         log(f"❌ Failed to load: {bundle_path}")
         return
 
-    search_dirs = _resolve_game_dirs(resource_dir)
+    search_dirs = [] if local_only else _resolve_game_dirs(resource_dir)
     graph = _make_graph([bundle], search_dirs, log, cache_path)
 
     objects = list(bundle.env.objects)
@@ -189,6 +206,9 @@ def trace_bundle(
             return
 
     log(f"=== {bundle_path.name} ===")
+    self_cabs = _self_cabs(bundle)
+    if self_cabs:
+        log(f"Self CAB: {', '.join(self_cabs)}")
     resolved = missing = 0
     for obj in objects:
         try:
@@ -214,7 +234,8 @@ def trace_bundle(
             target = graph.deref(obj, pointer)
             if target is None:
                 missing += 1
-                log(f"  -> {cab}:{pid} (unresolved)")
+                suffix = " (unresolved (local-only))" if local_only else " (unresolved)"
+                log(f"  -> {cab}:{pid}{suffix}")
             else:
                 resolved += 1
                 target_name = _obj_name(target)
