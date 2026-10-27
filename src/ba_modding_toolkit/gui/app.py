@@ -12,6 +12,7 @@ from PIL import ImageTk
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR, PACKAGE_DIR
 from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
+from ..spine import get_spine_backend
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
@@ -251,7 +252,7 @@ class App(tb.Frame, ConfigMixin):
         """从全局配置构建动画差异检测选项"""
         return AnimCheckOptions(
             enabled=self.check_animations_var.get(),
-            viewer_path=Path(self.spine_viewer_path_var.get())
+            backend=get_spine_backend("spine_viewer", Path(self.spine_viewer_path_var.get()))
         )
 
     def is_spine_converter_available(self) -> bool:

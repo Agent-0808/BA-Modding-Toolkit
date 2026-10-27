@@ -71,7 +71,7 @@ class TestSkelConverter:
         # 第二层：版本号正确 + SpineViewer 实际可读
         version = get_skel_version(out_skel)
         assert version and version.startswith("4.2")
-        ok, info = SpineViewer.query(out_skel, spine_viewer_path)
+        ok, info = SpineViewer(spine_viewer_path).query(out_skel)
         assert ok, info
         assert info["animations"]
 
@@ -96,7 +96,7 @@ class TestSkelConverter:
         # 第二层：版本号正确 + SpineViewer 实际可读
         version = get_skel_version(out_skel)
         assert version and version.startswith("3.8")
-        ok, info = SpineViewer.query(out_skel, spine_viewer_path)
+        ok, info = SpineViewer(spine_viewer_path).query(out_skel)
         assert ok, info
         assert info["animations"]
 

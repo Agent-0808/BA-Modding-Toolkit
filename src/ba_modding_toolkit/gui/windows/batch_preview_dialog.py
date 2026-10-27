@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
-from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
+from ...spine import get_spine_backend, RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ...core.preview import render_all_spine_previews
 from ..components import SettingRow, UIComponents
 from ..utils import open_directory
@@ -150,14 +150,15 @@ class BatchRenderDialog(StoppableDialog):
 
 
         # 检查 SpineViewer
-        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-        if not viewer_path_str:
+        tool_path_str = self.app.spine_viewer_path_var.get().strip()
+        if not tool_path_str:
             self._show_spine_viewer_not_configured()
             return
-        viewer_path = Path(viewer_path_str)
-        if not viewer_path.exists():
-            messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+        tool_path = Path(tool_path_str)
+        if not tool_path.exists():
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=tool_path_str))
             return
+        backend = get_spine_backend("spine_viewer", tool_path)
 
         # 输出目录（固定 output/batch_preview/，文件名 = prefix，重复渲染自动覆盖）
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BATCH_PREVIEW)
@@ -187,7 +188,7 @@ class BatchRenderDialog(StoppableDialog):
             rendered, total = render_all_spine_previews(
                 game_dir=Path(self.game_dir_var.get()),
                 output_dir=output_dir,
-                viewer_path=viewer_path,
+                backend=backend,
                 render_options=render_options,
                 render_categories=render_categories,
                 log=self.app.logger.log,

@@ -10,7 +10,7 @@ from ..bundle import BundleFileInfo, analyze_trailing, analyze_naming
 from ..i18n import t
 from ..models import LogFunc, ProgressCallback
 from ..naming import CharacterInternalIDMap
-from ..spine import RenderOptions, RENDER_PRESET_LOW
+from ..spine import SpineBackend, RenderOptions, RENDER_PRESET_LOW
 from ..utils import no_log, throttle_progress
 from .preview import render_spine_previews_batch, RENDER_CATEGORIES
 
@@ -59,7 +59,7 @@ def generate_mod_report(
     char_map: CharacterInternalIDMap | None = None,
     char_name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD,
     enable_render: bool = False,
-    viewer_path: Path | None = None,
+    backend: SpineBackend | None = None,
     report_format: ReportFormat = "list",
     render_options: RenderOptions = RENDER_PRESET_LOW,
     log: LogFunc = no_log,
@@ -75,7 +75,7 @@ def generate_mod_report(
         char_map: 角色名称映射表
         char_name_field: 角色名称字段
         enable_render: 是否生成 Spine 预览图
-        viewer_path: SpineViewerCLI 路径
+        backend: 渲染后端（工具可用性由调用入口保证）
         report_format: 报告格式（"list" 或 "table"）
         render_options: 渲染参数（默认低画质，供报告预览图使用）
         log: 日志函数
@@ -133,7 +133,7 @@ def generate_mod_report(
     category_counts = {cat: len(entries) for cat, entries in categories.items()}
 
     # 7. 可选：渲染 Spine 预览图
-    if enable_render and viewer_path:
+    if enable_render and backend:
         log(f"--- {t('log.report.render_preview')} ---")
         output_dir = output_path.parent / output_path.stem
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -161,7 +161,7 @@ def generate_mod_report(
         results = render_spine_previews_batch(
             tasks=render_tasks,
             output_dir=output_dir,
-            viewer_path=viewer_path,
+            backend=backend,
             render_options=render_options,
             log=log,
             progress_callback=progress_callback,

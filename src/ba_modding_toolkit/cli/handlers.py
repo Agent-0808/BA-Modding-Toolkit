@@ -22,7 +22,7 @@ from ..bundle import analyze_trailing, find_textasset_companions
 from ..core.report import generate_mod_report, RENDER_CATEGORIES
 from ..core.preview import render_all_spine_previews
 from ..core.introspect import inspect_bundles, trace_bundle
-from ..spine import RENDER_PRESET_LOW, RENDER_PRESET_HIGH
+from ..spine import get_spine_backend, RENDER_PRESET_LOW, RENDER_PRESET_HIGH
 from ..utils.paths import EXE_DIR
 
 class Logger:
@@ -388,7 +388,7 @@ def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
     # 动画缺失预检（提供 SpineViewerCLI 路径即启用，内部 is_valid() 再校验文件存在）
     anim_check = AnimCheckOptions(
         enabled=args.spine_viewer_path is not None,
-        viewer_path=Path(args.spine_viewer_path) if args.spine_viewer_path else None,
+        backend=get_spine_backend("spine_viewer", Path(args.spine_viewer_path)) if args.spine_viewer_path else None,
     )
 
     progress_callback = lambda current, total, filename: logger.log(
@@ -795,13 +795,14 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
                 char_map = None
 
     # 验证 Spine 渲染器路径（提供路径即启用渲染）
-    viewer_path = None
+    backend = None
     if args.spine_viewer_path:
-        viewer_path = Path(args.spine_viewer_path)
-        if not viewer_path.exists():
-            logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+        tool_path = Path(args.spine_viewer_path)
+        if not tool_path.exists():
+            logger.log(f"❌ Error: SpineViewerCLI not found: {tool_path}")
             return
-        logger.log(f"Spine rendering enabled: {viewer_path}")
+        backend = get_spine_backend("spine_viewer", tool_path)
+        logger.log(f"Spine rendering enabled: {tool_path}")
 
     # 进度回调
     progress_callback = lambda current, total, filename: logger.log(
@@ -815,7 +816,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         char_map=char_map,
         char_name_field=args.name_field,
         enable_render=args.spine_viewer_path is not None,
-        viewer_path=viewer_path,
+        backend=backend,
         report_format=args.format,
         log=logger.log,
         progress_callback=progress_callback,
@@ -835,10 +836,11 @@ def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) ->
     logger.log("--- Start Batch Spine Preview Rendering ---")
 
     # 验证 SpineViewerCLI 路径
-    viewer_path = Path(args.spine_viewer_path)
-    if not viewer_path.exists():
-        logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+    tool_path = Path(args.spine_viewer_path)
+    if not tool_path.exists():
+        logger.log(f"❌ Error: SpineViewerCLI not found: {tool_path}")
         return
+    backend = get_spine_backend("spine_viewer", tool_path)
 
     # 确定游戏目录
     resource_dir = args.resource_dir or get_BA_path(args.region)
@@ -878,7 +880,7 @@ def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) ->
     rendered, total = render_all_spine_previews(
         game_dir=game_dir,
         output_dir=output_dir,
-        viewer_path=viewer_path,
+        backend=backend,
         render_options=render_options,
         render_categories=args.categories,
         log=logger.log,

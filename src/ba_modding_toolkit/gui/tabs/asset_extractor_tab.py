@@ -9,7 +9,7 @@ from ...i18n import t
 from ... import core
 from ...models import FileType
 from ...naming import parse_filename
-from ...spine import SpineViewer
+from ...spine import get_spine_backend
 from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
 from ..windows.preview_window import PreviewWindow
@@ -170,13 +170,13 @@ class AssetExtractorTab(TabFrame):
 
         # 校验 SpineViewer 路径（启用预览渲染时）
         if self.app.render_preview_var.get():
-            viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-            if not viewer_path_str:
+            tool_path_str = self.app.spine_viewer_path_var.get().strip()
+            if not tool_path_str:
                 messagebox.showerror(t("common.error"), t("message.3rd_party.spine_viewer_required"))
                 return
-            viewer_path = Path(viewer_path_str)
-            if not viewer_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+            tool_path = Path(tool_path_str)
+            if not tool_path.exists():
+                messagebox.showerror(t("common.error"), t("message.file_not_found", path=tool_path_str))
                 return
 
         self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, unpack_atlas)
@@ -213,17 +213,16 @@ class AssetExtractorTab(TabFrame):
             self.logger.log(t("log.spine.no_skel_found"))
             return
 
-        viewer_path = Path(self.app.spine_viewer_path_var.get().strip())
+        backend = get_spine_backend("spine_viewer", Path(self.app.spine_viewer_path_var.get().strip()))
 
         self.logger.log(f'\n--- {t("log.section.render_preview")} ---')
         success_count = 0
         rendered_paths: list[Path] = []
         for skel_path in skel_files:
             output_path = output_dir / f"{skel_path.stem}_preview.png"
-            success, _ = SpineViewer.render_preview(
+            success, _ = backend.render_preview(
                 skel_path=skel_path,
                 output_path=output_path,
-                viewer_path=viewer_path,
                 log=self.logger.log,
             )
             if success:

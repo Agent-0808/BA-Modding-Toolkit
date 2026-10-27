@@ -23,7 +23,7 @@ from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
-from ...spine import RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
+from ...spine import SpineBackend, get_spine_backend, RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
 from ...core import extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, DualZoomableCanvas
 from .base import StoppableDialog
@@ -130,7 +130,7 @@ def _extract_bundle_assets(bundle: Path, extract_dir: Path, log: LogFunc) -> lis
 
 
 def _process_group(
-    group: ModGroup, viewer_path: Path | None, anim_check: AnimCheckOptions, log: LogFunc,
+    group: ModGroup, backend: SpineBackend | None, anim_check: AnimCheckOptions, log: LogFunc,
 ) -> GroupRenderResult:
     """组级流水线：两侧解包 → 资产哈希对比 → 双侧渲染（后台线程调用，禁止 tk 操作）
 
@@ -191,7 +191,7 @@ def _process_group(
                             detail = f"{a.detail} · {t('ui.mod_install.diff_content_changed')}"
                         # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
                         if a.fname.endswith(".skel") and anim_check.is_valid():
-                            missing = check_skel_animation_diff(b.path, a.path, anim_check.viewer_path, log)
+                            missing = check_skel_animation_diff(b.path, a.path, anim_check.backend, log=log)
                             if missing:
                                 detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
                         rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))
@@ -215,13 +215,13 @@ def _process_group(
                          for a in mod_pool.values() if a.fname.endswith(".skel")}
             rendered: dict[str, dict[str, Path]] = {"current": {}, "new": {}}
             side_errors: dict[str, str | None] = {"current": None, "new": None}
-            if viewer_path is not None and viewer_path.exists():
+            if backend is not None:
                 side_bundles = {"current": target_paths, "new": [f.mod_path for f in group.files]}
                 for side, bundles in side_bundles.items():
                     if not (cur_skels if side == "current" else new_skels):
                         continue
                     ok, msg, paths = render_spine_preview_from_bundle(
-                        bundles, out_dir / side, viewer_path,
+                        bundles, out_dir / side, backend,
                         render_options=RENDER_PRESET_HIGH,  # 高画质：耗时与低画质接近，临时文件体积可忽略
                         log=log,
                     )
@@ -439,8 +439,8 @@ class ModInstallDialog(StoppableDialog):
 
     def _pipeline_worker(self):
         """后台并行处理组渲染任务；窗口关闭（should_stop）时不再回填结果"""
-        viewer_str = self.app.spine_viewer_path_var.get().strip()
-        viewer_path = Path(viewer_str) if viewer_str else None
+        tool_str = self.app.spine_viewer_path_var.get().strip()
+        backend = get_spine_backend("spine_viewer", Path(tool_str)) if tool_str else None
         anim_check = self.app.build_anim_check_options()
 
         with ThreadPoolExecutor(max_workers=max(1, self.app.max_workers_var.get())) as executor:
@@ -455,7 +455,7 @@ class ModInstallDialog(StoppableDialog):
                 if cached is not None:
                     self.after(0, self._apply_result, i, cached)
                     continue
-                future = executor.submit(_process_group, group, viewer_path, anim_check, self.app.logger.log)
+                future = executor.submit(_process_group, group, backend, anim_check, self.app.logger.log)
                 futures[future] = (i, key)
 
             # 收集循环单线程执行：缓存写入与 after 回调均在此线程，无需加锁

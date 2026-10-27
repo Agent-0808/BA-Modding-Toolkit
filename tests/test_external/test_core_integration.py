@@ -55,7 +55,7 @@ class TestExternalCoreIntegration:
             output_dir=output_dir,
             asset_types_to_replace={"Texture2D", "TextAsset"},
             save_options=_SAVE_OPTIONS,
-            anim_check=AnimCheckOptions(enabled=True, viewer_path=spine_viewer_path),
+            anim_check=AnimCheckOptions(enabled=True, backend=SpineViewer(spine_viewer_path)),
         )
 
         assert result.success is True, result.message
@@ -146,7 +146,7 @@ class TestExternalCoreIntegration:
 
         version = get_skel_version(packed_skel)
         assert version and version.startswith(_major_minor(target))
-        query_ok, info = SpineViewer.query(packed_skel, spine_viewer_path)
+        query_ok, info = SpineViewer(spine_viewer_path).query(packed_skel)
         assert query_ok
         assert info["animations"]
 
@@ -159,7 +159,7 @@ class TestExternalCoreIntegration:
         """asset extractor + spine preview：从 bundle 渲染预览图存在且非空白"""
         require_render_support()
         ok, msg, rendered = render_spine_preview_from_bundle(
-            sample_case.bundle_paths, tmp_path / "preview", spine_viewer_path
+            sample_case.bundle_paths, tmp_path / "preview", SpineViewer(spine_viewer_path)
         )
 
         assert ok, msg

@@ -1,13 +1,16 @@
 # models.py
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Callable, Literal, NamedTuple
+from typing import TYPE_CHECKING, Callable, Literal, NamedTuple
 from enum import StrEnum
 from PIL import Image
 
 
 from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.files import ObjectReader as Obj
+
+if TYPE_CHECKING:
+    from .spine import SpineBackend
 
 # -------- 基础命名元组和类型别名 ---------
 
@@ -115,17 +118,13 @@ class SkelVersionConflict:
 
 @dataclass
 class AnimCheckOptions:
-    """动画差异比对与校验配置（依赖 SpineViewerCLI）"""
+    """动画差异比对与校验配置（依赖当前渲染后端）"""
     enabled: bool = False
-    viewer_path: Path | None = None
+    backend: "SpineBackend | None" = None
 
     def is_valid(self) -> bool:
         """检查动画检测器是否就绪"""
-        return bool(
-            self.enabled
-            and self.viewer_path
-            and self.viewer_path.exists()
-        )
+        return bool(self.enabled and self.backend is not None)
 
 # 动画差异映射：{skel名称: [缺失动画列表]}
 AnimDiffMap = dict[str, list[str]]

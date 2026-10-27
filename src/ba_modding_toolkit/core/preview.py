@@ -8,7 +8,7 @@ import tempfile
 
 from ..i18n import t
 from ..utils import no_log, throttle_progress
-from ..spine import SpineViewer, RenderOptions, RENDER_PRESET_HIGH, RENDER_PRESET_LOW
+from ..spine import SpineBackend, RenderOptions, RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ..models import LogFunc, ProgressCallback
 from ..naming import parse_filename
 from ..searching import list_bundle_files
@@ -21,7 +21,7 @@ RENDER_CATEGORIES = {"spinecharacters", "spinelobbies", "spinebackground"}
 def render_spine_preview_from_bundle(
     bundle_path: Path | list[Path],
     output_dir: Path,
-    viewer_path: Path,
+    backend: SpineBackend,
     output_filename: str | None = None,
     render_options: RenderOptions = RENDER_PRESET_HIGH,
     log: LogFunc = no_log,
@@ -32,7 +32,7 @@ def render_spine_preview_from_bundle(
     Args:
         bundle_path: bundle 文件路径（单个或列表）
         output_dir: 输出目录
-        viewer_path: SpineViewerCLI 路径
+        backend: 渲染后端（工具可用性由调用入口保证）
         output_filename: 输出文件名（不含扩展名），用于自定义命名。None 则使用 skel 文件名
         render_options: 渲染参数（默认高画质）
         log: 日志记录函数
@@ -43,11 +43,6 @@ def render_spine_preview_from_bundle(
 
     # 统一处理为列表
     bundle_paths = [bundle_path] if isinstance(bundle_path, Path) else bundle_path
-
-    if not viewer_path.exists():
-        msg = t("log.file.not_exist", path=viewer_path)
-        log(f'❌ {msg}')
-        return False, msg, []
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -88,10 +83,9 @@ def render_spine_preview_from_bundle(
             output_path = output_dir / f"{filename}.png"
 
             # 渲染预览图
-            skel_success, msg = SpineViewer.render_preview(
+            skel_success, msg = backend.render_preview(
                 skel_path=skel_path,
                 output_path=output_path,
-                viewer_path=viewer_path,
                 render_options=render_options,
                 log=log
             )
@@ -121,7 +115,7 @@ class RenderTask:
 def _render_task(
     task: RenderTask,
     output_dir: Path,
-    viewer_path: Path,
+    backend: SpineBackend,
     render_options: RenderOptions,
     log: LogFunc,
 ) -> tuple[bool, list[Path]]:
@@ -129,7 +123,7 @@ def _render_task(
     success, _, rendered_paths = render_spine_preview_from_bundle(
         bundle_path=task.files,
         output_dir=output_dir,
-        viewer_path=viewer_path,
+        backend=backend,
         output_filename=task.name,
         render_options=render_options,
         log=log,
@@ -141,7 +135,7 @@ def _render_task(
         success, _, rendered_paths = render_spine_preview_from_bundle(
             bundle_path=task.fallback_files,
             output_dir=output_dir,
-            viewer_path=viewer_path,
+            backend=backend,
             output_filename=task.name,
             render_options=render_options,
             log=log,
@@ -153,7 +147,7 @@ def _render_task(
 def render_spine_previews_batch(
     tasks: list[RenderTask],
     output_dir: Path,
-    viewer_path: Path,
+    backend: SpineBackend,
     render_options: RenderOptions = RENDER_PRESET_LOW,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
@@ -162,13 +156,13 @@ def render_spine_previews_batch(
     """
     批量渲染预览图（单路径实现，max_workers=1 时顺序执行）。
 
-    每个任务调用外部 SpineViewerCLI 子进程，子进程调用会释放 GIL，
+    每个任务调用外部渲染工具子进程，子进程调用会释放 GIL，
     多线程可获得真实并行收益；但渲染本身吃 CPU/GPU/内存，线程数建议 1~4。
 
     Args:
         tasks: 渲染任务列表（name 需唯一，作为输出文件名）
         output_dir: 输出目录
-        viewer_path: SpineViewerCLI 路径
+        backend: 渲染后端（工具可用性由调用入口保证）
         render_options: 渲染参数
         log: 日志函数
         progress_callback: 进度回调（按任务推进，任务完成后调用）
@@ -185,7 +179,7 @@ def render_spine_previews_batch(
 
     with ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
         futures = {
-            executor.submit(_render_task, task, output_dir, viewer_path, render_options, log): task
+            executor.submit(_render_task, task, output_dir, backend, render_options, log): task
             for task in tasks
         }
         # 计数与进度更新只在主线程（本循环）中进行，无需加锁
@@ -210,7 +204,7 @@ def render_spine_previews_batch(
 def render_all_spine_previews(
     game_dir: Path,
     output_dir: Path,
-    viewer_path: Path,
+    backend: SpineBackend,
     render_options: RenderOptions = RENDER_PRESET_LOW,
     render_categories: set[str] = RENDER_CATEGORIES,
     log: LogFunc = no_log,
@@ -226,7 +220,7 @@ def render_all_spine_previews(
     Args:
         game_dir: 游戏资源目录
         output_dir: 预览图输出目录
-        viewer_path: SpineViewerCLI 路径
+        backend: 渲染后端（工具可用性由调用入口保证）
         render_options: 渲染参数（默认低画质）
         render_categories: 需要渲染的分类集合（默认 RENDER_CATEGORIES）
         log: 日志函数
@@ -276,7 +270,7 @@ def render_all_spine_previews(
     results = render_spine_previews_batch(
         tasks=tasks,
         output_dir=output_dir,
-        viewer_path=viewer_path,
+        backend=backend,
         render_options=render_options,
         log=log,
         progress_callback=progress_callback,

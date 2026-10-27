@@ -55,6 +55,23 @@ def find_stream_refs(data: bytes) -> set[str]:
     return {m.decode() for m in STREAM_REF_PATTERN.findall(data)}
 
 
+def find_sibling_atlas_text(env: Env, skel_name: str) -> str | None:
+    """查找目标 bundle 中与 skel 同名的 atlas 文本
+
+    spine2dump 的 inspect 要求骨架旁存在同名 atlas，动画差异校验
+    （skel 仅以字节形式存在于内存）需要借此补全。
+    """
+    stem = skel_name.rsplit(".", 1)[0]
+    target = f"{stem}.atlas".lower()
+    for obj in env.objects:
+        if obj.type != AssetType.TextAsset:
+            continue
+        data = obj.read()
+        if getattr(data, "m_Name", "").lower() == target:
+            return data.m_Script
+    return None
+
+
 def rewrite_stream_ref_prefixes(data: bytes, target_cab: str, log: LogFunc = no_log) -> bytes:
     """把流引用路径中的 SerializedFile 名段改写为目标 bundle 的 SF 名
 
@@ -231,7 +248,8 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
             missing_anims = check_skel_animation_diff(
                 source_skel=content,
                 target_skel=target_bytes,
-                viewer_path=ctx.anim_check.viewer_path,
+                backend=ctx.anim_check.backend,
+                atlas_text=find_sibling_atlas_text(ctx.env, resource_name),
                 log=ctx.log
             )
             if missing_anims:

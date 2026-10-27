@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
-from ...spine import RENDER_PRESET_HIGH, RENDER_PRESET_LOW
+from ...spine import get_spine_backend, RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ...core.report import generate_mod_report
 from ..components import SettingRow, UIComponents
 from ..utils import open_in_os
@@ -142,17 +142,18 @@ class ReportDialog(StoppableDialog):
             return
 
         # 检查 SpineViewer（如果启用渲染）
-        viewer_path = None
+        backend = None
         enable_render = self.app.enable_spine_preview_var.get()
         if enable_render:
-            viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-            if not viewer_path_str:
+            tool_path_str = self.app.spine_viewer_path_var.get().strip()
+            if not tool_path_str:
                 messagebox.showerror(t("common.error"), t("message.3rd_party.spine_viewer_required"))
                 return
-            viewer_path = Path(viewer_path_str)
-            if not viewer_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+            tool_path = Path(tool_path_str)
+            if not tool_path.exists():
+                messagebox.showerror(t("common.error"), t("message.file_not_found", path=tool_path_str))
                 return
+            backend = get_spine_backend("spine_viewer", tool_path)
 
         # 输出目录
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_REPORTS)
@@ -175,7 +176,7 @@ class ReportDialog(StoppableDialog):
                 char_map=self.app.char_map,
                 char_name_field=self.app.character_name_field_var.get(),
                 enable_render=enable_render,
-                viewer_path=viewer_path,
+                backend=backend,
                 report_format=self.app.report_format_var.get(),
                 render_options=render_options,
                 log=self.app.logger.log,
