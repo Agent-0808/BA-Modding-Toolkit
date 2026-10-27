@@ -119,7 +119,7 @@
 		"spine_viewer_path": "SpineViewerCLI 路径",
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
 		"render_backend": "渲染后端",
-		"render_backend_info": "渲染预览图与动画差异检测使用的程序后端",
+		"render_backend_info": "渲染预览图与动画差异检测使用的程序后端\nspine2dump 仅支持 4.x skel，3.8（降级产物）请使用 SpineViewer",
 		"render_backend_spine_viewer": "SpineViewer",
 		"render_backend_spine2dump": "Spine2Dump",
 		"spine2dump_path": "spine2dump 程序路径",
