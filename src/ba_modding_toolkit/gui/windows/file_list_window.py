@@ -19,7 +19,6 @@ from ...searching import list_bundle_files, list_bundle_files_remote, search_pre
 from ...bundle import analyze_bundles
 from ...bundle import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
-from ...spine import get_spine_backend
 from ..components import Theme, UIComponents
 from ..utils import reveal_in_explorer, select_directory
 from .base import StoppableDialog
@@ -926,23 +925,22 @@ class FileListWindow(StoppableDialog):
         # ADB 模式下先缓存文件
         items = self._ensure_items_local(items)
 
-        # 检查 SpineViewerCLI 路径
-        tool_path_str = self.app.spine_viewer_path_var.get().strip()
-        if not tool_path_str:
+        # 检查渲染后端工具路径
+        tool_path = self.app.get_render_backend_path()
+        if tool_path is None:
             messagebox.showwarning(
                 t("common.warning"),
-                t("message.3rd_party.spine_viewer_required")
+                self.app.get_render_backend_required_message()
             )
             return
 
-        tool_path = Path(tool_path_str)
         if not tool_path.exists():
             messagebox.showwarning(
                 t("common.warning"),
                 t("log.file.not_exist", path=tool_path)
             )
             return
-        backend = get_spine_backend("spine_viewer", tool_path)
+        backend = self.app.get_render_backend()
 
         # 获取输出目录
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_PREVIEW)

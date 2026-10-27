@@ -9,7 +9,6 @@ from ...i18n import t
 from ... import core
 from ...models import FileType
 from ...naming import parse_filename
-from ...spine import get_spine_backend
 from ..components import UIComponents, SettingRow, DropZone
 from ..utils import select_directory, open_directory
 from ..windows.preview_window import PreviewWindow
@@ -105,10 +104,10 @@ class AssetExtractorTab(TabFrame):
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
     def _show_spine_viewer_not_configured(self, parent: tk.Widget | None = None):
-        """显示 SpineViewer 未配置的提示"""
+        """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),
-            t("message.3rd_party.spine_viewer_required")
+            self.app.get_render_backend_required_message()
         )
 
     def select_output_dir(self):
@@ -168,15 +167,14 @@ class AssetExtractorTab(TabFrame):
             
         unpack_atlas = self.app.unpack_atlas_var.get()
 
-        # 校验 SpineViewer 路径（启用预览渲染时）
+        # 校验渲染后端工具路径（启用预览渲染时）
         if self.app.render_preview_var.get():
-            tool_path_str = self.app.spine_viewer_path_var.get().strip()
-            if not tool_path_str:
-                messagebox.showerror(t("common.error"), t("message.3rd_party.spine_viewer_required"))
+            tool_path = self.app.get_render_backend_path()
+            if tool_path is None:
+                messagebox.showerror(t("common.error"), self.app.get_render_backend_required_message())
                 return
-            tool_path = Path(tool_path_str)
             if not tool_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=tool_path_str))
+                messagebox.showerror(t("common.error"), t("message.file_not_found", path=str(tool_path)))
                 return
 
         self.run_in_thread(self.run_extraction, bundle_paths, final_output_path, unpack_atlas)
@@ -213,7 +211,7 @@ class AssetExtractorTab(TabFrame):
             self.logger.log(t("log.spine.no_skel_found"))
             return
 
-        backend = get_spine_backend("spine_viewer", Path(self.app.spine_viewer_path_var.get().strip()))
+        backend = self.app.get_render_backend()
 
         self.logger.log(f'\n--- {t("log.section.render_preview")} ---')
         success_count = 0

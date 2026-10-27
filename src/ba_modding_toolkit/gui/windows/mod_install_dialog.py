@@ -23,7 +23,7 @@ from ...utils import no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
-from ...spine import SpineBackend, get_spine_backend, RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
+from ...spine import SpineBackend, RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
 from ...core import extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, DualZoomableCanvas
 from .base import StoppableDialog
@@ -439,8 +439,7 @@ class ModInstallDialog(StoppableDialog):
 
     def _pipeline_worker(self):
         """后台并行处理组渲染任务；窗口关闭（should_stop）时不再回填结果"""
-        tool_str = self.app.spine_viewer_path_var.get().strip()
-        backend = get_spine_backend("spine_viewer", Path(tool_str)) if tool_str else None
+        backend = self.app.get_render_backend()
         anim_check = self.app.build_anim_check_options()
 
         with ThreadPoolExecutor(max_workers=max(1, self.app.max_workers_var.get())) as executor:

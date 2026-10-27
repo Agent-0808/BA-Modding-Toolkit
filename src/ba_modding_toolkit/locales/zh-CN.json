@@ -118,6 +118,12 @@
 		"skel_converter_path_info": "SpineSkeletonDataConverter.exe 文件的路径",
 		"spine_viewer_path": "SpineViewerCLI 路径",
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
+		"render_backend": "渲染后端",
+		"render_backend_info": "渲染预览图与动画差异检测使用的程序后端",
+		"render_backend_spine_viewer": "SpineViewer",
+		"render_backend_spine2dump": "Spine2Dump",
+		"spine2dump_path": "spine2dump 程序路径",
+		"spine2dump_path_info": "spine2dump.exe 文件的路径（程序内置 Addons/spine2dump 目录）",
 		"check_animations": "检测动画差异",
 		"check_animations_info": "在替换 .skel 文件时，检测目标是否包含来源中不存在的动画\n需要配置 SpineViewerCLI 路径",
 		"mod_install_render_preview": "渲染预览图",
@@ -168,7 +174,8 @@
 		"bundle_backup": "AssetBundle 备份",
 		"folder": "文件夹",
 		"skel_converter": "SpineSkeletonConverter.exe",
-		"spine_viewer": "SpineViewerCLI.exe"
+		"spine_viewer": "SpineViewerCLI.exe",
+		"spine2dump": "spine2dump.exe"
 	},
 	"message": {
 		"confirm_replace_file": "此操作将覆盖文件：{path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
@@ -273,7 +280,8 @@
 		"3rd_party": {
 			"download_guide": "是否前往下载 {program}？\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter 未配置。\n请在设置页面配置 SpineSkeletonDataConverter 的路径。",
-			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。"
+			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。",
+			"spine2dump_required": "spine2dump 程序未设置或路径无效。\n\n请在设置中配置 spine2dump 的路径（程序内置 Addons/spine2dump 目录）。"
 		},
 		"download_confirm": "将从此地址下载文件：\n{url}\n\n保存至：{path}",
 		"adb": {
@@ -353,6 +361,7 @@
 		"spine": {
 			"skel_converter_set": "已设置 Skel 转换器: {path}",
 			"spine_viewer_set": "已设置 SpineViewerCLI: {path}",
+			"spine2dump_set": "已设置 spine2dump: {path}",
 			"character_map_set": "已设置角色ID映射表: {path}",
 			"skel_version_detection_failed": "无法检测当前 .skel 文件版本",
 			"converting_skel": "正在转换 .skel 文件: {name}",

@@ -562,8 +562,20 @@ class SettingsDialog(tb.Toplevel):
         )
 
     def _init_spine_viewer_settings(self):
-        """初始化 SpineViewer 预览设置"""
+        """初始化 Spine 预览渲染设置"""
         section = self._create_section(t("ui.settings.group_spine_viewer"))
+
+        # 渲染后端选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("option.render_backend"),
+            text_var=self.app.render_backend_var,
+            values=[
+                ("spine_viewer", t("option.render_backend_spine_viewer")),
+                ("spine2dump", t("option.render_backend_spine2dump")),
+            ],
+            tooltip=t("option.render_backend_info")
+        )
 
         # SpineViewerCLI 路径设置
         SettingRow.create_path_selector(
@@ -574,6 +586,16 @@ class SettingsDialog(tb.Toplevel):
             tooltip=t("option.spine_viewer_path_info"),
             download_guide_cmd=self.app.show_spine_viewer_download_guide,
             status_check=lambda: Path(self.app.spine_viewer_path_var.get()).is_file()
+        )
+
+        # spine2dump 路径设置
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.spine2dump_path"),
+            path_var=self.app.spine2dump_path_var,
+            select_cmd=self.select_spine2dump_path,
+            tooltip=t("option.spine2dump_path_info"),
+            status_check=lambda: Path(self.app.spine2dump_path_var.get()).is_file()
         )
 
         SettingRow.create_switch(
@@ -699,6 +721,19 @@ class SettingsDialog(tb.Toplevel):
             callback=lambda path: (
                 self.app.spine_viewer_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.spine_viewer_set", path=path))
+            ),
+            parent=self,
+            log=self.app.logger.log
+        )
+
+    def select_spine2dump_path(self):
+        """选择 spine2dump 程序路径"""
+        select_file(
+            title=t("ui.dialog.select", type=t("file_type.spine2dump")),
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
+            callback=lambda path: (
+                self.app.spine2dump_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.spine2dump_set", path=path))
             ),
             parent=self,
             log=self.app.logger.log

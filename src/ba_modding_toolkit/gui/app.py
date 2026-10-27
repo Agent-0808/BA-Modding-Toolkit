@@ -12,7 +12,7 @@ from PIL import ImageTk
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
 from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR, PACKAGE_DIR
 from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
-from ..spine import get_spine_backend
+from ..spine import SpineBackend, RenderBackendName, get_spine_backend
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
@@ -248,11 +248,31 @@ class App(tb.Frame, ConfigMixin):
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
 
+    def get_render_backend_name(self) -> RenderBackendName:
+        """获取当前选择的渲染后端名称"""
+        name = self.render_backend_var.get()
+        return "spine2dump" if name == "spine2dump" else "spine_viewer"
+
+    def get_render_backend_path(self) -> Path | None:
+        """获取当前渲染后端对应的工具路径；未配置时返回 None"""
+        if self.get_render_backend_name() == "spine2dump":
+            path_str = self.spine2dump_path_var.get().strip()
+        else:
+            path_str = self.spine_viewer_path_var.get().strip()
+        return Path(path_str) if path_str else None
+
+    def get_render_backend(self) -> SpineBackend | None:
+        """按当前渲染后端配置创建渲染后端实例；未配置时返回 None"""
+        path = self.get_render_backend_path()
+        if path is None:
+            return None
+        return get_spine_backend(self.get_render_backend_name(), path)
+
     def build_anim_check_options(self) -> AnimCheckOptions:
         """从全局配置构建动画差异检测选项"""
         return AnimCheckOptions(
             enabled=self.check_animations_var.get(),
-            backend=get_spine_backend("spine_viewer", Path(self.spine_viewer_path_var.get()))
+            backend=self.get_render_backend()
         )
 
     def is_spine_converter_available(self) -> bool:
@@ -262,19 +282,18 @@ class App(tb.Frame, ConfigMixin):
             return False
         return Path(path).exists()
 
-    def is_spine_viewer_available(self) -> bool:
-        """检查SpineViewerCLI程序路径是否有效"""
-        path = self.spine_viewer_path_var.get()
-        if not path:
-            return False
-        return Path(path).exists()
+    def is_render_backend_available(self) -> bool:
+        """检查当前渲染后端对应的工具路径是否有效"""
+        path = self.get_render_backend_path()
+        return path is not None and path.exists()
 
     def check_dependency(self, depends_on: str) -> bool:
         """检查依赖条件是否满足"""
         if depends_on == "spine_converter_path_var":
             return self.is_spine_converter_available()
         if depends_on == "spine_viewer_path_var":
-            return self.is_spine_viewer_available()
+            # 渲染相关开关统一依赖"当前渲染后端工具可用"
+            return self.is_render_backend_available()
         if depends_on == "enable_spine_conversion_var":
             # 同时检查 Spine 转换器路径和转换功能是否启用
             return self.is_spine_converter_available() and self.enable_spine_conversion_var.get()
@@ -320,12 +339,18 @@ class App(tb.Frame, ConfigMixin):
         )
 
     def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
-        """显示SpineViewer未配置提示"""
+        """显示当前渲染后端工具未配置提示"""
         messagebox.showinfo(
             t("common.tip"),
-            t("message.3rd_party.spine_viewer_required"),
+            self.get_render_backend_required_message(),
             parent=parent or self.master
         )
+
+    def get_render_backend_required_message(self) -> str:
+        """当前渲染后端对应的"工具未配置"提示文案"""
+        if self.get_render_backend_name() == "spine2dump":
+            return t("message.3rd_party.spine2dump_required")
+        return t("message.3rd_party.spine_viewer_required")
 
     def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineViewer下载引导对话框"""
