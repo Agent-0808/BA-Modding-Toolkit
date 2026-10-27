@@ -38,7 +38,7 @@ class SettingsDialog(tb.Toplevel):
         self._init_bacii_settings()
         self._init_asset_options()
         self._init_skel_converter_settings()
-        self._init_spine_viewer_settings()
+        self._init_render_backend_settings()
         self._init_adb_settings()
 
         self._init_footer_buttons()
@@ -561,9 +561,9 @@ class SettingsDialog(tb.Toplevel):
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
-    def _init_spine_viewer_settings(self):
-        """初始化 Spine 预览渲染设置"""
-        section = self._create_section(t("ui.settings.group_spine_viewer"))
+    def _init_render_backend_settings(self):
+        """初始化渲染后端设置"""
+        section = self._create_section(t("ui.settings.group_render_backend"))
 
         # 渲染后端选择
         SettingRow.create_combobox_row(
@@ -595,6 +595,7 @@ class SettingsDialog(tb.Toplevel):
             path_var=self.app.spine2dump_path_var,
             select_cmd=self.select_spine2dump_path,
             tooltip=t("option.spine2dump_path_info"),
+            download_guide_cmd=self.app.show_spine2dump_download_guide,
             status_check=lambda: Path(self.app.spine2dump_path_var.get()).is_file()
         )
 
@@ -604,7 +605,7 @@ class SettingsDialog(tb.Toplevel):
             variable=self.app.check_animations_var,
             tooltip=t("option.check_animations_info"),
             app=self.app,
-            on_click_disabled=self.app.show_spine_viewer_not_configured
+            on_click_disabled=self.app.show_render_backend_not_configured
         )
 
         # 预览图缩略图尺寸（预览窗口中缩略图的最大边长）

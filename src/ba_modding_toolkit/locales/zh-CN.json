@@ -616,7 +616,7 @@
 			"group_save": "保存设置",
 			"group_assets": "资源处理选项",
 			"group_skel_converter": "Skel 转换器",
-			"group_spine_viewer": "SpineViewer",
+			"group_render_backend": "渲染后端",
 			"group_bacii": "角色名称",
 			"group_performance": "性能",
 			"group_app": "应用设置",

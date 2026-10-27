@@ -65,7 +65,7 @@ class ModInstallTab(TabFrame):
             variable=self.app.mod_install_render_preview_var,
             tooltip=t("option.mod_install_render_preview_info"),
             app=self.app,
-            on_click_disabled=self.app.show_spine_viewer_not_configured
+            on_click_disabled=self.app.show_render_backend_not_configured
         )
 
         # 3. 操作按钮区域

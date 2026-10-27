@@ -121,7 +121,7 @@ class BatchRenderDialog(StoppableDialog):
         )
         render_btn.pack(anchor=tk.CENTER)
 
-    def _show_spine_viewer_not_configured(self):
+    def _show_render_backend_not_configured(self):
         """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),
@@ -152,7 +152,7 @@ class BatchRenderDialog(StoppableDialog):
         # 检查渲染后端
         tool_path = self.app.get_render_backend_path()
         if tool_path is None:
-            self._show_spine_viewer_not_configured()
+            self._show_render_backend_not_configured()
             return
         if not tool_path.exists():
             messagebox.showerror(t("common.error"), t("message.file_not_found", path=str(tool_path)))

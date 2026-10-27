@@ -91,7 +91,7 @@ class AssetExtractorTab(TabFrame):
             variable=self.app.render_preview_var,
             tooltip=t("option.extractor_render_preview_info"),
             app=self.app,
-            on_click_disabled=self._show_spine_viewer_not_configured
+            on_click_disabled=self._show_render_backend_not_configured
         )
 
         # 操作按钮
@@ -103,7 +103,7 @@ class AssetExtractorTab(TabFrame):
                                                  bootstyle="success", style="large")
         run_button.grid(row=0, column=0, sticky="ew", padx=(0, 0), pady=10)
 
-    def _show_spine_viewer_not_configured(self, parent: tk.Widget | None = None):
+    def _show_render_backend_not_configured(self, parent: tk.Widget | None = None):
         """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),

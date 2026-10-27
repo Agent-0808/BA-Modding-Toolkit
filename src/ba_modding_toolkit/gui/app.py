@@ -338,7 +338,7 @@ class App(tb.Frame, ConfigMixin):
             parent
         )
 
-    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
+    def show_render_backend_not_configured(self, parent: tk.Widget | None = None) -> None:
         """显示当前渲染后端工具未配置提示"""
         messagebox.showinfo(
             t("common.tip"),
@@ -357,6 +357,14 @@ class App(tb.Frame, ConfigMixin):
         self.show_download_guide(
             "SpineViewerCLI",
             "https://github.com/ww-rm/SpineViewer",
+            parent
+        )
+
+    def show_spine2dump_download_guide(self, parent: tk.Widget | None = None) -> None:
+        """显示spine2dump下载引导对话框"""
+        self.show_download_guide(
+            "Spine2Dump",
+            "https://github.com/Deathemonic/Spine2Dump",
             parent
         )
 

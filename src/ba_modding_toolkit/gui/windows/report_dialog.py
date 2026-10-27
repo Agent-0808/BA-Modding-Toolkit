@@ -52,7 +52,7 @@ class ReportDialog(StoppableDialog):
             variable=self.app.enable_spine_preview_var,
             tooltip=t("option.enable_spine_preview_info"),
             app=self.app,
-            on_click_disabled=self._show_spine_viewer_not_configured
+            on_click_disabled=self._show_render_backend_not_configured
         )
 
         # 预览渲染预设选择
@@ -103,7 +103,7 @@ class ReportDialog(StoppableDialog):
         )
         generate_btn.pack(anchor=tk.CENTER)
 
-    def _show_spine_viewer_not_configured(self):
+    def _show_render_backend_not_configured(self):
         """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),

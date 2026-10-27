@@ -247,7 +247,7 @@ class InstallTap(BaseTap):
     strategy: MatchStrategy = 'cont_name_type'  # Match strategy for update-type installs.
     no_backup: bool = False  # Do not create a backup (.backup) before replacing files in the game directory.
     spine_renderer: Literal['spine_viewer', 'spine2dump'] = 'spine_viewer'  # Render backend used for the missing-animation pre-check.
-    spine_viewer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer). Enables missing-animation pre-check when provided (no preview rendering).
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer). Enables missing-animation pre-check when provided (no preview rendering).
     max_workers: int = 1  # Number of parallel worker threads for group installs (1 = sequential).
     yes: bool = False  # Install all installable groups without interactive confirmation.
 
@@ -340,7 +340,7 @@ class ReportTap(BaseTap):
 
     # Spine渲染参数
     spine_renderer: Literal['spine_viewer', 'spine2dump'] = 'spine_viewer'  # Render backend used for Spine preview rendering.
-    spine_viewer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer). Spine preview rendering is enabled when provided.
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer). Spine preview rendering is enabled when provided.
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
@@ -366,10 +366,10 @@ Examples:
   bamt-cli report --format table
 
   # Generate report with Spine preview images
-  bamt-cli report --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+  bamt-cli report --spine-renderer-path "C:\\path\\to\\SpineViewerCLI.exe"
 
   # Generate report with spine2dump as the render backend
-  bamt-cli report --spine-renderer spine2dump --spine-viewer-path "C:\\path\\to\\spine2dump.exe"
+  bamt-cli report --spine-renderer spine2dump --spine-renderer-path "C:\\path\\to\\spine2dump.exe"
 
   # Use character name mapping
   bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
@@ -383,7 +383,7 @@ class BatchPreviewTap(BaseTap):
     """Batch-preview命令的参数解析器 - 用于批量渲染Spine预览图。"""
 
     # 基本参数
-    spine_viewer_path: Positional[Path]  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer).
+    spine_renderer_path: Positional[Path]  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe per --spine-renderer).
     spine_renderer: Literal['spine_viewer', 'spine2dump'] = 'spine_viewer'  # Render backend used for Spine preview rendering.
     output_dir: Path = Path('./output/batch_preview/')  # Directory to save preview images.
 

@@ -387,8 +387,8 @@ def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 动画缺失预检（提供渲染工具路径即启用，内部 is_valid() 再校验文件存在）
     anim_check = AnimCheckOptions(
-        enabled=args.spine_viewer_path is not None,
-        backend=get_spine_backend(args.spine_renderer, Path(args.spine_viewer_path)) if args.spine_viewer_path else None,
+        enabled=args.spine_renderer_path is not None,
+        backend=get_spine_backend(args.spine_renderer, Path(args.spine_renderer_path)) if args.spine_renderer_path else None,
     )
 
     progress_callback = lambda current, total, filename: logger.log(
@@ -796,8 +796,8 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
 
     # 验证 Spine 渲染器路径（提供路径即启用渲染）
     backend = None
-    if args.spine_viewer_path:
-        tool_path = Path(args.spine_viewer_path)
+    if args.spine_renderer_path:
+        tool_path = Path(args.spine_renderer_path)
         if not tool_path.exists():
             logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
             return
@@ -815,7 +815,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         output_path=output_path,
         char_map=char_map,
         char_name_field=args.name_field,
-        enable_render=args.spine_viewer_path is not None,
+        enable_render=args.spine_renderer_path is not None,
         backend=backend,
         report_format=args.format,
         log=logger.log,
@@ -836,7 +836,7 @@ def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) ->
     logger.log("--- Start Batch Spine Preview Rendering ---")
 
     # 验证渲染工具路径
-    tool_path = Path(args.spine_viewer_path)
+    tool_path = Path(args.spine_renderer_path)
     if not tool_path.exists():
         logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
         return
