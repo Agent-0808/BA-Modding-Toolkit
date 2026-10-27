@@ -385,10 +385,10 @@ def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
         target_version=args.target_spine_version or None,
     )
 
-    # 动画缺失预检（提供 SpineViewerCLI 路径即启用，内部 is_valid() 再校验文件存在）
+    # 动画缺失预检（提供渲染工具路径即启用，内部 is_valid() 再校验文件存在）
     anim_check = AnimCheckOptions(
         enabled=args.spine_viewer_path is not None,
-        backend=get_spine_backend("spine_viewer", Path(args.spine_viewer_path)) if args.spine_viewer_path else None,
+        backend=get_spine_backend(args.spine_renderer, Path(args.spine_viewer_path)) if args.spine_viewer_path else None,
     )
 
     progress_callback = lambda current, total, filename: logger.log(
@@ -799,9 +799,9 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
     if args.spine_viewer_path:
         tool_path = Path(args.spine_viewer_path)
         if not tool_path.exists():
-            logger.log(f"❌ Error: SpineViewerCLI not found: {tool_path}")
+            logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
             return
-        backend = get_spine_backend("spine_viewer", tool_path)
+        backend = get_spine_backend(args.spine_renderer, tool_path)
         logger.log(f"Spine rendering enabled: {tool_path}")
 
     # 进度回调
@@ -835,12 +835,12 @@ def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) ->
     """处理 'batch-preview' 命令的逻辑。"""
     logger.log("--- Start Batch Spine Preview Rendering ---")
 
-    # 验证 SpineViewerCLI 路径
+    # 验证渲染工具路径
     tool_path = Path(args.spine_viewer_path)
     if not tool_path.exists():
-        logger.log(f"❌ Error: SpineViewerCLI not found: {tool_path}")
+        logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
         return
-    backend = get_spine_backend("spine_viewer", tool_path)
+    backend = get_spine_backend(args.spine_renderer, tool_path)
 
     # 确定游戏目录
     resource_dir = args.resource_dir or get_BA_path(args.region)
