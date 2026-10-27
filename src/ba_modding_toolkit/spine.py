@@ -472,23 +472,24 @@ class SpineViewer:
         self,
         skel_path: Path,
         output_path: Path,
-        atlas_path: Path | None = None,
         animation: str = "Idle_01",
-        skin: str = "",
         render_options: RenderOptions = RENDER_PRESET_HIGH,
         log: LogFunc = no_log,
+        *,
+        skin: str = "",
+        atlas_path: Path | None = None,
     ) -> tuple[bool, str]:
         """
-        渲染 Spine 预览图。
+        渲染 Spine 预览图（与 SpineBackend 协议签名一致，atlas/skin 仅关键字传递）。
 
         Args:
             skel_path: skel 文件路径
             output_path: 输出图片路径
             animation: 动画名称
-            skin: 皮肤名称（空字符串表示默认皮肤）
-            atlas_path: atlas 文件路径（可选）
             render_options: 渲染参数（含输出格式与画质相关参数）
             log: 日志记录函数
+            skin: 皮肤名称（空字符串表示默认皮肤）
+            atlas_path: atlas 文件路径（可选）
 
         Returns:
             tuple[bool, str]: (是否成功, 状态消息)
