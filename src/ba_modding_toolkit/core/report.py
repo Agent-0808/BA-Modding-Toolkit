@@ -7,12 +7,13 @@ from pathlib import Path
 from typing import Literal
 
 from ..bundle import BundleFileInfo, analyze_trailing, analyze_naming
+from ..searching import list_bundle_files
 from ..i18n import t
 from ..models import LogFunc, ProgressCallback
 from ..naming import CharacterInternalIDMap
 from ..spine import RenderOptions, RENDER_PRESET_LOW
 from ..utils import no_log, throttle_progress
-from .preview import render_spine_previews_batch, RENDER_CATEGORIES
+from .preview import render_spine_previews_batch, RENDER_CATEGORIES, RenderTask
 
 
 ReportFormat = Literal['list', 'table']
