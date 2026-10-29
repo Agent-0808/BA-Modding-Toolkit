@@ -258,13 +258,14 @@ class RenderOptions:
     max_resolution: int = 8888
     time: float = 0.0
     quality: int = 100
+    compression: str = "balanced" # PNG 压缩预设（仅 spine2dump 后端使用）
 
 
 # 高画质预设：与旧版默认参数一致（extractor / file_list 交互预览使用）
 RENDER_PRESET_HIGH = RenderOptions()
 
 # 低画质预设：报告生成使用，降低分辨率与质量以减小体积
-RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50)
+RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50, compression="balanced")
 
 # 渲染后端名称（与 config 的 render_backend 取值一致）
 RenderBackendName = Literal["spine_viewer", "spine2dump"]
@@ -667,6 +668,48 @@ class Spine2Dump:
             log(f'  ❌ {t("log.error_detail", error=e)}')
             return False, {}
 
+    @staticmethod
+    def _parse_bounds(output: str) -> tuple[float, float, float, float] | None:
+        """从 inspect 头部信息表解析骨架 bounds (x, y, width, height)，失败返回 None。"""
+        for raw_line in output.splitlines():
+            stripped = raw_line.strip()
+            if not stripped.startswith("│"):
+                continue
+            cells = [cell.strip() for cell in stripped.strip("│").split("│")]
+            if cells and cells[0] == "bounds":
+                try:
+                    values = tuple(float(v) for v in cells[1].split())
+                    if len(values) == 4:
+                        return values[0], values[1], values[2], values[3]
+                except ValueError:
+                    return None
+        return None
+
+    def _resolve_dump_size(self, work_dir: Path, render_options: RenderOptions, log: LogFunc) -> int:
+        """计算 dump 画布尺寸：min(bounds 最长边 * scale, max_resolution)。
+
+        spine2dump 的 --size 会把内容最长边缩放到画布尺寸（可放大可缩小），
+        因此先取骨架自然尺寸，仅在超出 max_resolution 时缩小，保证不放大。
+        bounds 不可用时退回 max_resolution（内容可能被放大）。
+        """
+        max_resolution = max(1, render_options.max_resolution)
+
+        result = subprocess.run(
+            [str(self.tool_path), "inspect", str(work_dir)],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='ignore',
+            creationflags=CREATE_NO_WINDOW,
+        )
+        bounds = self._parse_bounds(result.stdout) if result.returncode == 0 else None
+        if bounds is None:
+            log(f'  ⚠️ {t("log.spine.bounds_unavailable")}')
+            return max_resolution
+
+        natural = max(bounds[2], bounds[3]) * render_options.scale
+        return max(1, round(min(natural, max_resolution)))
+
     def render(
         self,
         skel_path: Path,
@@ -677,8 +720,9 @@ class Spine2Dump:
     ) -> tuple[bool, str]:
         """渲染单帧预览图并移动到 output_path（透明背景 PNG）。
 
-        RenderOptions 仅使用 max_resolution（映射为正方形画布 + --trim），
-        fmt/quality/margin/background/time/skin 在该后端下静默忽略。
+        RenderOptions 仅使用 max_resolution（尺寸上限）、scale（对自然尺寸的倍率）
+        与 compression（PNG 压缩预设），实际画布 = min(bounds 最长边 * scale, max_resolution)，
+        配合 --trim 裁掉透明边；fmt/quality/margin/background/time/skin 在该后端下静默忽略。
         """
         if not skel_path.exists():
             msg = t("log.file.not_exist", path=skel_path)
@@ -691,11 +735,11 @@ class Spine2Dump:
             return False, msg
 
         try:
-            size = max(1, render_options.max_resolution)
             log(f'  > {t("log.spine.rendering_preview", name=skel_path.name, anim=animation)}')
 
             with self._isolate_assets(skel_path, log) as work_dir:
                 dump_dir = work_dir / "dump"
+                size = self._resolve_dump_size(work_dir, render_options, log)
                 result = subprocess.run(
                     [
                         str(self.tool_path),
@@ -708,7 +752,7 @@ class Spine2Dump:
                         "--fps", "1",
                         "--size", str(size),
                         "--trim",
-                        "--compression", "fast",
+                        "--compression", render_options.compression,
                     ],
                     capture_output=True,
                     text=True,
