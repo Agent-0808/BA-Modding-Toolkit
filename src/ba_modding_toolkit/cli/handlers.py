@@ -22,7 +22,7 @@ from ..bundle import analyze_trailing, find_textasset_companions
 from ..core.report import generate_mod_report, RENDER_CATEGORIES
 from ..core.preview import render_all_spine_previews
 from ..core.introspect import inspect_bundles, trace_bundle
-from ..spine import get_spine_backend, RENDER_PRESET_LOW, RENDER_PRESET_HIGH
+from ..spine import resolve_spine_backend, RENDER_PRESET_LOW, RENDER_PRESET_HIGH
 from ..utils.paths import EXE_DIR
 
 class Logger:
@@ -386,10 +386,16 @@ def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     # 动画缺失预检（提供渲染工具路径即启用，内部 is_valid() 再校验文件存在）
-    anim_check = AnimCheckOptions(
-        enabled=args.spine_renderer_path is not None,
-        backend=get_spine_backend(args.spine_renderer, Path(args.spine_renderer_path)) if args.spine_renderer_path else None,
-    )
+    anim_check = AnimCheckOptions(enabled=False, backend=None)
+    if args.spine_renderer_path:
+        try:
+            anim_check = AnimCheckOptions(
+                enabled=True,
+                backend=resolve_spine_backend(args.spine_renderer, Path(args.spine_renderer_path)),
+            )
+        except ValueError as e:
+            logger.log(f"❌ Error: {e}")
+            return
 
     progress_callback = lambda current, total, filename: logger.log(
         f"[{current}/{total}] Installing: {filename}"
@@ -801,7 +807,11 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         if not tool_path.exists():
             logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
             return
-        backend = get_spine_backend(args.spine_renderer, tool_path)
+        try:
+            backend = resolve_spine_backend(args.spine_renderer, tool_path)
+        except ValueError as e:
+            logger.log(f"❌ Error: {e}")
+            return
         logger.log(f"Spine rendering enabled: {tool_path}")
 
     # 进度回调
@@ -840,7 +850,11 @@ def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) ->
     if not tool_path.exists():
         logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
         return
-    backend = get_spine_backend(args.spine_renderer, tool_path)
+    try:
+        backend = resolve_spine_backend(args.spine_renderer, tool_path)
+    except ValueError as e:
+        logger.log(f"❌ Error: {e}")
+        return
 
     # 确定游戏目录
     resource_dir = args.resource_dir or get_BA_path(args.region)

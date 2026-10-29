@@ -267,8 +267,9 @@ RENDER_PRESET_HIGH = RenderOptions()
 # 低画质预设：报告生成使用，降低分辨率与质量以减小体积
 RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50, compression="balanced")
 
-# 渲染后端名称（与 config 的 render_backend 取值一致）
+# 渲染后端名称（与 config 的 render_backend 取值一致）；CLI 参数额外支持 "auto" 按文件名推断
 RenderBackendName = Literal["spine_viewer", "spine2dump"]
+RenderBackendNameOrAuto = Literal["auto", "spine_viewer", "spine2dump"]
 
 # 1x1 透明 PNG：为 spine2dump 的 atlas 页面占位（页面内容不参与列表解析）
 _TINY_PNG_BYTES = base64.b64decode(
@@ -816,6 +817,39 @@ def get_spine_backend(backend: RenderBackendName, tool_path: Path) -> SpineBacke
     if backend == "spine2dump":
         return Spine2Dump(tool_path)
     return SpineViewer(tool_path)
+
+
+def resolve_spine_backend(backend: RenderBackendNameOrAuto, tool_path: Path) -> SpineBackend:
+    """解析渲染后端并创建实例。
+
+    按可执行文件名识别后端特征：含 "spine2dump" → spine2dump，含 "spineviewer"
+    或 "spine_viewer" → spine_viewer。无法识别时抛出 ValueError；
+    显式指定且与识别结果不一致时同样抛出 ValueError，
+    避免后端与工具错配直到运行时才暴露。
+    """
+    stem = tool_path.stem.lower()
+    detected: RenderBackendName | None
+    if "spine2dump" in stem:
+        detected = "spine2dump"
+    elif "spineviewer" in stem or "spine_viewer" in stem:
+        detected = "spine_viewer"
+    else:
+        detected = None
+
+    if detected is None:
+        raise ValueError(
+            f"Cannot infer render backend from executable name '{tool_path.name}'. "
+            "The executable should be named like spine2dump.exe or SpineViewerCLI.exe, "
+            "or rename it to include 'spine2dump' / 'spineviewer'."
+        )
+    if backend == "auto":
+        backend = detected
+    elif backend != detected:
+        raise ValueError(
+            f"Renderer tool mismatch: '{tool_path.name}' does not look like a {backend} executable. "
+            "Check the --spine-renderer / --spine-renderer-path combination."
+        )
+    return get_spine_backend(backend, tool_path)
 
 
 def atlas_downgrade(
