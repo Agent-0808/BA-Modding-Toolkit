@@ -1,5 +1,6 @@
 # spine.py
 
+import os
 import re
 import shutil
 import subprocess
@@ -463,6 +464,10 @@ class SpineViewer:
             return False, msg
 
         try:
+            # 强制 .NET 运行时使用不变区域性，避免系统区域设置（如小数点为逗号）导致浮点参数解析失败
+            env = os.environ.copy()
+            env["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "1"
+
             command = [
                 str(viewer_path),
                 "export",
@@ -494,6 +499,7 @@ class SpineViewer:
                 encoding='utf-8',
                 errors='ignore',
                 creationflags=CREATE_NO_WINDOW,
+                # env=env,
             )
 
             if result.returncode != 0:
