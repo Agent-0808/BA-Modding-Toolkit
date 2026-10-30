@@ -499,7 +499,7 @@ class SpineViewer:
                 encoding='utf-8',
                 errors='ignore',
                 creationflags=CREATE_NO_WINDOW,
-                # env=env,
+                env=env,
             )
 
             if result.returncode != 0:
