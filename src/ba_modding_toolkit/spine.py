@@ -250,22 +250,29 @@ class SkelConverter:
 
 @dataclass(frozen=True)
 class RenderOptions:
-    """SpineViewerCLI 导出预览图的渲染参数。"""
-    fmt: str = "png"
+    """Spine 渲染参数（双后端共用，各后端按需取用，未用字段静默忽略）。"""
+
+    # 共用：两后端均使用
     scale: float = 1.0
+    max_resolution: int = 2048
+
+    # 仅 SpineViewer 后端使用
+    fmt: str = "png"
     background: str = "#00000000"
     margin: int = 0
-    max_resolution: int = 8888
     time: float = 0.0
     quality: int = 100
-    compression: str = "balanced" # PNG 压缩预设（仅 spine2dump 后端使用）
+
+    # 仅 Spine2Dump 后端使用
+    compression: str = "balanced" # PNG 压缩预设
+    fallback_size: int = 1024 # 画布回退尺寸（骨架 bounds 不可用时使用，实际取 min(fallback_size, max_resolution)）
 
 
 # 高画质预设：与旧版默认参数一致（extractor / file_list 交互预览使用）
-RENDER_PRESET_HIGH = RenderOptions()
+RENDER_PRESET_HIGH = RenderOptions(max_resolution=8888, fallback_size=2048)
 
 # 低画质预设：报告生成使用，降低分辨率与质量以减小体积
-RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50, compression="balanced")
+RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50)
 
 # 渲染后端名称（与 config 的 render_backend 取值一致）；CLI 参数额外支持 "auto" 按文件名推断
 RenderBackendName = Literal["spine_viewer", "spine2dump"]
@@ -691,7 +698,8 @@ class Spine2Dump:
 
         spine2dump 的 --size 会把内容最长边缩放到画布尺寸（可放大可缩小），
         因此先取骨架自然尺寸，仅在超出 max_resolution 时缩小，保证不放大。
-        bounds 不可用时退回 max_resolution（内容可能被放大）。
+        bounds 不可用（含宽高 <= 0 的退化 bounds）时回退 fallback_size
+        （与 max_resolution 取小，内容可能被放大到回退尺寸）。
         """
         max_resolution = max(1, render_options.max_resolution)
 
@@ -704,9 +712,10 @@ class Spine2Dump:
             creationflags=CREATE_NO_WINDOW,
         )
         bounds = self._parse_bounds(result.stdout) if result.returncode == 0 else None
-        if bounds is None:
+        # 宽或高 <= 0 的退化 bounds（如 Spine 导出未含 setup bounds 的骨架）同样不可用
+        if bounds is None or bounds[2] <= 0 or bounds[3] <= 0:
             log(f'  ⚠️ {t("log.spine.bounds_unavailable")}')
-            return max_resolution
+            return max(1, min(render_options.fallback_size, max_resolution))
 
         natural = max(bounds[2], bounds[3]) * render_options.scale
         return max(1, round(min(natural, max_resolution)))
@@ -721,9 +730,10 @@ class Spine2Dump:
     ) -> tuple[bool, str]:
         """渲染单帧预览图并移动到 output_path（透明背景 PNG）。
 
-        RenderOptions 仅使用 max_resolution（尺寸上限）、scale（对自然尺寸的倍率）
-        与 compression（PNG 压缩预设），实际画布 = min(bounds 最长边 * scale, max_resolution)，
-        配合 --trim 裁掉透明边；fmt/quality/margin/background/time/skin 在该后端下静默忽略。
+        RenderOptions 仅使用 max_resolution（尺寸上限）、scale（对自然尺寸的倍率）、
+        compression（PNG 压缩预设）与 fallback_size（bounds 不可用时的画布回退尺寸），
+        实际画布 = min(bounds 最长边 * scale, max_resolution)，配合 --trim 裁掉透明边；
+        fmt/quality/margin/background/time/skin 在该后端下静默忽略。
         """
         if not skel_path.exists():
             msg = t("log.file.not_exist", path=skel_path)
