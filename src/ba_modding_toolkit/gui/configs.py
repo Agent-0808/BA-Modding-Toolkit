@@ -94,7 +94,9 @@ class ConfigMixin:
     scale_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="enable_spine_downgrade_var")]
 
     # SpineViewer
+    render_backend_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "spine_viewer")]
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
+    spine2dump_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
     check_animations_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", False, depends_on="spine_viewer_path_var")]
     preview_thumbnail_size_var: Annotated[tk.IntVar, ConfigMeta("SpineViewer", 768)]
     mod_install_render_preview_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", True, depends_on="spine_viewer_path_var")]

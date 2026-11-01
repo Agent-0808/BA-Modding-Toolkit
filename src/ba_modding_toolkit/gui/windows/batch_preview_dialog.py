@@ -121,11 +121,11 @@ class BatchRenderDialog(StoppableDialog):
         )
         render_btn.pack(anchor=tk.CENTER)
 
-    def _show_spine_viewer_not_configured(self):
-        """显示 SpineViewer 未配置的提示"""
+    def _show_render_backend_not_configured(self):
+        """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),
-            t("message.3rd_party.spine_viewer_required")
+            self.app.get_render_backend_required_message()
         )
 
     def _update_progress(self, current: int, total: int, filename: str):
@@ -149,15 +149,15 @@ class BatchRenderDialog(StoppableDialog):
         """开始批量渲染"""
 
 
-        # 检查 SpineViewer
-        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-        if not viewer_path_str:
-            self._show_spine_viewer_not_configured()
+        # 检查渲染后端
+        tool_path = self.app.get_render_backend_path()
+        if tool_path is None:
+            self._show_render_backend_not_configured()
             return
-        viewer_path = Path(viewer_path_str)
-        if not viewer_path.exists():
-            messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+        if not tool_path.exists():
+            messagebox.showerror(t("common.error"), t("message.file_not_found", path=str(tool_path)))
             return
+        backend = self.app.get_render_backend()
 
         # 输出目录（固定 output/batch_preview/，文件名 = prefix，重复渲染自动覆盖）
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_BATCH_PREVIEW)
@@ -187,7 +187,7 @@ class BatchRenderDialog(StoppableDialog):
             rendered, total = render_all_spine_previews(
                 game_dir=Path(self.game_dir_var.get()),
                 output_dir=output_dir,
-                viewer_path=viewer_path,
+                backend=backend,
                 render_options=render_options,
                 render_categories=render_categories,
                 log=self.app.logger.log,

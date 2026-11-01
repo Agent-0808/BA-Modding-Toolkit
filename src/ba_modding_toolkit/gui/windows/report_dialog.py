@@ -52,7 +52,7 @@ class ReportDialog(StoppableDialog):
             variable=self.app.enable_spine_preview_var,
             tooltip=t("option.enable_spine_preview_info"),
             app=self.app,
-            on_click_disabled=self._show_spine_viewer_not_configured
+            on_click_disabled=self._show_render_backend_not_configured
         )
 
         # 预览渲染预设选择
@@ -103,11 +103,11 @@ class ReportDialog(StoppableDialog):
         )
         generate_btn.pack(anchor=tk.CENTER)
 
-    def _show_spine_viewer_not_configured(self):
-        """显示 SpineViewer 未配置的提示"""
+    def _show_render_backend_not_configured(self):
+        """显示渲染后端工具未配置的提示"""
         messagebox.showwarning(
             t("common.warning"),
-            t("message.3rd_party.spine_viewer_required")
+            self.app.get_render_backend_required_message()
         )
 
     def _update_progress(self, current: int, total: int, filename: str):
@@ -141,18 +141,18 @@ class ReportDialog(StoppableDialog):
             messagebox.showerror(t("common.error"), t("message.dir_not_found", path=game_dir))
             return
 
-        # 检查 SpineViewer（如果启用渲染）
-        viewer_path = None
+        # 检查渲染后端（如果启用渲染）
+        backend = None
         enable_render = self.app.enable_spine_preview_var.get()
         if enable_render:
-            viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-            if not viewer_path_str:
-                messagebox.showerror(t("common.error"), t("message.3rd_party.spine_viewer_required"))
+            tool_path = self.app.get_render_backend_path()
+            if tool_path is None:
+                messagebox.showerror(t("common.error"), self.app.get_render_backend_required_message())
                 return
-            viewer_path = Path(viewer_path_str)
-            if not viewer_path.exists():
-                messagebox.showerror(t("common.error"), t("message.file_not_found", path=viewer_path_str))
+            if not tool_path.exists():
+                messagebox.showerror(t("common.error"), t("message.file_not_found", path=str(tool_path)))
                 return
+            backend = self.app.get_render_backend()
 
         # 输出目录
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_REPORTS)
@@ -175,7 +175,7 @@ class ReportDialog(StoppableDialog):
                 char_map=self.app.char_map,
                 char_name_field=self.app.character_name_field_var.get(),
                 enable_render=enable_render,
-                viewer_path=viewer_path,
+                backend=backend,
                 report_format=self.app.report_format_var.get(),
                 render_options=render_options,
                 log=self.app.logger.log,

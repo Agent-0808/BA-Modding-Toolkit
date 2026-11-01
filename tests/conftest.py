@@ -222,6 +222,10 @@ PATHS_FILE = EXTERNAL_TOOLS_DIR / "paths.toml"
 
 CONVERTER_EXE_NAMES = ("SpineSkeletonDataConverter.exe",)
 VIEWER_EXE_NAMES = ("SpineViewerCLI.exe",)
+SPINE2DUMP_EXE_NAMES = ("spine2dump.exe",)
+
+# 仓库内置的 spine2dump（Addons/ 被 gitignore，本地存在时作为兜底来源）
+BUNDLED_SPINE2DUMP_DIR = Path(__file__).parent.parent / "Addons" / "spine2dump"
 
 # Spine 版本自举基准：游戏运行时 skel 为 4.2.x，本地编辑通常为 3.8.x
 GAME_SPINE_VERSION = "4.2.33"
@@ -291,6 +295,26 @@ def spine_viewer_path() -> Path:
     if path is None:
         pytest.skip("未找到 SpineViewerCLI（本地编辑 paths.toml 或在 CI 设置 SPINE_VIEWER_URL），跳过外部工具测试")
     return path
+
+
+@pytest.fixture(scope="session")
+def spine2dump_path() -> Path:
+    """spine2dump exe 路径；paths.toml / CI 约定目录 / 仓库内置 Addons 均未命中则跳过测试"""
+    path = resolve_external_tool("spine2dump", SPINE2DUMP_EXE_NAMES)
+    if path is None:
+        path = _find_exe_in_dir(BUNDLED_SPINE2DUMP_DIR, SPINE2DUMP_EXE_NAMES, max_depth=3)
+    if path is None:
+        pytest.skip("未找到 spine2dump（本地编辑 paths.toml 或放入仓库内置 Addons/spine2dump），跳过测试")
+    return path
+
+
+@pytest.fixture(scope="session")
+def large_skel_path() -> Path:
+    """ch0309_home 大型素材（4 页 atlas / 4.2.33 skel）；数据不入 git，缺失时跳过"""
+    skel = SAMPLE_DIR / "ch0309_home" / "assets" / "CH0309_home.skel"
+    if not skel.is_file():
+        pytest.skip("缺少大型测试素材 ch0309_home（未放入 tests/assets/sample）")
+    return skel
 
 
 def bootstrap_spine_assets(

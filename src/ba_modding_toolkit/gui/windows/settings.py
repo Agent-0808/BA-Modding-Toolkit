@@ -38,7 +38,7 @@ class SettingsDialog(tb.Toplevel):
         self._init_bacii_settings()
         self._init_asset_options()
         self._init_skel_converter_settings()
-        self._init_spine_viewer_settings()
+        self._init_render_backend_settings()
         self._init_adb_settings()
 
         self._init_footer_buttons()
@@ -561,9 +561,21 @@ class SettingsDialog(tb.Toplevel):
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
-    def _init_spine_viewer_settings(self):
-        """初始化 SpineViewer 预览设置"""
-        section = self._create_section(t("ui.settings.group_spine_viewer"))
+    def _init_render_backend_settings(self):
+        """初始化渲染后端设置"""
+        section = self._create_section(t("ui.settings.group_render_backend"))
+
+        # 渲染后端选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("option.render_backend"),
+            text_var=self.app.render_backend_var,
+            values=[
+                ("spine_viewer", t("option.render_backend_spine_viewer")),
+                ("spine2dump", t("option.render_backend_spine2dump")),
+            ],
+            tooltip=t("option.render_backend_info")
+        )
 
         # SpineViewerCLI 路径设置
         SettingRow.create_path_selector(
@@ -576,13 +588,24 @@ class SettingsDialog(tb.Toplevel):
             status_check=lambda: Path(self.app.spine_viewer_path_var.get()).is_file()
         )
 
+        # spine2dump 路径设置
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.spine2dump_path"),
+            path_var=self.app.spine2dump_path_var,
+            select_cmd=self.select_spine2dump_path,
+            tooltip=t("option.spine2dump_path_info"),
+            download_guide_cmd=self.app.show_spine2dump_download_guide,
+            status_check=lambda: Path(self.app.spine2dump_path_var.get()).is_file()
+        )
+
         SettingRow.create_switch(
             section,
             label=t("option.check_animations"),
             variable=self.app.check_animations_var,
             tooltip=t("option.check_animations_info"),
             app=self.app,
-            on_click_disabled=self.app.show_spine_viewer_not_configured
+            on_click_disabled=self.app.show_render_backend_not_configured
         )
 
         # 预览图缩略图尺寸（预览窗口中缩略图的最大边长）
@@ -699,6 +722,19 @@ class SettingsDialog(tb.Toplevel):
             callback=lambda path: (
                 self.app.spine_viewer_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.spine_viewer_set", path=path))
+            ),
+            parent=self,
+            log=self.app.logger.log
+        )
+
+    def select_spine2dump_path(self):
+        """选择 spine2dump 程序路径"""
+        select_file(
+            title=t("ui.dialog.select", type=t("file_type.spine2dump")),
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
+            callback=lambda path: (
+                self.app.spine2dump_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.spine2dump_set", path=path))
             ),
             parent=self,
             log=self.app.logger.log

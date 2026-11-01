@@ -925,22 +925,22 @@ class FileListWindow(StoppableDialog):
         # ADB 模式下先缓存文件
         items = self._ensure_items_local(items)
 
-        # 检查 SpineViewerCLI 路径
-        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-        if not viewer_path_str:
+        # 检查渲染后端工具路径
+        tool_path = self.app.get_render_backend_path()
+        if tool_path is None:
             messagebox.showwarning(
                 t("common.warning"),
-                t("message.3rd_party.spine_viewer_required")
+                self.app.get_render_backend_required_message()
             )
             return
 
-        viewer_path = Path(viewer_path_str)
-        if not viewer_path.exists():
+        if not tool_path.exists():
             messagebox.showwarning(
                 t("common.warning"),
-                t("log.file.not_exist", path=viewer_path)
+                t("log.file.not_exist", path=tool_path)
             )
             return
+        backend = self.app.get_render_backend()
 
         # 获取输出目录
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_PREVIEW)
@@ -959,7 +959,7 @@ class FileListWindow(StoppableDialog):
             success, message, rendered_paths = render_spine_preview_from_bundle(
                 bundle_path=bundle_paths,
                 output_dir=output_dir,
-                viewer_path=viewer_path,
+                backend=backend,
                 log=self.app.logger.log
             )
             if not self.should_stop() and self.winfo_exists():

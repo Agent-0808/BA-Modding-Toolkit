@@ -30,7 +30,7 @@ class TestSpineViewer:
         """query 返回 (True, dict)，animations 非空且为列表"""
         skel_path = _require_skel(sample_case)
 
-        ok, info = SpineViewer.query(skel_path, spine_viewer_path)
+        ok, info = SpineViewer(spine_viewer_path).query(skel_path)
         assert ok, info
         animations = info.get("animations")
         assert isinstance(animations, list)
@@ -47,7 +47,7 @@ class TestSpineViewer:
         skel_path = _require_skel(sample_case)
         out_png = tmp_path / "preview.png"
 
-        ok, msg = SpineViewer.render_preview(skel_path, out_png, spine_viewer_path)
+        ok, msg = SpineViewer(spine_viewer_path).render_preview(skel_path, out_png)
         assert ok, msg
         assert out_png.exists()
 

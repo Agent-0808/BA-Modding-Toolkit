@@ -8,6 +8,7 @@ from typing import Literal
 
 from ..models import ReplaceAssetType, CompressionType, MatchStrategy
 from ..core.report import ReportFormat
+from ..spine import RenderBackendNameOrAuto
 from ..utils import BARegion
 from ..naming import CharacterInternalIDMap
 
@@ -246,7 +247,8 @@ class InstallTap(BaseTap):
     # 安装行为参数
     strategy: MatchStrategy = 'cont_name_type'  # Match strategy for update-type installs.
     no_backup: bool = False  # Do not create a backup (.backup) before replacing files in the game directory.
-    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe. Enables missing-animation pre-check when provided (no preview rendering).
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for the missing-animation pre-check ("auto" infers from the executable name).
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe). Enables missing-animation pre-check when provided (no preview rendering).
     max_workers: int = 1  # Number of parallel worker threads for group installs (1 = sequential).
     yes: bool = False  # Install all installable groups without interactive confirmation.
 
@@ -276,7 +278,7 @@ Examples:
   bamt-cli install "mod.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
 
   # Enable missing-animation pre-check (no preview rendering)
-  bamt-cli install "mod.bundle" --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+  bamt-cli install "mod.bundle" --spine-renderer-path "C:\\path\\to\\SpineViewerCLI.exe"
 '''
 
 
@@ -338,7 +340,8 @@ class ReportTap(BaseTap):
     region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # Spine渲染参数
-    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe. Spine preview rendering is enabled when provided.
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for Spine preview rendering ("auto" infers from the executable name).
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe). Spine preview rendering is enabled when provided.
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
@@ -364,7 +367,10 @@ Examples:
   bamt-cli report --format table
 
   # Generate report with Spine preview images
-  bamt-cli report --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+  bamt-cli report --spine-renderer-path "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Render with spine2dump (backend is auto-inferred from the executable name)
+  bamt-cli report --spine-renderer-path "C:\\path\\to\\spine2dump.exe"
 
   # Use character name mapping
   bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
@@ -378,7 +384,8 @@ class BatchPreviewTap(BaseTap):
     """Batch-preview命令的参数解析器 - 用于批量渲染Spine预览图。"""
 
     # 基本参数
-    spine_viewer_path: Positional[Path]  # Path to SpineViewerCLI.exe.
+    spine_renderer_path: Positional[Path]  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe).
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for Spine preview rendering ("auto" infers from the executable name).
     output_dir: Path = Path('./output/batch_preview/')  # Directory to save preview images.
 
     # 搜索目录参数
@@ -400,6 +407,9 @@ Note: This command renders ALL Spine resources (not limited to modded files),
 Examples:
   # Render previews with auto-detected game directory
   bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Render with spine2dump backend
+  bamt-cli batch-preview "C:\\path\\to\\spine2dump.exe"
 
   # Specify game resource directory and high quality preset
   bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --resource-dir "C:\\game\\resources" --preset high
