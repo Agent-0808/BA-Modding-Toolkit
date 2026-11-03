@@ -7,11 +7,19 @@ requires-python = ">=3.11"
 dependencies = [
     "pillow>=10.4.0",
     "spineatlas>=1.0.13",
-    "tkinterdnd2>=0.4.3",
     "toml>=0.10.2",
-    "ttkbootstrap>=1.10.1",
-    "typed-argument-parser>=1.12.0",
     "unitypy==1.23.0",
+]
+
+[project.optional-dependencies]
+# GUI dependencies
+gui = [
+    "tkinterdnd2>=0.4.3",
+    "ttkbootstrap>=1.10.1",
+]
+# CLI dependencies
+cli = [
+    "typed-argument-parser>=1.12.0",
 ]
 
 [build-system]
@@ -20,6 +28,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+ba_modding_toolkit = ["locales/*.json", "py.typed"]
 
 [tool.uv.sources]
 spineatlas = { git = "https://github.com/Agent-0808/SpineAtlas.git", rev = "fix/bounds-not-first" }
@@ -31,4 +42,7 @@ bamt-cli = "ba_modding_toolkit.cli.main:main"
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "tkinterdnd2>=0.4.3",
+    "ttkbootstrap>=1.10.1",
+    "typed-argument-parser>=1.12.0",
 ]

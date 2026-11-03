@@ -54,31 +54,46 @@ source = { editable = "." }
 dependencies = [
     { name = "pillow" },
     { name = "spineatlas" },
-    { name = "tkinterdnd2" },
     { name = "toml" },
-    { name = "ttkbootstrap" },
-    { name = "typed-argument-parser" },
     { name = "unitypy" },
+]
+
+[package.optional-dependencies]
+cli = [
+    { name = "typed-argument-parser" },
+]
+gui = [
+    { name = "tkinterdnd2" },
+    { name = "ttkbootstrap" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "tkinterdnd2" },
+    { name = "ttkbootstrap" },
+    { name = "typed-argument-parser" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pillow", specifier = ">=10.4.0" },
     { name = "spineatlas", git = "https://github.com/Agent-0808/SpineAtlas.git?rev=fix%2Fbounds-not-first" },
-    { name = "tkinterdnd2", specifier = ">=0.4.3" },
+    { name = "tkinterdnd2", marker = "extra == 'gui'", specifier = ">=0.4.3" },
     { name = "toml", specifier = ">=0.10.2" },
-    { name = "ttkbootstrap", specifier = ">=1.10.1" },
-    { name = "typed-argument-parser", specifier = ">=1.12.0" },
+    { name = "ttkbootstrap", marker = "extra == 'gui'", specifier = ">=1.10.1" },
+    { name = "typed-argument-parser", marker = "extra == 'cli'", specifier = ">=1.12.0" },
     { name = "unitypy", specifier = "==1.23.0" },
 ]
+provides-extras = ["gui", "cli"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.0.0" }]
+dev = [
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "tkinterdnd2", specifier = ">=0.4.3" },
+    { name = "ttkbootstrap", specifier = ">=1.10.1" },
+    { name = "typed-argument-parser", specifier = ">=1.12.0" },
+]
 
 [[package]]
 name = "brotli"
