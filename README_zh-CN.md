@@ -76,7 +76,7 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
 - 如果您想要更新的Mod制作于 2025 年及之后，则其已经使用了 Spine 4 格式，无需配置该选项也可正常更新。
 
-### Spine 预览工具
+### SpineViewer
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
@@ -86,6 +86,16 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 在“资源提取”功能中，可选在解包之后渲染预览图。
 - 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
 - 可用于检测 `.skel` 动画列表的区别，在“Mod 更新”与“资源打包”功能中使用。
+
+### Spine2Dump
+
+**[Deathemonic/Spine2Dump](https://github.com/Deathemonic/Spine2Dump)**
+
+该工具同样可以解析与渲染 Spine 的 `.skel` 动画文件，与上一节的 SpineViewer 二者二选一即可，均可在设置界面配置使用。
+
+- 在设置界面将“渲染后端”选择为 Spine2Dump，并配置 `spine2dump.exe` 程序的路径。
+- 实测在批量渲染时速度更快，但输出的预览图尺寸可能与 SpineViewer 不完全一致，且难以控制。
+- 目前实测仅支持 Spine 4.x 格式的 `.skel` 文件；Spine 3.8 文件请使用 SpineViewer。
 
 ### ADB(Android Debug Bridge)
 
@@ -169,9 +179,6 @@ cd BA-Modding-Toolkit
 python -m pip install uv
 uv sync
 uv run bamt
-# 或者使用传统方式安装依赖
-python -m pip install .
-python -m ba_modding_toolkit
 ```
 
 作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
@@ -203,15 +210,30 @@ BA-Modding-Toolkit/
 ├── src/ba_modding_toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # 程序入口
-│ ├── core.py        # 核心处理逻辑
-│ ├── searching.py   # 搜索功能逻辑
+│ ├── asset.py       # Bundle 资产相关操作
 │ ├── bundle.py      # Bundle 类
+│ ├── searching.py   # 搜索功能逻辑
 │ ├── spine.py       # Spine 相关工具
-│ ├── report.py      # 报告生成工具
 │ ├── naming.py      # 文件名处理逻辑
+│ ├── references.py  # 跨 Bundle 指针解析
 │ ├── models.py      # 数据模型类
 │ ├── i18n.py        # 国际化功能相关
-│ ├── utils.py       # 工具类和辅助函数
+│ ├── core/          # 核心处理逻辑包
+│ │ ├── __init__.py
+│ │ ├── extraction.py   # 资源提取
+│ │ ├── introspect.py   # Bundle 内省与只读诊断
+│ │ ├── mod_install.py  # Mod 安装
+│ │ ├── mod_update.py   # Mod 更新
+│ │ ├── packing.py      # 资源打包
+│ │ ├── preview.py      # 预览渲染
+│ │ └── report.py       # 报告生成
+│ ├── utils/         # 工具类和辅助函数包
+│ │ ├── __init__.py
+│ │ ├── about.py     # 程序版本信息与环境诊断
+│ │ ├── common.py    # 通用工具
+│ │ ├── crc.py       # CRC 校验值计算与修正
+│ │ ├── image.py     # 图像处理
+│ │ └── paths.py     # 路径处理
 │ ├── adb/           # ADB 相关模块
 │ ├── cli/           # 命令行接口子程序
 │ │ ├── __main__.py     # CLI 主入口
@@ -225,24 +247,8 @@ BA-Modding-Toolkit/
 │ │ ├── components.py   # UI 组件、主题、日志
 │ │ ├── configs.py      # 配置项定义
 │ │ ├── utils.py        # UI 相关工具函数
-│ │ ├── windows/        # 独立窗口
-│ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py           # ADB 浏览器窗口
-│ │ │ ├── settings.py              # 设置页 
-│ │ │ ├── abnormal_check_dialog.py # 不正常的用户端检查对话框
-│ │ │ ├── report_dialog.py         # 报告工具对话框
-│ │ │ ├── backup_dialog.py         # 备份工具对话框
-│ │ │ └── file_list_window.py      # 文件列表窗口
+│ │ ├── windows/        # 独立窗口与对话框
 │ │ └── tabs/           # 功能标签页
-│ │   ├── __init__.py
-│ │   ├── base_tab.py              # TabFrame 基类
-│ │   ├── mod_update_tab.py        # Mod 更新标签页
-│ │   ├── batch_update_tab.py      # 批量更新标签页
-│ │   ├── crc_tool_tab.py          # CRC 工具标签页
-│ │   ├── asset_packer_tab.py      # 资源打包标签页
-│ │   ├── asset_extractor_tab.py   # 资源提取标签页
-│ │   ├── adb_push_tab.py          # ADB 推送标签页
-│ │   └── tools_tab.py             # 工具标签页
 │ ├── assets/         # 资源文件
 │ └── locales/        # 语言文件
 ├── tests/            # Pytest 测试案例文件夹

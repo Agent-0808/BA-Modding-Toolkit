@@ -76,16 +76,25 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 - Even if `SpineSkeletonDataConverter.exe` is not configured, you can still use this program normally to update Mods that *use Spine files compatible with the current version (4.2.xx)*.
 - If the Mod you want to update was made in 2025 or later, it already uses the Spine 4 format, so you can update it normally without configuring this option.
 
-### Spine Viewer
+### SpineViewer
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
 This tool can parse and render Spine `.skel` animation files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
 
-- Right-click to preview in the "File List" window
 - In the Asset Extractor tab, you can optionally render preview images after extraction.
 - In the "Mod Report" feature, you can optionally render preview images when generating the report.
 - It can be used to detect differences in `.skel` animation lists, and is used in the "Mod Update" and "Asset Packer" features.
+
+### Spine2Dump
+
+**[Deathemonic/Spine2Dump](https://github.com/Deathemonic/Spine2Dump)**
+
+This tool can also parse and render Spine `.skel` animation files; just choose either it or the SpineViewer in the previous section, both are configurable in the Settings interface.
+
+- Select Spine2Dump as the render backend in the Settings interface and configure the path to `spine2dump.exe`.
+- In practice it renders faster in batch processing, but the output preview size may differ from SpineViewer and is hard to control.
+- It only supports Spine 4.x format `.skel` files; Spine 3.8 files should use SpineViewer instead.
 
 ### ADB (Android Debug Bridge)
 
@@ -169,9 +178,6 @@ cd BA-Modding-Toolkit
 python -m pip install uv
 uv sync
 uv run bamt
-# or use legacy way to install dependencies
-python -m pip install .
-python -m ba_modding_toolkit
 ```
 
 The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
@@ -203,15 +209,30 @@ BA-Modding-Toolkit/
 ├── src/ba_modding_toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # Entry point
-│ ├── core.py        # Core processing logic
-│ ├── searching.py   # Searching logic
+│ ├── asset.py       # Bundle asset operations
 │ ├── bundle.py      # Bundle class
+│ ├── searching.py   # Searching logic
 │ ├── spine.py       # Spine-related utilities
-│ ├── report.py      # Mod report generator
 │ ├── naming.py      # File naming logic
+│ ├── references.py  # Cross-bundle pointer parsing
 │ ├── models.py      # Data models
 │ ├── i18n.py        # Internationalization functionality
-│ ├── utils.py       # Utility classes and helper functions
+│ ├── core/          # Core processing logic package
+│ │ ├── __init__.py
+│ │ ├── extraction.py   # Asset extraction
+│ │ ├── introspect.py   # Bundle introspection & read-only diagnostics
+│ │ ├── mod_install.py  # Mod installation
+│ │ ├── mod_update.py   # Mod update
+│ │ ├── packing.py      # Asset packing
+│ │ ├── preview.py      # Preview rendering
+│ │ └── report.py       # Report generation
+│ ├── utils/         # Utility classes and helper functions package
+│ │ ├── __init__.py
+│ │ ├── about.py     # Program version info & environment diagnostics
+│ │ ├── common.py    # Common utilities
+│ │ ├── crc.py       # CRC checksum calculation and correction
+│ │ ├── image.py     # Image processing
+│ │ └── paths.py     # Path handling
 │ ├── adb/           # ADB related modules
 │ ├── cli/           # Command Line Interface (CLI) package
 │ │ ├── __main__.py     # CLI Entry Point
@@ -225,24 +246,8 @@ BA-Modding-Toolkit/
 │ │ ├── components.py   # UI components, themes, logging
 │ │ ├── configs.py      # Configuration definitions
 │ │ ├── utils.py        # UI related utility functions
-│ │ ├── windows/        # Individual windows
-│ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py           # ADB Browser window
-│ │ │ ├── settings.py              # Settings window
-│ │ │ ├── abnormal_check_dialog.py # Abnormal Client Check
-│ │ │ ├── report_dialog.py         # Report Dialog
-│ │ │ ├── backup_dialog.py         # Backup Dialog
-│ │ │ └── file_list_window.py      # File List window
+│ │ ├── windows/        # Individual windows and dialogs
 │ │ └── tabs/           # Feature tabs
-│ │   ├── __init__.py
-│ │   ├── base_tab.py              # TabFrame base class
-│ │   ├── mod_update_tab.py        # Mod Update tab
-│ │   ├── batch_update_tab.py      # Batch Update tab
-│ │   ├── crc_tool_tab.py          # CRC Tool tab
-│ │   ├── asset_packer_tab.py      # Asset Packer tab
-│ │   ├── asset_extractor_tab.py   # Asset Extractor tab
-│ │   ├── adb_push_tab.py          # ADB Push tab
-│ │   └── tools_tab.py             # Tools tab
 │ ├── assets/         # Project assets
 │ └── locales/        # Language files
 ├── tests/            # Pytest test cases folder
