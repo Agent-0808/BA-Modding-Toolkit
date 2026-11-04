@@ -719,8 +719,9 @@ class Spine2Dump:
         bounds = self._parse_bounds(result.stdout) if result.returncode == 0 else None
         # 宽或高 <= 0 的退化 bounds（如 Spine 导出未含 setup bounds 的骨架）同样不可用
         if bounds is None or bounds[2] <= 0 or bounds[3] <= 0:
-            log(f'  ⚠️ {t("log.spine.bounds_unavailable")}')
-            return max(1, min(render_options.fallback_size, max_resolution))
+            size = max(1, min(render_options.fallback_size, max_resolution))
+            log(f'  ⚠️ {t("log.spine.bounds_unavailable", size=size)}')
+            return size
 
         natural = max(bounds[2], bounds[3]) * render_options.scale
         return max(1, round(min(natural, max_resolution)))

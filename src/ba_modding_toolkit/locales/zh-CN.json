@@ -388,7 +388,7 @@
 			"render_success": "预览图渲染成功: {path}",
 			"render_failed": "预览图渲染失败: {error}",
 			"render_file_not_found": "渲染完成但未找到输出文件",
-			"bounds_unavailable": "无法获取骨架 bounds，画布尺寸回退为 max_resolution",
+			"bounds_unavailable": "无法获取骨架 bounds，画布尺寸回退为 {size}",
 			"no_skel_found": "未找到 .skel 文件",
 			"no_animation_found": "未找到可用动画: {name}",
 			"using_first_animation": "未找到 Idle_01 或 Dummy，使用第一个动画: {anim}",

@@ -84,6 +84,8 @@
 		"replace_mesh_info": "3D model files.",
 		"replace_animationclip": "AnimationClip",
 		"replace_animationclip_info": "Animation for models",
+		"replace_font": "Font",
+		"replace_font_info": "Font resource files.\nOnly font data and family name are copied; the target font's metric fields are preserved.",
 		"replace_all": "ALL",
 		"replace_all_info": "Replaces resources of all types.\nExperimental, not recommended.",
 		"spine_conversion": "Enable Spine Version Conversion",
@@ -116,6 +118,12 @@
 		"skel_converter_path_info": "Path to the SpineSkeletonDataConverter.exe file.",
 		"spine_viewer_path": "SpineViewerCLI Path",
 		"spine_viewer_path_info": "Path to the SpineViewerCLI.exe file.",
+		"render_backend": "Render Backend",
+		"render_backend_info": "Program backend used for rendering previews and detecting animation differences.\nspine2dump only supports 4.x skel; for 3.8 (downgraded output), use SpineViewer.",
+		"render_backend_spine_viewer": "SpineViewer",
+		"render_backend_spine2dump": "Spine2Dump",
+		"spine2dump_path": "spine2dump Path",
+		"spine2dump_path_info": "Path to the spine2dump.exe file.",
 		"check_animations": "Detect Animation Differences",
 		"check_animations_info": "When replacing .skel files, detect whether the target contains animations not present in the source\nRequires configuring the SpineViewerCLI path",
 		"mod_install_render_preview": "Render Preview",
@@ -166,7 +174,8 @@
 		"bundle_backup": "AssetBundle Backup",
 		"folder": "Folder",
 		"skel_converter": "SpineSkeletonConverter.exe",
-		"spine_viewer": "SpineViewerCLI.exe"
+		"spine_viewer": "SpineViewerCLI.exe",
+		"spine2dump": "spine2dump.exe"
 	},
 	"message": {
 		"confirm_replace_file": "This operation will overwrite the file: {path}\n\nIt is recommended to ensure that backups are enabled.\nAre you sure you want to continue?",
@@ -271,7 +280,8 @@
 		"3rd_party": {
 			"download_guide": "Download {program}?\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter not configured.\nPlease configure the path in the settings page for SpineSkeletonDataConverter.",
-			"spine_viewer_required": "SpineViewerCLI program not set or path is invalid.\n\nPlease configure the path in the settings page for SpineViewerCLI."
+			"spine_viewer_required": "SpineViewerCLI program not set or path is invalid.\n\nPlease configure the path to SpineViewerCLI in the settings.",
+			"spine2dump_required": "The spine2dump program is not set or the path is invalid.\n\nPlease configure the path to spine2dump in the settings."
 		},
 		"download_confirm": "Download file from:\n{url}\n\nAnd save to: {path}",
 		"adb": {
@@ -351,6 +361,7 @@
 		"spine": {
 			"skel_converter_set": "Skel Converter set: {path}",
 			"spine_viewer_set": "SpineViewerCLI set: {path}",
+			"spine2dump_set": "spine2dump set: {path}",
 			"character_map_set": "Character ID Map set: {path}",
 			"skel_version_detection_failed": "Failed to detect current .skel file version",
 			"converting_skel": "Converting .skel file: {name}",
@@ -377,6 +388,7 @@
 			"render_success": "Preview rendered: {path}",
 			"render_failed": "Preview render failed: {error}",
 			"render_file_not_found": "Preview render completed but output file not found",
+			"bounds_unavailable": "Unable to obtain the skeleton bounds; canvas size falls back to {size}",
 			"no_skel_found": "No .skel file found",
 			"no_animation_found": "No available animations found: {name}",
 			"using_first_animation": "No Idle_01 or Dummy found, using first animation found: {anim}",
@@ -468,6 +480,7 @@
 			"extraction_failed": "Error extracting asset {name}: {error}",
 			"processing_file": "Processing: {name}",
 			"stream_ref_dangling": "Skipping extraction [{name}]: serialized data references a stream data file (.resS) missing from the bundle; replacing would corrupt the asset",
+			"no_image_data": "Skipping extraction [{name}]: the texture has no pixel data (empty StreamData and no inline data); the asset may be corrupt",
 			"stream_ref_export_unsupported": "Skipping export [{name}]: assets with .resS stream references cannot yet be exported as repackable dumps"
 		},
 		"mod_update": {
@@ -604,7 +617,7 @@
 			"group_save": "Save Settings",
 			"group_assets": "Asset Options",
 			"group_skel_converter": "Skel Converter",
-			"group_spine_viewer": "SpineViewer",
+			"group_render_backend": "Spine Rendering Tools",
 			"group_bacii": "Character Names",
 			"group_performance": "Performance",
 			"group_app": "App Settings",
