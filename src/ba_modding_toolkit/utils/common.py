@@ -22,6 +22,21 @@ LogFunc = Callable[[str], None]
 ProgressCallback = Callable[[int, int, str], None]
 
 
+def is_safe_relative_name(name: str) -> bool:
+    """Whether a name read from an untrusted file stays below a folder when joined to it, on every platform.
+
+    Refuses absolute paths, drive and stream prefixes and parent references, including the segments of dots and
+    spaces that Windows normalises into them."""
+    if "\0" in name or ":" in name:
+        return False
+    return all(part.rstrip(". ") for part in name.replace("\\", "/").split("/"))
+
+
+def is_safe_file_name(name: str) -> bool:
+    """``is_safe_relative_name`` for a single file name, without folders."""
+    return "/" not in name and "\\" not in name and is_safe_relative_name(name)
+
+
 def parse_hex_bytes(hex_str: str | None) -> bytes | None:
     """将字符串转换为 bytes
 

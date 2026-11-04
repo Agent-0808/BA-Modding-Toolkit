@@ -5,6 +5,8 @@ from .common import (
     CREATE_NO_WINDOW,
     LogFunc,
     ProgressCallback,
+    is_safe_file_name,
+    is_safe_relative_name,
     no_log,
     parse_hex_bytes,
     throttle_progress,
@@ -23,6 +25,8 @@ from .about import get_environment_info, get_version_info
 __all__ = [
     "CREATE_NO_WINDOW",
     "LogFunc",
+    "is_safe_file_name",
+    "is_safe_relative_name",
     "no_log",
     "parse_hex_bytes",
     "ProgressCallback",

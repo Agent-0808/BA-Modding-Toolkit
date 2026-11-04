@@ -7,7 +7,7 @@ import shutil
 import tempfile
 
 from ..i18n import t
-from ..utils import no_log
+from ..utils import is_safe_file_name, no_log
 from ..spine import (
     SkelConverter, atlas_downgrade, unpack_atlas,
 )
@@ -65,6 +65,10 @@ def extract_assets_from_bundle(
                 resource_name: str = getattr(data, 'm_Name', None)
                 if not resource_name:
                     log(f"  > {t('log.extractor.skipping_unnamed', type=obj.type.name)}")
+                    continue
+                # m_Name comes from the bundle: never let it choose a path outside work_dir
+                if not is_safe_file_name(resource_name):
+                    log(f"  > {t('log.extractor.skipping_unsafe_name', name=repr(resource_name))}")
                     continue
 
                 dest_path = None

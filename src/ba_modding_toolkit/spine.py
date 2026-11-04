@@ -13,7 +13,7 @@ from typing import Iterator, Literal, Protocol
 from SpineAtlas import Atlas, ReadAtlasFile
 
 from .i18n import t
-from .utils import CREATE_NO_WINDOW, LogFunc, no_log
+from .utils import CREATE_NO_WINDOW, LogFunc, is_safe_file_name, is_safe_relative_name, no_log
 from .models import SkelConvertOptions, SkelVersionConflict
 
 
@@ -175,7 +175,6 @@ class SkelConverter:
             log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
             converted = SkelConverter._convert_bytes(
                 skel_bytes=skel_bytes,
-                resource_name=resource_name,
                 converter_path=options.converter_path,
                 target_version=target_version,
                 log=log,
@@ -190,7 +189,6 @@ class SkelConverter:
     @staticmethod
     def _convert_bytes(
         skel_bytes: bytes,
-        resource_name: str,
         converter_path: Path,
         target_version: str,
         log: LogFunc,
@@ -199,7 +197,8 @@ class SkelConverter:
         try:
             # 创建临时文件进行转换
             with tempfile.TemporaryDirectory() as temp_dir:
-                temp_input_path = Path(temp_dir) / resource_name
+                # A fixed name: the asset's own name comes from the mod
+                temp_input_path = Path(temp_dir) / "input.skel"
                 temp_input_path.write_bytes(skel_bytes)
 
                 # 调用 run() 进行转换（原地覆盖）
@@ -499,6 +498,10 @@ class SpineViewer:
             log: 日志记录函数
             skin: 皮肤名称（空字符串表示默认皮肤）
             atlas_path: atlas 文件路径（可选）
+            render_options: 渲染参数（含输出格式与画质相关参数）
+            log: 日志记录函数
+            skin: 皮肤名称（空字符串表示默认皮肤）
+            atlas_path: atlas 文件路径（可选）
 
         Returns:
             tuple[bool, str]: (是否成功, 状态消息)
@@ -602,6 +605,10 @@ class Spine2Dump:
                 try:
                     atlas: Atlas = ReadAtlasFile(str(atlas_path))
                     for tex in atlas.atlas:
+                        # 页名来自 mod 的 atlas 文本：拒绝逃逸出临时目录的路径
+                        if not is_safe_relative_name(tex.png):
+                            log(f'  > {t("log.spine.unsafe_atlas_page", name=repr(tex.png))}')
+                            continue
                         rel_path = Path(tex.png)
                         src_png = atlas_path.parent / rel_path
                         if src_png.is_file():
@@ -868,6 +875,15 @@ def resolve_spine_backend(backend: RenderBackendNameOrAuto, tool_path: Path) -> 
     return get_spine_backend(backend, tool_path)
 
 
+def _require_safe_atlas_names(atlas: Atlas) -> None:
+    """Refuse an atlas whose page or region names would leave the output folder: both come from the mod."""
+    for page in atlas.atlas:
+        unsafe = [] if is_safe_file_name(page.png) else [page.png]
+        unsafe += [frame.name for frame in page.frames if not is_safe_relative_name(frame.name)]
+        if unsafe:
+            raise ValueError(t("log.spine.unsafe_atlas_name", name=repr(unsafe[0])))
+
+
 def atlas_downgrade(
     atlas_path: Path,
     output_dir: Path,
@@ -887,6 +903,7 @@ def atlas_downgrade(
         log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
 
         atlas: Atlas = ReadAtlasFile(str(atlas_path))
+        _require_safe_atlas_names(atlas)
         atlas.version = False
 
         atlas.ReScale()
@@ -924,6 +941,7 @@ def unpack_atlas(
         log(f'    > {t("log.spine.unpacking_atlas", name=atlas_path.name)}')
 
         atlas = ReadAtlasFile(str(atlas_path))
+        _require_safe_atlas_names(atlas)
         atlas.ReScale()
         frames_output_dir = output_dir / "images"
         frames_output_dir.mkdir(parents=True, exist_ok=True)
@@ -1026,7 +1044,7 @@ def normalize_legacy_assets(source_folder_path: Path, bundle_png_names: set[str]
     return final_temp_path
 
 
-def _write_atlas_placeholders(atlas_text: str, dst_dir: Path, skel_stem: str) -> None:
+def _write_atlas_placeholders(atlas_text: str, dst_dir: Path, skel_stem: str, log: LogFunc = no_log) -> None:
     """为 spine2dump 的临时骨架写入 atlas 文本与 1x1 页面占位图。
 
     inspect 要求目录内存在同名 atlas 且 atlas 引用的页面文件存在，
@@ -1037,6 +1055,10 @@ def _write_atlas_placeholders(atlas_text: str, dst_dir: Path, skel_stem: str) ->
         page = line.strip()
         # 页面行无缩进（区域行有缩进），形如 "xxx.png"
         if page.endswith(".png") and not line[:1].isspace():
+            # 页名来自 mod 的 atlas 文本：拒绝逃逸出临时目录的路径
+            if not is_safe_relative_name(page):
+                log(f'  > {t("log.spine.unsafe_atlas_page", name=repr(page))}')
+                continue
             png_path = dst_dir / page
             png_path.parent.mkdir(parents=True, exist_ok=True)
             png_path.write_bytes(_TINY_PNG_BYTES)
@@ -1079,9 +1101,9 @@ def check_skel_animation_diff(
 
             if atlas_text:
                 if src_is_temp:
-                    _write_atlas_placeholders(atlas_text, temp_path, "source")
+                    _write_atlas_placeholders(atlas_text, temp_path, "source", log)
                 if tgt_is_temp:
-                    _write_atlas_placeholders(atlas_text, temp_path, "target")
+                    _write_atlas_placeholders(atlas_text, temp_path, "target", log)
 
             src_ok, src_info = backend.query(src_file, log=log)
             tgt_ok, tgt_info = backend.query(tgt_file, log=log)
