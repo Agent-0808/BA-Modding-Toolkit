@@ -9,6 +9,7 @@ from .common import (
     is_safe_relative_name,
     no_log,
     parse_hex_bytes,
+    run_batch,
     throttle_progress,
     timing,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "no_log",
     "parse_hex_bytes",
     "ProgressCallback",
+    "run_batch",
     "throttle_progress",
     "timing",
     "apply_crc_fix",

@@ -1,13 +1,11 @@
 # core/mod_update.py
 """Mod 更新核心流程（单文件 / 批量）"""
 
-import threading
 import traceback
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..i18n import t
-from ..utils import no_log
+from ..utils import no_log, run_batch
 from ..models import (
     FilePair, ProgressCallback,
     LogFunc, Patch,
@@ -257,91 +255,54 @@ def process_batch_mod_update(
         for skel, anims in diff.items():
             anim_diffs.setdefault(skel, set()).update(anims)
 
+    def worker(mod_path: Path) -> ModUpdateResult:
+        return _process_single_mod_update(
+            mod_path=mod_path,
+            search_paths=search_paths,
+            output_dir=output_dir,
+            asset_types_to_replace=asset_types_to_replace,
+            save_options=save_options,
+            spine_options=spine_options,
+            skip_unchanged=skip_unchanged,
+            match_strategy=match_strategy,
+            anim_check=anim_check,
+            log=log,
+        )
+
+    def collect(mod_path: Path, result: ModUpdateResult | None, exc: Exception | None) -> None:
+        """聚合单个文件的结果（并行路径下由 run_batch 加锁调用）"""
+        nonlocal success_count, fail_count, unchanged_count
+        filename = mod_path.name
+
+        if exc is not None:
+            fail_count += 1
+            failed_tasks.append(f"{filename} - {t('message.process_failed', error=exc)}")
+            log(t("log.batch.process_failed", filename=filename, message=str(exc)))
+            return
+
+        record_diff(result.anim_diffs)
+        if result.success:
+            if result.message == "unchanged":
+                unchanged_count += 1
+            else:
+                success_count += 1
+                file_pairs.extend(result.file_pairs)
+        else:
+            fail_count += 1
+            failed_tasks.append(f"{filename} - {result.message}")
+
     log("\n" + "=" * 50)
     log(f"📦 {t('log.batch.start')}")
     log(f"  > {t('log.summary.total_files', count=total_files)}")
 
-    if max_workers <= 1:
-        # 串行处理
-        for i, old_mod_path in enumerate(mod_file_list):
-            current_progress = i + 1
-            filename = old_mod_path.name
-
-            if progress_callback:
-                progress_callback(current_progress, total_files, filename)
-
-            log("\n" + "=" * 50)
-            log(t("status.processing_batch", current=current_progress, total=total_files, filename=filename))
-
-            result: ModUpdateResult = _process_single_mod_update(
-                mod_path=old_mod_path,
-                search_paths=search_paths,
-                output_dir=output_dir,
-                asset_types_to_replace=asset_types_to_replace,
-                save_options=save_options,
-                spine_options=spine_options,
-                skip_unchanged=skip_unchanged,
-                match_strategy=match_strategy,
-                anim_check=anim_check,
-                log=log,
-            )
-            record_diff(result.anim_diffs)
-
-            if result.success:
-                if result.message == "unchanged":
-                    unchanged_count += 1
-                else:
-                    success_count += 1
-                    file_pairs.extend(result.file_pairs)
-            else:
-                fail_count += 1
-                failed_tasks.append(filename)
-    else:
-        # 并行处理
-        lock = threading.Lock()
-        completed = 0
-
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {}
-            for mod_path in mod_file_list:
-                future = executor.submit(
-                    _process_single_mod_update,
-                    mod_path, search_paths, output_dir,
-                    asset_types_to_replace, save_options,
-                    spine_options, skip_unchanged,
-                    match_strategy, anim_check, log,
-                )
-                futures[future] = mod_path.name
-
-            for future in as_completed(futures):
-                filename = futures[future]
-                try:
-                    result = future.result()
-                except Exception as e:
-                    with lock:
-                        fail_count += 1
-                        failed_tasks.append(f"{filename} - {t('message.process_failed', error=e)}")
-                        completed += 1
-                    log(t("log.batch.process_failed", filename=filename, message=str(e)))
-                else:
-                    with lock:
-                        record_diff(result.anim_diffs)
-                        if result.success:
-                            if result.message == "unchanged":
-                                unchanged_count += 1
-                                log(t("log.batch.process_unchanged", filename=filename))
-                            else:
-                                success_count += 1
-                                file_pairs.extend(result.file_pairs)
-                                log(t("log.batch.process_success", filename=filename))
-                        else:
-                            fail_count += 1
-                            failed_tasks.append(f"{filename} - {result.message}")
-                            log(t("log.batch.process_failed", filename=filename, message=result.message))
-                        completed += 1
-
-                if progress_callback:
-                    progress_callback(completed, total_files, filename)
+    run_batch(
+        mod_file_list,
+        worker,
+        collect,
+        name_of=lambda p: p.name,
+        progress_callback=progress_callback,
+        max_workers=max_workers,
+    )
 
     log("\n" + "=" * 50)
     log(f"📊 {t('log.batch.summary', total=total_files, success=success_count, fail=fail_count)}")

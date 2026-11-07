@@ -7,14 +7,12 @@
 from pathlib import Path
 from dataclasses import dataclass, field, replace as dc_replace
 from enum import StrEnum
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 import shutil
 import tempfile
-import threading
 
 from ..i18n import t
-from ..utils import no_log
+from ..utils import no_log, run_batch
 from ..models import (
     AnimCheckOptions,
     LogFunc,
@@ -416,16 +414,19 @@ def execute_mod_install(
     """
     result = InstallResult()
     output_dir.mkdir(parents=True, exist_ok=True)
-    total = len(groups)
 
-    def run_group(group: ModGroup):
+    def worker(group: ModGroup):
         return _execute_group(
             group, output_dir, asset_types_to_replace, save_options,
             spine_options, match_strategy, anim_check, create_backup, log,
         )
 
-    def collect(group: ModGroup, group_result) -> None:
-        """组级结果聚合到 InstallResult（并行路径需外部加锁）"""
+    def collect(group: ModGroup, group_result, exc: Exception | None) -> None:
+        """组级结果聚合到 InstallResult（并行路径由 run_batch 加锁调用）"""
+        if exc is not None:
+            log(f"❌ {t('log.process_failed', error=exc)}")
+            result.failed_groups.append((group.core, str(exc)))
+            return
         failures, anims, all_unchanged, has_work = group_result
         if not has_work:
             return
@@ -443,31 +444,14 @@ def execute_mod_install(
         # 成功组（含已安装跳过）记录 mod 文件，供调用方清理待安装列表；失败组保留便于重试
         result.installed_files.extend(f.mod_path for f in group.files)
 
-    if max_workers <= 1:
-        # 串行处理
-        for i, group in enumerate(groups, 1):
-            if progress_callback:
-                progress_callback(i, total, group.core)
-            collect(group, run_group(group))
-    else:
-        # 并行处理
-        lock = threading.Lock()
-        completed = 0
-
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(run_group, g): g for g in groups}
-            for future in as_completed(futures):
-                group = futures[future]
-                completed += 1
-                if progress_callback:
-                    progress_callback(completed, total, group.core)
-                try:
-                    group_result = future.result()
-                except Exception as e:
-                    log(f"❌ {t('log.process_failed', error=e)}")
-                    group_result = ([(group.core, str(e))], {}, False, True)
-                with lock:
-                    collect(group, group_result)
+    run_batch(
+        groups,
+        worker,
+        collect,
+        name_of=lambda g: g.core,
+        progress_callback=progress_callback,
+        max_workers=max_workers,
+    )
 
     log("\n" + t(
         "log.mod_install.execute_done",

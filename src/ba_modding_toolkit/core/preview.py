@@ -1,13 +1,12 @@
 # core/preview.py
 """Spine 预览图渲染（单任务 / 批量 / 全量）"""
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 import tempfile
 
 from ..i18n import t
-from ..utils import no_log, throttle_progress
+from ..utils import no_log, run_batch, throttle_progress
 from ..spine import SpineBackend, RenderOptions, RENDER_PRESET_HIGH, RENDER_PRESET_LOW
 from ..models import LogFunc, ProgressCallback
 from ..naming import parse_filename
@@ -154,7 +153,7 @@ def render_spine_previews_batch(
     max_workers: int = 1,
 ) -> dict[str, list[Path]]:
     """
-    批量渲染预览图（单路径实现，max_workers=1 时顺序执行）。
+    批量渲染预览图。
 
     每个任务调用外部渲染工具子进程，子进程调用会释放 GIL，
     多线程可获得真实并行收益；但渲染本身吃 CPU/GPU/内存，线程数建议 1~4。
@@ -172,31 +171,28 @@ def render_spine_previews_batch(
         dict[str, list[Path]]: 成功任务名 → 渲染输出的文件路径列表
     """
     results: dict[str, list[Path]] = {}
-    total = len(tasks)
-    completed = 0
+
+    def worker(task: RenderTask) -> tuple[bool, list[Path]]:
+        return _render_task(task, output_dir, backend, render_options, log)
+
+    def collect(task: RenderTask, result: tuple[bool, list[Path]] | None, exc: Exception | None) -> None:
+        if exc is not None:
+            log(t("log.batch.process_failed", filename=task.name, message=str(exc)))
+            return
+        success, rendered_paths = result
+        if success:
+            results[task.name] = rendered_paths
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    with ThreadPoolExecutor(max_workers=max(1, max_workers)) as executor:
-        futures = {
-            executor.submit(_render_task, task, output_dir, backend, render_options, log): task
-            for task in tasks
-        }
-        # 计数与进度更新只在主线程（本循环）中进行，无需加锁
-        for future in as_completed(futures):
-            task = futures[future]
-            try:
-                success, rendered_paths = future.result()
-            except Exception as e:
-                success, rendered_paths = False, []
-                log(t("log.batch.process_failed", filename=task.name, message=str(e)))
-
-            if success:
-                results[task.name] = rendered_paths
-
-            completed += 1
-            if progress_callback:
-                progress_callback(completed, total, task.name)
+    run_batch(
+        tasks,
+        worker,
+        collect,
+        name_of=lambda task: task.name,
+        progress_callback=progress_callback,
+        max_workers=max(1, max_workers),
+    )
 
     return results
 
