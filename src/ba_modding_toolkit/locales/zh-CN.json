@@ -674,6 +674,7 @@
 			"action_mixed": "混合",
 			"meta_size": "{mod_size} → {existing_size}",
 			"diff_content_changed": "内容有变化",
+			"diff_similarity": "相似度 {value}%",
 			"diff_unchanged": "无变化",
 			"diff_missing_anims": "缺失 {count} 个动画",
 			"diff_will_replace": "将被替换",

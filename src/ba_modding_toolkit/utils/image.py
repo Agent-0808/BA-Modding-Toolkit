@@ -85,6 +85,19 @@ def texture_mse(img1: Image.Image, img2: Image.Image, alpha_epsilon: int = 8) ->
     return sum(stat.sum2) / (a1.width * a1.height * 4)
 
 
+def compare_texture(img1: Image.Image, img2: Image.Image) -> tuple[bool, float]:
+    """带容差比较：返回 (是否视为一致, MSE)，尺寸不同时 MSE 为 inf"""
+    mse = texture_mse(img1, img2)
+    return mse <= DEFAULT_TEXTURE_MSE_THRESHOLD, mse
+
+
+def mse_to_similarity(mse: float) -> float:
+    """MSE → 相似度百分比（100 − 归一化 RMSE），inf 返回 0"""
+    if not math.isfinite(mse):
+        return 0.0
+    return 100 - math.sqrt(mse) / 255 * 100
+
+
 def is_same_texture(img1: Image.Image, img2: Image.Image) -> bool:
     """带容差的贴图一致性判定：MSE 不超过默认阈值即视为一致"""
-    return texture_mse(img1, img2) <= DEFAULT_TEXTURE_MSE_THRESHOLD
+    return compare_texture(img1, img2)[0]

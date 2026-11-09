@@ -4,6 +4,7 @@ import tkinter as tk
 import ttkbootstrap as tb
 from tkinter import messagebox
 from pathlib import Path
+import math
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
-from ...utils import no_log
+from ...utils import compare_texture, mse_to_similarity, no_log
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
@@ -55,6 +56,23 @@ def _fmt_size(n: int) -> str:
 def _sha(path: Path) -> str:
     """文件内容短哈希（提取产物已在磁盘上，仅用于前后一致性展示判定）"""
     return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
+
+
+def _texture_similarity(a: Path, b: Path) -> tuple[bool, str]:
+    """两侧提取贴图的相似度判定
+
+    Returns:
+        (是否视为一致, 相似度文本)；一致判定与安装阶段 is_same_texture 相同，
+        尺寸不同或无法解码时视为不一致且不显示相似度
+    """
+    try:
+        with PILImage.open(a) as ia, PILImage.open(b) as ib:
+            same, mse = compare_texture(ia, ib)
+    except Exception:
+        return False, ""
+    if not math.isfinite(mse) or mse == 0:
+        return same, ""  # 尺寸不同无意义，编码差异无展示价值
+    return same, t("ui.mod_install.diff_similarity", value=f"{mse_to_similarity(mse):.1f}")
 
 
 @dataclass
@@ -184,22 +202,31 @@ def _process_group(
                     b = mod_pool.get(a.fname)
                     if b is None or a.type != b.type:
                         continue
-                    if a.sha != b.sha:
-                        if a.detail != b.detail:
-                            detail = f"{a.detail} → {b.detail}"
-                        else:
-                            detail = f"{a.detail} · {t('ui.mod_install.diff_content_changed')}"
-                        # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
-                        if a.fname.endswith(".skel") and anim_check.is_valid():
-                            missing = check_skel_animation_diff(b.path, a.path, anim_check.backend, log=log)
-                            if missing:
-                                detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
-                        rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))
+                    # 贴图按安装阶段的容差判定，颜色与执行阶段是否跳过保持一致
+                    same = a.sha == b.sha
+                    similarity = ""
+                    if not same and a.type == "Texture2D" and a.detail == b.detail:
+                        same, similarity = _texture_similarity(a.path, b.path)
+
+                    if same:
+                        detail = f"{a.detail} · {t('ui.mod_install.diff_unchanged')}"
+                        if similarity:
+                            detail += f" · {similarity}"
+                        rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.SAME))
+                        continue
+
+                    if a.detail != b.detail:
+                        detail = f"{a.detail} → {b.detail}"
                     else:
-                        rows.append((a.type, a.fname, (
-                            f"[{a.type}] {a.fname} — {a.detail} · "
-                            f"{t('ui.mod_install.diff_unchanged')}"
-                        ), _RowTag.SAME))
+                        detail = f"{a.detail} · {t('ui.mod_install.diff_content_changed')}"
+                        if similarity:
+                            detail += f" · {similarity}"
+                    # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
+                    if a.fname.endswith(".skel") and anim_check.is_valid():
+                        missing = check_skel_animation_diff(b.path, a.path, anim_check.backend, log=log)
+                        if missing:
+                            detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
+                    rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))
                 non_preview_target = Bundle.list_asset_names(target, _non_preview_types)
                 for name, type_name in non_preview_target & non_preview_mod:
                     rows.append((type_name, name, f"[{type_name}] {name} — {t('ui.mod_install.diff_will_replace')}", _RowTag.REPLACE))

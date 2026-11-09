@@ -19,7 +19,14 @@ from .crc import (
     compute_crc32,
     manipulate_file_crc,
 )
-from .image import bleed_image, is_same_texture, texture_mse
+from .image import (
+    DEFAULT_TEXTURE_MSE_THRESHOLD,
+    bleed_image,
+    compare_texture,
+    is_same_texture,
+    mse_to_similarity,
+    texture_mse,
+)
 from .paths import BARegion, EXE_DIR, PACKAGE_DIR, get_BA_path
 from .about import get_environment_info, get_version_info
 
@@ -41,6 +48,9 @@ __all__ = [
     "bleed_image",
     "texture_mse",
     "is_same_texture",
+    "compare_texture",
+    "mse_to_similarity",
+    "DEFAULT_TEXTURE_MSE_THRESHOLD",
     "BARegion",
     "EXE_DIR",
     "PACKAGE_DIR",
