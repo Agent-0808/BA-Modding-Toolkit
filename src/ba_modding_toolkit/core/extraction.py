@@ -112,6 +112,7 @@ def process_asset_extraction(
     """
     从指定的 Bundle 文件中提取全部支持的资源类型到输出目录（见 EXTRACTABLE_ASSET_TYPES）。
     支持 Texture2D (保存为 .png)、TextAsset (按原名保存)、Mesh (.mesh.bytes)、AnimationClip (.animationclip.dat)。
+    提取成功后会先清空输出目录再输出，以清除上次提取的残留文件。
     如果启用了Spine降级选项，将自动处理Spine 4.x到3.8的降级。
 
     Args:
@@ -160,6 +161,11 @@ def process_asset_extraction(
                 return True, msg
 
             # ========== 阶段 2: 处理资源 ==========
+
+            # 提取成功后清空输出目录再输出，避免残留旧文件（如 atlas 减少部件后的孤立 png）
+            if output_dir.exists():
+                shutil.rmtree(output_dir)
+            output_dir.mkdir(parents=True, exist_ok=True)
 
             # 2.1 Spine降级处理
             if downgrade_enabled:
