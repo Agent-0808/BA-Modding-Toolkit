@@ -7,7 +7,7 @@ from typing import NamedTuple
 from PIL import Image
 
 from ba_modding_toolkit.spine import SkelConverter, atlas_downgrade, get_skel_version
-from ba_modding_toolkit.utils import LogFunc, no_log
+from ba_modding_toolkit.utils import LogFunc, no_log, texture_mse
 
 # 测试数据统一约定（数据文件不入 git，仅 .gitkeep 跟踪目录结构）。
 # 目录按数据扮演的角色命名，不绑定具体角色素材；每组下按案例子目录组织，
@@ -135,27 +135,10 @@ def pytest_generate_tests(metafunc) -> None:
 
 
 def compare_images_mse(img1: Image.Image, img2: Image.Image) -> float:
+    """复用主程序的带 alpha 掩码实现（透明区域压缩后 RGB 不确定，不计入统计）"""
     if img1.size != img2.size:
         raise ValueError(f"Size mismatch: {img1.size} vs {img2.size}")
-    
-    img1 = img1.convert("RGBA")
-    img2 = img2.convert("RGBA")
-    
-    pixels1 = img1.load()
-    pixels2 = img2.load()
-    
-    width, height = img1.size
-    total_diff = 0.0
-    
-    for y in range(height):
-        for x in range(width):
-            p1 = pixels1[x, y]
-            p2 = pixels2[x, y]
-            for c in range(4):
-                total_diff += (p1[c] - p2[c]) ** 2
-    
-    mse = total_diff / (width * height * 4)
-    return mse
+    return texture_mse(img1, img2)
 
 
 def find_first_file(directory: Path, extension: str) -> Path | None:

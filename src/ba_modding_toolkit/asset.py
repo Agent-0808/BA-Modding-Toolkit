@@ -13,7 +13,7 @@ from .models import (
     FontAssetData,
 )
 from .spine import SkelConverter, check_skel_animation_diff
-from .utils import no_log
+from .utils import is_same_texture, no_log
 
 
 # -------- 提取/应用上下文 --------
@@ -226,9 +226,8 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
 
     if obj.type == AssetType.Texture2D:
         new_image = content
-        if (data.image.mode == new_image.mode
-                and data.image.size == new_image.size
-                and data.image.tobytes() == new_image.tobytes()):
+        # 带容差的一致性判定
+        if is_same_texture(data.image, new_image):
             return ApplyOutcome(applied=False)
         data.image = new_image
         data.save()
