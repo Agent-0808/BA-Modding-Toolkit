@@ -200,7 +200,7 @@ def process_asset_packing(
             elif s in DUMP_FILE_EXTENSIONS:
                 parsed = parse_typed_dump_name(f.name)
                 if parsed:
-                    original_filenames[NameTypeKey(parsed[0], parsed[1].name)] = f.name
+                    original_filenames[NameTypeKey(parsed[0], parsed[1])] = f.name
 
         strategy_name = 'name_type'
 
