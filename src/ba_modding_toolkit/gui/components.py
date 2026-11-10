@@ -968,15 +968,6 @@ class SettingRow:
         return container
 
     @staticmethod
-    def _bind_enabled_state(widget: tk.Widget, enabled_var: tk.BooleanVar) -> None:
-        """让控件的可用状态跟随布尔开关变化"""
-        def _sync(*_):
-            widget.config(state=tk.NORMAL if enabled_var.get() else tk.DISABLED)
-
-        enabled_var.trace_add("write", _sync)
-        _sync()
-
-    @staticmethod
     def create_spinbox_row(
         parent: tk.Widget,
         label: str,
@@ -985,13 +976,10 @@ class SettingRow:
         to: int = 8,
         tooltip: str | None = None,
         width: int | None = None,
-        enabled_when: tk.BooleanVar | None = None,
+        app: "App | None" = None,
+        depends_on: str | None = None,
     ) -> tb.Spinbox:
-        """创建数值选择器行
-
-        Args:
-            enabled_when: 可选的开关变量，关闭时该数值框自动禁用
-        """
+        """创建数值选择器行，支持依赖管理（依赖不满足时自动禁用）"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         if width is None:
@@ -1005,8 +993,17 @@ class SettingRow:
         )
         spinbox.pack(side=tk.RIGHT, padx=(10, 0))
 
-        if enabled_when is not None:
-            SettingRow._bind_enabled_state(spinbox, enabled_when)
+        # 自动从 variable 推导 depends_on（如果未手动指定）
+        if app and depends_on is None:
+            depends_on = app.get_depends_on_from_var(int_var)
+
+        if app and depends_on:
+            SettingRow._setup_dependency(
+                spinbox, app, depends_on,
+                on_disabled=lambda: spinbox.config(state=tk.DISABLED),
+                on_enabled=lambda: spinbox.config(state=tk.NORMAL),
+                parent=parent,
+            )
 
         return spinbox
 

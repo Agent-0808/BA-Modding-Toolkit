@@ -300,6 +300,10 @@ class App(tb.Frame, ConfigMixin):
         if depends_on == "enable_spine_downgrade_var":
             # 同时检查 Spine 转换器路径和降级功能是否启用
             return self.is_spine_converter_available() and self.enable_spine_downgrade_var.get()
+        # 兜底：被依赖项本身是布尔开关时，取其当前状态
+        dep_var = getattr(self, depends_on, None)
+        if isinstance(dep_var, tk.Variable):
+            return bool(dep_var.get())
         return True
 
     def get_depends_on_from_var(self, variable: tk.Variable) -> str | None:

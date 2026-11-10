@@ -73,7 +73,7 @@ class AssetPackerTab(TabFrame):
             from_=0,
             to=32,
             tooltip=t("option.bleed_alpha_threshold_info"),
-            enabled_when=self.app.enable_bleed_var,
+            app=self.app,
         )
 
         # 操作按钮区域

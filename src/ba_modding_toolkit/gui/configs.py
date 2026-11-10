@@ -112,7 +112,7 @@ class ConfigMixin:
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
-    bleed_alpha_threshold_var: Annotated[tk.IntVar, ConfigMeta("Tabs", DEFAULT_BLEED_ALPHA_THRESHOLD)]
+    bleed_alpha_threshold_var: Annotated[tk.IntVar, ConfigMeta("Tabs", DEFAULT_BLEED_ALPHA_THRESHOLD, depends_on="enable_bleed_var")]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_spine_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     render_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False, depends_on="spine_viewer_path_var")]
