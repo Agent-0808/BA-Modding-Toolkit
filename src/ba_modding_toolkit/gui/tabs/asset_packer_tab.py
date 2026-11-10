@@ -66,22 +66,15 @@ class AssetPackerTab(TabFrame):
         )
 
         # Bleed 的 alpha 阈值：不超过该值的像素按透明处理
-        bleed_threshold_spinbox = SettingRow.create_spinbox_row(
+        SettingRow.create_spinbox_row(
             options_frame,
             label=t("option.bleed_alpha_threshold"),
             int_var=self.app.bleed_alpha_threshold_var,
             from_=0,
             to=32,
-            tooltip=t("option.bleed_alpha_threshold_info")
+            tooltip=t("option.bleed_alpha_threshold_info"),
+            enabled_when=self.app.enable_bleed_var,
         )
-
-        # 溢出关闭时禁用阈值输入
-        def _sync_bleed_threshold_state(*_):
-            state = tk.NORMAL if self.app.enable_bleed_var.get() else tk.DISABLED
-            bleed_threshold_spinbox.config(state=state)
-
-        self.app.enable_bleed_var.trace_add("write", _sync_bleed_threshold_state)
-        _sync_bleed_threshold_state()
 
         # 操作按钮区域
         action_button_frame = tb.Frame(self)
