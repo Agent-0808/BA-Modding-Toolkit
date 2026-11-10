@@ -132,6 +132,8 @@
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "溢出",
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
+		"bleed_alpha_threshold": "溢出阈值",
+		"bleed_alpha_threshold_info": "alpha 不超过该值的像素按透明处理，其颜色由周边像素扩散覆盖\n用于消除线性过滤与 mipmap 产生的黑边\n0 表示只处理完全透明像素，一般保持 5 即可",
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
 		"enable_spine_preview": "生成 Spine 预览图",

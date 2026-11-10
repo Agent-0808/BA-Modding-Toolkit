@@ -9,10 +9,21 @@ from PIL import Image, ImageChops, ImageStat
 # MSE 低于该阈值视为一致；0 = 逐字节严格比较
 DEFAULT_TEXTURE_MSE_THRESHOLD = 20.0
 
+# Bleed 的 alpha 阈值：alpha 不超过该值的像素视觉上等同于透明，
+# 但其 RGB 往往不可靠（导出/压缩残留），会被线性过滤与 mipmap 带进可见区域
+DEFAULT_BLEED_ALPHA_THRESHOLD = 5
 
-def bleed_image(image: Image.Image, iteration: int = 8) -> Image.Image:
+
+def bleed_image(
+    image: Image.Image,
+    iteration: int = 8,
+    threshold: int = DEFAULT_BLEED_ALPHA_THRESHOLD,
+) -> Image.Image:
     """
     对图像进行 Bleed 处理。
+
+    将 alpha 不超过 alpha_threshold 的像素视为不可见，用周边颜色扩散覆盖其 RGB，
+    alpha 通道保持原样。alpha_threshold=0 时只处理完全透明像素。
     """
     if image.mode != 'RGBA':
         image = image.convert('RGBA')
@@ -21,12 +32,11 @@ def bleed_image(image: Image.Image, iteration: int = 8) -> Image.Image:
     original_alpha = image.getchannel('A')
 
     # 优化：使用 LUT 代替逐像素操作
-    lut = [255] * 256
-    lut[0] = 0
+    lut = [0 if v <= threshold else 255 for v in range(256)]
     mask = original_alpha.point(lut)
 
-    # 优化：如果没有完全透明像素，直接返回
-    if original_alpha.getextrema()[0] > 0:
+    # 优化：如果没有不超过阈值的像素，直接返回
+    if original_alpha.getextrema()[0] > threshold:
         return image
 
     current_canvas = image.copy()

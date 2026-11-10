@@ -20,6 +20,7 @@ from .crc import (
     manipulate_file_crc,
 )
 from .image import (
+    DEFAULT_BLEED_ALPHA_THRESHOLD,
     DEFAULT_TEXTURE_MSE_THRESHOLD,
     bleed_image,
     compare_texture,
@@ -51,6 +52,7 @@ __all__ = [
     "compare_texture",
     "mse_to_similarity",
     "DEFAULT_TEXTURE_MSE_THRESHOLD",
+    "DEFAULT_BLEED_ALPHA_THRESHOLD",
     "BARegion",
     "EXE_DIR",
     "PACKAGE_DIR",

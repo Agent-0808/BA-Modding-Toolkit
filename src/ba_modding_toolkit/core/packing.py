@@ -8,7 +8,7 @@ import tempfile
 from PIL import Image
 
 from ..i18n import t
-from ..utils import bleed_image, no_log
+from ..utils import DEFAULT_BLEED_ALPHA_THRESHOLD, bleed_image, no_log
 from ..spine import (
     SkelConverter,
     check_legacy_rename_needed, normalize_legacy_assets,
@@ -47,6 +47,7 @@ def process_asset_packing(
     spine_options: SkelConvertOptions | None = None,
     enable_rename_fix: bool | None = False,
     enable_bleed: bool | None = False,
+    bleed_alpha_threshold: int = DEFAULT_BLEED_ALPHA_THRESHOLD,
     skip_unchanged: bool = True,
     anim_check: AnimCheckOptions | None = None,
     log: LogFunc = no_log,
@@ -72,6 +73,7 @@ def process_asset_packing(
         spine_options: Spine资源升级的选项
         enable_rename_fix: 是否启用旧版 Spine 3 文件名修正
         enable_bleed: 是否对 PNG 文件进行 Bleed 处理
+        bleed_alpha_threshold: Bleed 时视为透明的 alpha 阈值（含），默认 DEFAULT_BLEED_ALPHA_THRESHOLD
         skip_unchanged: 是否跳过未变化的文件
         log: 日志记录函数，默认为空函数
     """
@@ -135,7 +137,7 @@ def process_asset_packing(
                 asset_key = NameTypeKey(file_path.stem, AssetType.Texture2D.name)
                 content = Image.open(file_path).convert("RGBA")
                 if enable_bleed:
-                    content = bleed_image(content)
+                    content = bleed_image(content, threshold=bleed_alpha_threshold)
                     log(f"  > {t('log.packer.bleed_processed', name=file_path.stem)}")
             elif suffix in {".skel", ".atlas"}:
                 asset_key = NameTypeKey(file_path.name, AssetType.TextAsset.name)
