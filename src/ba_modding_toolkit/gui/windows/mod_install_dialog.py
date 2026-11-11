@@ -20,7 +20,13 @@ if TYPE_CHECKING:
     from ..app import App
 
 from ...i18n import t
-from ...utils import compare_texture, mse_to_similarity, no_log
+from ...utils import (
+    DEFAULT_TEXTURE_MSE_THRESHOLD,
+    compare_texture,
+    compare_texture_scaled,
+    mse_to_similarity,
+    no_log,
+)
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
@@ -58,21 +64,66 @@ def _sha(path: Path) -> str:
     return hashlib.sha1(path.read_bytes()).hexdigest()[:12]
 
 
-def _texture_similarity(a: Path, b: Path) -> tuple[bool, str]:
+def _texture_similarity(a: Path, b: Path) -> tuple[bool, float]:
     """两侧提取贴图的相似度判定
 
     Returns:
-        (是否视为一致, 相似度文本)；一致判定与安装阶段 is_same_texture 相同，
-        尺寸不同或无法解码时视为不一致且不显示相似度
+        (是否视为一致, MSE)；一致判定与安装阶段 is_same_texture 相同，
+        尺寸不同或无法解码时视为不一致且 MSE 为 inf
     """
     try:
         with PILImage.open(a) as ia, PILImage.open(b) as ib:
-            same, mse = compare_texture(ia, ib)
+            return compare_texture(ia, ib)
     except Exception:
-        return False, ""
-    if not math.isfinite(mse) or mse == 0:
-        return same, ""  # 尺寸不同无意义，编码差异无展示价值
-    return same, t("ui.mod_install.diff_similarity", value=f"{mse_to_similarity(mse):.1f}")
+        return False, math.inf
+
+
+def _preview_similarity(
+    a: Path | None, b: Path | None, mse: float | None = None, *, allow_resize: bool = False,
+) -> tuple[str | None, bool | None]:
+    """预览对的相似度文本与判定（同尺寸才逐像素比较，缺图/比例不符只给提示）
+
+    mse 由调用方复用（贴图对在元信息对比时已算过），为 None 时现场计算。
+    allow_resize=True 时，尺寸不同但宽高比接近（渲染 trim 导致）会裁透明边、
+    缩放到同一尺寸再比较，文本中保留原始尺寸并标注缩放。
+
+    Returns:
+        (文本, 是否视为一致)；不可比较或无法解码时文本为提示或 None、判定为 None
+    """
+    if a is None or b is None:
+        return t("ui.mod_install.preview_one_side"), None
+    scaled = False
+    try:
+        with PILImage.open(a) as ia, PILImage.open(b) as ib:
+            size_text = f"{ia.width}×{ia.height}"
+            right_text = f"{ib.width}×{ib.height}"
+            if ia.size != ib.size:
+                result = compare_texture_scaled(ia, ib) if allow_resize else None
+                if result is None:
+                    return t(
+                        "ui.mod_install.preview_size_mismatch",
+                        left=size_text, right=right_text,
+                    ), None
+                same, mse = result
+                scaled = True
+            elif mse is None:
+                same, mse = compare_texture(ia, ib)
+            else:
+                same = mse <= DEFAULT_TEXTURE_MSE_THRESHOLD
+    except Exception:
+        return None, None
+    if not math.isfinite(mse):
+        return None, None
+    if scaled:
+        return t(
+            "ui.mod_install.preview_similarity_scaled",
+            value=f"{mse_to_similarity(mse):.1f}", mse=f"{mse:.1f}",
+            left=size_text, right=right_text,
+        ), same
+    return t(
+        "ui.mod_install.preview_similarity",
+        value=f"{mse_to_similarity(mse):.1f}", mse=f"{mse:.1f}", size=size_text,
+    ), same
 
 
 @dataclass
@@ -92,6 +143,8 @@ class _PreviewPair:
     new_image: Path | None = None       # 安装后侧图片
     current_error: str | None = None    # 现有侧失败原因（图片缺失时显示）
     new_error: str | None = None        # 安装后侧失败原因
+    similarity: str | None = None       # 相似度文本（后台流水线计算，None = 不显示）
+    similar: bool | None = None         # True/False = 同尺寸可比较的判定；None = 不可比较
 
 
 @dataclass
@@ -195,6 +248,7 @@ def _process_group(
             non_preview_mod: set[tuple[str, str]] = set()
             for f in group.files:
                 non_preview_mod |= Bundle.list_asset_names(f.mod_path, _non_preview_types)
+            tex_mse: dict[str, float] = {}  # 贴图对 MSE：元信息对比已算过，预览区直接复用
             for target, before_list in target_assets.items():
                 # (类型名, 名字, 展示文本, 标签)：先收集再按"类型→名字"统一排序
                 rows: list[tuple[str, str, str, _RowTag]] = []
@@ -204,9 +258,20 @@ def _process_group(
                         continue
                     # 贴图按安装阶段的容差判定，颜色与执行阶段是否跳过保持一致
                     same = a.sha == b.sha
+                    mse: float | None = None
                     similarity = ""
-                    if not same and a.type == "Texture2D" and a.detail == b.detail:
-                        same, similarity = _texture_similarity(a.path, b.path)
+                    if a.type == "Texture2D":
+                        if same:
+                            mse = 0.0
+                        elif a.detail == b.detail:
+                            same, mse = _texture_similarity(a.path, b.path)
+                            if math.isfinite(mse) and mse != 0:
+                                similarity = t(
+                                    "ui.mod_install.diff_similarity",
+                                    value=f"{mse_to_similarity(mse):.1f}",
+                                )
+                        if mse is not None:
+                            tex_mse[a.fname] = mse
 
                     if same:
                         detail = f"{a.detail} · {t('ui.mod_install.diff_unchanged')}"
@@ -256,12 +321,16 @@ def _process_group(
                     if not ok:
                         side_errors[side] = msg
             for stem in sorted(cur_skels | new_skels):
+                cur_render, new_render = rendered["current"].get(stem), rendered["new"].get(stem)
+                similarity, similar = _preview_similarity(cur_render, new_render, allow_resize=True)
                 result.previews.append(_PreviewPair(
                     label=f"{t('ui.mod_install.preview_tag_render')} {stem}",
-                    current_image=rendered["current"].get(stem),
-                    new_image=rendered["new"].get(stem),
+                    current_image=cur_render,
+                    new_image=new_render,
                     current_error=side_errors["current"],
                     new_error=side_errors["new"],
+                    similarity=similarity,
+                    similar=similar,
                 ))
 
             # 原始解包贴图：拷贝到缓存目录（临时目录销毁后仍可显示），按文件名配对双侧
@@ -277,10 +346,15 @@ def _process_group(
                     a.path = tex_dirs[side] / a.fname  # 指向缓存副本（临时目录销毁后原路径失效）
             for fname in sorted(tex_map["current"].keys() | tex_map["new"].keys()):
                 cur_a, new_a = tex_map["current"].get(fname), tex_map["new"].get(fname)
+                cur_path = cur_a.path if cur_a else None
+                new_path = new_a.path if new_a else None
+                similarity, similar = _preview_similarity(cur_path, new_path, tex_mse.get(fname))
                 result.previews.append(_PreviewPair(
                     label=f"{t('ui.mod_install.preview_tag_extract')} {fname}",
-                    current_image=cur_a.path if cur_a else None,
-                    new_image=new_a.path if new_a else None,
+                    current_image=cur_path,
+                    new_image=new_path,
+                    similarity=similarity,
+                    similar=similar,
                 ))
 
     except Exception as e:
@@ -321,7 +395,7 @@ class ModInstallDialog(StoppableDialog):
 
     def _setup_window(self):
         self.title(t("ui.mod_install.dialog_title"))
-        self.geometry("900x1000")
+        self.geometry("900x1100")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -376,12 +450,16 @@ class ModInstallDialog(StoppableDialog):
             bootstyle="primary",
         ).grid(row=0, column=1, sticky="e", padx=(5, 0), pady=(0, 5))
 
+        # 当前预览对的相似度（后台算好，随下拉切换刷新；不可比较时只显示提示）
+        self.similarity_label = tb.Label(preview_frame, anchor=tk.CENTER, bootstyle="secondary")
+        self.similarity_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 5))
+
         self.dual_canvas = DualZoomableCanvas(
             preview_frame,
             left_label=t("ui.mod_install.preview_current"),
             right_label=t("ui.mod_install.preview_new"),
         )
-        self.dual_canvas.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.dual_canvas.grid(row=2, column=0, columnspan=2, sticky="nsew")
         self.preview_canvases = self.dual_canvas.canvases
 
         # 4. 底部锚定：决策区与确认按钮自下而上排列，元信息区不抢占剩余空间
@@ -589,6 +667,7 @@ class ModInstallDialog(StoppableDialog):
         else:
             self._preview_pairs = []
             self.preview_combo.grid_remove()
+            self._set_similarity(None, None)
             waiting = self.app.mod_install_render_preview_var.get() and self._pipeline_running
             text_key = "ui.mod_install.preview_rendering" if waiting else "ui.mod_install.preview_none"
             for canvas in self.preview_canvases:
@@ -616,6 +695,7 @@ class ModInstallDialog(StoppableDialog):
         if result.error:
             for canvas in self.preview_canvases:
                 canvas.set_image(None, result.error)
+            self._set_similarity(None, None)
             return
         self._apply_pair()
 
@@ -625,12 +705,21 @@ class ModInstallDialog(StoppableDialog):
         pair = self._preview_pairs[self._preview_index] if self._preview_pairs else None
         if pair is None:
             self.dual_canvas.set_images(None, None, none_text, none_text)
+            self._set_similarity(None, None)
             return
         left = pair.current_image if pair.current_image is not None and pair.current_image.exists() else None
         right = pair.new_image if pair.new_image is not None and pair.new_image.exists() else None
         self.dual_canvas.set_images(
             left, right,
             pair.current_error or none_text, pair.new_error or none_text,
+        )
+        self._set_similarity(pair.similarity, pair.similar)
+
+    def _set_similarity(self, text: str | None, similar: bool | None):
+        """更新预览区相似度标签（None 清空；None 判定用灰色，差异用橙色）"""
+        self.similarity_label.configure(
+            text=text or "",
+            bootstyle="secondary" if similar is None else ("success" if similar else "warning"),
         )
 
     def _on_preview_selected(self, _event=None):

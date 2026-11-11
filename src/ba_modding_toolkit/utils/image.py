@@ -9,6 +9,10 @@ from PIL import Image, ImageChops, ImageStat
 # MSE 低于该阈值视为一致；0 = 逐字节严格比较
 DEFAULT_TEXTURE_MSE_THRESHOLD = 20.0
 
+# 尺寸轻微不同（如 Spine 渲染 trim）时允许比较的宽高比相对差异：
+# 超过该比例说明两张图构图已不同，缩放后再比较没有意义
+DEFAULT_COMPARE_ASPECT_TOLERANCE = 0.02
+
 # Bleed 的 alpha 阈值：alpha 不超过该值的像素视觉上等同于透明，
 # 但其 RGB 往往不可靠（导出/压缩残留），会被线性过滤与 mipmap 带进可见区域
 DEFAULT_BLEED_ALPHA_THRESHOLD = 5
@@ -99,6 +103,40 @@ def compare_texture(img1: Image.Image, img2: Image.Image) -> tuple[bool, float]:
     """带容差比较：返回 (是否视为一致, MSE)，尺寸不同时 MSE 为 inf"""
     mse = texture_mse(img1, img2)
     return mse <= DEFAULT_TEXTURE_MSE_THRESHOLD, mse
+
+
+def _crop_transparent(image: Image.Image) -> Image.Image:
+    """裁掉 alpha 全透明的边（无 alpha 通道或全透明时原样返回）"""
+    if "A" not in image.getbands():
+        return image
+    bbox = image.getchannel("A").getbbox()
+    return image.crop(bbox) if bbox else image
+
+
+def compare_texture_scaled(
+    img1: Image.Image,
+    img2: Image.Image,
+    aspect_tolerance: float = DEFAULT_COMPARE_ASPECT_TOLERANCE,
+) -> tuple[bool, float] | None:
+    """尺寸不同但宽高比接近时，裁透明边并缩放到同尺寸后比较
+
+    先按 alpha 非零区域裁掉透明边（消除 trim 造成的边距/位置偏差），
+    再统一缩放到较小一侧尺寸，最后复用 texture_mse 的透明像素掩码规则。
+
+    Returns:
+        (是否视为一致, MSE)；宽高比相对差异超过 aspect_tolerance 时返回 None
+    """
+    ratio1 = img1.width / img1.height
+    ratio2 = img2.width / img2.height
+    if abs(ratio1 - ratio2) > aspect_tolerance * min(ratio1, ratio2):
+        return None
+    ia, ib = _crop_transparent(img1), _crop_transparent(img2)
+    target = ia.size if ia.width * ia.height <= ib.width * ib.height else ib.size
+    if ia.size != target:
+        ia = ia.resize(target, Image.BILINEAR)
+    if ib.size != target:
+        ib = ib.resize(target, Image.BILINEAR)
+    return compare_texture(ia, ib)
 
 
 def mse_to_similarity(mse: float) -> float:
