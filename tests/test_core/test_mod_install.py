@@ -31,7 +31,7 @@ class TestPlanModInstall:
         assert not group.target_paths
 
     def test_update(self, update_case: "UpdateCase", tmp_path: Path):
-        """同名不存在但 prefix 可匹配新版文件 → UPDATE，多候选取最新日期"""
+        """同名不存在但 prefix + 资产指纹可匹配新版文件 → UPDATE"""
         game_dir = tmp_path / "game"
         game_dir.mkdir()
         for p in update_case.new_paths:

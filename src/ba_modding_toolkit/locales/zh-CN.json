@@ -502,7 +502,6 @@
 			"plan_start": "开始分析 {count} 个 Mod 文件...",
 			"group_info": "分组 [{core}]（{count} 个文件）",
 			"same_name_found": "找到同名文件: {filename}，将直接替换",
-			"filter_latest_date": "存在多个日期版本，已选取最新: {date}",
 			"update_targets": "需要更新，匹配到 {count} 个目标文件: {names}",
 			"target_conflict": "目标文件冲突: {filename}",
 			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）",

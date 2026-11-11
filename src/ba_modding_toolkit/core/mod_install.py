@@ -25,7 +25,7 @@ from ..models import (
 from ..bundle import Bundle
 from .mod_update import process_mod_update
 from ..naming import parse_filename, ParsedFilename
-from ..searching import search_prefix, asset_match
+from ..searching import find_target_bundles
 
 
 # -------- 安装计划数据模型 ---------
@@ -113,32 +113,6 @@ def _find_same_name_bundles(
     return index
 
 
-def _search_latest_targets(
-    source_paths: list[Path],
-    search_dirs: list[Path],
-    log: LogFunc,
-) -> tuple[list[Path], str]:
-    """
-    按 prefix 搜索候选目标，先过滤至最新日期（多候选自动取 date 最新）再进行资产匹配。
-
-    Returns:
-        tuple[list[Path], str]: (匹配的目标路径列表, 错误消息)
-    """
-    if not source_paths:
-        return [], ""
-
-    candidates, err_msg = search_prefix(source_paths[0], search_dirs, log)
-    if not candidates:
-        return [], err_msg
-
-    latest_date = max(parse_filename(c.name).date for c in candidates)
-    filtered = [c for c in candidates if parse_filename(c.name).date == latest_date]
-    if len(filtered) != len(candidates):
-        log(f'  > {t("log.mod_install.filter_latest_date", date=latest_date)}')
-
-    return asset_match(source_paths, filtered, log)
-
-
 def plan_mod_install(
     mod_paths: list[Path],
     game_resource_dir: Path | list[Path],
@@ -151,7 +125,7 @@ def plan_mod_install(
 
     判定规则（见设计文档 §2.2）：
     - 同名存在 → DIRECT_REPLACE（是否需 CRC 修正由现有文件平台决定）
-    - 同名不存在 → UPDATE（search_prefix 搜索，多候选取 date 最新）
+    - 同名不存在 → UPDATE（search_prefix + asset_match 搜索，与批量更新一致）
     - 搜索不到 → NOT_FOUND；文件名解析失败 → ERROR
 
     Args:
@@ -216,7 +190,7 @@ def plan_mod_install(
 
         update_files = [f for f in group.files if f.action == InstallAction.NOT_FOUND]
         if update_files:
-            targets, err_msg = _search_latest_targets(
+            targets, err_msg = find_target_bundles(
                 [f.mod_path for f in update_files], search_dirs, log,
             )
             if targets:
