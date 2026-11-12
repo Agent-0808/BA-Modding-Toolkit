@@ -288,7 +288,7 @@ def _process_group(
                             detail += f" · {similarity}"
                     # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
                     if a.fname.endswith(".skel") and anim_check.is_valid():
-                        missing = check_skel_animation_diff(SkelRef(b.path), SkelRef(a.path), anim_check.backend, log=log)
+                        missing = check_skel_animation_diff(SkelRef.from_disk(b.path), SkelRef.from_disk(a.path), anim_check.backend, log=log)
                         if missing:
                             detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
                     rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))

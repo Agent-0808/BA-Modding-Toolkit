@@ -295,6 +295,13 @@ def select_animation(animations: list[str], log: LogFunc = no_log) -> str | None
     return None
 
 
+def find_sibling_file(path: Path, suffix: str) -> Path | None:
+    """查找同目录同主干（不区分大小写）的指定后缀文件。"""
+    stem = path.stem.lower()
+    return next((p for p in path.parent.iterdir()
+                 if p.stem.lower() == stem and p.suffix.lower() == suffix), None)
+
+
 @dataclass(frozen=True)
 class SkelRef:
     """待查询的骨架：文件路径或内存字节，附其配套 atlas 文本。
@@ -308,6 +315,17 @@ class SkelRef:
     skel: Path | bytes
     atlas_text: str | None = None
     name: str | None = None
+
+    @classmethod
+    def from_disk(cls, path: Path) -> "SkelRef":
+        """从磁盘 skel 构建查询用引用：显式携带同目录 atlas 文本，页面 png 用占位图。
+
+        skel 与 atlas 总在同一 bundle，但贴图可能单独在另一个 bundle——
+        按包分目录提取时 atlas 旁没有页面 png；动画/皮肤列表查询只需占位页面。
+        渲染需要真实页面，不适用本方法，直接用 SkelRef(path)。
+        """
+        atlas = find_sibling_file(path, ".atlas")
+        return cls(path, atlas.read_text(encoding="utf-8", errors="ignore") if atlas else None)
 
 
 class SpineBackend(Protocol):
@@ -484,12 +502,8 @@ class SpineViewer:
         Returns:
             tuple[bool, str]: (是否成功, 状态消息)
         """
-        # 查找同目录下的 atlas 文件
-        atlas_path = None
-        for atlas in skel_path.parent.glob("*.atlas"):
-            if atlas.stem == skel_path.stem:
-                atlas_path = atlas
-                break
+        # 查找同目录下的 atlas 文件（不区分大小写）
+        atlas_path = find_sibling_file(skel_path, ".atlas")
 
         # 查询动画信息
         success, info = self.query(SkelRef(skel_path), log)
@@ -621,13 +635,6 @@ class Spine2Dump:
     def __init__(self, tool_path: Path):
         self.tool_path = tool_path
 
-    def _find_atlas(self, skel_path: Path) -> Path | None:
-        """查找与 skel 同名的 atlas 文件。"""
-        for atlas in skel_path.parent.glob("*.atlas"):
-            if atlas.stem == skel_path.stem:
-                return atlas
-        return None
-
     @contextmanager
     def _isolate_assets(self, skel: SkelRef, log: LogFunc = no_log) -> Iterator[Path]:
         """把目标 skel（含配套 atlas）隔离到临时目录。
@@ -645,7 +652,7 @@ class Spine2Dump:
                 if skel.atlas_text is not None:
                     _write_atlas_placeholders(skel.atlas_text, work_dir, skel_path.stem, log)
                 else:
-                    atlas_path = self._find_atlas(skel_path)
+                    atlas_path = find_sibling_file(skel_path, ".atlas")
                     if atlas_path is not None:
                         self._copy_atlas_with_pages(atlas_path, work_dir, log)
             else:
