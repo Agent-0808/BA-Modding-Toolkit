@@ -1,19 +1,61 @@
 # cli/taps.py
-from argparse import RawTextHelpFormatter
-from typing import Literal
+import argparse
+import textwrap
+from argparse import RawTextHelpFormatter, _SubParsersAction
 from tap import Tap, Positional
 from pathlib import Path
+from typing import Literal
+
+from ..models import ReplaceAssetType, CompressionType, MatchStrategy
+from ..core.report import ReportFormat
+from ..spine import RenderBackendNameOrAuto
+from ..utils import BARegion
+from ..naming import CharacterInternalIDMap
+
+# 主帮助中子命令的分组显示：(分组标题, 命令列表)
+COMMAND_GROUPS: list[tuple[str, tuple[str, ...]]] = [
+    ('Console output', ('parse', 'inspect', 'trace', 'env')),
+    ('File output', ('update', 'batch-update', 'install', 'pack', 'extract', 'crc', 'backup')),
+    ('Report output', ('report', 'batch-preview')),
+]
+
+
+class GroupedHelpFormatter(RawTextHelpFormatter):
+    """主帮助输出中将子命令按 COMMAND_GROUPS 分组显示。"""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        # 仅主解析器存在 subparsers action，其余 action 走默认渲染
+        if isinstance(action, _SubParsersAction):
+            return self._format_grouped_subparsers(action)
+        return super()._format_action(action)
+
+    def _format_grouped_subparsers(self, action: _SubParsersAction) -> str:
+        # _choices_actions 是 argparse 内部结构，按注册顺序保存各子命令的 name/help
+        helps: dict[str, str] = {pa.metavar: pa.help or '' for pa in action._choices_actions}
+        # 未登记分组的新子命令兜底归入 Other，避免从帮助中消失
+        grouped = {cmd for _, cmds in COMMAND_GROUPS for cmd in cmds}
+        ungrouped = tuple(name for name in helps if name not in grouped)
+        groups = [*COMMAND_GROUPS, *(('Other:', ungrouped) if ungrouped else ())]
+        width = max(len(cmd) for _, cmds in COMMAND_GROUPS for cmd in cmds)
+        indent = ' ' * self._current_indent
+        blocks = []
+        for title, cmds in groups:
+            lines = [f'{title}:']
+            lines += [f'  {cmd:<{width}}  {helps.get(cmd, "")}' for cmd in cmds]
+            blocks.append('\n'.join(lines))
+        return textwrap.indent('\n\n'.join(blocks), indent) + '\n'
+
 
 class BaseTap(Tap):
     """基础Tap类，提供共享配置。"""
 
     def configure(self) -> None:
         self.description = "BA Modding Toolkit - Command Line Interface."
-        self.formatter_class = RawTextHelpFormatter
+        self.formatter_class = GroupedHelpFormatter
         self._underscores_to_dashes = True
 
 
-class UpdateTap(Tap):
+class UpdateTap(BaseTap):
     """Update命令的参数解析器 - 用于更新或移植Mod。"""
 
     # 基本参数
@@ -23,23 +65,24 @@ class UpdateTap(Tap):
     # 目标文件定位参数
     target: list[Path] | None = None  # Path(s) to the new game resource bundle file(s) (Overrides --resource-dir if provided).
     resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip', 'Font']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all files including unchanged ones (default: skip unchanged files).
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
 
     # 匹配策略
-    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy for cross-version migration.
+    strategy: MatchStrategy = 'path_id'  # Match strategy for cross-version migration.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Update or port a Mod, migrating assets from old Mod(s) to new Bundle(s).
 
 Examples:
@@ -57,13 +100,11 @@ Examples:
   bamt-cli update "old_mod.bundle" --no-crc
 
   # Enable Spine skeleton conversion
-  bamt-cli update "old.bundle" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
+  bamt-cli update "old.bundle" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class PackTap(Tap):
+class PackTap(BaseTap):
     """Pack命令的参数解析器 - 用于资源打包。"""
 
     # 基本参数
@@ -74,15 +115,15 @@ class PackTap(Tap):
     # 保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method for Bundle files.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
     save_all: bool = False  # Save all bundles including unchanged ones (default: skip unchanged bundles).
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Pack contents from an asset folder into target bundle files.
 
 Examples:
@@ -93,49 +134,52 @@ Examples:
   bamt-cli pack --bundle "b1.bundle" "b2.bundle" --folder "assets_folder"
 
   # Pack with Spine conversion
-  bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --enable-spine-conversion --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe"
+  bamt-cli pack --bundle "target.bundle" --folder "spine_assets" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class CrcTap(Tap):
+class CrcTap(BaseTap):
     """CRC命令的参数解析器 - 用于CRC修正工具。"""
 
     # 基本参数
-    modified: Positional[Path]  # Path to the modified file (to be fixed or calculated).
+    files: Positional[list[Path]]  # Check mode: 1 file to calculate (compare with filename CRC if present), or 2 files to compare. Fix mode: exactly 1 file.
 
-    # 原始文件定位参数
-    original: Path | None = None  # Path to the original file (provides target CRC value).
-    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    # 修正参数
+    target_crc: str | None = None  # Target CRC32 in hex (e.g., "0xABCD1234"). If omitted, extracted from the filename.
 
     # 操作选项
-    check_only: bool = False  # Only calculate and compare CRC, do not modify any files.
+    check: bool = False  # Only calculate and compare CRC, do not modify any files.
     no_backup: bool = False  # Do not create a backup (.backup) before fixing the file.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
 
+    # 游戏目录搜索参数（仅 check 模式单文件场景使用，可选）
+    resource_dir: Path | None = None  # Path to the game resource directory. Search for a same-name file to compare against.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan). Search only runs when --resource-dir/--region is explicitly provided.
+
     def configure(self) -> None:
+        super().configure()
         self.description = '''Tool to fix file CRC32 checksum or calculate/compare CRC32 values.
-It OVERWRITES the input file and will NOT output at "output/" directory.
+Fix mode OVERWRITES the input file and will NOT output at "output/" directory.
 
 Examples:
-  # Fix CRC of my_mod.bundle to match original bundle
+  # Fix CRC of my_mod.bundle (target CRC extracted from the filename)
   bamt-cli crc "my_mod.bundle"
 
-  # Automatically search original file in game directory and fix CRC
-  bamt-cli crc "my_mod.bundle" --resource-dir "C:\\path\\to\\game_data"
+  # Fix CRC with an explicit target value
+  bamt-cli crc "my_mod.bundle" --target-crc "0xABCD1234"
 
-  # Check if CRC matches only, do not modify file
-  bamt-cli crc "my_mod.bundle" --original "original.bundle" --check-only
+  # Calculate CRC of a file (also compares with the CRC in the filename if present)
+  bamt-cli crc "my_mod.bundle" --check
 
-  # Calculate CRC for a single file
-  bamt-cli crc "my_mod.bundle" --check-only
+  # Compare CRC of two files
+  bamt-cli crc "my_mod.bundle" "original.bundle" --check
+
+  # Calculate CRC and additionally compare with the same-name file in the game directory
+  bamt-cli crc "my_mod.bundle" --check --resource-dir "C:\\path\\to\\game_data"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class ExtractTap(Tap):
+class ExtractTap(BaseTap):
     """Extract命令的参数解析器 - 用于从Bundle中提取资源。"""
 
     # 基本参数
@@ -143,18 +187,15 @@ class ExtractTap(Tap):
     output_dir: Path = Path('./output/')  # Base directory to save the extracted assets.
     subdir: str | None = None  # Subdirectory name within output_dir. Auto-generated from bundle name if not specified.
 
-    # 资源类型参数
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to extract.
-
     # Spine转换参数
-    enable_spine_downgrade: bool = False  # Enable Spine skeleton downgrade.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine downgrade is enabled when provided.
     target_spine_version: str = '3.8.75'  # Target Spine version for downgrade (e.g., "3.8.75").
 
     # Atlas解包参数
     unpack_atlas: bool = False  # Unpack Atlas into individual PNG frames while keeping the original files.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Extract assets from Unity Bundle files.
 
 Examples:
@@ -162,7 +203,7 @@ Examples:
   bamt-cli extract "C:\\path\\to\\bundle.bundle"
 
   # Extract with Spine downgrade
-  bamt-cli extract "bundle.bundle" --enable-spine-downgrade --spine-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version 3.8.75
+  bamt-cli extract "bundle.bundle" --skel-converter-path "C:\\path\\to\\SpineSkeletonDataConverter.exe" --target-spine-version 3.8.75
 
   # Extract multiple bundles
   bamt-cli extract "bundle1.bundle" "bundle2.bundle" --output-dir "C:\\output"
@@ -173,17 +214,75 @@ Examples:
   # Extract with unpack mode for atlas files
   bamt-cli extract "bundle.bundle" --unpack-atlas
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class EnvTap(Tap):
+class EnvTap(BaseTap):
     """Env命令的参数解析器 - 用于显示环境信息。"""
 
     def configure(self) -> None:
+        super().configure()
         self.description = 'Display system information and library versions of the current environment.'
 
-class BatchUpdateTap(Tap):
+class InstallTap(BaseTap):
+    """Install命令的参数解析器 - 用于一键安装Mod到游戏目录。"""
+
+    # 基本参数
+    mods: Positional[list[Path]]  # Path(s) to the mod bundle file(s) (.bundle / .backup).
+
+    # 目标定位参数
+    output_dir: Path = Path('./output/')  # Directory to save files generated during update-type installs.
+    resource_dir: Path | None = None      # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+
+    # 资源与保存参数
+    no_crc: bool = False  # Disable CRC fix function.
+    extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI") to append before CRC correction.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip', 'Font']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method for Bundle files.
+
+    # Spine转换参数（仅 skel 版本转换，不做预览渲染）
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
+    target_spine_version: str = '4.2.33'  # Target Spine version (e.g., "4.2.33").
+
+    # 安装行为参数
+    strategy: MatchStrategy = 'cont_name_type'  # Match strategy for update-type installs.
+    no_backup: bool = False  # Do not create a backup (.backup) before replacing files in the game directory.
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for the missing-animation pre-check ("auto" infers from the executable name).
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe). Enables missing-animation pre-check when provided (no preview rendering).
+    max_workers: int = 1  # Number of parallel worker threads for group installs (1 = sequential).
+    yes: bool = False  # Install all installable groups without interactive confirmation.
+
+    # 角色映射参数
+    bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Analyze mod file(s) and install them into the game directory.
+
+Same-name bundles are directly replaced; others are installed by updating the latest
+matching game bundles. Installable groups are confirmed one by one unless --yes is given.
+
+Examples:
+  # Interactive install with auto-detected game directory
+  bamt-cli install "C:\\path\\to\\mod1.bundle" "C:\\path\\to\\mod2.bundle"
+
+  # Install all installable groups without confirmation
+  bamt-cli install "mod1.bundle" --yes
+
+  # Specify game resource directory and disable backup
+  bamt-cli install "mod.bundle" --resource-dir "C:\\game\\resources" --no-backup
+
+  # Show character names with the BACII mapping
+  bamt-cli install "mod.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
+
+  # Enable missing-animation pre-check (no preview rendering)
+  bamt-cli install "mod.bundle" --spine-renderer-path "C:\\path\\to\\SpineViewerCLI.exe"
+'''
+
+
+class BatchUpdateTap(BaseTap):
     """Batch-update命令的参数解析器 - 用于批量更新Mod文件。"""
 
     # 基本参数
@@ -192,22 +291,24 @@ class BatchUpdateTap(Tap):
 
     # 搜索目录参数
     resource_dir: Path | None = None  # Path to the game resource directory for searching new bundles.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # 资源与保存参数
     no_crc: bool = False  # Disable CRC fix function.
     extra_bytes: str | None = None  # Extra bytes in hex format (e.g., "0x08080808" or "QWERTYUI").
-    asset_types: list[Literal['Texture2D', 'TextAsset', 'Mesh', 'ALL']] = ['Texture2D', 'TextAsset', 'Mesh']  # List of asset types to replace.
-    compression: Literal['lzma', 'lz4', 'original', 'none'] = 'lzma'  # Compression method.
+    asset_types: list[ReplaceAssetType] = ['Texture2D', 'TextAsset', 'Mesh', 'AnimationClip', 'Font']  # List of asset types to replace.
+    compression: CompressionType = 'lzma'  # Compression method.
 
     # Spine转换参数
-    enable_spine_conversion: bool = False  # Enable Spine skeleton conversion.
-    spine_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe.
+    skel_converter_path: Path | None = None  # Full path to SpineSkeletonDataConverter.exe. Spine conversion is enabled when provided.
     target_spine_version: str = '4.2.33'  # Target Spine version.
 
     # 匹配策略
-    strategy: Literal['path_id', 'cont_name_type', 'name_type'] = 'path_id'  # Match strategy.
+    strategy: MatchStrategy = 'path_id'  # Match strategy.
+    max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Batch update multiple Mod files, migrating assets from old Mods to new game bundles.
 
 This command scans the input directory for .bundle files, automatically finds corresponding
@@ -224,13 +325,11 @@ Examples:
   bamt-cli batch-update "C:\\path\\to\\old_mods\\" --no-crc
 
   # Enable Spine conversion
-  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --enable-spine-conversion --spine-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe"
+  bamt-cli batch-update "C:\\path\\to\\old_mods\\" --skel-converter-path "C:\\tools\\SpineSkeletonDataConverter.exe" --target-spine-version "4.2.0808"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class ReportTap(Tap):
+class ReportTap(BaseTap):
     """Report命令的参数解析器 - 用于生成Mod列表报告。"""
 
     # 基本参数
@@ -238,19 +337,23 @@ class ReportTap(Tap):
 
     # 搜索目录参数
     resource_dir: Path | None = None  # Path to the game resource directory.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
 
     # Spine渲染参数
-    enable_render: bool = False  # Enable Spine preview rendering.
-    spine_viewer_path: Path | None = None  # Path to SpineViewerCLI.exe.
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for Spine preview rendering ("auto" infers from the executable name).
+    spine_renderer_path: Path | None = None  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe). Spine preview rendering is enabled when provided.
 
     # 角色映射参数
     bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv.
-    name_field: str = "full_name"  # Character name field to display.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
 
     # 报告格式参数
-    report_format: Literal['list', 'table'] = 'list'  # Report output format.
+    format: ReportFormat = 'list'  # Report output format.
+    max_workers: int = 1  # Number of parallel worker threads for Spine preview rendering (1 = sequential).
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Generate a report of all modded bundle files in the game directory.
 
 Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
@@ -261,26 +364,74 @@ Examples:
   bamt-cli report
 
   # Generate table format report
-  bamt-cli report --report-format table
+  bamt-cli report --format table
 
   # Generate report with Spine preview images
-  bamt-cli report --enable-render --spine-viewer-path "C:\\path\\to\\SpineViewerCLI.exe"
+  bamt-cli report --spine-renderer-path "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Render with spine2dump (backend is auto-inferred from the executable name)
+  bamt-cli report --spine-renderer-path "C:\\path\\to\\spine2dump.exe"
 
   # Use character name mapping
-  bamt-cli report --bacii-map-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
+  bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --name-field "name_jp"
+
+  # Use a different CSV column as the lookup key
+  bamt-cli report --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv" --index-column "student_id" --name-field "name_en"
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
 
 
-class BackupTap(Tap):
+class BatchPreviewTap(BaseTap):
+    """Batch-preview命令的参数解析器 - 用于批量渲染Spine预览图。"""
+
+    # 基本参数
+    spine_renderer_path: Positional[Path]  # Path to the renderer tool (SpineViewerCLI.exe or spine2dump.exe).
+    spine_renderer: RenderBackendNameOrAuto = 'auto'  # Render backend for Spine preview rendering ("auto" infers from the executable name).
+    output_dir: Path = Path('./output/batch_preview/')  # Directory to save preview images.
+
+    # 搜索目录参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Will try to find the directory automatically if not provided.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+
+    # Spine渲染参数
+    preset: Literal['low', 'high'] = 'low'  # Preview render preset.
+    categories: list[Literal['spinecharacters', 'spinelobbies', 'spinebackground']] = ['spinecharacters', 'spinelobbies', 'spinebackground']  # Categories to render (default: render all).
+    max_workers: int = 1  # Number of parallel worker threads (1 = sequential).
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Batch render Spine preview images for all Spine resources in the game directory.
+
+Note: This command renders ALL Spine resources (not limited to modded files),
+      grouped by file prefix. Existing preview images with the same name are overwritten.
+
+Examples:
+  # Render previews with auto-detected game directory
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe"
+
+  # Render with spine2dump backend
+  bamt-cli batch-preview "C:\\path\\to\\spine2dump.exe"
+
+  # Specify game resource directory and high quality preset
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --resource-dir "C:\\game\\resources" --preset high
+
+  # Render only characters and lobbies
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --categories spinecharacters spinelobbies
+
+  # Render with 4 parallel workers
+  bamt-cli batch-preview "C:\\path\\to\\SpineViewerCLI.exe" --max-workers 4
+'''
+
+
+class BackupTap(BaseTap):
     """Backup命令的参数解析器 - 用于备份Mod文件。"""
 
     output_dir: Path = Path('./output/backup/')  # Directory to save the backup files.
     resource_dir: Path | None = None  # Path to the game resource directory.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
     yes: bool = False  # Automatically confirm clearing the existing backup directory.
 
     def configure(self) -> None:
+        super().configure()
         self.description = '''Backup all modded bundle files from the game directory.
 
 Note: The feature recognizes a "modded" bundle as one that has a trailing byte greater than 0.
@@ -296,21 +447,121 @@ Examples:
   # Auto-confirm clearing existing backup directory
   bamt-cli backup --yes
 '''
-        self.formatter_class = RawTextHelpFormatter
-        self._underscores_to_dashes = True
+
+
+class ParseTap(BaseTap):
+    """Parse命令的参数解析器 - 用于解析Bundle文件名。"""
+
+    # 基本参数
+    filenames: Positional[list[Path]]  # Filename(s) or path(s) to parse (only the name part is used).
+
+    # 角色映射参数
+    bacii_path: Path | None = None  # Path to BA-Characters-Internal-ID.csv. Character name lookup is enabled when provided.
+    index_column: str = CharacterInternalIDMap.DEFAULT_INDEX_COLUMN  # CSV column used as the lookup key for character mapping.
+    name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD  # Character name field to display.
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Parse BA bundle filename(s) and print the parsed components.
+
+Examples:
+  # Parse a single filename (full path is also accepted)
+  bamt-cli parse "assets-_mx-spinecharacters-ch0808_spr-mxdependency-textures-2077-08-08_12345678.bundle"
+
+  # Parse multiple filenames
+  bamt-cli parse "a.bundle" "b.bundle"
+
+  # Resolve character name from the BACII mapping
+  bamt-cli parse "ch0001_spr.bundle" --bacii-path "C:\\path\\to\\BA-Characters-Internal-ID.csv"
+'''
+
+
+class InspectTap(BaseTap):
+    """Inspect命令的参数解析器 - 用于bundle内省。"""
+
+    # 基本参数
+    bundle: Positional[list[Path]]  # Path(s) to the bundle file(s) to inspect.
+
+    # 跨包解析参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Enables cross-bundle resolution (MonoScript class names, external CAB locations).
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+    cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
+    no_cache: bool = False  # Disable the CAB mapping cache.
+    local_only: bool = False  # Only resolve locally: skip cross-bundle resolution even if a resource directory is available (external references are labeled unresolved).
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Inspect bundle file(s): platform info, self CAB name(s), asset type stats, external references,
+MonoBehaviour list grouped by MonoScript class name, and container entries.
+
+Examples:
+  # Inspect a single bundle
+  bamt-cli inspect "assets-_mx-spinelobbies-ch0242_home-_mxdependency-2025-07-10_002_assets_all_4117045409.bundle"
+
+  # Enable cross-bundle MonoScript class name resolution
+  bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Inspect locally without touching the game directory (fast, no scanning)
+  bamt-cli inspect "bundle.bundle" --local-only
+
+  # Disable the CAB mapping cache
+  bamt-cli inspect "bundle.bundle" --resource-dir "C:\\path\\to\\game" --no-cache
+'''
+
+
+class TraceTap(BaseTap):
+    """Trace命令的参数解析器 - 用于bundle引用追踪。"""
+
+    # 基本参数
+    bundle: Positional[Path]  # Path to the bundle file to trace.
+
+    # 跨包解析参数
+    resource_dir: Path | None = None  # Path to the game resource directory. Enables cross-bundle reference resolution.
+    region: BARegion = 'auto'  # Game region used to auto-detect the install path (auto = global first, then japan).
+    path_id: int | None = None  # Only trace the object with this path ID (default: trace all objects).
+    cab_cache: Path | None = None  # Path to the CAB mapping cache file (default: <exe_dir>/Addons/cab_cache.json).
+    no_cache: bool = False  # Disable the CAB mapping cache.
+    local_only: bool = False  # Only resolve locally: skip cross-bundle resolution even if a resource directory is available (unresolved pointers are labeled).
+
+    def configure(self) -> None:
+        super().configure()
+        self.description = '''Trace all references of objects inside a bundle and resolve each pointer
+(m_FileID, m_PathID) to its target object, locating external CAB references in the game directory.
+
+Examples:
+  # Trace all references without cross-bundle resolution
+  bamt-cli trace "assets-_mx-spinelobbies-ch0242_home-_mxdependency-2025-07-10_002_assets_all_4117045409.bundle"
+
+  # Resolve external references against the game directory
+  bamt-cli trace "bundle.bundle" --resource-dir "C:\\path\\to\\game"
+
+  # Trace locally without touching the game directory (fast, no scanning)
+  bamt-cli trace "bundle.bundle" --local-only
+
+  # Trace a single object
+  bamt-cli trace "bundle.bundle" --path-id 123456
+'''
 
 
 class MainTap(BaseTap):
     """主Tap类，包含所有子命令。"""
+
+    # 全局参数（需放在子命令之前，如: bamt-cli --lang en-us update ...）
+    lang: str | None = None  # Interface language for localized output (e.g., "en-US", "zh-CN", "debug"; default: auto-detect).
 
     def configure(self) -> None:
         super().configure()
         self.add_subparsers(dest='command', help='Available commands')
         self.add_subparser('update', UpdateTap, help='Update or port a Mod, migrating assets from an old Mod to a specific Bundle.')
         self.add_subparser('batch-update', BatchUpdateTap, help='Batch update multiple Mod files from an input directory.')
+        self.add_subparser('install', InstallTap, help='Analyze mod file(s) and install them into the game directory (per-group confirmation).')
         self.add_subparser('pack', PackTap, help='Pack contents from an asset folder into a target bundle file.')
         self.add_subparser('extract', ExtractTap, help='Extract assets from Unity Bundle files.')
         self.add_subparser('crc', CrcTap, help='Tool to fix file CRC32 checksum or calculate/compare CRC32 values.')
+        self.add_subparser('parse', ParseTap, help='Parse BA bundle filename(s) and print the parsed components.')
         self.add_subparser('report', ReportTap, help='Generate a report of all modded bundle files.')
+        self.add_subparser('batch-preview', BatchPreviewTap, help='Batch render Spine preview images for all Spine resources.')
         self.add_subparser('backup', BackupTap, help='Backup all modded bundle files.')
+        self.add_subparser('inspect', InspectTap, help='Inspect bundle file(s): type stats, externals, MonoBehaviour list, container.')
+        self.add_subparser('trace', TraceTap, help='Trace object references inside a bundle and resolve external CAB targets.')
         self.add_subparser('env', EnvTap, help='Display system information and library versions.')

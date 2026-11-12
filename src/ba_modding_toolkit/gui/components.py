@@ -1,19 +1,32 @@
 # gui/components.py
 
 import tkinter as tk
+import math
 import ttkbootstrap as tb
 from ttkbootstrap.widgets.tooltip import ToolTip
+from ttkbootstrap.widgets.scrolled import ScrolledText
 from tkinterdnd2 import DND_FILES
+from PIL import Image as PILImage, ImageTk
 from pathlib import Path
 from typing import Callable, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .app import App
 
-from .utils import select_file, select_directory, reveal_in_explorer, build_filetypes
+from .utils import select_file, select_directory, open_directory, reveal_in_explorer, build_filetypes
 from ..i18n import t
 from ..naming import parse_filename
 from ..models import FileType
+
+# --- 路径选择组件共用的核心机制 ---
+def _auto_path_commands(
+    path_var: tk.StringVar,
+    title: str,
+    parent: tk.Widget,
+) -> tuple[Callable[[], None], Callable[[], None]]:
+    select_cmd = lambda: select_directory(path_var, title, parent=parent)
+    open_cmd = lambda: open_directory(path_var.get())
+    return select_cmd, open_cmd
 
 # --- 日志管理类 ---
 class Logger:
@@ -51,6 +64,41 @@ class Logger:
             self.log_widget.config(state=tk.DISABLED)
         
         self.master.after(0, _clear_log)
+
+# --- 日志区域构建 ---
+
+def create_log_area(parent: tk.Widget) -> ScrolledText:
+    """创建日志区域，返回带自动隐藏滚动条的 ScrolledText（.text 为内部 Text 组件）"""
+    # 创建外层容器（带标题的边框）
+    log_frame = tb.Labelframe(
+        parent,
+        text=t("ui.log_area"),
+        bootstyle="default",
+        padding=(5, 0)
+    )
+    log_frame.pack(fill=tk.BOTH, expand=True)
+
+    # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
+    st = ScrolledText(
+        log_frame,
+        padding=0,
+        height=8,
+        autohide=True,    # 自动隐藏滚动条
+        bootstyle="round" # 滚动条样式
+    )
+    st.pack(fill=tk.BOTH, expand=True)
+
+    # 通过操作内部的 Text 组件来修改颜色
+    st.text.configure(
+        font=Theme.LOG_FONT,
+        background=Theme.LOG_BG,
+        foreground=Theme.LOG_FG,
+        selectbackground=Theme.LOG_SELECTED, # 选中时的背景色
+        insertbackground=Theme.LOG_FG,  # 光标颜色
+        state=tk.DISABLED,              # 初始设为不可编辑
+        spacing1=2,                     # 段前间距（像素）
+    )
+    return st
 
 # --- 主题与颜色管理 ---
 
@@ -164,7 +212,7 @@ class UIComponents:
         return checkbutton
 
     @staticmethod
-    def create_path_entry(parent, title, textvariable, select_cmd, open_cmd=None, placeholder_text=None, open_button=True):
+    def create_path_entry(parent, title, textvariable, select_cmd=None, open_cmd=None, placeholder_text=None, open_button=True):
         """
         创建路径输入框组件
 
@@ -172,14 +220,19 @@ class UIComponents:
             parent: 父组件
             title: 标题（可选，用于向后兼容）
             textvariable: 文本变量
-            select_cmd: 选择按钮命令
-            open_cmd: 打开按钮命令（可选）
+            select_cmd: 选择按钮命令；为 None 时自动生成默认的本地目录选择命令（以 title 作为对话框标题）
+            open_cmd: 打开按钮命令（可选）；仅在 select_cmd 也为 None（即选择命令为自动生成）时自动生成默认的打开目录命令
             placeholder_text: 占位符文本（可选）
             open_button: 是否显示"开"按钮，默认为True
 
         Returns:
             创建的框架组件
         """
+        # 自动生成默认的选择/打开命令（适用于普通本地目录路径）
+        if select_cmd is None:
+            select_cmd, auto_open_cmd = _auto_path_commands(textvariable, title, parent)
+            if open_cmd is None:
+                open_cmd = auto_open_cmd
 
         frame = tb.Labelframe(parent, text=title, padding=8)
         frame.pack(fill=tk.X, pady=5)
@@ -198,13 +251,13 @@ class UIComponents:
 
     # 保留原函数作为向后兼容的包装器
     @staticmethod
-    def create_directory_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text=None):
-        """创建目录路径输入框组件（向后兼容）"""
+    def create_directory_path_entry(parent, title, textvariable, select_cmd=None, open_cmd=None, placeholder_text=None):
+        """创建目录路径输入框组件（向后兼容）；select_cmd/open_cmd 为 None 时自动生成默认命令"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, open_cmd, placeholder_text, open_button=True)
 
     @staticmethod
     def create_file_path_entry(parent, title, textvariable, select_cmd):
-        """创建文件路径输入框组件（向后兼容）"""
+        """创建文件路径输入框组件（向后兼容）；文件选择无默认命令，select_cmd 需手动提供"""
         return UIComponents.create_path_entry(parent, title, textvariable, select_cmd, None, None, open_button=False)
 
     @staticmethod
@@ -397,10 +450,8 @@ class DropZone(tb.Labelframe):
             field = self._app.character_name_field_var.get()
             char_name = self._app.char_map.lookup(parsed.core, field) or ""
 
-            # 格式化显示文本（逐个拼接）
-            ui_text = parsed.core
-            if char_name:
-                ui_text += f"（{char_name}）"
+            # 格式化显示文本（解析到角色名时显示为 "name (core)"，否则仅显示 core）
+            ui_text = f"{char_name} ({parsed.core})" if char_name else parsed.core
             ui_text += f"\n({t('ui.drop_zone.contains', count=len(self._paths), types=type_str)})"
 
             self.set_success(ui_text)
@@ -479,7 +530,8 @@ class DropZone(tb.Labelframe):
         if self._allow_folder:
             path = select_directory(
                 title=t("ui.dialog.select", type=self.cget("text")),
-                log=self._logger.log if self._logger else None
+                log=self._logger.log if self._logger else None,
+                parent=self
             )
             if path:
                 dir_path = Path(path)
@@ -676,12 +728,12 @@ class SettingRow:
         parent: tk.Widget,
         label: str,
         path_var: tk.StringVar,
-        select_cmd: Callable[[], None],
+        select_cmd: Callable[[], None] | None = None,
         open_cmd: Callable[[], None] | None = None,
         tooltip: str | None = None,
         download_guide_cmd: Callable[[tk.Widget | None], None] | None = None,
         status_check: Callable[[], bool] | None = None,
-        extra_button: tuple[str, Callable[[], None], str] | None = None
+        extra_button: tuple[str, Callable[[], None], str] | None = None,
     ) -> tb.Frame:
         """创建路径选择行
 
@@ -689,8 +741,8 @@ class SettingRow:
             parent: 父组件
             label: 标签文本
             path_var: 路径变量
-            select_cmd: 选择路径命令
-            open_cmd: 打开路径命令（可选）
+            select_cmd: 选择路径命令；为 None 时自动生成默认的本地目录选择命令（以 label 作为对话框标题）
+            open_cmd: 打开路径命令（可选）；仅在 select_cmd 也为 None（即选择命令为自动生成）时自动生成默认的打开目录命令
             tooltip: 提示文本（可选）
             download_guide_cmd: 下载引导命令（可选），接收顶层窗口作为参数
             status_check: 状态检查函数（可选），返回 True 显示绿色指示器
@@ -698,6 +750,10 @@ class SettingRow:
         """
         container = SettingRow.create_container(parent)
         refresh_indicator = SettingRow._add_label_area(container, label, tooltip, status_check)
+        if select_cmd is None:
+            select_cmd, auto_open_cmd = _auto_path_commands(path_var, label, parent)
+            if open_cmd is None:
+                open_cmd = auto_open_cmd
         
         # 右侧区域容器
         right_frame = tb.Frame(container)
@@ -921,8 +977,10 @@ class SettingRow:
         to: int = 8,
         tooltip: str | None = None,
         width: int | None = None,
+        app: "App | None" = None,
+        depends_on: str | None = None,
     ) -> tb.Spinbox:
-        """创建数值选择器行"""
+        """创建数值选择器行，支持依赖管理（依赖不满足时自动禁用）"""
         container = SettingRow.create_container(parent)
         SettingRow._add_label_area(container, label, tooltip)
         if width is None:
@@ -935,6 +993,19 @@ class SettingRow:
             width=width,
         )
         spinbox.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # 自动从 variable 推导 depends_on（如果未手动指定）
+        if app and depends_on is None:
+            depends_on = app.get_depends_on_from_var(int_var)
+
+        if app and depends_on:
+            SettingRow._setup_dependency(
+                spinbox, app, depends_on,
+                on_disabled=lambda: spinbox.config(state=tk.DISABLED),
+                on_enabled=lambda: spinbox.config(state=tk.NORMAL),
+                parent=parent,
+            )
+
         return spinbox
 
     @staticmethod
@@ -1037,7 +1108,8 @@ class FileListbox:
         self.display_formatter = display_formatter
         self.on_files_added = on_files_added
         self.allowed_suffixes = allowed_suffixes
-        
+        self._annotations: dict[Path, tuple[str, str]] = {}  # path → (标注文本, 前景色)
+
         self._create_widgets(title)
         
     def _create_widgets(self, title):
@@ -1152,6 +1224,33 @@ class FileListbox:
         
         return real_file_count if real_file_count < len(self.file_list) else None
     
+    def _item_text(self, path: Path) -> str:
+        """listbox 项显示文本：文件名（或格式化文本）+ 标注"""
+        base = self.display_formatter(path) if self.display_formatter else path.name
+        ann = self._annotations.get(path)
+        return f"{base}{ann[0]}" if ann else base
+
+    def _apply_annotation_colors(self):
+        """按当前 file_list 重涂各行前景色（Listbox 的 itemconfigure 按索引定位，
+        增删项后颜色不会随内容移动，需结构性变更后重涂）"""
+        for i in range(self.listbox.size()):
+            file_index = self._get_file_index_by_listbox_index(i)
+            ann = self._annotations.get(self.file_list[file_index]) if file_index is not None else None
+            self.listbox.itemconfigure(i, foreground=ann[1] if ann else Theme.TEXT_NORMAL)
+
+    def set_annotations(self, annotations: dict[Path, tuple[str, str]] | None = None) -> None:
+        """设置文件级标注（通用 API）：path → (标注文本, 前景色)；传 None 清除全部标注
+
+        Args:
+            annotations: 标注映射。文本会追加在显示文本之后，颜色作用于整行；
+                仅对当前列表内的文件生效，列表为空的文件忽略
+        """
+        self._annotations = annotations or {}
+        for i, path in enumerate(self.file_list):
+            self.listbox.delete(i)
+            self.listbox.insert(i, self._item_text(path))
+        self._apply_annotation_colors()
+
     def add_files(self, paths: list[Path]):
         """
         添加文件到列表
@@ -1168,17 +1267,12 @@ class FileListbox:
             if path not in self.file_list:
                 self.file_list.append(path)
                 added_paths.append(path)  # 记录新添加的文件
-                
-                # 格式化显示文本
-                if self.display_formatter:
-                    display_text = self.display_formatter(path)
-                else:
-                    display_text = path.name
-                
-                self.listbox.insert(tk.END, display_text)
+
+                self.listbox.insert(tk.END, self._item_text(path))
                 added_count += 1
-        
+
         if added_count > 0:
+            self._apply_annotation_colors()
             if self.logger:
                 self.logger.log(t('log.file.added_count', count=added_count))
             
@@ -1220,14 +1314,16 @@ class FileListbox:
             file_types=ft,
             multiple=True,
             callback=lambda paths: self.add_files(paths),
-            log=self.logger.log if self.logger else None
+            log=self.logger.log if self.logger else None,
+            parent=self.frame
         )
 
     def _browse_add_folder(self):
         """浏览添加文件夹"""
         folder = select_directory(
             title = t("action.add_folder"),
-            log = self.logger.log if self.logger else None
+            log = self.logger.log if self.logger else None,
+            parent = self.frame
             )
 
         if folder:
@@ -1275,11 +1371,13 @@ class FileListbox:
             self.listbox.delete(listbox_index)
             if file_index < len(self.file_list):
                 del self.file_list[file_index]
-        
+
         # 如果列表为空，添加占位符
         if not self.file_list and self.listbox.size() == 0:
             self._add_placeholder()
-        
+        else:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+
         if self.logger:
             self.logger.log(t('log.file.removed_count', count=len(items_to_remove)))
     
@@ -1288,9 +1386,35 @@ class FileListbox:
         self.file_list.clear()
         self.listbox.delete(0, tk.END)
         self._add_placeholder()
-        
+
         if self.logger:
             self.logger.log(t('log.file.list_cleared'))
+
+    def remove_files(self, paths: list[Path]) -> int:
+        """移除指定文件（同时删除 listbox 项与 file_list 条目）
+
+        Args:
+            paths: 待移除的文件路径列表
+
+        Returns:
+            int: 实际移除的数量
+        """
+        targets = set(paths)
+        removed = 0
+        # 从后往前删除，避免索引变动
+        for listbox_index in range(self.listbox.size() - 1, -1, -1):
+            file_index = self._get_file_index_by_listbox_index(listbox_index)
+            if file_index is not None and self.file_list[file_index] in targets:
+                self.listbox.delete(listbox_index)
+                del self.file_list[file_index]
+                removed += 1
+
+        # 如果列表为空，添加占位符
+        if not self.file_list and self.listbox.size() == 0:
+            self._add_placeholder()
+        elif removed:
+            self._apply_annotation_colors()  # 删除后各行索引变动，重涂标注色
+        return removed
     
     def get_frame(self):
         """获取组件框架，用于布局"""
@@ -1299,3 +1423,206 @@ class FileListbox:
     def get_listbox(self):
         """获取列表框控件,用于直接操作"""
         return self.listbox
+
+
+# ZoomableCanvas 渲染参数：交互期代理图最长边 / 高清渲染像素上限（防超大帧冻结 UI）
+_PROXY_MAX_SIDE = 1024
+_MAX_RENDER_PIXELS = 16_000_000
+_INTERACTIVE_INTERVAL_MS = 33  # 交互期快速渲染最小间隔（约 30fps）
+_QUALITY_DEBOUNCE_MS = 120     # 停止缩放后高清重渲染的防抖延迟
+
+
+class CanvasSyncGroup:
+    """ZoomableCanvas 同步组：共享画布列表与同步开关（关闭后各画布独立缩放平移）"""
+
+    def __init__(self):
+        self.canvases: list[ZoomableCanvas] = []
+        self.enabled = True
+
+
+class ZoomableCanvas(tb.Canvas):
+    """可滚轮缩放、拖拽平移的图片预览画布（无图时显示占位文本）
+
+    - 滚轮缩放（以画布中心为基准）、左键拖拽平移、双击复位适配
+    - 缩放渲染经节流/防抖调度：交互期代理图最近邻快渲染，停止后原图双线性重渲染
+    - set_image 传入 Path 自动加载；加载失败或传 None 时显示占位文本
+    - sync_group 传入共享组后，组内画布缩放/平移状态互通
+      （缩放为相对各自适配基准的倍率，两侧图片尺寸不同时仍保持视觉一致）
+    """
+
+    def __init__(self, master, placeholder: str = "", sync_group: CanvasSyncGroup | None = None, **kwargs):
+        super().__init__(master, highlightthickness=0, **kwargs)
+        self._pil: PILImage.Image | None = None
+        self._photo: ImageTk.PhotoImage | None = None  # 防止 PhotoImage 被回收
+        self._proxy: PILImage.Image | None = None  # 交互期快速渲染用代理图（限制最长边）
+        self._fit = 1.0   # 适配窗口的基础缩放（set_image/_refit 时更新）
+        self._zoom = 1.0  # 相对基础缩放的倍率（同步组内共享）
+        self._scale = 1.0
+        self._scale_max = 8.0  # 缩放上限（受渲染像素预算约束，set_image 时更新）
+        self._drag_start: tuple[int, int] | None = None
+        self._interactive_job: str | None = None  # 交互渲染节流任务
+        self._quality_job: str | None = None      # 高清重渲染防抖任务
+        self._sync_group = sync_group or CanvasSyncGroup()  # 同步组：滚轮缩放/拖拽平移时组内其他画布跟随
+        self._sync_group.canvases.append(self)
+        self._img_id = self.create_image(0, 0, anchor="nw")
+        self._text_id = self.create_text(0, 0, text=placeholder, fill="#888888")
+        self.bind("<Configure>", lambda _e: self._refit())
+        self.bind("<MouseWheel>", self._on_wheel)
+        self.bind("<ButtonPress-1>", self._on_press)
+        self.bind("<B1-Motion>", self._on_motion)
+        self.bind("<Double-Button-1>", lambda _e: self._refit())
+
+    def set_image(self, image: Path | None, placeholder: str = ""):
+        """设置图片或清空；每次设置后重新适配窗口大小"""
+        if image is not None:
+            try:
+                with PILImage.open(image) as im:
+                    self._pil = im.convert("RGBA")
+            except Exception:
+                self._pil = None
+        else:
+            self._pil = None
+        if self._pil is None:
+            self._proxy = None
+            self.itemconfigure(self._text_id, text=placeholder)
+            self.itemconfigure(self._img_id, image="")
+            self._photo = None
+        else:
+            # 交互期快速渲染代理图（缩小源图，最近邻采样成本低）
+            w, h = self._pil.size
+            if max(w, h) > _PROXY_MAX_SIDE:
+                k = _PROXY_MAX_SIDE / max(w, h)
+                self._proxy = self._pil.resize((max(1, int(w * k)), max(1, int(h * k))), PILImage.BILINEAR)
+            else:
+                self._proxy = self._pil
+            # 缩放上限随分辨率收紧（如 2220×3540 原图约 1.4 倍封顶），避免高清渲染出天文数字尺寸冻结 UI
+            self._scale_max = min(8.0, math.sqrt(_MAX_RENDER_PIXELS / (w * h)))
+            self.itemconfigure(self._text_id, text="")
+            self._refit()
+
+    def _refit(self):
+        """重新适配窗口（复位缩放为适配基准并居中，双击复位同样走这里）"""
+        cw, ch = self.winfo_width(), self.winfo_height()
+        if self._pil is None:
+            if cw > 10 and ch > 10:
+                self.coords(self._text_id, cw // 2, ch // 2)
+            return
+        if cw < 10 or ch < 10:
+            return
+        iw, ih = self._pil.size
+        self._fit = min(cw / iw, ch / ih)
+        self._zoom = 1.0
+        self._scale = self._fit
+        self._render()
+        # 复位/窗口变化时同步组内其他画布回到适配基准
+        if self._sync_group.enabled:
+            for canvas in self._sync_group.canvases:
+                if canvas is not self:
+                    canvas._apply_zoom(1.0)
+
+    def _render(self, fast: bool = False):
+        """按当前缩放重新采样并居中绘制
+
+        fast=True 交互期快速渲染：代理图 + 最近邻（停止缩放后由防抖任务重绘高清）
+        """
+        assert self._pil is not None
+        iw, ih = self._pil.size
+        size = (max(1, int(iw * self._scale)), max(1, int(ih * self._scale)))
+        src, resample = (self._proxy, PILImage.NEAREST) if fast else (self._pil, PILImage.BILINEAR)
+        self._photo = ImageTk.PhotoImage(src.resize(size, resample))
+        cw, ch = self.winfo_width(), self.winfo_height()
+        self.coords(self._img_id, (cw - size[0]) // 2, (ch - size[1]) // 2)
+        self.itemconfigure(self._img_id, image=self._photo)
+
+    def _on_wheel(self, event):
+        """滚轮缩放（Windows delta ±120），并同步到组内其他画布"""
+        if self._pil is None:
+            return
+        factor = 1.1 if event.delta > 0 else 1 / 1.1
+        self._apply_zoom(self._zoom * factor, sync=True)
+
+    def _apply_zoom(self, zoom: float, sync: bool = False):
+        """按相对适配基准的倍率缩放（渲染经节流/防抖调度），sync 时组内其他画布跟随"""
+        if self._pil is None or not self.winfo_exists():
+            return
+        new_scale = min(max(self._fit * zoom, 0.05), self._scale_max)
+        if new_scale == self._scale:
+            return
+        self._zoom = new_scale / self._fit
+        self._scale = new_scale
+        self._schedule_render()
+        if sync and self._sync_group.enabled:
+            for canvas in self._sync_group.canvases:
+                if canvas is not self:
+                    canvas._apply_zoom(self._zoom)
+
+    def _schedule_render(self):
+        """合并连续缩放事件：交互期低清快渲染（节流）+ 停止后高清重渲染（防抖）"""
+        # 节流：已排队的快渲染不重复排队，单帧耗时再长也不会积压事件
+        if self._interactive_job is None:
+            self._interactive_job = self.after(_INTERACTIVE_INTERVAL_MS, self._render_interactive)
+        # 防抖：每次滚动重置高清渲染计时器
+        if self._quality_job is not None:
+            self.after_cancel(self._quality_job)
+        self._quality_job = self.after(_QUALITY_DEBOUNCE_MS, self._render_quality)
+
+    def _render_interactive(self):
+        """交互期快速渲染（代理图最近邻，约 30fps 上限）"""
+        self._interactive_job = None
+        if self._pil is not None and self.winfo_exists():
+            self._render(fast=True)
+
+    def _render_quality(self):
+        """停止缩放后高清重渲染（原图双线性）"""
+        self._quality_job = None
+        if self._pil is not None and self.winfo_exists():
+            self._render()
+
+    def _on_press(self, event):
+        self._drag_start = (event.x, event.y)
+
+    def _on_motion(self, event):
+        """左键拖拽平移（同步组内其他画布跟随相同位移）"""
+        if self._drag_start is not None:
+            dx, dy = event.x - self._drag_start[0], event.y - self._drag_start[1]
+            self.move(self._img_id, dx, dy)
+            if self._sync_group.enabled:
+                for canvas in self._sync_group.canvases:
+                    if canvas is not self and canvas._pil is not None:
+                        canvas.move(canvas._img_id, dx, dy)
+            self._drag_start = (event.x, event.y)
+
+
+class DualZoomableCanvas(tb.Frame):
+    """左右并排、状态同步（缩放/平移互通）的双 ZoomableCanvas 对比组件
+
+    两侧各自独立加载图片（尺寸可不同），缩放按相对各自适配基准的倍率、
+    平移按相同位移保持视觉一致；无图一侧显示占位文本。
+    """
+
+    def __init__(self, master, left_label: str = "", right_label: str = "", **kwargs):
+        super().__init__(master, **kwargs)
+        self.grid_columnconfigure((0, 1), weight=1)
+        self.grid_rowconfigure(0, weight=1)
+        self.sync_group = CanvasSyncGroup()
+        self.canvases: list[ZoomableCanvas] = []
+        for col, label in enumerate((left_label, right_label)):
+            lf = tb.Labelframe(self, text=label, padding=5)
+            lf.grid(row=0, column=col, sticky="nsew", padx=(0, 5) if col == 0 else (5, 0))
+            canvas = ZoomableCanvas(lf, width=400, height=500, sync_group=self.sync_group)
+            canvas.pack(fill=tk.BOTH, expand=True)
+            self.canvases.append(canvas)
+
+    def set_images(self, left: Path | None, right: Path | None,
+                   left_placeholder: str = "", right_placeholder: str = ""):
+        """同时设置左右图片或清空（每次设置后各自重新适配，缩放同步从基准开始）"""
+        for canvas, image, placeholder in zip(
+            self.canvases, (left, right), (left_placeholder, right_placeholder),
+        ):
+            canvas.set_image(image, placeholder)
+
+    def set_sync(self, enabled: bool):
+        """开关状态同步；重新开启时以左侧画布的缩放为准立即对齐右侧"""
+        self.sync_group.enabled = enabled
+        if enabled:
+            self.canvases[1]._apply_zoom(self.canvases[0]._zoom)

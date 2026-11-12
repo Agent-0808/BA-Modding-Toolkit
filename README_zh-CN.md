@@ -3,7 +3,7 @@
     <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/99332127fc5478e227a37d60bad12074c9472992/docs/title.png?raw=true/>
   </p>
   <p>
-    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <a href="https://www.gnu.org/licenses/gpl-3.0"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPL--3.0-orange.svg"></a>
     <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
     <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
@@ -76,14 +76,26 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 即使不配置 `SpineSkeletonDataConverter.exe`，也可以正常使用本程序来更新*使用与当前版本（4.2.xx）兼容的Spine文件*的 Mod。
 - 如果您想要更新的Mod制作于 2025 年及之后，则其已经使用了 Spine 4 格式，无需配置该选项也可正常更新。
 
-### Spine 预览工具
+### SpineViewer
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-该工具可以预览与渲染 Spine 的骨骼动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+该工具可以解析与渲染 Spine 的 `.skel` 动画文件。您可以在设置界面配置 `SpineViewerCLI.exe` 程序的路径来供本程序调用。
+
 - 在“文件列表”窗口中右键预览
 - 在“资源提取”功能中，可选在解包之后渲染预览图。
 - 在“Mod 报告”功能中，可选在生成报告时渲染预览图。
+- 可用于检测 `.skel` 动画列表的区别，在“Mod 更新”与“资源打包”功能中使用。
+
+### Spine2Dump
+
+**[Deathemonic/Spine2Dump](https://github.com/Deathemonic/Spine2Dump)**
+
+该工具同样可以解析与渲染 Spine 的 `.skel` 动画文件，与上一节的 SpineViewer 二者二选一即可，均可在设置界面配置使用。
+
+- 在设置界面将“渲染后端”选择为 Spine2Dump，并配置 `spine2dump.exe` 程序的路径。
+- 实测在批量渲染时速度更快，但输出的预览图尺寸可能与 SpineViewer 不完全一致，且难以控制。
+- 目前实测仅支持 Spine 4.x 格式的 `.skel` 文件；Spine 3.8 文件请使用 SpineViewer。
 
 ### ADB(Android Debug Bridge)
 
@@ -93,6 +105,11 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 
 - 该功能需要您已连接 Android 设备，并且已授权该程序访问您的设备。
 - 设置 `adb.exe` 程序的路径后，在“设置”窗口内选择目标 Android 设备与对应的文件来源即可。
+
+> [!TIP]
+> 请查看 [ADB 使用方法](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/ADB%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95) 页面参考详细用法说明。
+
+## 子项目
 
 ### BA-characters-internal-id
 
@@ -104,9 +121,19 @@ BA Modding Toolkit 可以帮助您解决以上问题，完全傻瓜式操作，�
 - 也用作生成 Mod 报告时，根据角色内部ID显示角色名称。
 
 > [!NOTE]
-> 从 Releases 下载的打包版本已在程序目录的 `Addons/` 子目录中附带了一份数据文件（`BA-Characters-Internal-ID.csv`），开箱即用；您也可以在设置界面手动下载最新版本。
+> 从 Releases 下载的打包版本已在程序目录的 `Addons/` 子目录中附带了一份数据文件（`BA-Characters-Internal-ID.csv`），开箱即用；您也可以在设置界面手动下载托管的最新版本。
 >
 > 该数据文件基于 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) 协议授权（完整声明见程序目录 `Addons/BA-Characters-Internal-ID-LICENSE.txt`），数据整理自 [基沃托斯古书馆](https://kivo.wiki) 的文本数据，在本程序中仅用于显示角色名称等合理用途。
+
+## 语言支持
+
+本项目开发语言为 **zh-CN**，当前维护的语言包括 **en-US**。
+
+在 Beta 阶段，我们仅保证 **zh-CN** 内容的完整；其他语言可能无法及时完善新增内容的文本。正式版发布前，我们会逐步补充与完善维护语言。若发现现有语言内容有误，欢迎通过 Issue 或 PR 指出。
+
+如果想要自行添加语言，可以在 EXE 文件同级目录新建 `locales` 文件夹，放入新增的语言文件（如 `new-LANG.json`），程序将从该目录获取外部的语言文件。
+
+如果您有意添加新语言，欢迎提交 PR。但受维护精力限制，新增语言后续大概率不会被主动维护，敬请谅解。感谢理解与支持！
 
 ## 命令行接口 (CLI)
 
@@ -140,7 +167,25 @@ bamt-cli backup -h
 
 请查看 [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) 页面参考详细用法说明。
 
-## 技术细节
+## 开发
+
+请安装 Python 3.12+ 版本，安装依赖后运行：
+
+```bash
+git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
+cd BA-Modding-Toolkit
+
+# 使用 uv 管理依赖
+python -m pip install uv
+uv sync
+uv run bamt
+```
+
+作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
+
+您可以将 `BA-Modding-Toolkit` 的代码加入您的项目中或是进行修改，以实现自定义的 Mod 制作和更新功能。
+
+`cli/main.py` 是一个命令行接口（CLI）版本的主程序，您可以参考其调用处理函数的方式。
 
 ### 经过测试的环境
 
@@ -155,29 +200,6 @@ bamt-cli backup -h
 | Windows 10          | 3.12.4    | 1.24.0     | 10.4.0    | ❌   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10   | 1.23.0     | 12.0.0    | ✅   |  |
 
-## 开发
-
-请安装 Python 3.12+ 版本，安装依赖后运行：
-
-```bash
-git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
-cd BA-Modding-Toolkit
-
-# 使用 uv 管理依赖
-python -m pip install uv
-uv sync
-uv run bamt
-# 或者使用传统方式安装依赖
-python -m pip install .
-python -m ba_modding_toolkit
-```
-
-作者的编程水平有限，欢迎提出建议或是issue，也欢迎贡献代码以改进本项目。
-
-您可以将 `BA-Modding-Toolkit` 的代码加入您的项目中或是进行修改，以实现自定义的 Mod 制作和更新功能。
-
-`cli/main.py` 是一个命令行接口（CLI）版本的主程序，您可以参考其调用处理函数的方式。
-
 ### 文件结构
 
 ```
@@ -188,15 +210,30 @@ BA-Modding-Toolkit/
 ├── src/ba_modding_toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # 程序入口
-│ ├── core.py        # 核心处理逻辑
-│ ├── searching.py   # 搜索功能逻辑
+│ ├── asset.py       # Bundle 资产相关操作
 │ ├── bundle.py      # Bundle 类
+│ ├── searching.py   # 搜索功能逻辑
 │ ├── spine.py       # Spine 相关工具
-│ ├── report.py      # 报告生成工具
 │ ├── naming.py      # 文件名处理逻辑
+│ ├── references.py  # 跨 Bundle 指针解析
 │ ├── models.py      # 数据模型类
 │ ├── i18n.py        # 国际化功能相关
-│ ├── utils.py       # 工具类和辅助函数
+│ ├── core/          # 核心处理逻辑包
+│ │ ├── __init__.py
+│ │ ├── extraction.py   # 资源提取
+│ │ ├── introspect.py   # Bundle 内省与只读诊断
+│ │ ├── mod_install.py  # Mod 安装
+│ │ ├── mod_update.py   # Mod 更新
+│ │ ├── packing.py      # 资源打包
+│ │ ├── preview.py      # 预览渲染
+│ │ └── report.py       # 报告生成
+│ ├── utils/         # 工具类和辅助函数包
+│ │ ├── __init__.py
+│ │ ├── about.py     # 程序版本信息与环境诊断
+│ │ ├── common.py    # 通用工具
+│ │ ├── crc.py       # CRC 校验值计算与修正
+│ │ ├── image.py     # 图像处理
+│ │ └── paths.py     # 路径处理
 │ ├── adb/           # ADB 相关模块
 │ ├── cli/           # 命令行接口子程序
 │ │ ├── __main__.py     # CLI 主入口
@@ -210,24 +247,8 @@ BA-Modding-Toolkit/
 │ │ ├── components.py   # UI 组件、主题、日志
 │ │ ├── configs.py      # 配置项定义
 │ │ ├── utils.py        # UI 相关工具函数
-│ │ ├── windows/        # 独立窗口
-│ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py           # ADB 浏览器窗口
-│ │ │ ├── settings.py              # 设置页 
-│ │ │ ├── abnormal_check_dialog.py # 不正常的用户端检查对话框
-│ │ │ ├── report_dialog.py         # 报告工具对话框
-│ │ │ ├── backup_dialog.py         # 备份工具对话框
-│ │ │ └── file_list_window.py      # 文件列表窗口
+│ │ ├── windows/        # 独立窗口与对话框
 │ │ └── tabs/           # 功能标签页
-│ │   ├── __init__.py
-│ │   ├── base_tab.py              # TabFrame 基类
-│ │   ├── mod_update_tab.py        # Mod 更新标签页
-│ │   ├── batch_update_tab.py      # 批量更新标签页
-│ │   ├── crc_tool_tab.py          # CRC 工具标签页
-│ │   ├── asset_packer_tab.py      # 资源打包标签页
-│ │   ├── asset_extractor_tab.py   # 资源提取标签页
-│ │   ├── adb_push_tab.py          # ADB 推送标签页
-│ │   └── tools_tab.py             # 工具标签页
 │ ├── assets/         # 资源文件
 │ └── locales/        # 语言文件
 ├── tests/            # Pytest 测试案例文件夹

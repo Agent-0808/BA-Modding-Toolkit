@@ -58,8 +58,8 @@ jobs:
           low-memory: true
           # lto: "no"
           # jobs: 1
+          # 包含代码依赖包（不包含整个 ba_modding_toolkit，GUI 子包及其依赖由 import 跟随自动排除）
           include-package: |
-            ba_modding_toolkit
             UnityPy.resources
           # 包含依赖包的数据文件
           include-package-data: |

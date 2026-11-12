@@ -1,15 +1,20 @@
 # spine.py
 
+import base64
+import os
 import re
 import shutil
 import subprocess
 import tempfile
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator, Literal, Protocol
 from SpineAtlas import Atlas, ReadAtlasFile
 
 from .i18n import t
-from .utils import CREATE_NO_WINDOW, LogFunc, no_log
+from .utils import CREATE_NO_WINDOW, LogFunc, is_safe_file_name, is_safe_relative_name, no_log
+from .models import SkelConvertOptions, SkelVersionConflict
 
 
 def get_skel_version(source: Path | bytes, log: LogFunc = no_log) -> str | None:
@@ -131,59 +136,89 @@ class SkelConverter:
             return False
 
     @staticmethod
-    def upgrade(
+    def ensure_version(
         skel_bytes: bytes,
         resource_name: str,
-        enabled: bool = False,
-        converter_path: Path | None = None,
-        target_version: str | None = None,
+        options: SkelConvertOptions | None = None,
         log: LogFunc = no_log,
-    ) -> bytes:
-        """处理 .skel 文件的版本检查和升级。"""
-        if not enabled or not converter_path or not target_version:
-            return skel_bytes
+    ) -> tuple[bytes, SkelVersionConflict | None]:
+        """
+        检测 .skel 版本与预设目标版本是否兼容（前两位 major.minor 一致），不一致时尝试转换。
 
-        if not converter_path.exists():
-            return skel_bytes
+        Args:
+            skel_bytes: .skel 文件字节数据
+            resource_name: 资源名（用于日志与临时文件名）
+            options: Spine 转换选项；target_version 无论转换器是否启用均作为判定基准
+            log: 日志函数
 
-        if target_version.count(".") != 2:
-            return skel_bytes
+        Returns:
+            (处理后的字节数据, 冲突信息或 None)；冲突时返回原始字节数据
+        """
+        target_version = options.target_version if options else None
+        if not target_version or target_version.count(".") != 2:
+            # 未配置有效的基准版本，不做检测
+            return skel_bytes, None
 
+        current_version = get_skel_version(skel_bytes, log)
+        if not current_version:
+            log(f'  > ⚠️ {t("log.spine.skel_version_detection_failed")}')
+            return skel_bytes, None
+
+        major_minor = ".".join(target_version.split(".")[:2])
+        if current_version.startswith(major_minor):
+            return skel_bytes, None
+
+        # 版本前两位不一致：转换器可用则尝试转换，否则报告冲突
+        log(f'  > {t("log.spine.skel_detected", name=resource_name)}')
+
+        if options.enabled and options.converter_path and options.converter_path.exists():
+            log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+            converted = SkelConverter._convert_bytes(
+                skel_bytes=skel_bytes,
+                converter_path=options.converter_path,
+                target_version=target_version,
+                log=log,
+            )
+            if converted is not None:
+                return converted, None
+        else:
+            log(f'    > {t("log.spine.version_mismatch_no_convert", current=current_version, target=target_version)}')
+
+        return skel_bytes, SkelVersionConflict(resource_name, current_version, target_version)
+
+    @staticmethod
+    def _convert_bytes(
+        skel_bytes: bytes,
+        converter_path: Path,
+        target_version: str,
+        log: LogFunc,
+    ) -> bytes | None:
+        """将 .skel 字节数据转换到目标版本，失败返回 None。"""
         try:
-            log(f'  > {t("log.spine.skel_detected", name=resource_name)}')
-            current_version = get_skel_version(skel_bytes, log)
-            target_major_minor = ".".join(target_version.split('.')[:2])
+            # 创建临时文件进行转换
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # A fixed name: the asset's own name comes from the mod
+                temp_input_path = Path(temp_dir) / "input.skel"
+                temp_input_path.write_bytes(skel_bytes)
 
-            if current_version and not current_version.startswith(target_major_minor):
-                log(f'    > {t("log.spine.version_mismatch_converting", current=current_version, target=target_version)}')
+                # 调用 run() 进行转换（原地覆盖）
+                success = SkelConverter.run(
+                    input_path=temp_input_path,
+                    output_path=temp_input_path,
+                    converter_path=converter_path,
+                    target_version=target_version,
+                    log=log
+                )
 
-                # 创建临时文件进行转换
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_dir_path = Path(temp_dir)
-                    temp_input_path = temp_dir_path / resource_name
-
-                    # 写入临时文件
-                    temp_input_path.write_bytes(skel_bytes)
-
-                    # 调用 run() 进行转换（原地覆盖）
-                    success = SkelConverter.run(
-                        input_path=temp_input_path,
-                        output_path=temp_input_path,
-                        converter_path=converter_path,
-                        target_version=target_version,
-                        log=log
-                    )
-
-                    if success:
-                        log(f'  > {t("log.spine.skel_conversion_success")}')
-                        return temp_input_path.read_bytes()
-                    else:
-                        log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
+                if success:
+                    log(f'  > {t("log.spine.skel_conversion_success")}')
+                    return temp_input_path.read_bytes()
+                log(f'  ❌ {t("log.spine.skel_conversion_failed")}')
 
         except Exception as e:
             log(f'    ❌ {t("log.error_detail", error=e)}')
 
-        return skel_bytes
+        return None
 
     @staticmethod
     def downgrade(
@@ -214,60 +249,173 @@ class SkelConverter:
 
 @dataclass(frozen=True)
 class RenderOptions:
-    """SpineViewerCLI 导出预览图的渲染参数。"""
-    fmt: str = "png"
+    """Spine 渲染参数（双后端共用，各后端按需取用，未用字段静默忽略）。"""
+
+    # 共用：两后端均使用
     scale: float = 1.0
+    max_resolution: int = 2048
+
+    # 仅 SpineViewer 后端使用
+    fmt: str = "png"
     background: str = "#00000000"
     margin: int = 0
-    max_resolution: int = 8888
     time: float = 0.0
     quality: int = 100
 
+    # 仅 Spine2Dump 后端使用
+    compression: str = "balanced" # PNG 压缩预设
+    fallback_size: int = 1024 # 画布回退尺寸（骨架 bounds 不可用时使用，实际取 min(fallback_size, max_resolution)）
+
 
 # 高画质预设：与旧版默认参数一致（extractor / file_list 交互预览使用）
-RENDER_PRESET_HIGH = RenderOptions()
+RENDER_PRESET_HIGH = RenderOptions(max_resolution=8888, fallback_size=2048)
 
 # 低画质预设：报告生成使用，降低分辨率与质量以减小体积
 RENDER_PRESET_LOW = RenderOptions(max_resolution=1024, quality=50)
+
+# 渲染后端名称（与 config 的 render_backend 取值一致）；CLI 参数额外支持 "auto" 按文件名推断
+RenderBackendName = Literal["spine_viewer", "spine2dump"]
+RenderBackendNameOrAuto = Literal["auto", "spine_viewer", "spine2dump"]
+
+# 1x1 透明 PNG：为 spine2dump 的 atlas 页面占位（页面内容不参与列表解析）
+_TINY_PNG_BYTES = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+)
+
+
+def select_animation(animations: list[str], log: LogFunc = no_log) -> str | None:
+    """动画选择优先级：Idle_01 > Dummy > 第一个"""
+    if "Idle_01" in animations:
+        return "Idle_01"
+    if "Dummy" in animations:
+        return "Dummy"
+    if animations:
+        log(f'  > {t("log.spine.using_first_animation", anim=animations[0])}')
+        return animations[0]
+    return None
+
+
+def find_sibling_file(path: Path, suffix: str) -> Path | None:
+    """查找同目录同主干（不区分大小写）的指定后缀文件。"""
+    stem = path.stem.lower()
+    return next((p for p in path.parent.iterdir()
+                 if p.stem.lower() == stem and p.suffix.lower() == suffix), None)
+
+
+@dataclass(frozen=True)
+class SkelRef:
+    """待查询的骨架：文件路径或内存字节，附其配套 atlas 文本。
+
+    atlas 仅 spine2dump 后端需要（工具要求骨架旁存在同名 atlas），
+    必须与骨架的实际图集匹配——skel 配上不匹配的 atlas 会使 spine2dump
+    原生崩溃（0xC0000005，无任何输出）；SpineViewer 后端忽略该字段。
+    name 为可选的日志显示名（bytes 骨架没有文件名可用，含 .skel 后缀时
+    也用作落盘文件名）；None 时 Path 取文件名，bytes 用占位名。
+    """
+    skel: Path | bytes
+    atlas_text: str | None = None
+    name: str | None = None
+
+    @classmethod
+    def from_disk(cls, path: Path) -> "SkelRef":
+        """从磁盘 skel 构建查询用引用：显式携带同目录 atlas 文本，页面 png 用占位图。
+
+        skel 与 atlas 总在同一 bundle，但贴图可能单独在另一个 bundle——
+        按包分目录提取时 atlas 旁没有页面 png；动画/皮肤列表查询只需占位页面。
+        渲染需要真实页面，不适用本方法，直接用 SkelRef(path)。
+        """
+        atlas = find_sibling_file(path, ".atlas")
+        return cls(path, atlas.read_text(encoding="utf-8", errors="ignore") if atlas else None)
+
+
+class SpineBackend(Protocol):
+    """Spine 渲染后端接口；SpineViewer 与 Spine2Dump 结构化实现此协议。"""
+
+    def query(self, skel: SkelRef, log: LogFunc = no_log) -> tuple[bool, dict]: ...
+    def render(
+        self,
+        skel_path: Path,
+        output_path: Path,
+        animation: str,
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]: ...
+    def render_preview(
+        self,
+        skel_path: Path,
+        output_path: Path,
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]: ...
+
+
+def _link_or_copy(src: Path, dst: Path) -> None:
+    """优先硬链接（同卷零拷贝），失败时回退复制。"""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
+
+
+def _bytes_skel_stem(name: str | None, fallback: str) -> str:
+    """bytes 骨架的文件名主干：优先取 SkelRef.name（剥掉 .skel 后缀），不安全或缺失时回退。
+
+    spine2dump 要求隔离目录中 atlas 与骨架文件同名，故统一在主干层面约定。
+    """
+    if name:
+        stem = name[:-len(".skel")] if name.lower().endswith(".skel") else name
+        if is_safe_file_name(stem) and is_safe_file_name(f"{stem}.skel"):
+            return stem
+    return fallback
 
 
 class SpineViewer:
     """SpineViewerCLI 工具集成类,用于查询信息和渲染预览。"""
 
-    @staticmethod
-    def query(
-        skel_path: Path,
-        viewer_path: Path,
-        log: LogFunc = no_log,
-    ) -> tuple[bool, dict]:
+    def __init__(self, tool_path: Path):
+        self.tool_path = tool_path
+
+    def query(self, skel: SkelRef, log: LogFunc = no_log) -> tuple[bool, dict]:
         """
         查询 Spine skel 文件中的动画和皮肤信息。
 
+        atlas 信息仅 spine2dump 后端需要，此处忽略；skel 为内存字节时落临时文件。
+
         Args:
-            skel_path: skel 文件路径
-            viewer_path: SpineViewerCLI 可执行文件路径
+            skel: 待查询的骨架
             log: 日志记录函数
 
         Returns:
             tuple[bool, dict]: (是否成功, 包含 animations 和 skins 的字典)
         """
+        if isinstance(skel.skel, bytes):
+            stem = _bytes_skel_stem(skel.name, "query")
+            with tempfile.TemporaryDirectory(prefix="skel_query_") as temp_dir:
+                path = Path(temp_dir) / f"{stem}.skel"
+                path.write_bytes(skel.skel)
+                return self._query_path(path, log)
+        return self._query_path(skel.skel, log, skel.name)
+
+    def _query_path(self, skel_path: Path, log: LogFunc, display_name: str | None = None) -> tuple[bool, dict]:
+        """对磁盘上的 skel 执行 SpineViewerCLI query --all。"""
         if not skel_path.exists():
             log(f'  ❌ {t("log.file.not_exist", path=skel_path)}')
             return False, {}
 
-        if not viewer_path.exists():
-            log(f'  ❌ {t("log.file.not_exist", path=viewer_path)}')
+        if not self.tool_path.exists():
+            log(f'  ❌ {t("log.file.not_exist", path=self.tool_path)}')
             return False, {}
 
         try:
             command = [
-                str(viewer_path),
+                str(self.tool_path),
                 "query",
                 "--all",
                 str(skel_path)
             ]
 
-            log(f'  > {t("log.spine.querying_info", name=skel_path.name)}')
+            log(f'  > {t("log.spine.querying_info", name=display_name or skel_path.name)}')
 
             result = subprocess.run(
                 command,
@@ -279,8 +427,9 @@ class SpineViewer:
             )
 
             if result.returncode != 0:
-                log(f'  ✗ {t("log.spine.query_failed")}: {result.stderr.strip()}')
-                return False, {}
+                error = result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+                log(f'  ✗ {t("log.spine.query_failed")}: {error}')
+                return False, {"error": error}
 
             # 解析输出
             info = {
@@ -328,11 +477,10 @@ class SpineViewer:
             log(f'  ❌ {t("log.error_detail", error=e)}')
             return False, {}
 
-    @staticmethod
     def render_preview(
+        self,
         skel_path: Path,
         output_path: Path,
-        viewer_path: Path,
         render_options: RenderOptions = RENDER_PRESET_HIGH,
         log: LogFunc = no_log,
     ) -> tuple[bool, str]:
@@ -348,74 +496,62 @@ class SpineViewer:
         Args:
             skel_path: skel 文件路径（atlas 和 png 在同目录）
             output_path: 输出图片路径
-            viewer_path: SpineViewerCLI 路径
             render_options: 渲染参数（默认高画质）
             log: 日志函数
 
         Returns:
             tuple[bool, str]: (是否成功, 状态消息)
         """
-        # 查找同目录下的 atlas 文件
-        atlas_path = None
-        for atlas in skel_path.parent.glob("*.atlas"):
-            if atlas.stem == skel_path.stem:
-                atlas_path = atlas
-                break
+        # 查找同目录下的 atlas 文件（不区分大小写）
+        atlas_path = find_sibling_file(skel_path, ".atlas")
 
         # 查询动画信息
-        success, info = SpineViewer.query(skel_path, viewer_path, log)
+        success, info = self.query(SkelRef(skel_path), log)
         if not success:
-            return False, t("log.spine.query_failed")
+            return False, f'{t("log.spine.query_failed")}: {info.get("error", "")}'.rstrip(": ")
 
         # 选择动画（优先 Idle_01 > Dummy > 第一个）
-        animation = None
-        animations = info.get('animations', [])
-        if 'Idle_01' in animations:
-            animation = 'Idle_01'
-        elif 'Dummy' in animations:
-            animation = 'Dummy'
-        elif animations:
-            animation = animations[0]
-            log(f'  > {t("log.spine.using_first_animation", anim=animation)}')
-
+        animation = select_animation(info.get('animations', []), log)
         if not animation:
             log(f'  ⚠️ {t("log.spine.no_animation_found", name=skel_path.name)}')
             return False, t("log.spine.no_animation_found", name=skel_path.name)
 
         # 渲染预览图
-        return SpineViewer.render(
+        return self.render(
             skel_path=skel_path,
             output_path=output_path,
-            viewer_path=viewer_path,
             atlas_path=atlas_path,
             animation=animation,
             render_options=render_options,
             log=log
         )
 
-    @staticmethod
     def render(
+        self,
         skel_path: Path,
         output_path: Path,
-        viewer_path: Path,
-        atlas_path: Path | None = None,
         animation: str = "Idle_01",
-        skin: str = "",
         render_options: RenderOptions = RENDER_PRESET_HIGH,
         log: LogFunc = no_log,
+        *,
+        skin: str = "",
+        atlas_path: Path | None = None,
     ) -> tuple[bool, str]:
         """
-        渲染 Spine 预览图。
+        渲染 Spine 预览图（与 SpineBackend 协议签名一致，atlas/skin 仅关键字传递）。
 
         Args:
             skel_path: skel 文件路径
             output_path: 输出图片路径
-            viewer_path: SpineViewerCLI 可执行文件路径
             animation: 动画名称
+            render_options: 渲染参数（含输出格式与画质相关参数）
+            log: 日志记录函数
             skin: 皮肤名称（空字符串表示默认皮肤）
             atlas_path: atlas 文件路径（可选）
             render_options: 渲染参数（含输出格式与画质相关参数）
             log: 日志记录函数
+            skin: 皮肤名称（空字符串表示默认皮肤）
+            atlas_path: atlas 文件路径（可选）
 
         Returns:
             tuple[bool, str]: (是否成功, 状态消息)
@@ -425,14 +561,18 @@ class SpineViewer:
             log(f'  ❌ {msg}')
             return False, msg
 
-        if not viewer_path.exists():
-            msg = t("log.file.not_exist", path=viewer_path)
+        if not self.tool_path.exists():
+            msg = t("log.file.not_exist", path=self.tool_path)
             log(f'  ❌ {msg}')
             return False, msg
 
         try:
+            # 强制 .NET 运行时使用不变区域性，避免系统区域设置（如小数点为逗号）导致浮点参数解析失败
+            env = os.environ.copy()
+            env["DOTNET_SYSTEM_GLOBALIZATION_INVARIANT"] = "1"
+
             command = [
-                str(viewer_path),
+                str(self.tool_path),
                 "export",
                 str(skel_path),
                 "-f", render_options.fmt,
@@ -462,6 +602,7 @@ class SpineViewer:
                 encoding='utf-8',
                 errors='ignore',
                 creationflags=CREATE_NO_WINDOW,
+                env=env,
             )
 
             if result.returncode != 0:
@@ -484,6 +625,333 @@ class SpineViewer:
             return False, msg
 
 
+class Spine2Dump:
+    """spine2dump 工具集成类，实现与 SpineViewer 相同的渲染后端接口。
+
+    输入是"目录"而非单个 skel，且多 skel 目录会被工具一次性加载，
+    因此 query/render 前先把目标骨架隔离到临时目录（skel + atlas + 引用 png）。
+    """
+
+    def __init__(self, tool_path: Path):
+        self.tool_path = tool_path
+
+    @contextmanager
+    def _isolate_assets(self, skel: SkelRef, log: LogFunc = no_log) -> Iterator[Path]:
+        """把目标 skel（含配套 atlas）隔离到临时目录。
+
+        spine2dump 以"目录"为单位一次性加载全部骨架，且要求骨架旁存在同名 atlas。
+        atlas 文本优先取 SkelRef 显式携带的（内存骨架场景，页面 png 用占位图，
+        内容不参与动画/皮肤列表解析）；Path 输入回退到磁盘同名文件并复制页面。
+        """
+        with tempfile.TemporaryDirectory(prefix="spine2dump_") as temp_dir:
+            work_dir = Path(temp_dir)
+
+            if isinstance(skel.skel, Path):
+                skel_path = skel.skel
+                _link_or_copy(skel_path, work_dir / skel_path.name)
+                if skel.atlas_text is not None:
+                    _write_atlas_placeholders(skel.atlas_text, work_dir, skel_path.stem, log)
+                else:
+                    atlas_path = find_sibling_file(skel_path, ".atlas")
+                    if atlas_path is not None:
+                        self._copy_atlas_with_pages(atlas_path, work_dir, log)
+            else:
+                stem = _bytes_skel_stem(skel.name, "skel")
+                (work_dir / f"{stem}.skel").write_bytes(skel.skel)
+                if skel.atlas_text is not None:
+                    _write_atlas_placeholders(skel.atlas_text, work_dir, stem, log)
+
+            yield work_dir
+
+    def _copy_atlas_with_pages(self, atlas_path: Path, work_dir: Path, log: LogFunc) -> None:
+        """复制磁盘 atlas 文件及其引用的页面 png 到隔离目录。"""
+        _link_or_copy(atlas_path, work_dir / atlas_path.name)
+        try:
+            atlas: Atlas = ReadAtlasFile(str(atlas_path))
+            for tex in atlas.atlas:
+                # 页名来自 mod 的 atlas 文本：拒绝逃逸出临时目录的路径
+                if not is_safe_relative_name(tex.png):
+                    log(f'  > {t("log.spine.unsafe_atlas_page", name=repr(tex.png))}')
+                    continue
+                rel_path = Path(tex.png)
+                src_png = atlas_path.parent / rel_path
+                if src_png.is_file():
+                    _link_or_copy(src_png, work_dir / rel_path)
+        except Exception as e:
+            # atlas 解析失败时不阻断，交由工具自身报告缺失页面
+            log(f'  ⚠️ {t("log.error_detail", error=e)}')
+
+    @staticmethod
+    def _parse_inspect(output: str) -> dict:
+        """解析 inspect 表格输出中的 Animations / Skins 区段。"""
+        info: dict[str, list[str]] = {"animations": [], "skins": []}
+        section: str | None = None
+
+        for raw_line in output.splitlines():
+            line = raw_line.rstrip()
+            stripped = line.strip()
+
+            if stripped.startswith("Animations ("):
+                section = "animations"
+                continue
+            if stripped.startswith("Skins ("):
+                section = "skins"
+                continue
+            if stripped.startswith("Expression candidates"):
+                section = None
+                continue
+
+            if section == "animations" and stripped.startswith("│"):
+                cells = [cell.strip() for cell in stripped.strip("│").split("│")]
+                if cells and cells[0] and cells[0] != "name":
+                    info["animations"].append(cells[0])
+            elif section == "skins" and line == stripped:
+                # 仅取深度 0 的皮肤行（├─ / └─），排除缩进的附件明细
+                if stripped.startswith(("├─ ", "└─ ")):
+                    info["skins"].append(stripped[3:].strip())
+
+        return info
+
+    def query(
+        self,
+        skel: SkelRef,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, dict]:
+        """查询 Spine skel 文件中的动画和皮肤信息。"""
+        if isinstance(skel.skel, Path):
+            skel_name = skel.name or skel.skel.name
+        else:
+            skel_name = f"{_bytes_skel_stem(skel.name, 'skel')}.skel"
+
+        if isinstance(skel.skel, Path) and not skel.skel.exists():
+            log(f'  ❌ {t("log.file.not_exist", path=skel.skel)}')
+            return False, {}
+
+        if not self.tool_path.exists():
+            log(f'  ❌ {t("log.file.not_exist", path=self.tool_path)}')
+            return False, {}
+
+        try:
+            log(f'  > {t("log.spine.querying_info", name=skel_name)}')
+            with self._isolate_assets(skel, log) as work_dir:
+                result = subprocess.run(
+                    [str(self.tool_path), "inspect", str(work_dir)],
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore',
+                    creationflags=CREATE_NO_WINDOW,
+                )
+
+            if result.returncode != 0:
+                error = result.stderr.strip() or result.stdout.strip() or f"exit code {result.returncode}"
+                log(f'  ✗ {t("log.spine.query_failed")}: {error}')
+                return False, {"error": error}
+
+            info = self._parse_inspect(result.stdout)
+            log(f'  > {t("log.spine.query_success", anim_count=len(info["animations"]), skin_count=len(info["skins"]))}')
+            return True, info
+
+        except Exception as e:
+            log(f'  ❌ {t("log.error_detail", error=e)}')
+            return False, {}
+
+    @staticmethod
+    def _parse_bounds(output: str) -> tuple[float, float, float, float] | None:
+        """从 inspect 头部信息表解析骨架 bounds (x, y, width, height)，失败返回 None。"""
+        for raw_line in output.splitlines():
+            stripped = raw_line.strip()
+            if not stripped.startswith("│"):
+                continue
+            cells = [cell.strip() for cell in stripped.strip("│").split("│")]
+            if cells and cells[0] == "bounds":
+                try:
+                    values = tuple(float(v) for v in cells[1].split())
+                    if len(values) == 4:
+                        return values[0], values[1], values[2], values[3]
+                except ValueError:
+                    return None
+        return None
+
+    def _resolve_dump_size(self, work_dir: Path, render_options: RenderOptions, log: LogFunc) -> int:
+        """计算 dump 画布尺寸：min(bounds 最长边 * scale, max_resolution)。
+
+        spine2dump 的 --size 会把内容最长边缩放到画布尺寸（可放大可缩小），
+        因此先取骨架自然尺寸，仅在超出 max_resolution 时缩小，保证不放大。
+        bounds 不可用（含宽高 <= 0 的退化 bounds）时回退 fallback_size
+        （与 max_resolution 取小，内容可能被放大到回退尺寸）。
+        """
+        max_resolution = max(1, render_options.max_resolution)
+
+        result = subprocess.run(
+            [str(self.tool_path), "inspect", str(work_dir)],
+            capture_output=True,
+            text=True,
+            encoding='utf-8',
+            errors='ignore',
+            creationflags=CREATE_NO_WINDOW,
+        )
+        bounds = self._parse_bounds(result.stdout) if result.returncode == 0 else None
+        # 宽或高 <= 0 的退化 bounds（如 Spine 导出未含 setup bounds 的骨架）同样不可用
+        if bounds is None or bounds[2] <= 0 or bounds[3] <= 0:
+            size = max(1, min(render_options.fallback_size, max_resolution))
+            log(f'  ⚠️ {t("log.spine.bounds_unavailable", size=size)}')
+            return size
+
+        natural = max(bounds[2], bounds[3]) * render_options.scale
+        return max(1, round(min(natural, max_resolution)))
+
+    def render(
+        self,
+        skel_path: Path,
+        output_path: Path,
+        animation: str,
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]:
+        """渲染单帧预览图并移动到 output_path（透明背景 PNG）。
+
+        RenderOptions 仅使用 max_resolution（尺寸上限）、scale（对自然尺寸的倍率）、
+        compression（PNG 压缩预设）与 fallback_size（bounds 不可用时的画布回退尺寸），
+        实际画布 = min(bounds 最长边 * scale, max_resolution)，配合 --trim 裁掉透明边；
+        fmt/quality/margin/background/time/skin 在该后端下静默忽略。
+        """
+        if not skel_path.exists():
+            msg = t("log.file.not_exist", path=skel_path)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+        if not self.tool_path.exists():
+            msg = t("log.file.not_exist", path=self.tool_path)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+        try:
+            log(f'  > {t("log.spine.rendering_preview", name=skel_path.name, anim=animation)}')
+
+            with self._isolate_assets(SkelRef(skel_path), log) as work_dir:
+                dump_dir = work_dir / "dump"
+                size = self._resolve_dump_size(work_dir, render_options, log)
+                result = subprocess.run(
+                    [
+                        str(self.tool_path),
+                        "dump",
+                        str(work_dir),
+                        "-o", str(dump_dir),
+                        "--animation", animation,
+                        "--start", "0",
+                        "--end", "0.0333",
+                        "--fps", "1",
+                        "--size", str(size),
+                        "--trim",
+                        "--compression", render_options.compression,
+                    ],
+                    capture_output=True,
+                    text=True,
+                    encoding='utf-8',
+                    errors='ignore',
+                    creationflags=CREATE_NO_WINDOW,
+                )
+
+                if result.returncode != 0:
+                    msg = t("log.spine.render_failed", error=result.stderr.strip())
+                    log(f'  ✗ {msg}')
+                    return False, msg
+
+                frame = dump_dir / animation / "frame_00000.png"
+                if not frame.exists():
+                    frame = next(dump_dir.glob("*/frame_00000.png"), None)
+                if frame is None:
+                    msg = t("log.spine.render_file_not_found")
+                    log(f'  ✗ {msg}')
+                    return False, msg
+
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(frame), str(output_path))
+
+            if output_path.exists():
+                msg = t("log.spine.render_success", path=output_path)
+                log(f'  ✓ {msg}')
+                return True, msg
+
+            msg = t("log.spine.render_file_not_found")
+            log(f'  ✗ {msg}')
+            return False, msg
+
+        except Exception as e:
+            msg = t("log.error_detail", error=e)
+            log(f'  ❌ {msg}')
+            return False, msg
+
+    def render_preview(
+        self,
+        skel_path: Path,
+        output_path: Path,
+        render_options: RenderOptions = RENDER_PRESET_HIGH,
+        log: LogFunc = no_log,
+    ) -> tuple[bool, str]:
+        """从 skel 文件自动选择动画并渲染预览图。"""
+        success, info = self.query(SkelRef(skel_path), log)
+        if not success:
+            return False, f'{t("log.spine.query_failed")}: {info.get("error", "")}'.rstrip(": ")
+
+        animation = select_animation(info.get('animations', []), log)
+        if not animation:
+            log(f'  ⚠️ {t("log.spine.no_animation_found", name=skel_path.name)}')
+            return False, t("log.spine.no_animation_found", name=skel_path.name)
+
+        return self.render(skel_path, output_path, animation, render_options, log)
+
+
+def get_spine_backend(backend: RenderBackendName, tool_path: Path) -> SpineBackend:
+    """按后端名称创建实例；tool_path 为该后端对应的可执行文件路径。"""
+    if backend == "spine2dump":
+        return Spine2Dump(tool_path)
+    return SpineViewer(tool_path)
+
+
+def resolve_spine_backend(backend: RenderBackendNameOrAuto, tool_path: Path) -> SpineBackend:
+    """解析渲染后端并创建实例。
+
+    按可执行文件名识别后端特征：含 "spine2dump" → spine2dump，含 "spineviewer"
+    或 "spine_viewer" → spine_viewer。无法识别时抛出 ValueError；
+    显式指定且与识别结果不一致时同样抛出 ValueError，
+    避免后端与工具错配直到运行时才暴露。
+    """
+    stem = tool_path.stem.lower()
+    detected: RenderBackendName | None
+    if "spine2dump" in stem:
+        detected = "spine2dump"
+    elif "spineviewer" in stem or "spine_viewer" in stem:
+        detected = "spine_viewer"
+    else:
+        detected = None
+
+    if detected is None:
+        raise ValueError(
+            f"Cannot infer render backend from executable name '{tool_path.name}'. "
+            "The executable should be named like spine2dump.exe or SpineViewerCLI.exe, "
+            "or rename it to include 'spine2dump' / 'spineviewer'."
+        )
+    if backend == "auto":
+        backend = detected
+    elif backend != detected:
+        raise ValueError(
+            f"Renderer tool mismatch: '{tool_path.name}' does not look like a {backend} executable. "
+            "Check the --spine-renderer / --spine-renderer-path combination."
+        )
+    return get_spine_backend(backend, tool_path)
+
+
+def _require_safe_atlas_names(atlas: Atlas) -> None:
+    """Refuse an atlas whose page or region names would leave the output folder: both come from the mod."""
+    for page in atlas.atlas:
+        unsafe = [] if is_safe_file_name(page.png) else [page.png]
+        unsafe += [frame.name for frame in page.frames if not is_safe_relative_name(frame.name)]
+        if unsafe:
+            raise ValueError(t("log.spine.unsafe_atlas_name", name=repr(unsafe[0])))
+
+
 def atlas_downgrade(
     atlas_path: Path,
     output_dir: Path,
@@ -503,6 +971,7 @@ def atlas_downgrade(
         log(f'    > {t("log.spine.converting_atlas", name=atlas_path.name)}')
 
         atlas: Atlas = ReadAtlasFile(str(atlas_path))
+        _require_safe_atlas_names(atlas)
         atlas.version = False
 
         atlas.ReScale()
@@ -540,6 +1009,7 @@ def unpack_atlas(
         log(f'    > {t("log.spine.unpacking_atlas", name=atlas_path.name)}')
 
         atlas = ReadAtlasFile(str(atlas_path))
+        _require_safe_atlas_names(atlas)
         atlas.ReScale()
         frames_output_dir = output_dir / "images"
         frames_output_dir.mkdir(parents=True, exist_ok=True)
@@ -642,51 +1112,62 @@ def normalize_legacy_assets(source_folder_path: Path, bundle_png_names: set[str]
     return final_temp_path
 
 
+def _write_atlas_placeholders(atlas_text: str, dst_dir: Path, skel_stem: str, log: LogFunc = no_log) -> None:
+    """为 spine2dump 的临时骨架写入 atlas 文本与 1x1 页面占位图。
+
+    inspect 要求目录内存在同名 atlas 且 atlas 引用的页面文件存在，
+    页面图像本身不参与动画/皮肤列表解析，用占位图即可（仅动画校验场景）。
+    """
+    (dst_dir / f"{skel_stem}.atlas").write_text(atlas_text, encoding="utf-8")
+    for line in atlas_text.splitlines():
+        page = line.strip()
+        # 页面行无缩进（区域行有缩进），形如 "xxx.png"
+        if page.endswith(".png") and not line[:1].isspace():
+            # 页名来自 mod 的 atlas 文本：拒绝逃逸出临时目录的路径
+            if not is_safe_relative_name(page):
+                log(f'  > {t("log.spine.unsafe_atlas_page", name=repr(page))}')
+                continue
+            png_path = dst_dir / page
+            png_path.parent.mkdir(parents=True, exist_ok=True)
+            png_path.write_bytes(_TINY_PNG_BYTES)
+
+
 def check_skel_animation_diff(
-    source_skel: Path | bytes,
-    target_skel: Path | bytes,
-    viewer_path: Path,
+    source: SkelRef,
+    target: SkelRef,
+    backend: SpineBackend,
     log: LogFunc = no_log,
 ) -> list[str]:
     """
-    比较两个 skel 的动画差异，返回目标中有但来源中没有的动画列表。
+    比较两个骨架的动画差异，返回目标中有但来源中没有的动画列表。
 
     Args:
-        source_skel: 来源 skel 文件路径或内容
-        target_skel: 目标 skel 文件路径或内容
-        viewer_path: SpineViewerCLI 路径
+        source: 来源骨架及配套 atlas（atlas 仅 spine2dump 后端需要，
+            必须与骨架实际图集匹配，错配会使工具原生崩溃）
+        target: 目标骨架及配套 atlas
+        backend: 渲染后端（提供 query 能力）
         log: 日志记录函数
 
     Returns:
         目标中有但来源中没有的动画名称列表，查询失败时返回空列表
     """
-    if not viewer_path or not viewer_path.exists():
-        return []
-
     try:
-        with tempfile.TemporaryDirectory(prefix="skel_diff_") as temp_dir:
-            temp_path = Path(temp_dir)
+        # bytes 骨架没有文件名，未指定显示名时按来源/目标角色命名，便于日志区分
+        def with_role_name(ref: SkelRef, fallback: str) -> SkelRef:
+            return ref if ref.name or isinstance(ref.skel, Path) else SkelRef(ref.skel, ref.atlas_text, fallback)
 
-            # 统一转为文件路径供 CLI 使用
-            def to_file(data: Path | bytes, name: str) -> Path:
-                if isinstance(data, Path):
-                    return data
-                p = temp_path / name
-                p.write_bytes(data)
-                return p
+        src_ok, src_info = backend.query(with_role_name(source, "source.skel"), log=log)
+        tgt_ok, tgt_info = backend.query(with_role_name(target, "target.skel"), log=log)
 
-            src_file = to_file(source_skel, "source.skel")
-            tgt_file = to_file(target_skel, "target.skel")
+        if not (src_ok and tgt_ok):
+            # 查询失败时差异未知，显式告警（外层会把空结果误读为"动画一致"）
+            failed = src_info if not src_ok else tgt_info
+            log(f'  ⚠️ {t("log.spine.anim_check_failed", error=failed.get("error") or t("log.spine.query_failed"))}')
+            return []
 
-            src_ok, src_info = SpineViewer.query(src_file, viewer_path, log=log)
-            tgt_ok, tgt_info = SpineViewer.query(tgt_file, viewer_path, log=log)
-
-            if not (src_ok and tgt_ok):
-                return []
-
-            src_anims = set(src_info.get('animations', []))
-            tgt_anims = set(tgt_info.get('animations', []))
-            return sorted(tgt_anims - src_anims)
+        src_anims = set(src_info.get('animations', []))
+        tgt_anims = set(tgt_info.get('animations', []))
+        return sorted(tgt_anims - src_anims)
 
     except Exception as e:
         log(f'  ⚠️ {t("log.spine.anim_check_failed", error=e)}')

@@ -13,11 +13,11 @@ import ttkbootstrap as tb
 from ttkbootstrap.widgets.tableview import Tableview as TBTableview
 
 from ...i18n import t
-from ...utils import CRCUtils
+from ...utils import compute_crc32
 from ...naming import parse_filename, CharacterInternalIDMap, COMMON_MOD_PREFIXES
 from ...searching import list_bundle_files, list_bundle_files_remote, search_prefix, search_prefix_remote, get_search_dirs
 from ...bundle import analyze_bundles
-from ...models import BundleFileInfo
+from ...bundle import BundleFileInfo
 from ...core import render_spine_preview_from_bundle
 from ..components import Theme, UIComponents
 from ..utils import reveal_in_explorer, select_directory
@@ -47,7 +47,7 @@ def _format_hex(data: bytes | None) -> str:
 def _format_time(mtime: float) -> str:
     if mtime <= 0:
         return ""
-    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
 
 
 _UNSET = "—"
@@ -62,11 +62,12 @@ class ColumnId(Enum):
     modified_time = 4
     trailing_bytes = 5
     trailing_content = 6
-    core = 7
-    char_name = 8       # 角色名称（通过映射表从 core 转换）
-    res_type = 9
-    crc = 10
-    crc_actual = 11
+    category = 7        # 资源分类
+    core = 8
+    char_name = 9       # 角色名称（通过映射表从 core 转换）
+    res_type = 10
+    crc = 11
+    crc_actual = 12
 
 
 class ColumnDef(NamedTuple):
@@ -86,6 +87,7 @@ def _get_columns() -> list[ColumnDef]:
         ColumnDef(ColumnId.modified_time, t("ui.file_list.column.modified_time"), 100),
         ColumnDef(ColumnId.trailing_bytes, t("ui.file_list.column.trailing_bytes"), 80, default_visible=False),
         ColumnDef(ColumnId.trailing_content, t("ui.file_list.column.trailing_content"), 150, default_visible=False),
+        ColumnDef(ColumnId.category, t("ui.file_list.column.category"), 120, default_visible=False),
         ColumnDef(ColumnId.core, t("ui.file_list.column.core"), 150, default_visible=False),
         ColumnDef(ColumnId.char_name, t("ui.file_list.column.character"), 150, default_visible=False),
         ColumnDef(ColumnId.res_type, t("ui.file_list.column.res_type"), 80, default_visible=False),
@@ -108,7 +110,7 @@ def _get_analyzer_options() -> list[AnalyzerOption]:
 
 ANALYZER_TO_COLUMNS: dict[str, list[ColumnId]] = {
     "trailing": [ColumnId.trailing_bytes, ColumnId.trailing_content],
-    "naming": [ColumnId.core, ColumnId.char_name, ColumnId.res_type],
+    "naming": [ColumnId.category, ColumnId.core, ColumnId.char_name, ColumnId.res_type],
     "crc": [ColumnId.crc, ColumnId.crc_actual],
 }
 
@@ -264,7 +266,6 @@ class FileListWindow(StoppableDialog):
     def _setup_window(self):
         self.title(t("ui.file_list.window_title"))
         self.geometry("1400x750")
-        self.transient(self.master)
         self.app.setup_icon(self)
 
     def _create_toolbar(self):
@@ -486,7 +487,7 @@ class FileListWindow(StoppableDialog):
             if browser.selected_paths:
                 self._dir_var.set(browser.selected_paths[0])
         else:
-            select_directory(self._dir_var, t("option.game_dir_windows_global"), self.app.logger.log)
+            select_directory(self._dir_var, t("option.game_dir_windows_global"), self.app.logger.log, parent=self)
 
     def _is_adb_mode(self) -> bool:
         """当前是否为 ADB 模式"""
@@ -595,6 +596,7 @@ class FileListWindow(StoppableDialog):
             _format_hex(item.trailing_content) if item.trailing_content is not None else _UNSET
         )
         core_display = item.parsed_name.core if item.parsed_name else _UNSET
+        category_display = item.parsed_name.category if item.parsed_name and item.parsed_name.category else _UNSET
         character_display = self._lookup_character_name(core_display) if item.parsed_name else _UNSET
         res_type_display = item.parsed_name.res_type if item.parsed_name and item.parsed_name.res_type else _UNSET
         crc_display = (
@@ -630,11 +632,12 @@ class FileListWindow(StoppableDialog):
             _format_time(item.modified_time),   # 4: modified_time
             trailing_display,         # 5: trailing_bytes
             trailing_content_display, # 6: trailing_content
-            core_display,             # 7: core
-            character_display,        # 8: character
-            res_type_display,         # 9: res_type
-            crc_display,              # 10: crc
-            crc_actual_display,       # 11: crc_actual
+            category_display,         # 7: category
+            core_display,             # 8: core
+            character_display,        # 9: character
+            res_type_display,         # 10: res_type
+            crc_display,              # 11: crc
+            crc_actual_display,       # 12: crc_actual
         ]
 
     def _on_scan_complete(self, items: list[BundleFileInfo]):
@@ -676,7 +679,7 @@ class FileListWindow(StoppableDialog):
         return {
             "has_trailing": (t("ui.file_list.filter.has_trailing"), lambda item: item.trailing_bytes is not None and item.trailing_bytes > 0),
             "crc_mismatch": (t("ui.file_list.filter.crc_mismatch"), lambda item: item.crc_actual is not None and item.parsed_name and item.crc_actual != int(item.parsed_name.crc or 0)),
-            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self.app.char_map.lookup(item.parsed_name.core, field="full_name") is not None),
+            "has_character": (t("ui.file_list.filter.has_character"), lambda item: item.parsed_name and self.app.char_map.lookup(item.parsed_name.core, field="full_kivo") is not None),
             "common_mod": (t("ui.file_list.filter.common_mod"), lambda item: any(item.path.name.startswith(p) for p in COMMON_MOD_PREFIXES)),
         }
 
@@ -888,7 +891,7 @@ class FileListWindow(StoppableDialog):
                     item.parsed_name = parse_filename(item.path.name)
 
                 if item.crc_actual is None:
-                    item.crc_actual = CRCUtils.compute_crc32(item.effective_path)
+                    item.crc_actual = compute_crc32(item.effective_path)
 
                 row = self.table.get_row(iid=str(item.path))
                 if row:
@@ -922,22 +925,22 @@ class FileListWindow(StoppableDialog):
         # ADB 模式下先缓存文件
         items = self._ensure_items_local(items)
 
-        # 检查 SpineViewerCLI 路径
-        viewer_path_str = self.app.spine_viewer_path_var.get().strip()
-        if not viewer_path_str:
+        # 检查渲染后端工具路径
+        tool_path = self.app.get_render_backend_path()
+        if tool_path is None:
             messagebox.showwarning(
                 t("common.warning"),
-                t("message.3rd_party.spine_viewer_required")
+                self.app.get_render_backend_required_message()
             )
             return
 
-        viewer_path = Path(viewer_path_str)
-        if not viewer_path.exists():
+        if not tool_path.exists():
             messagebox.showwarning(
                 t("common.warning"),
-                t("log.file.not_exist", path=viewer_path)
+                t("log.file.not_exist", path=tool_path)
             )
             return
+        backend = self.app.get_render_backend()
 
         # 获取输出目录
         output_dir = self.app.get_output_subdir(self.app.OUTPUT_SUBDIR_PREVIEW)
@@ -956,7 +959,7 @@ class FileListWindow(StoppableDialog):
             success, message, rendered_paths = render_spine_preview_from_bundle(
                 bundle_path=bundle_paths,
                 output_dir=output_dir,
-                viewer_path=viewer_path,
+                backend=backend,
                 log=self.app.logger.log
             )
             if not self.should_stop() and self.winfo_exists():

@@ -1,4 +1,4 @@
-# report.py
+# core/report.py
 """Mod 报告生成核心逻辑"""
 
 from dataclasses import dataclass, field
@@ -6,14 +6,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from .bundle import analyze_trailing, analyze_naming
-from .i18n import t
-from .models import BundleFileInfo, LogFunc, ProgressCallback
-from .naming import CharacterInternalIDMap
-from .searching import list_bundle_files
-from .core import render_spine_preview_from_bundle
-from .spine import RenderOptions, RENDER_PRESET_LOW
-from .utils import no_log, throttle_progress
+from ..bundle import BundleFileInfo, analyze_trailing, analyze_naming
+from ..searching import list_bundle_files
+from ..i18n import t
+from ..models import LogFunc, ProgressCallback
+from ..naming import CharacterInternalIDMap
+from ..spine import SpineBackend, RenderOptions, RENDER_PRESET_LOW
+from ..utils import no_log, throttle_progress
+from .preview import render_spine_previews_batch, RENDER_CATEGORIES, RenderTask
 
 
 ReportFormat = Literal['list', 'table']
@@ -29,9 +29,6 @@ CATEGORY_MAP: dict[str, str] = {
 
 # 分类输出顺序
 OUTPUT_ORDER = ["spinecharacters", "spinelobbies", "characters", "npcs", "spinebackground", "other"]
-
-# 渲染分类（仅 Spine 资源）
-RENDER_CATEGORIES = {"spinecharacters", "spinelobbies", "spinebackground"}
 
 
 @dataclass
@@ -61,13 +58,14 @@ def generate_mod_report(
     game_dir: Path,
     output_path: Path,
     char_map: CharacterInternalIDMap | None = None,
-    char_name_field: str = "full_name",
+    char_name_field: str = CharacterInternalIDMap.DEFAULT_NAME_FIELD,
     enable_render: bool = False,
-    viewer_path: Path | None = None,
+    backend: SpineBackend | None = None,
     report_format: ReportFormat = "list",
     render_options: RenderOptions = RENDER_PRESET_LOW,
     log: LogFunc = no_log,
     progress_callback: ProgressCallback | None = None,
+    max_workers: int = 1,
 ) -> tuple[bool, str]:
     """
     生成 Mod 报告。
@@ -78,11 +76,12 @@ def generate_mod_report(
         char_map: 角色名称映射表
         char_name_field: 角色名称字段
         enable_render: 是否生成 Spine 预览图
-        viewer_path: SpineViewerCLI 路径
+        backend: 渲染后端（工具可用性由调用入口保证）
         report_format: 报告格式（"list" 或 "table"）
         render_options: 渲染参数（默认低画质，供报告预览图使用）
         log: 日志函数
         progress_callback: 进度回调函数
+        max_workers: 预览渲染的并行线程数
 
     Returns:
         tuple[bool, str]: (是否成功, 状态消息)
@@ -135,7 +134,7 @@ def generate_mod_report(
     category_counts = {cat: len(entries) for cat, entries in categories.items()}
 
     # 7. 可选：渲染 Spine 预览图
-    if enable_render and viewer_path:
+    if enable_render and backend:
         log(f"--- {t('log.report.render_preview')} ---")
         output_dir = output_path.parent / output_path.stem
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -144,70 +143,43 @@ def generate_mod_report(
         prefix_to_all_files: dict[str, list[Path]] = {}
         for item in items:
             if item.parsed_name and item.parsed_name.prefix:
-                prefix = item.parsed_name.prefix
-                if prefix not in prefix_to_all_files:
-                    prefix_to_all_files[prefix] = []
-                prefix_to_all_files[prefix].append(item.path)
+                prefix_to_all_files.setdefault(item.parsed_name.prefix, []).append(item.path)
 
-        # 计算需要渲染的条目数
-        render_entries = [
-            entry
+        # 构建渲染任务（仅 Spine 分类，mod 文件优先，失败回退到全量同 prefix 文件）
+        render_tasks = [
+            RenderTask(entry.prefix, entry.files, prefix_to_all_files.get(entry.prefix))
             for cat, cat_entries in categories.items()
             if cat in RENDER_CATEGORIES
             for entry in cat_entries
             if entry.files
         ]
-        total_render = len(render_entries)
-        current_render = 0
+        total_render = len(render_tasks)
 
         # 重置进度条（渲染阶段）
         if progress_callback:
-            progress_callback(current_render, total_render, "")
+            progress_callback(0, total_render, "")
 
-        render_count = 0
+        results = render_spine_previews_batch(
+            tasks=render_tasks,
+            output_dir=output_dir,
+            backend=backend,
+            render_options=render_options,
+            log=log,
+            progress_callback=progress_callback,
+            max_workers=max_workers,
+        )
+
+        # 回写渲染结果
         for cat, cat_entries in categories.items():
             if cat not in RENDER_CATEGORIES:
                 continue
             for entry in cat_entries:
-                if not entry.files:
-                    continue
-                
-                # 第一次尝试：只用 mod 文件
-                success, _, rendered_paths = render_spine_preview_from_bundle(
-                    bundle_path=entry.files,
-                    output_dir=output_dir,
-                    viewer_path=viewer_path,
-                    output_filename=entry.prefix,
-                    render_options=render_options,
-                    log=log,
-                )
-                
-                # 如果失败，尝试包含所有同 prefix 的文件（可能有原始 skel/atlas）
-                if not success:
-                    all_files = prefix_to_all_files.get(entry.prefix, [])
-                    if all_files and all_files != entry.files:
-                        log(f"  > {t('log.report.render_retry', prefix=entry.prefix)}")
-                        success, _, rendered_paths = render_spine_preview_from_bundle(
-                            bundle_path=all_files,
-                            output_dir=output_dir,
-                            viewer_path=viewer_path,
-                            output_filename=entry.prefix,
-                            render_options=render_options,
-                            log=log,
-                        )
-
-                if success:
-                    render_count += 1
-                    entry.render_paths = rendered_paths
-                else:
+                if entry.prefix in results:
+                    entry.render_paths = results[entry.prefix]
+                elif entry.files:
                     entry.render_success = False
 
-                # 更新进度
-                current_render += 1
-                if progress_callback:
-                    progress_callback(current_render, total_render, entry.prefix)
-
-        log(f"{t('log.report.render_count', count=render_count)}")
+        log(f"{t('log.report.render_count', count=len(results))}")
 
     # 8. 生成报告（第二轮进度：处理mod条目）
     report = ModReport(

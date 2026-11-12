@@ -3,7 +3,7 @@ from pathlib import Path
 from PIL import Image
 
 from ba_modding_toolkit.utils import (
-    ImageUtils,
+    bleed_image,
     parse_hex_bytes,
 )
 
@@ -35,7 +35,7 @@ class TestParseHexBytes:
 class TestImageUtils:
     def test_bleed_image_basic(self):
         img = Image.new("RGBA", (100, 100), (255, 0, 0, 255))
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         
         assert result.size == img.size
         assert result.mode == "RGBA"
@@ -44,13 +44,28 @@ class TestImageUtils:
         img = Image.new("RGBA", (50, 50), (0, 255, 0, 128))
         original_alpha = img.getchannel("A")
         
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         result_alpha = result.getchannel("A")
         
         assert list(original_alpha.getdata()) == list(result_alpha.getdata())
 
+    def test_bleed_image_alpha_threshold(self):
+        """alpha 不超过阈值的像素应被邻居颜色覆盖，alpha 通道保持原样"""
+        img = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+        for y in range(8):
+            for x in range(4):
+                img.putpixel((x, y), (255, 0, 0, 255))
+            img.putpixel((4, y), (0, 0, 0, 3))  # 紧邻不透明区域、alpha 极低的黑点
+
+        r, g, b, a = bleed_image(img, threshold=5).getpixel((4, 4))
+        assert a == 3
+        assert r > 200 and (g, b) == (0, 0), "低 alpha 像素的 RGB 应被扩散覆盖"
+
+        # 阈值为 0 时只处理完全透明像素，该像素保持原色
+        assert bleed_image(img, threshold=0).getpixel((4, 4)) == (0, 0, 0, 3)
+
     def test_bleed_image_no_transparent_pixels(self):
         img = Image.new("RGBA", (10, 10), (255, 255, 255, 255))
-        result = ImageUtils.bleed_image(img)
+        result = bleed_image(img)
         
         assert result == img

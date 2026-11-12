@@ -5,20 +5,19 @@ import tkinter as tk
 from tkinter import messagebox
 import urllib.request
 from dataclasses import dataclass, fields
-from typing import get_type_hints
 import ttkbootstrap as tb
 from pathlib import Path
-from ttkbootstrap.widgets.scrolled import ScrolledText
+from PIL import ImageTk
 
 from ..i18n import i18n_manager, t, get_system_language, get_locale_dir
-from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR
+from ..utils import get_environment_info, get_version_info, parse_hex_bytes, EXE_DIR, PACKAGE_DIR
 from ..models import SaveOptions, SkelConvertOptions, AnimCheckOptions
+from ..spine import SpineBackend, RenderBackendName, get_spine_backend
 from ..bundle import Bundle
 from ..adb import ADBManager, ADBFileIndex, ADBCache, ADBFileSource, LocalFileSource, FileSourceAdapter
 from ..naming import CharacterInternalIDMap
-from .components import Theme, Logger, UIComponents
-from .utils import open_directory, select_directory
-from .configs import ConfigManager, ConfigMeta, ConfigMixin
+from .components import Theme, Logger, UIComponents, create_log_area
+from .configs import ConfigManager, ConfigMixin
 from .windows import SettingsDialog, FileListWindow
 from .tabs import *
 
@@ -31,6 +30,7 @@ class Tabs:
     """
     mod_update: ModUpdateTab
     batch_update: BatchUpdateTab
+    mod_install: ModInstallTab
     crc_tool: CrcToolTab
     asset_packer: AssetPackerTab
     asset_extractor: AssetExtractorTab
@@ -42,6 +42,7 @@ class Tabs:
         titles = [
             t("ui.tabs.mod_update"),
             t("ui.tabs.batch_update"),
+            t("ui.tabs.mod_install"),
             t("ui.tabs.crc_tool"),
             t("ui.tabs.asset_packer"),
             t("ui.tabs.asset_extractor"),
@@ -83,14 +84,8 @@ class App(tb.Frame, ConfigMixin):
         # 设置路径
         # exe_dir: 程序所在目录（打包后为 exe 目录，开发环境为项目根目录）
         self.exe_dir = EXE_DIR
-        if "__compiled__" in globals():
-            # 打包环境（nuitka onefile）
-            # root_path: nuitka 解压的资源目录（temp 目录下）
-            self.root_path = Path(sys.executable).parent / "ba_modding_toolkit"
-        else:
-            # 开发环境
-            # root_path：src/ba_modding_toolkit/
-            self.root_path = Path(__file__).parents[1]
+        # root_path: 包资源根目录（打包后为 nuitka 解压的资源目录，开发环境为 src/ba_modding_toolkit/）
+        self.root_path = PACKAGE_DIR
 
         # 设置窗口图标
         print(f"exe_dir: {self.exe_dir}")
@@ -99,44 +94,23 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_icon(self, window: tk.Toplevel):
         """设置窗口图标"""
-        icon_path = self.root_path / "assets" / "eligma.ico"
-        if icon_path.exists():
-            window.iconbitmap(icon_path)
-
-    def init_shared_variables(self):
-        """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""
-        self._config_specs: dict[str, ConfigMeta] = {}
-        
-        hints = get_type_hints(self.__class__, include_extras=True)
-        for var_name, hint in hints.items():
-            if not hasattr(hint, '__metadata__'):
-                continue
-            
-            var_type = hint.__origin__
-            meta: ConfigMeta = hint.__metadata__[0]
-            
-            var_instance = var_type()
-            setattr(self, var_name, var_instance)
-            self._config_specs[var_name] = meta
-            
-            default = meta.default() if callable(meta.default) else meta.default
-            var_instance.set(default)
-        
-        # 特殊处理：语言设置
-        self.language_var.set(i18n_manager.lang)
-        self.available_languages = i18n_manager.get_available_languages()
-
-    def _set_default_values(self):
-        """重置所有配置变量为默认值"""
-        hints = get_type_hints(self.__class__, include_extras=True)
-        for var_name, hint in hints.items():
-            if not hasattr(hint, '__metadata__'):
-                continue
-
-            meta: ConfigMeta = hint.__metadata__[0]
-            var = getattr(self, var_name)
-            default = meta.default() if callable(meta.default) else meta.default
-            var.set(default)
+        if sys.platform == "win32":
+            # Windows 下使用 iconbitmap 设置 .ico：映射前设置也会由 Tk 在创建
+            # wrapper 时应用，图标随窗口首次绘制立即显示（iconphoto 做不到这点）
+            icon_path = self.root_path / "assets" / "eligma.ico"
+            if not icon_path.exists():
+                print(f"图标文件不存在: {icon_path}")
+                return
+            window.iconbitmap(str(icon_path))
+        else:
+            # 非 Windows 平台使用 iconphoto 设置 png（iconbitmap 不支持 ico 格式）
+            icon_path = self.root_path / "assets" / "eligma.png"
+            if not icon_path.exists():
+                print(f"图标文件不存在: {icon_path}")
+                return
+            image = ImageTk.PhotoImage(master=window, file=str(icon_path))
+            window._icon_image = image  # 保留引用，防止被 GC 回收导致图标丢失
+            window.iconphoto(True, image)
 
     def _load_character_mapping(self):
         """加载角色ID映射表 CSV"""
@@ -170,7 +144,8 @@ class App(tb.Frame, ConfigMixin):
         paned_window.add(log_panel_frame, weight=0)
 
         # 创建日志区域（需要在侧边栏之前创建，因为侧边栏会创建Tab，Tab需要logger）
-        self.log_text = self.create_log_area(log_panel_frame)
+        self.log_scrolled_wrapper = create_log_area(log_panel_frame)
+        self.log_text = self.log_scrolled_wrapper.text
 
         # 底部状态栏 - 固定在窗口底部
         self.status_label = tb.Label(self.master, relief=tk.SUNKEN, padding=(5,0),
@@ -224,6 +199,10 @@ class App(tb.Frame, ConfigMixin):
             asset_types.add("TextAsset")
         if self.replace_mesh_var.get():
             asset_types.add("Mesh")
+        if self.replace_animationclip_var.get():
+            asset_types.add("AnimationClip")
+        if self.replace_font_var.get():
+            asset_types.add("Font")
         return asset_types
 
     def has_any_asset_type(self) -> bool:
@@ -269,11 +248,31 @@ class App(tb.Frame, ConfigMixin):
                 target_version=self.spine_downgrade_version_var.get().strip()
             )
 
+    def get_render_backend_name(self) -> RenderBackendName:
+        """获取当前选择的渲染后端名称"""
+        name = self.render_backend_var.get()
+        return "spine2dump" if name == "spine2dump" else "spine_viewer"
+
+    def get_render_backend_path(self) -> Path | None:
+        """获取当前渲染后端对应的工具路径；未配置时返回 None"""
+        if self.get_render_backend_name() == "spine2dump":
+            path_str = self.spine2dump_path_var.get().strip()
+        else:
+            path_str = self.spine_viewer_path_var.get().strip()
+        return Path(path_str) if path_str else None
+
+    def get_render_backend(self) -> SpineBackend | None:
+        """按当前渲染后端配置创建渲染后端实例；未配置时返回 None"""
+        path = self.get_render_backend_path()
+        if path is None:
+            return None
+        return get_spine_backend(self.get_render_backend_name(), path)
+
     def build_anim_check_options(self) -> AnimCheckOptions:
         """从全局配置构建动画差异检测选项"""
         return AnimCheckOptions(
             enabled=self.check_animations_var.get(),
-            viewer_path=Path(self.spine_viewer_path_var.get())
+            backend=self.get_render_backend()
         )
 
     def is_spine_converter_available(self) -> bool:
@@ -283,25 +282,28 @@ class App(tb.Frame, ConfigMixin):
             return False
         return Path(path).exists()
 
-    def is_spine_viewer_available(self) -> bool:
-        """检查SpineViewerCLI程序路径是否有效"""
-        path = self.spine_viewer_path_var.get()
-        if not path:
-            return False
-        return Path(path).exists()
+    def is_render_backend_available(self) -> bool:
+        """检查当前渲染后端对应的工具路径是否有效"""
+        path = self.get_render_backend_path()
+        return path is not None and path.exists()
 
     def check_dependency(self, depends_on: str) -> bool:
         """检查依赖条件是否满足"""
         if depends_on == "spine_converter_path_var":
             return self.is_spine_converter_available()
         if depends_on == "spine_viewer_path_var":
-            return self.is_spine_viewer_available()
+            # 渲染相关开关统一依赖"当前渲染后端工具可用"
+            return self.is_render_backend_available()
         if depends_on == "enable_spine_conversion_var":
             # 同时检查 Spine 转换器路径和转换功能是否启用
             return self.is_spine_converter_available() and self.enable_spine_conversion_var.get()
         if depends_on == "enable_spine_downgrade_var":
             # 同时检查 Spine 转换器路径和降级功能是否启用
             return self.is_spine_converter_available() and self.enable_spine_downgrade_var.get()
+        # 兜底：被依赖项本身是布尔开关时，取其当前状态
+        dep_var = getattr(self, depends_on, None)
+        if isinstance(dep_var, tk.Variable):
+            return bool(dep_var.get())
         return True
 
     def get_depends_on_from_var(self, variable: tk.Variable) -> str | None:
@@ -340,27 +342,33 @@ class App(tb.Frame, ConfigMixin):
             parent
         )
 
-    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
-        """显示SpineViewer未配置提示"""
+    def show_render_backend_not_configured(self, parent: tk.Widget | None = None) -> None:
+        """显示当前渲染后端工具未配置提示"""
         messagebox.showinfo(
             t("common.tip"),
-            t("message.3rd_party.spine_viewer_required"),
+            self.get_render_backend_required_message(),
             parent=parent or self.master
         )
 
-    def show_spine_viewer_not_configured(self, parent: tk.Widget | None = None) -> None:
-        """显示SpineViewer未配置提示"""
-        messagebox.showinfo(
-            t("common.tip"),
-            t("message.3rd_party.spine_viewer_required"),
-            parent=parent or self.master
-        )
+    def get_render_backend_required_message(self) -> str:
+        """当前渲染后端对应的"工具未配置"提示文案"""
+        if self.get_render_backend_name() == "spine2dump":
+            return t("message.3rd_party.spine2dump_required")
+        return t("message.3rd_party.spine_viewer_required")
 
     def show_spine_viewer_download_guide(self, parent: tk.Widget | None = None) -> None:
         """显示SpineViewer下载引导对话框"""
         self.show_download_guide(
             "SpineViewerCLI",
             "https://github.com/ww-rm/SpineViewer",
+            parent
+        )
+
+    def show_spine2dump_download_guide(self, parent: tk.Widget | None = None) -> None:
+        """显示spine2dump下载引导对话框"""
+        self.show_download_guide(
+            "Spine2Dump",
+            "https://github.com/Deathemonic/Spine2Dump",
             parent
         )
 
@@ -425,18 +433,6 @@ class App(tb.Frame, ConfigMixin):
         return source.startswith("adb_")
 
 
-    def select_game_resource_directory(self):
-        select_directory(self.game_resource_dir_var, t("option.game_dir_windows_global"), self.logger.log)
-
-    def open_game_resource_in_explorer(self):
-        open_directory(self.game_resource_dir_var.get(), self.logger.log)
-
-    def select_output_directory(self):
-        select_directory(self.output_dir_var, t("option.output_dir"), self.logger.log)
-
-    def open_output_dir_in_explorer(self):
-        open_directory(self.output_dir_var.get(), self.logger.log, create_if_not_exist=True)
-
     # --- ADB 相关方法 ---
 
     def _init_adb(self):
@@ -447,8 +443,8 @@ class App(tb.Frame, ConfigMixin):
         self._adb_index = ADBFileIndex(self._adb_manager)
         cache_dir = self.adb_cache_dir_var.get()
         if not cache_dir:
-            # 默认缓存路径：程序根目录/adb_cache
-            cache_dir = str(self.exe_dir / "adb_cache")
+            # 默认缓存路径：程序根目录/Addons/adb_cache
+            cache_dir = str(self.exe_dir / "Addons" / "adb_cache")
             self.adb_cache_dir_var.set(cache_dir)
         self._adb_cache = ADBCache(Path(cache_dir))
         self._local_source = LocalFileSource()
@@ -519,6 +515,7 @@ class App(tb.Frame, ConfigMixin):
     OUTPUT_SUBDIR_EXTRACT = "extract"
     OUTPUT_SUBDIR_PREVIEW = "preview"
     OUTPUT_SUBDIR_REPORTS = "reports"
+    OUTPUT_SUBDIR_BATCH_PREVIEW = "batch_preview"
 
     def get_output_subdir(self, subdir: str) -> Path:
         """获取输出目录下的子目录路径，自动创建"""
@@ -551,15 +548,15 @@ class App(tb.Frame, ConfigMixin):
         if config_loaded:
             print(f"配置加载成功，语言设置为: {language}")
     
-    def save_current_config(self):
+    def save_current_config(self, parent: tk.Misc | None = None):
         """保存当前配置到文件"""
         if self.config_manager.save_config(self):
             self._load_character_mapping()  # 映射表路径/索引列变更后重新加载
             self.logger.log(t("log.config.saved"))
-            messagebox.showinfo(t("common.success"), t("message.config.saved"))
+            messagebox.showinfo(t("common.success"), t("message.config.saved"), parent=parent)
         else:
             self.logger.log(t("log.config.save_failed"))
-            messagebox.showerror(t("common.error"), t("message.config.save_failed"))
+            messagebox.showerror(t("common.error"), t("message.config.save_failed"), parent=parent)
 
     
     def create_sidebar_layout(self, parent):
@@ -592,6 +589,7 @@ class App(tb.Frame, ConfigMixin):
         self.tabs: Tabs = Tabs(
             mod_update=ModUpdateTab(self.content_frame, self),
             batch_update=BatchUpdateTab(self.content_frame, self),
+            mod_install=ModInstallTab(self.content_frame, self),
             crc_tool=CrcToolTab(self.content_frame, self),
             asset_packer=AssetPackerTab(self.content_frame, self),
             asset_extractor=AssetExtractorTab(self.content_frame, self),
@@ -661,43 +659,3 @@ class App(tb.Frame, ConfigMixin):
                 btn.config(bootstyle="primary")  # 激活状态使用更亮的样式
             else:
                 btn.config(bootstyle="secondary")  # 非激活状态使用稍浅样式，比侧边栏背景稍浅
-    
-    def create_log_area(self, parent):
-        """
-        创建日志区域，使用自定义的深色风格
-        """
-        # 创建外层容器（带标题的边框）
-        log_frame = tb.Labelframe(
-            parent, 
-            text=t("ui.log_area"), 
-            bootstyle="default",
-            padding=(5, 0)
-        )
-        log_frame.pack(fill=tk.BOTH, expand=True)
-
-        # 使用 ttkbootstrap 的 ScrolledText (带自动隐藏的滚动条)
-        st = ScrolledText(
-            log_frame,
-            padding=0,
-            height=8,
-            autohide=True,            # 自动隐藏滚动条
-            bootstyle="round" # 滚动条样式
-        )
-        st.pack(fill=tk.BOTH, expand=True)
-
-        # 这里直接操作 st.text (内部的 Text 组件) 来修改颜色
-        st.text.configure(
-            font=Theme.LOG_FONT,
-            background=Theme.LOG_BG,
-            foreground=Theme.LOG_FG,
-            selectbackground=Theme.LOG_SELECTED, # 选中时的背景色
-            insertbackground=Theme.LOG_FG,  # 光标颜色
-            state=tk.DISABLED,              # 初始设为不可编辑
-            spacing1=2,                     # 段前间距（像素）
-        )
-
-        # 保存引用以防被垃圾回收（虽然在 pack 后通常不需要）
-        self.log_scrolled_wrapper = st
-
-        # 返回内部的 Text 组件，这样你现有的 Logger 类无需修改即可直接使用
-        return st.text

@@ -3,7 +3,7 @@
     <img alt="BAMT icon" src=https://github.com/Agent-0808/BA-Modding-Toolkit/blob/99332127fc5478e227a37d60bad12074c9472992/docs/title.png?raw=true/>
   </p>
   <p>
-    <img alt="GitHub License" src="https://img.shields.io/github/license/Agent-0808/BA-Modding-Toolkit">
+    <a href="https://www.gnu.org/licenses/gpl-3.0"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPL--3.0-orange.svg"></a>
     <img alt="GitHub Release" src="https://img.shields.io/github/v/release/Agent-0808/BA-Modding-Toolkit">
     <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Agent-0808/BA-Modding-Toolkit?style=flat">
     <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/Agent-0808/BA-Modding-Toolkit/total">
@@ -11,9 +11,6 @@
 </div>
 
 # BA Modding Toolkit
-
-> [!NOTE]
-> English Translations are available now. If you find any errors or have any suggestions, please feel free to submit an issue or pull request.
 
 [简体中文](README_zh-CN.md) | English
 
@@ -79,14 +76,25 @@ Configure the path of the `SpineSkeletonDataConverter.exe` program in the settin
 - Even if `SpineSkeletonDataConverter.exe` is not configured, you can still use this program normally to update Mods that *use Spine files compatible with the current version (4.2.xx)*.
 - If the Mod you want to update was made in 2025 or later, it already uses the Spine 4 format, so you can update it normally without configuring this option.
 
-### Spine Viewer
+### SpineViewer
 
 **[ww-rm/SpineViewer](https://github.com/ww-rm/SpineViewer)**
 
-This tool can preview and render Spine skeleton files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
-- Right-click to preview in the "File List" window
+This tool can parse and render Spine `.skel` animation files. You can configure the path to `SpineViewerCLI.exe` in the Settings interface for use by this program.
+
 - In the Asset Extractor tab, you can optionally render preview images after extraction.
 - In the "Mod Report" feature, you can optionally render preview images when generating the report.
+- It can be used to detect differences in `.skel` animation lists, and is used in the "Mod Update" and "Asset Packer" features.
+
+### Spine2Dump
+
+**[Deathemonic/Spine2Dump](https://github.com/Deathemonic/Spine2Dump)**
+
+This tool can also parse and render Spine `.skel` animation files; just choose either it or the SpineViewer in the previous section, both are configurable in the Settings interface.
+
+- Select Spine2Dump as the render backend in the Settings interface and configure the path to `spine2dump.exe`.
+- In practice it renders faster in batch processing, but the output preview size may differ from SpineViewer and is hard to control.
+- It only supports Spine 4.x format `.skel` files; Spine 3.8 files should use SpineViewer instead.
 
 ### ADB (Android Debug Bridge)
 
@@ -96,6 +104,11 @@ This tool can communicate with Android devices. You can configure the path of `a
 
 - This feature requires an Android device to be connected and authorized for this program to access.
 - After setting the path to `adb.exe`, select the target Android device and corresponding file source in the "Settings" window.
+
+> [!TIP]
+> Check out the [ADB-Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/ADB-Usage) Page for detailed instructions.
+
+## Subproject
 
 ### BA-characters-internal-id
 
@@ -110,6 +123,16 @@ A reference table that records the mapping between in-game character names and t
 > The packaged version downloaded from Releases already includes a copy of the data file (`BA-Characters-Internal-ID.csv`) in the `Addons/` subdirectory next to the executable, ready to use out of the box. You can also download the latest version manually in the Settings interface.
 >
 > The data file is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/legalcode) (see `Addons/BA-Characters-Internal-ID-LICENSE.txt` for the full notice). The data is compiled from the text data of [KivoWiki](https://kivo.wiki) and is used in this program only for fair purposes such as displaying character names.
+
+## Language Support
+
+The development language of this project is **zh-CN**, and the currently maintained language is **en-US**.
+
+During the Beta stage, we only guarantee the completeness of **zh-CN** content; texts for other languages may not be updated promptly when new content is added. We will gradually supplement and improve the maintained languages before the official release. If you find any errors in the existing language content, feel free to point them out via Issue or PR.
+
+If you want to add a language yourself, you can create a `locales` folder next to the EXE file and put the new language file in it (e.g. `new-LANG.json`). The program will load external language files from that directory.
+
+If you are interested in adding a new language, PRs are welcome. However, due to limited maintenance capacity, newly added languages will most likely not be actively maintained afterwards — your understanding is appreciated.
 
 ## Command Line Interface (CLI)
 
@@ -143,7 +166,25 @@ bamt-cli backup -h
 
 Check the [CLI Usage](https://github.com/Agent-0808/BA-Modding-Toolkit/wiki/CLI-Usage-&-Arguments) Page for Complete Usage Instructions.
 
-## Technical Details
+## Developing
+
+Please ensure that Python 3.11 or higher is installed.
+
+```bash
+git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
+cd BA-Modding-Toolkit
+
+# use uv to manage dependencies
+python -m pip install uv
+uv sync
+uv run bamt
+```
+
+The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
+
+You can add `BA-Modding-Toolkit` code to your project or modify the existing code to implement custom Mod creation and update functionality.
+
+`cli/main.py` is a command-line interface (CLI) version of the main program, which you can refer to for calling processing functions.
 
 ### Tested Environments
 
@@ -158,29 +199,6 @@ The table below lists tested environment configurations for reference.
 | Windows 10          | 3.12.4         | 1.24.0     | 10.4.0    | ❌   |  |
 | Ubuntu 22.04 (WSL2) | 3.13.10        | 1.23.0     | 12.0.0    | ✅   |  |
 
-## Developing
-
-Please ensure that Python 3.11 or higher is installed.
-
-```bash
-git clone https://github.com/Agent-0808/BA-Modding-Toolkit.git
-cd BA-Modding-Toolkit
-
-# use uv to manage dependencies
-python -m pip install uv
-uv sync
-uv run bamt
-# or use legacy way to install dependencies
-python -m pip install .
-python -m ba_modding_toolkit
-```
-
-The author's programming skills are limited, welcome to provide suggestions or issues, and also welcome to contribute code to improve this project.
-
-You can add `BA-Modding-Toolkit` code to your project or modify the existing code to implement custom Mod creation and update functionality.
-
-`cli/main.py` is a command-line interface (CLI) version of the main program, which you can refer to for calling processing functions.
-
 ### File Structure
 
 ```
@@ -191,15 +209,30 @@ BA-Modding-Toolkit/
 ├── src/ba_modding_toolkit/
 │ ├── __init__.py
 │ ├── __main__.py    # Entry point
-│ ├── core.py        # Core processing logic
-│ ├── searching.py   # Searching logic
+│ ├── asset.py       # Bundle asset operations
 │ ├── bundle.py      # Bundle class
+│ ├── searching.py   # Searching logic
 │ ├── spine.py       # Spine-related utilities
-│ ├── report.py      # Mod report generator
 │ ├── naming.py      # File naming logic
+│ ├── references.py  # Cross-bundle pointer parsing
 │ ├── models.py      # Data models
 │ ├── i18n.py        # Internationalization functionality
-│ ├── utils.py       # Utility classes and helper functions
+│ ├── core/          # Core processing logic package
+│ │ ├── __init__.py
+│ │ ├── extraction.py   # Asset extraction
+│ │ ├── introspect.py   # Bundle introspection & read-only diagnostics
+│ │ ├── mod_install.py  # Mod installation
+│ │ ├── mod_update.py   # Mod update
+│ │ ├── packing.py      # Asset packing
+│ │ ├── preview.py      # Preview rendering
+│ │ └── report.py       # Report generation
+│ ├── utils/         # Utility classes and helper functions package
+│ │ ├── __init__.py
+│ │ ├── about.py     # Program version info & environment diagnostics
+│ │ ├── common.py    # Common utilities
+│ │ ├── crc.py       # CRC checksum calculation and correction
+│ │ ├── image.py     # Image processing
+│ │ └── paths.py     # Path handling
 │ ├── adb/           # ADB related modules
 │ ├── cli/           # Command Line Interface (CLI) package
 │ │ ├── __main__.py     # CLI Entry Point
@@ -213,24 +246,8 @@ BA-Modding-Toolkit/
 │ │ ├── components.py   # UI components, themes, logging
 │ │ ├── configs.py      # Configuration definitions
 │ │ ├── utils.py        # UI related utility functions
-│ │ ├── windows/        # Individual windows
-│ │ │ ├── __init__.py
-│ │ │ ├── adb_browser.py           # ADB Browser window
-│ │ │ ├── settings.py              # Settings window
-│ │ │ ├── abnormal_check_dialog.py # Abnormal Client Check
-│ │ │ ├── report_dialog.py         # Report Dialog
-│ │ │ ├── backup_dialog.py         # Backup Dialog
-│ │ │ └── file_list_window.py      # File List window
+│ │ ├── windows/        # Individual windows and dialogs
 │ │ └── tabs/           # Feature tabs
-│ │   ├── __init__.py
-│ │   ├── base_tab.py              # TabFrame base class
-│ │   ├── mod_update_tab.py        # Mod Update tab
-│ │   ├── batch_update_tab.py      # Batch Update tab
-│ │   ├── crc_tool_tab.py          # CRC Tool tab
-│ │   ├── asset_packer_tab.py      # Asset Packer tab
-│ │   ├── asset_extractor_tab.py   # Asset Extractor tab
-│ │   ├── adb_push_tab.py          # ADB Push tab
-│ │   └── tools_tab.py             # Tools tab
 │ ├── assets/         # Project assets
 │ └── locales/        # Language files
 ├── tests/            # Pytest test cases folder

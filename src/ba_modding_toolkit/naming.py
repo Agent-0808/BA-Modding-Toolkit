@@ -3,18 +3,18 @@
 import csv
 import re
 from pathlib import Path
-from .models import ParsedFilename
+from typing import NamedTuple
 
 # -------- 文件名解析常量 --------
 
-PRELOAD_PREFIX = [
+PRELOAD_PREFIX = (
     "prologgroup-",
     "prologdepengroup-"
-]
+)
 
-FIXED_PREFIX = [
+FIXED_PREFIX = (
     "assets-_mx-",
-]
+)
 
 # 日服版额外的资源类型后缀
 RESOURCE_TYPES_TEXT = {
@@ -25,6 +25,54 @@ RESOURCE_TYPES_NUM = {
     '000', '001', '002', '003', '004', '005', '006', '007', '008', '009',
     '010', '011', '012', '013', '014', '015', '016', '017', '018', '019',
 }
+
+# 带类型标记的 dump 文件二级扩展名 → 资源类型名（如 {name}.mesh.bytes / {name}.mesh.dat / {name}.animationclip.dat）
+# 值为 AssetType（UnityPy ClassIDType）成员名，raw dump 内容统一走 set_raw_data 原样替换，
+# 要求 dump 字节为该类型的合法序列化数据且流数据内联（无外部 .resS 引用）
+DUMP_TYPE_EXTENSIONS: dict[str, str] = {
+    'texture2d': 'Texture2D',
+    'mesh': 'Mesh',
+    'animationclip': 'AnimationClip',
+    'textasset': 'TextAsset',
+}
+
+# dump 文件允许的末级扩展名
+DUMP_FILE_EXTENSIONS = {'.bytes', '.dat'}
+
+
+def parse_typed_dump_name(filename: str) -> tuple[str, str] | None:
+    """解析 {name}.{type}.{bytes|dat} 形式的 dump 文件名。
+
+    Args:
+        filename: 文件名字符串
+
+    Returns:
+        (资源名, 资源类型名)；文件名不符合带类型标记的 dump 命名时返回 None
+    """
+    stem = filename.rsplit('.', 1)[0]
+    idx = stem.rfind('.')
+    if idx == -1:
+        return None
+    asset_type = DUMP_TYPE_EXTENSIONS.get(stem[idx + 1:].lower())
+    if asset_type is None:
+        return None
+    return stem[:idx], asset_type
+
+
+def parse_asset_core(filename: str) -> str:
+    """从散件资产文件名提取 core（供打包器根据资源名自动定位同名 bundle）。
+
+    输入为散件资产（如 {name}.mesh.bytes / {name}.animationclip.dat / {name}.skel / {name}.png），
+    与 bundle 命名解析（parse_filename）是两个独立的命名域。
+
+    Args:
+        filename: 散件资产文件名字符串
+
+    Returns:
+        core（资源核心名，如 ch0808_spr）；无有效内容时返回空字符串
+    """
+    parsed = parse_typed_dump_name(filename)
+    return (parsed[0] if parsed else filename.rsplit('.', 1)[0]).strip('-_')
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
@@ -57,6 +105,26 @@ def get_category_prefix(core: str) -> str:
         if core_lower.endswith(suffix):
             return prefix
     return _DEFAULT_SEARCH_PREFIX
+
+
+class ParsedFilename(NamedTuple):
+    """
+    解析后的文件名结构。
+
+    Attributes:
+        category: 资源分类 (如 spinecharacters)，可能为 None
+        core:     核心名称 (如 ch0808_spr)，必须有值
+        res_type: 资源类型 (如 textassets)，可能为 None
+        date:     日期字符串 (YYYY-MM-DD)
+        crc:      CRC32 校验码
+        prefix:   用于搜索同组文件的前缀
+    """
+    category: str | None
+    core: str
+    res_type: str | None
+    date: str
+    crc: str
+    prefix: str
 
 
 def parse_filename(filename: str) -> ParsedFilename:
@@ -175,7 +243,11 @@ class CharacterInternalIDMap:
 
     # 默认索引列与名称字段（CSV 未加载时的回退值）
     DEFAULT_INDEX_COLUMN = "file_id"
-    NAME_FIELDS = ["full_name", "name_cn", "name_jp", "name_tw", "name_en", "name_kr"]
+    DEFAULT_NAME_FIELD = "full_en"
+    # 学生数据 CSV 语言后缀：kivo（基沃托斯语/官中风格）, jp, kr, en, tw, cn
+    NAME_FIELDS = [
+        "full_kivo", "full_jp", "full_kr", "full_en", "full_tw", "full_cn", 
+    ]
 
     def __init__(self):
         self._map: dict[str, dict[str, str]] = {}
@@ -221,16 +293,18 @@ class CharacterInternalIDMap:
         """映射表是否已加载"""
         return bool(self._map)
 
-    def lookup(self, core: str, field: str = "full_name") -> str | None:
+    def lookup(self, core: str, field: str | None = None) -> str | None:
         """根据 core 值查找角色名称
 
         Args:
             core: 解析后的 core 值（如 ch0808_spr）
-            field: 映射字段名（如 full_name, name_cn 等）
-        
+            field: 映射字段名（如 full_en, name_cn 等）；为 None 时使用默认字段
+
         Returns:
             角色名称，未找到则返回 None
         """
+        if field is None:
+            field = self.DEFAULT_NAME_FIELD
         core_lower = core.lower()
         # 先尝试原值匹配
         entry = self._map.get(core_lower)
@@ -243,4 +317,7 @@ class CharacterInternalIDMap:
         if entry is None:
             return None
         name = entry.get(field, "")
+        # 指定字段缺失（如旧配置残留已废弃的字段名）时回退到默认字段
+        if not name and field != self.DEFAULT_NAME_FIELD:
+            name = entry.get(self.DEFAULT_NAME_FIELD, "")
         return name if name else None

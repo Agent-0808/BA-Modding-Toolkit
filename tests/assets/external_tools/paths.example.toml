@@ -1,0 +1,9 @@
+# 外部测试工具路径配置模板：复制为 paths.toml 并按需修改（paths.toml 已被 gitignore 覆盖）
+# 未配置时外部工具测试自动跳过；CI 场景无需此文件（workflow 会下载到 converter/、viewer/ 子目录）
+# 路径填 exe 本体；Windows 路径使用单引号字面量可免转义反斜杠
+
+# SkelConverter 的 SpineSkeletonDataConverter.exe 路径
+converter = 'C:\Tools\SkelConverter\SpineSkeletonDataConverter.exe'
+
+# SpineViewer 的 SpineViewerCLI.exe 路径（需与配套 DLL 保持同目录）
+viewer = 'C:\Tools\SpineViewer\SpineViewerCLI.exe'

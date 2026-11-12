@@ -58,8 +58,8 @@ jobs:
           clang: true
           low-memory: true
           include-package: |
-            ba_modding_toolkit
             UnityPy.resources
+          # 不强制包含整个 ba_modding_toolkit：GUI 子包及其依赖由 import 跟随自动排除
           include-package-data: |
             ba_modding_toolkit
             UnityPy

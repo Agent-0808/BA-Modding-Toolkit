@@ -4,22 +4,26 @@ import shutil
 import sys
 from pathlib import Path
 
-from .taps import UpdateTap, PackTap, CrcTap, EnvTap, ExtractTap, BatchUpdateTap, ReportTap, BackupTap
+from .taps import UpdateTap, PackTap, CrcTap, ParseTap, EnvTap, ExtractTap, BatchUpdateTap, InstallTap, ReportTap, BatchPreviewTap, BackupTap, InspectTap, TraceTap
 from ..searching import find_target_bundles, search_prefix, list_bundle_files, get_search_dirs
 from ..core import (
-    SaveOptions,
-    SkelConvertOptions,
+    EXTRACTABLE_ASSET_TYPES,
     process_mod_update,
     process_asset_packing,
     process_asset_extraction,
     process_batch_mod_update,
 )
-from ..models import SaveOptions, SkelConvertOptions
-from ..utils import get_environment_info, CRCUtils, get_BA_path, parse_hex_bytes
+from ..core.mod_install import InstallAction, ModGroup, execute_mod_install, plan_mod_install
+from ..models import AnimCheckOptions, SaveOptions, SkelConvertOptions
+from ..utils import compute_crc32, get_BA_path, get_environment_info, manipulate_file_crc, parse_hex_bytes
 from ..searching import get_search_dirs
-from ..naming import parse_filename, CharacterInternalIDMap
-from ..bundle import analyze_trailing
-from ..report import generate_mod_report
+from ..naming import parse_filename, get_category_prefix, CharacterInternalIDMap
+from ..bundle import analyze_trailing, find_textasset_companions
+from ..core.report import generate_mod_report, RENDER_CATEGORIES
+from ..core.preview import render_all_spine_previews
+from ..core.introspect import inspect_bundles, trace_bundle
+from ..spine import resolve_spine_backend, RENDER_PRESET_LOW, RENDER_PRESET_HIGH
+from ..utils.paths import EXE_DIR
 
 class Logger:
     """日志记录器基类。"""
@@ -83,7 +87,7 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 确定资源目录：优先使用 --resource-dir，否则自动搜寻
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
 
     target_paths: list[Path] = []
     if args.target:
@@ -127,8 +131,8 @@ def handle_update(args: UpdateTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -174,7 +178,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 确定资源目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return
@@ -213,8 +217,8 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
 
     # 创建Spine选项
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -234,6 +238,7 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         progress_callback=callback_log,
         skip_unchanged=True,
         match_strategy=args.strategy,
+        max_workers=max(1, args.max_workers),
     )
 
     # 输出结果摘要
@@ -252,6 +257,182 @@ def handle_batch_update(args: BatchUpdateTap, logger: Logger = NULL_LOGGER) -> N
         logger.log(f"\n❌ Failed tasks:")
         for task in result.failed_tasks:
             logger.log(f"  - {task}")
+
+    logger.log("="*50)
+
+
+# 安装动作 → 英文展示标签（CLI 自身输出不本地化）
+_ACTION_LABELS: dict[InstallAction, str] = {
+    InstallAction.DIRECT_REPLACE: "replace same-name",
+    InstallAction.UPDATE: "update existing",
+    InstallAction.NOT_FOUND: "target not found",
+    InstallAction.ERROR: "error",
+    InstallAction.MIXED: "mixed",
+}
+
+
+def handle_install(args: InstallTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'install' 命令的逻辑（复用 core/mod_install 的 plan + execute）。"""
+    logger.log("--- Start Mod Install ---")
+
+    # 验证输入文件（.bundle / .backup，与 GUI 一致）
+    mod_paths = [Path(p) for p in args.mods]
+    valid_paths: list[Path] = []
+    for p in mod_paths:
+        if not p.is_file():
+            logger.log(f"❌ Error: Mod file '{p}' does not exist.")
+        elif p.suffix.lower() not in (".bundle", ".backup"):
+            logger.log(f"❌ Error: Unsupported file type '{p.name}' (expected .bundle or .backup).")
+        else:
+            valid_paths.append(p)
+    if not valid_paths:
+        logger.log("❌ Error: No valid mod files provided.")
+        return
+
+    # 定位游戏目录（install 必须有游戏目录）
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 加载角色映射（可选，加载失败降级为无映射，不中止）
+    char_map: CharacterInternalIDMap | None = None
+    if args.bacii_path:
+        bacii_path = Path(args.bacii_path)
+        if bacii_path.exists():
+            char_map = CharacterInternalIDMap()
+            if not char_map.load(bacii_path, index_column=args.index_column):
+                logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
+                char_map = None
+        else:
+            logger.log(f"⚠️ Warning: BACII file not found: {bacii_path}")
+
+    def group_display(group: ModGroup) -> str:
+        """组名展示：[category] name (core)，无映射或查不到时回退 core（对齐 GUI）。"""
+        name = (char_map.lookup(group.core, args.name_field) if char_map else "") or ""
+        display = f"{name} ({group.core})" if name else group.core
+        return f"[{group.category}] {display}" if group.category else display
+
+    # 分析（纯读不写盘）
+    groups = plan_mod_install(valid_paths, get_search_dirs(game_dir), logger.log)
+
+    def installable(group: ModGroup) -> bool:
+        """组是否可安装（NOT_FOUND/ERROR 不可安装，与 GUI 判定一致）。"""
+        return group.group_action in (
+            InstallAction.DIRECT_REPLACE, InstallAction.UPDATE, InstallAction.MIXED,
+        )
+
+    # 打印组摘要
+    logger.log(f"\nFound {len(groups)} group(s):")
+    total = len(groups)
+    for i, group in enumerate(groups, 1):
+        logger.log(f"[{i}/{total}] {group_display(group)} ({len(group.files)} file(s)) - {_ACTION_LABELS[group.group_action]}")
+        for f in group.files:
+            note = f" - {f.note}" if f.note else ""
+            logger.log(f"    - {f.mod_path.name} ({_ACTION_LABELS[f.action]}){note}")
+
+    # 收集决策：--yes 全部安装可安装组，否则逐组确认
+    if args.yes:
+        selected = [g for g in groups if installable(g)]
+    else:
+        selected: list[ModGroup] = []
+        install_all = False
+        # 逐组确认选项说明（仅打印一次）
+        logger.log("\nChoices: [Y] install this group (default), [n] skip, [a] install this and all remaining groups, [q] cancel.")
+        for i, group in enumerate(groups, 1):
+            if not installable(group):
+                logger.log(f"Skip group [{i}/{total}] {group_display(group)} (not installable).")
+                continue
+            try:
+                answer = (
+                    'y' if install_all
+                    else input(f"Install group [{i}/{total}] {group_display(group)}? [Y/n/a/q]: ").strip().lower()
+                )
+            except (EOFError, KeyboardInterrupt):
+                answer = 'q'  # 管道/脚本场景下视作中止
+            if answer == 'q':
+                logger.log("❌ Operation cancelled.")
+                return
+            if answer == 'a':
+                install_all = True
+            if answer in ('', 'y', 'a'):
+                selected.append(group)
+            else:
+                logger.log(f"  > Skipped group {group_display(group)}.")
+    if not selected:
+        logger.log("Nothing to install.")
+        return
+
+    logger.log(f"\nInstalling {len(selected)} group(s)...")
+
+    save_options = SaveOptions(
+        perform_crc=not args.no_crc,
+        extra_bytes=parse_hex_bytes(args.extra_bytes),
+        compression=args.compression
+    )
+
+    spine_options = SkelConvertOptions(
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
+        target_version=args.target_spine_version or None,
+    )
+
+    # 动画缺失预检（提供渲染工具路径即启用，内部 is_valid() 再校验文件存在）
+    anim_check = AnimCheckOptions(enabled=False, backend=None)
+    if args.spine_renderer_path:
+        try:
+            anim_check = AnimCheckOptions(
+                enabled=True,
+                backend=resolve_spine_backend(args.spine_renderer, Path(args.spine_renderer_path)),
+            )
+        except ValueError as e:
+            logger.log(f"❌ Error: {e}")
+            return
+
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Installing: {filename}"
+    )
+
+    # 调用核心安装函数
+    result = execute_mod_install(
+        groups=selected,
+        output_dir=output_dir,
+        asset_types_to_replace=set(args.asset_types),
+        save_options=save_options,
+        spine_options=spine_options,
+        match_strategy=args.strategy,
+        anim_check=anim_check,
+        create_backup=not args.no_backup,
+        log=logger.log,
+        progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
+    )
+
+    # 输出结果摘要
+    logger.log("\n" + "="*50)
+    logger.log("Install Summary:")
+    logger.log(f"  Installed: {result.installed_groups} group(s)")
+    logger.log(f"  Skipped:   {result.skipped_groups} group(s)")
+    logger.log(f"  Failed:    {len(result.failed_groups)} group(s)")
+
+    if result.failed_groups:
+        logger.log("\n❌ Failed groups:")
+        display_map = {g.core: group_display(g) for g in selected}
+        for core, reason in result.failed_groups:
+            logger.log(f"  - [{display_map.get(core, core)}] {reason}")
+
+    if result.anim_diffs:
+        logger.log("\n⚠️ Missing animations detected (warning only, not a failure):")
+        for name, missing in result.anim_diffs.items():
+            logger.log(f"  - {name}: {', '.join(missing)}")
 
     logger.log("="*50)
 
@@ -297,8 +478,8 @@ def handle_asset_packing(args: PackTap, logger: Logger = NULL_LOGGER) -> None:
     )
 
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_conversion,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
@@ -333,84 +514,119 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'crc' 命令的逻辑。"""
     logger.log("--- Start CRC Tool ---")
 
-    modified_path = Path(args.modified)
+    files = [Path(p) for p in args.files]
+
+    def compute_crc_hex(path: Path) -> str:
+        """计算文件 CRC32 的十六进制字符串，读取失败时返回空字符串。"""
+        try:
+            with open(path, "rb") as f:
+                return f"{compute_crc32(f.read()):08X}"
+        except Exception as e:
+            logger.log(f"❌ Error computing CRC: {e}")
+            return ""
+
+    # --- 模式 1: 仅检查/计算 CRC ---
+    if args.check:
+        if not 1 <= len(files) <= 2:
+            logger.log("❌ Error: Check mode accepts 1 or 2 files.")
+            return
+        for file_path in files:
+            if not file_path.is_file():
+                logger.log(f"❌ Error: File '{file_path}' does not exist.")
+                return
+
+        # 两个文件：分别计算并互相对比
+        if len(files) == 2:
+            first_crc_hex = compute_crc_hex(files[0])
+            second_crc_hex = compute_crc_hex(files[1])
+            if not first_crc_hex or not second_crc_hex:
+                return
+            logger.log(f"File CRC32: {first_crc_hex}  ({files[0].name})")
+            logger.log(f"File CRC32: {second_crc_hex}  ({files[1].name})")
+            if first_crc_hex == second_crc_hex:
+                logger.log("✅ CRC Match: Yes")
+            else:
+                logger.log("❌ CRC Match: No")
+            return
+
+        # 单个文件：计算 CRC
+        single_path = files[0]
+        single_crc_hex = compute_crc_hex(single_path)
+        if not single_crc_hex:
+            return
+        logger.log(f"File CRC32: {single_crc_hex}  ({single_path.name})")
+
+        # 对比文件名中的期望 CRC（若有）
+        crc_str = parse_filename(single_path.name).crc
+        if crc_str:
+            expected_crc = int(crc_str)
+            logger.log(f"Expected CRC from filename: {expected_crc:08X}")
+            if expected_crc == int(single_crc_hex, 16):
+                logger.log("✅ CRC Match: Yes")
+            else:
+                logger.log("❌ CRC Match: No")
+
+        # 可选：仅当显式提供 --resource-dir 或 --region 时，在游戏目录中搜索同名文件对比
+        if args.resource_dir is None and args.region == 'auto':
+            return
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if not resource_dir:
+            logger.log("⚠ Could not auto-detect game install path, skipping comparison.")
+            return
+        game_dir = Path(resource_dir)
+        if not game_dir.is_dir():
+            logger.log(f"⚠ Game resource directory '{game_dir}' does not exist or is not a directory, skipping comparison.")
+            return
+
+        logger.log(f"Searching for same-name file in '{game_dir}'...")
+        original_path: Path | None = None
+        for dir_path in get_search_dirs(game_dir):
+            if not dir_path.exists():
+                continue
+            candidate = dir_path / single_path.name
+            if candidate.is_file():
+                original_path = candidate
+                break
+        if original_path is None:
+            logger.log(f"⚠ Auto-search failed: File '{single_path.name}' not found in search directories, skipping comparison.")
+            return
+        logger.log(f"  > Found original file: {original_path}")
+
+        original_crc_hex = compute_crc_hex(original_path)
+        if not original_crc_hex:
+            return
+        logger.log(f"Original File CRC32: {original_crc_hex}  ({original_path.name})")
+        if original_crc_hex == single_crc_hex:
+            logger.log("✅ CRC Match: Yes")
+        else:
+            logger.log("❌ CRC Match: No")
+        return
+
+    # --- 模式 2: 修正 CRC ---
+    if len(files) != 1:
+        logger.log("❌ Error: Fix mode accepts exactly 1 file.")
+        return
+    modified_path = files[0]
     if not modified_path.is_file():
         logger.log(f"❌ Error: Modified file '{modified_path}' does not exist.")
         return
 
-    resource_dir = args.resource_dir or get_BA_path()
-
-    # 确定原始文件路径：优先使用 --original，其次使用 resource_dir 自动查找
-    original_path = None
-    if args.original:
-        original_path = Path(args.original)
-        if not original_path.is_file():
-            logger.log(f"❌ Error: Manually specified original file '{original_path.name}' does not exist.")
-            return
-        logger.log(f"Manually specified original file: {original_path}")
-    elif resource_dir:
-        logger.log(f"No original file provided, searching automatically in '{resource_dir}'...")
-        game_dir = Path(resource_dir)
-        if not game_dir.is_dir():
-            logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
-            return
-
-        # 在搜索目录中查找同名文件（只取第一个找到的）
-        search_dirs = get_search_dirs(game_dir)
-        target_name = modified_path.name
-        original_path: Path | None = None
-        for dir_path in search_dirs:
-            if not dir_path.exists():
-                continue
-            candidate = dir_path / target_name
-            if candidate.is_file():
-                original_path = candidate
-                break
-
-        if original_path is None:
-            logger.log(f"❌ Auto-search failed: File '{target_name}' not found in search directories")
-            return
-        logger.log(f"  > Found original file: {original_path}")
-
-    # --- 模式 1: 仅检查/计算 CRC ---
-    if args.check_only:
-        try:
-            with open(modified_path, "rb") as f:
-                modified_data = f.read()
-            modified_crc_hex = f"{CRCUtils.compute_crc32(modified_data):08X}"
-            logger.log(f"Modified File CRC32: {modified_crc_hex}  ({modified_path.name})")
-
-            if original_path:
-                with open(original_path, "rb") as f:
-                    original_data = f.read()
-                original_crc_hex = f"{CRCUtils.compute_crc32(original_data):08X}"
-                logger.log(f"Original File CRC32: {original_crc_hex}  ({original_path.name})")
-                if original_crc_hex == modified_crc_hex:
-                    logger.log("✅ CRC Match: Yes")
-                else:
-                    logger.log("❌ CRC Match: No")
-        except Exception as e:
-            logger.log(f"❌ Error computing CRC: {e}")
-        return
-
-    # --- 模式 2: 修正 CRC ---
-    if not modified_path:
-        logger.log("❌ Error: For CRC fix, must provide '--modified' file.")
-        return
-
     try:
-        # 从文件名提取目标 CRC
-        _, _, _, _, crc_str = parse_filename(modified_path.name)
-        if not crc_str:
-            logger.log("❌ Error: Could not extract target CRC from filename.")
-            return
-        
-        target_crc = int(crc_str)
-        logger.log(f"Target CRC from filename: {target_crc:08X}")
+        # 确定 target CRC：优先使用 --target-crc，其次从文件名提取
+        if args.target_crc:
+            target_crc = int(args.target_crc, 16)
+            logger.log(f"Target CRC from argument: {target_crc:08X}")
+        else:
+            crc_str = parse_filename(modified_path.name).crc
+            if not crc_str:
+                logger.log("❌ Error: Could not extract target CRC from filename. Use '--target-crc' to specify it explicitly.")
+                return
+            target_crc = int(crc_str)
+            logger.log(f"Target CRC from filename: {target_crc:08X}")
 
         # 检查当前 CRC 是否已匹配
         with open(modified_path, "rb") as f:
-            current_crc = CRCUtils.compute_crc32(f.read())
+            current_crc = compute_crc32(f.read())
         
         if current_crc == target_crc:
             logger.log("⚠ CRC values already match, no fix needed.")
@@ -423,7 +639,7 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
             shutil.copy2(modified_path, backup_path)
             logger.log(f"  > Backup file created: {backup_path.name}")
 
-        success = CRCUtils.manipulate_file_crc(modified_path, target_crc, parse_hex_bytes(args.extra_bytes))
+        success = manipulate_file_crc(modified_path, target_crc, parse_hex_bytes(args.extra_bytes))
 
         if success:
             logger.log("✅ CRC Fix Successful! The modified file has been updated.")
@@ -432,6 +648,37 @@ def handle_crc(args: CrcTap, logger: Logger = NULL_LOGGER) -> None:
 
     except Exception as e:
         logger.log(f"❌ Error during CRC fix process: {e}")
+
+
+def handle_parse(args: ParseTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'parse' 命令的逻辑。"""
+    logger.log("--- Start Filename Parser ---")
+
+    # 可选：加载角色ID映射表
+    bacii_map: CharacterInternalIDMap | None = None
+    if args.bacii_path:
+        bacii_map = CharacterInternalIDMap()
+        if not bacii_map.load(args.bacii_path, index_column=args.index_column):
+            logger.log(f"⚠ Failed to load BACII from '{args.bacii_path}', character name lookup disabled.")
+            bacii_map = None
+
+    for filename_path in args.filenames:
+        filename = Path(filename_path).name
+        parsed = parse_filename(filename)
+
+        logger.log(f"File: {filename}")
+        logger.log(f"  category:      {parsed.category or '-'}")
+        logger.log(f"  core:          {parsed.core or '-'}")
+        logger.log(f"  res_type:      {parsed.res_type or '-'}")
+        logger.log(f"  date:          {parsed.date or '-'}")
+        crc_display = f"{parsed.crc} (0x{int(parsed.crc):08X})" if parsed.crc else "-"
+        logger.log(f"  crc:           {crc_display}")
+        logger.log(f"  prefix:        {parsed.prefix or '-'}")
+        if parsed.core:
+            logger.log(f"  search_prefix: {get_category_prefix(parsed.core)}")
+        if bacii_map and parsed.core:
+            name = bacii_map.lookup(parsed.core, args.name_field)
+            logger.log(f"  character:     {name or '(not found)'}")
 
 
 def handle_env(args: EnvTap, logger: Logger = NULL_LOGGER) -> None:
@@ -461,28 +708,23 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     # 确保基础输出目录存在
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 处理资源类型
-    asset_types = set(args.asset_types)
-    if 'ALL' in asset_types:
-        asset_types = {'Texture2D', 'TextAsset', 'Mesh'}
-
-    logger.log(f"Specified asset extraction types: {', '.join(asset_types)}")
+    logger.log(f"Extracting all supported asset types: {', '.join(sorted(EXTRACTABLE_ASSET_TYPES))}")
     logger.log(f"Bundles to process: {len(valid_bundles)}")
     for bp in valid_bundles:
         logger.log(f"  - {bp.name}")
 
     # 创建SpineOptions对象
     spine_options = SkelConvertOptions(
-        enabled=args.enable_spine_downgrade,
-        converter_path=Path(args.spine_converter_path) if args.spine_converter_path else None,
+        enabled=args.skel_converter_path is not None,
+        converter_path=Path(args.skel_converter_path) if args.skel_converter_path else None,
         target_version=args.target_spine_version or None,
     )
 
     # 检查Spine降级配置
-    if args.enable_spine_downgrade:
+    if spine_options.enabled:
         if not spine_options.is_valid():
             logger.log("❌ Error: Spine downgrade is enabled but configuration is invalid.")
-            logger.log("   Please provide a valid --spine-converter-path and --target-spine-version.")
+            logger.log("   Please provide a valid --skel-converter-path and --target-spine-version.")
             return
         logger.log(f"Spine downgrade enabled: target version {args.target_spine_version}")
 
@@ -507,7 +749,6 @@ def handle_extract(args: ExtractTap, logger: Logger = NULL_LOGGER) -> None:
     success, message = process_asset_extraction(
         bundle_path=valid_bundles,
         output_dir=final_output_dir,
-        asset_types_to_extract=asset_types,
         spine_options=spine_options,
         enable_unpack_atlas=args.unpack_atlas,
         log=logger.log
@@ -527,7 +768,7 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
     logger.log("--- Start Mod Report Generation ---")
 
     # 确定游戏目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return
@@ -553,23 +794,25 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         bacii_path = Path(args.bacii_path)
         if bacii_path.exists():
             char_map = CharacterInternalIDMap()
-            if char_map.load(bacii_path):
+            if char_map.load(bacii_path, index_column=args.index_column):
                 logger.log(f"Loaded character mapping from: {bacii_path}")
             else:
                 logger.log(f"⚠️ Warning: Failed to load character mapping from: {bacii_path}")
                 char_map = None
 
-    # 验证 Spine 渲染器路径
-    viewer_path = None
-    if args.enable_render:
-        if not args.spine_viewer_path:
-            logger.log("❌ Error: --spine-viewer-path is required when --enable-render is set.")
+    # 验证 Spine 渲染器路径（提供路径即启用渲染）
+    backend = None
+    if args.spine_renderer_path:
+        tool_path = Path(args.spine_renderer_path)
+        if not tool_path.exists():
+            logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
             return
-        viewer_path = Path(args.spine_viewer_path)
-        if not viewer_path.exists():
-            logger.log(f"❌ Error: SpineViewerCLI not found: {viewer_path}")
+        try:
+            backend = resolve_spine_backend(args.spine_renderer, tool_path)
+        except ValueError as e:
+            logger.log(f"❌ Error: {e}")
             return
-        logger.log(f"Spine rendering enabled: {viewer_path}")
+        logger.log(f"Spine rendering enabled: {tool_path}")
 
     # 进度回调
     progress_callback = lambda current, total, filename: logger.log(
@@ -582,11 +825,12 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         output_path=output_path,
         char_map=char_map,
         char_name_field=args.name_field,
-        enable_render=args.enable_render,
-        viewer_path=viewer_path,
-        report_format=args.report_format,
+        enable_render=args.spine_renderer_path is not None,
+        backend=backend,
+        report_format=args.format,
         log=logger.log,
         progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
     )
 
     logger.log("\n" + "="*50)
@@ -597,12 +841,81 @@ def handle_report(args: ReportTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log(f"❌ Report Generation Failed: {message}")
 
 
+def handle_batch_preview(args: BatchPreviewTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'batch-preview' 命令的逻辑。"""
+    logger.log("--- Start Batch Spine Preview Rendering ---")
+
+    # 验证渲染工具路径
+    tool_path = Path(args.spine_renderer_path)
+    if not tool_path.exists():
+        logger.log(f"❌ Error: Renderer tool not found: {tool_path}")
+        return
+    try:
+        backend = resolve_spine_backend(args.spine_renderer, tool_path)
+    except ValueError as e:
+        logger.log(f"❌ Error: {e}")
+        return
+
+    # 确定游戏目录
+    resource_dir = args.resource_dir or get_BA_path(args.region)
+    if not resource_dir:
+        logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
+        return
+
+    game_dir = Path(resource_dir)
+    if not game_dir.is_dir():
+        logger.log(f"❌ Error: Game resource directory '{game_dir}' does not exist or is not a directory.")
+        return
+
+    # 确保输出目录存在
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # 渲染预设（Literal 类型已在 argparse 阶段校验取值）
+    preset_map = {'low': RENDER_PRESET_LOW, 'high': RENDER_PRESET_HIGH}
+    render_options = preset_map[args.preset]
+
+    # 渲染分类
+    if not args.categories:
+        logger.log("❌ Error: All render categories are ignored. Nothing to render.")
+        return
+
+    logger.log(f"Game directory: {game_dir}")
+    logger.log(f"Output directory: {output_dir.resolve()}")
+    logger.log(f"Render preset: {args.preset}")
+    logger.log(f"Render categories: {', '.join(args.categories)}")
+
+    # 进度回调
+    progress_callback = lambda current, total, filename: logger.log(
+        f"[{current}/{total}] Rendering: {filename}"
+    )
+
+    # 调用核心渲染函数
+    rendered, total = render_all_spine_previews(
+        game_dir=game_dir,
+        output_dir=output_dir,
+        backend=backend,
+        render_options=render_options,
+        render_categories=args.categories,
+        log=logger.log,
+        progress_callback=progress_callback,
+        max_workers=max(1, args.max_workers),
+    )
+
+    logger.log("\n" + "="*50)
+    if total > 0:
+        logger.log(f"✅ Batch Preview Rendering Complete: {rendered}/{total} group(s) rendered.")
+        logger.log(f"   Output: {output_dir.resolve()}")
+    else:
+        logger.log("❌ No preview images rendered.")
+
+
 def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
     """处理 'backup' 命令的逻辑。"""
     logger.log("--- Start Mod Backup ---")
 
     # 确定游戏目录
-    resource_dir = args.resource_dir or get_BA_path()
+    resource_dir = args.resource_dir or get_BA_path(args.region)
     if not resource_dir:
         logger.log("❌ Error: Cannot find game resource directory. Please provide --resource-dir.")
         return
@@ -641,6 +954,12 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
         logger.log("❌ No modded files found.")
         return
 
+    # 2.5 Detect spine textassets companions to include (png-only mods leave textassets untouched)
+    companions = find_textasset_companions(mod_files, items, game_dir, logger.log)
+    if companions:
+        logger.log(f"Including {len(companions)} companion textassets bundle(s).")
+        mod_files.extend(companions)
+
     logger.log(f"Found {len(mod_files)} modded file(s).")
 
     # 3. 创建备份目录
@@ -672,3 +991,76 @@ def handle_backup(args: BackupTap, logger: Logger = NULL_LOGGER) -> None:
 
     logger.log("\n" + "="*50)
     logger.log(f"✅ Backup complete: {mod_total} file(s) saved to {backup_dir.resolve()}")
+
+
+def _resolve_cab_cache(args: InspectTap | TraceTap) -> Path | None:
+    """解析 CAB 映射缓存路径：--no-cache 禁用；未指定 --cab-cache 时用默认位置"""
+    if getattr(args, 'no_cache', False):
+        return None
+    return args.cab_cache or (EXE_DIR / "Addons" / "cab_cache.json")
+
+
+def handle_inspect(args: InspectTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'inspect' 命令的逻辑。"""
+    logger.log("--- Start Bundle Inspection ---")
+
+    # 验证输入文件
+    bundle_paths = [Path(p) for p in args.bundle]
+    valid_paths = []
+    for p in bundle_paths:
+        if p.is_file():
+            valid_paths.append(p)
+        else:
+            logger.log(f"❌ Error: Bundle file '{p}' does not exist.")
+    if not valid_paths:
+        logger.log("❌ Error: No valid bundle files provided.")
+        return
+
+    # 跨包解析目录（可选；--local-only 时跳过探测）
+    resource_dir = None
+    if args.local_only:
+        logger.log("Local-only mode: cross-bundle resolution disabled.")
+    else:
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if resource_dir:
+            logger.log(f"Game resource directory: {resource_dir}")
+        else:
+            logger.log("Cross-bundle resolution disabled (no resource directory).")
+
+    inspect_bundles(
+        valid_paths,
+        log=logger.log,
+        resource_dir=Path(resource_dir) if resource_dir else None,
+        cache_path=_resolve_cab_cache(args),
+        local_only=args.local_only,
+    )
+
+
+def handle_trace(args: TraceTap, logger: Logger = NULL_LOGGER) -> None:
+    """处理 'trace' 命令的逻辑。"""
+    logger.log("--- Start Bundle Reference Tracing ---")
+
+    bundle_path = Path(args.bundle)
+    if not bundle_path.is_file():
+        logger.log(f"❌ Error: Bundle file '{bundle_path}' does not exist.")
+        return
+
+    # 跨包解析目录（可选；--local-only 时跳过探测）
+    resource_dir = None
+    if args.local_only:
+        logger.log("Local-only mode: cross-bundle resolution disabled.")
+    else:
+        resource_dir = args.resource_dir or get_BA_path(args.region)
+        if resource_dir:
+            logger.log(f"Game resource directory: {resource_dir}")
+        else:
+            logger.log("Cross-bundle resolution disabled (no resource directory).")
+
+    trace_bundle(
+        bundle_path,
+        log=logger.log,
+        path_id=args.path_id,
+        resource_dir=Path(resource_dir) if resource_dir else None,
+        cache_path=_resolve_cab_cache(args),
+        local_only=args.local_only,
+    )

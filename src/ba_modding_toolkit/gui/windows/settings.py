@@ -1,5 +1,6 @@
 # gui/windows/settings.py
 
+import os
 import tkinter as tk
 import ttkbootstrap as tb
 import tkinter.messagebox as messagebox
@@ -16,10 +17,9 @@ from ...models import FileType
 from ...utils import get_environment_info
 from ...naming import CharacterInternalIDMap
 from ..components import Theme, UIComponents, SettingRow
-from ..utils import select_file, select_directory, open_directory
-from .base import StoppableDialog
+from ..utils import select_file, open_directory
 
-class SettingsDialog(StoppableDialog):
+class SettingsDialog(tb.Toplevel):
     def __init__(self, master, app_instance: "App"):
         super().__init__(master)
         self.app = app_instance
@@ -32,11 +32,14 @@ class SettingsDialog(StoppableDialog):
         self.content_area.pack(fill=tk.BOTH, expand=True, padx=(0, 15))
 
         self._init_app_settings()
+        self._init_performance_settings()
         self._init_path_settings()
-        self._init_adb_settings()
         self._init_saving_options()
+        self._init_bacii_settings()
         self._init_asset_options()
-        self._init_spine_settings()
+        self._init_skel_converter_settings()
+        self._init_render_backend_settings()
+        self._init_adb_settings()
 
         self._init_footer_buttons()
 
@@ -46,8 +49,6 @@ class SettingsDialog(StoppableDialog):
         self.geometry("800x1000")
         # 设置窗口图标
         self.app.setup_icon(self)
-
-        self.transient(self.master)
 
     def _create_section(self, title: str) -> tb.Labelframe:
         """
@@ -99,8 +100,6 @@ class SettingsDialog(StoppableDialog):
             path_config_frame,
             label=t("option.game_dir_windows_global"),
             path_var=self.app.game_resource_dir_var,
-            select_cmd=self.app.select_game_resource_directory,
-            open_cmd=self.app.open_game_resource_in_explorer,
             tooltip=t("option.game_dir_windows_global_info")
         )
 
@@ -109,8 +108,6 @@ class SettingsDialog(StoppableDialog):
             path_config_frame,
             label=t("option.game_dir_windows_japan"),
             path_var=self.app.game_resource_dir_japan_var,
-            select_cmd=self._select_game_resource_directory_japan,
-            open_cmd=self._open_game_resource_japan_in_explorer,
             tooltip=t("option.game_dir_windows_japan_info")
         )
 
@@ -147,14 +144,6 @@ class SettingsDialog(StoppableDialog):
         self._prev_file_source = source
         # 发送事件通知各tab更新
         self.app.event_generate("<<FileSourceChanged>>")
-
-    def _select_game_resource_directory_japan(self):
-        """选择日服游戏资源目录"""
-        select_directory(self.app.game_resource_dir_japan_var, t("option.game_dir_windows_japan"), self.app.logger.log)
-
-    def _open_game_resource_japan_in_explorer(self):
-        """打开日服游戏资源目录"""
-        open_directory(self.app.game_resource_dir_japan_var.get(), self.app.logger.log)
 
     def _select_android_global_dir(self):
         """通过 ADB 浏览器选择国际服 Android 目录"""
@@ -229,7 +218,6 @@ class SettingsDialog(StoppableDialog):
             section,
             label=t("option.adb_cache_dir"),
             path_var=self.app.adb_cache_dir_var,
-            select_cmd=self._select_adb_cache_dir,
             open_cmd=self._open_adb_cache_dir,
             tooltip=t("option.adb_cache_dir_info")
         )
@@ -261,6 +249,7 @@ class SettingsDialog(StoppableDialog):
                 self.app.adb_path_var.set(str(path)),
                 self._update_adb_status()
             ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -366,15 +355,6 @@ class SettingsDialog(StoppableDialog):
                 bootstyle="danger"
             )
 
-    def _select_adb_cache_dir(self):
-        """选择 ADB 缓存目录"""
-
-        select_directory(
-            var=self.app.adb_cache_dir_var,
-            title=t("ui.dialog.select", type=t("option.adb_cache_dir")),
-            log=self.app.logger.log
-        )
-
     def _open_adb_cache_dir(self):
         """打开 ADB 缓存目录"""
         cache_dir = self.app.adb_cache_dir_var.get()
@@ -382,7 +362,7 @@ class SettingsDialog(StoppableDialog):
             open_directory(cache_dir, self.app.logger.log, create_if_not_exist=True)
         else:
             # 打开默认缓存目录
-            default_dir = self.app.exe_dir / "adb_cache"
+            default_dir = self.app.exe_dir / "Addons" / "adb_cache"
             default_dir.mkdir(parents=True, exist_ok=True)
             open_directory(default_dir, self.app.logger.log)
 
@@ -426,8 +406,7 @@ class SettingsDialog(StoppableDialog):
             section,
             label=t("option.output_dir"),
             path_var=self.app.output_dir_var,
-            select_cmd=self.app.select_output_directory,
-            open_cmd=self.app.open_output_dir_in_explorer,
+            open_cmd=lambda: open_directory(self.app.output_dir_var.get(), self.app.logger.log, create_if_not_exist=True),
             tooltip=t("option.output_dir_info")
         )
 
@@ -445,6 +424,20 @@ class SettingsDialog(StoppableDialog):
             button_text=t("action.print"),
             command=self.print_environment_info,
             bootstyle="info"
+        )
+
+    def _init_performance_settings(self):
+        """初始化性能设置"""
+        section = self._create_section(t("ui.settings.group_performance"))
+
+        # 并行线程数（批量更新 / 批量预览渲染 / 报告渲染共用）
+        SettingRow.create_spinbox_row(
+            section,
+            label=t("option.max_workers"),
+            int_var=self.app.max_workers_var,
+            from_=1,
+            to=min(os.cpu_count() or 4, 8),
+            tooltip=t("option.max_workers_info")
         )
 
     def _init_saving_options(self):
@@ -474,7 +467,7 @@ class SettingsDialog(StoppableDialog):
             tooltip=t("option.backup_info")
         )
 
-        SettingRow.create_radiobutton_row(
+        SettingRow.create_combobox_row(
             section,
             label=t("option.compression_method"),
             text_var=self.app.compression_method_var,
@@ -521,11 +514,34 @@ class SettingsDialog(StoppableDialog):
             tooltip=t("option.replace_mesh_info")
         )
 
-    def _init_spine_settings(self):
-        """初始化Spine设置"""
-        section = self._create_section(t("ui.settings.group_spine"))
+        SettingRow.create_switch(
+            section,
+            label=t("option.replace_animationclip"),
+            variable=self.app.replace_animationclip_var,
+            tooltip=t("option.replace_animationclip_info")
+        )
 
-        # Spine 转换器路径设置
+        SettingRow.create_switch(
+            section,
+            label=t("option.replace_font"),
+            variable=self.app.replace_font_var,
+            tooltip=t("option.replace_font_info")
+        )
+
+    def _init_skel_converter_settings(self):
+        """初始化 Skel 转换器设置"""
+        section = self._create_section(t("ui.settings.group_skel_converter"))
+
+        # skel 目标版本：无论是否启用转换，都作为版本检测基线，不匹配则拒绝/报错
+        SettingRow.create_entry_row(
+            section,
+            label=t("option.spine_target_version"),
+            text_var=self.app.target_spine_version_var,
+            tooltip=t("option.spine_target_version_info"),
+            app=self.app,
+        )
+
+        # Skel 转换器路径设置
         SettingRow.create_path_selector(
             section,
             label=t("option.skel_converter_path"),
@@ -545,15 +561,21 @@ class SettingsDialog(StoppableDialog):
             on_click_disabled=self.app.show_spine_converter_not_configured
         )
 
-        SettingRow.create_entry_row(
-            section,
-            label=t("option.spine_target_version"),
-            text_var=self.app.target_spine_version_var,
-            tooltip=t("option.spine_target_version_info"),
-            app=self.app,
-        )
+    def _init_render_backend_settings(self):
+        """初始化渲染后端设置"""
+        section = self._create_section(t("ui.settings.group_render_backend"))
 
-        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
+        # 渲染后端选择
+        SettingRow.create_combobox_row(
+            section,
+            label=t("option.render_backend"),
+            text_var=self.app.render_backend_var,
+            values=[
+                ("spine_viewer", t("option.render_backend_spine_viewer")),
+                ("spine2dump", t("option.render_backend_spine2dump")),
+            ],
+            tooltip=t("option.render_backend_info")
+        )
 
         # SpineViewerCLI 路径设置
         SettingRow.create_path_selector(
@@ -566,16 +588,39 @@ class SettingsDialog(StoppableDialog):
             status_check=lambda: Path(self.app.spine_viewer_path_var.get()).is_file()
         )
 
+        # spine2dump 路径设置
+        SettingRow.create_path_selector(
+            section,
+            label=t("option.spine2dump_path"),
+            path_var=self.app.spine2dump_path_var,
+            select_cmd=self.select_spine2dump_path,
+            tooltip=t("option.spine2dump_path_info"),
+            download_guide_cmd=self.app.show_spine2dump_download_guide,
+            status_check=lambda: Path(self.app.spine2dump_path_var.get()).is_file()
+        )
+
         SettingRow.create_switch(
             section,
             label=t("option.check_animations"),
             variable=self.app.check_animations_var,
             tooltip=t("option.check_animations_info"),
             app=self.app,
-            on_click_disabled=self.app.show_spine_viewer_not_configured
+            on_click_disabled=self.app.show_render_backend_not_configured
         )
 
-        tb.Separator(section).pack(fill=tk.X, padx=5, pady=5)
+        # 预览图缩略图尺寸（预览窗口中缩略图的最大边长）
+        SettingRow.create_spinbox_row(
+            section,
+            label=t("option.preview_thumbnail_size"),
+            int_var=self.app.preview_thumbnail_size_var,
+            from_=128,
+            to=2048,
+            tooltip=t("option.preview_thumbnail_size_info")
+        )
+
+    def _init_bacii_settings(self):
+        """初始化角色 ID 映射（BACII）设置"""
+        section = self._create_section(t("ui.settings.group_bacii"))
 
         # 角色ID映射表
         SettingRow.create_path_selector(
@@ -583,7 +628,6 @@ class SettingsDialog(StoppableDialog):
             label=t("option.character_id_map"),
             path_var=self.app.bacii_map_path_var,
             select_cmd=self.select_character_map_path,
-            open_cmd=None,
             tooltip=t("option.character_id_map_info"),
             download_guide_cmd=self.app.download_BACII_map,
             status_check=lambda: Path(self.app.bacii_map_path_var.get()).is_file()
@@ -616,7 +660,7 @@ class SettingsDialog(StoppableDialog):
         footer_frame.columnconfigure(1, weight=1)
         footer_frame.columnconfigure(2, weight=1)
 
-        save_button = UIComponents.create_button(footer_frame, text=t("action.save"), command=self.app.save_current_config, bootstyle="success")
+        save_button = UIComponents.create_button(footer_frame, text=t("action.save"), command=lambda: self.app.save_current_config(parent=self), bootstyle="success")
         save_button.grid(row=0, column=0, sticky="ew", padx=(0, 5))
 
         load_button = UIComponents.create_button(footer_frame, text=t("action.load"), command=self.load_config, bootstyle="warning") 
@@ -638,7 +682,7 @@ class SettingsDialog(StoppableDialog):
     def _on_language_changed(self, event):
         """语言选项变化时的处理"""
         if messagebox.askyesno(t("common.tip"), t("message.config.language_changed"), parent=self):
-            self.app.save_current_config()
+            self.app.save_current_config(parent=self)
             self.destroy()
             self.master.quit()
 
@@ -646,7 +690,7 @@ class SettingsDialog(StoppableDialog):
         """加载配置文件并更新UI"""
         if self.app.config_manager.load_config(self.app):
             self.app.logger.log(t("log.config.loaded"))
-            messagebox.showinfo(t("common.success"), t("message.config.loaded"))
+            messagebox.showinfo(t("common.success"), t("message.config.loaded"), parent=self)
         else:
             self.app.logger.log(t("log.config.load_failed"))
             messagebox.showerror(t("common.error"), t("message.config.load_failed"), parent=self)
@@ -666,6 +710,7 @@ class SettingsDialog(StoppableDialog):
                 self.app.spine_converter_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.skel_converter_set", path=path))
             ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -678,6 +723,20 @@ class SettingsDialog(StoppableDialog):
                 self.app.spine_viewer_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.spine_viewer_set", path=path))
             ),
+            parent=self,
+            log=self.app.logger.log
+        )
+
+    def select_spine2dump_path(self):
+        """选择 spine2dump 程序路径"""
+        select_file(
+            title=t("ui.dialog.select", type=t("file_type.spine2dump")),
+            file_types=[FileType.EXECUTABLE, FileType.ALL],
+            callback=lambda path: (
+                self.app.spine2dump_path_var.set(str(path)),
+                self.app.logger.log(t("log.spine.spine2dump_set", path=path))
+            ),
+            parent=self,
             log=self.app.logger.log
         )
 
@@ -690,6 +749,7 @@ class SettingsDialog(StoppableDialog):
                 self.app.bacii_map_path_var.set(str(path)),
                 self.app.logger.log(t("log.spine.character_map_set", path=path))
             ),
+            parent=self,
             log=self.app.logger.log
         )
 

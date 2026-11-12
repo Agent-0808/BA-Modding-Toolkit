@@ -1,13 +1,16 @@
 # models.py
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Callable, Literal, NamedTuple
+from typing import TYPE_CHECKING, Callable, Literal, NamedTuple
 from enum import StrEnum
 from PIL import Image
 
 
 from UnityPy.enums import ClassIDType as AssetType
 from UnityPy.files import ObjectReader as Obj
+
+if TYPE_CHECKING:
+    from .spine import SpineBackend
 
 # -------- 基础命名元组和类型别名 ---------
 
@@ -32,22 +35,50 @@ class ContNameTypeKey(NamedTuple):
 
 AssetKey = str | int | NameTypeKey | ContNameTypeKey
 
-# 资源的具体内容，可以是字节数据、PIL图像或None
-AssetContent = bytes | Image.Image | None  
+@dataclass(frozen=True)
+class FontAssetData:
+    """Font 特判替换内容：仅搬运字体数据与家族名，apply 时保留目标对象其余字段
+
+    不走 raw 整对象搬运，避免跨版本 Font 类 typetree 布局变化导致坏对象，
+    同时不覆盖目标侧的度量字段（m_LineSpacing 等）。
+    """
+    font_data: bytes          # 字体文件字节（ttf/otf）
+    font_names: list[str]     # 写入 m_FontNames 的家族名列表
+
+# 资源的具体内容，可以是字节数据、PIL图像、Font特判数据或None
+AssetContent = bytes | Image.Image | FontAssetData | None
+
+class RawAssetBytes(bytes):
+    """标记 raw dump 内容（完整序列化对象字节），apply_patch 走 set_raw_data 原样替换
+
+    序列化数据中的流式引用（.resS/.resource）指向源 bundle 的内部附属文件，
+    companions 携带这些文件（{basename: 字节}），apply_patch 时一并写入目标 bundle，
+    避免替换后引用悬空导致游戏内资源丢失；无流引用时为空。
+    """
+
+    # bytes 子类不支持 __slots__，动态属性无法存储实例槽位；
+    # 仅作类型声明（供 IDE/类型检查器），实际赋值在 __new__
+    companions: dict[str, bytes]
+
+    def __new__(cls, data: bytes = b"", companions: dict[str, bytes] | None = None) -> "RawAssetBytes":
+        obj = super().__new__(cls, data)
+        obj.companions = companions if companions is not None else {}
+        return obj
 
 # 补丁，用于描述向Bundle文件进行的资源替换操作
 Patch = dict[AssetKey, AssetContent]
 
-# 日志函数类型
-LogFunc = Callable[[str], None]  
-
-ProgressCallback = Callable[[int, int, str], None]
+# 日志/进度回调类型：定义在 utils.common，此处 re-export 供既有调用方使用
+from .utils import LogFunc, ProgressCallback
 
 # 压缩类型
 CompressionType = Literal["lzma", "lz4", "original", "none"]  
 
 # 匹配策略类型
 MatchStrategy = Literal['path_id', 'name_type', 'cont_name_type']
+
+# 资源类型名（ALL 表示全部支持类型）
+ReplaceAssetType = Literal["Texture2D", "TextAsset", "Mesh", "AnimationClip", "Font", "ALL"]
 
 KeyFunc = Callable[[Obj], AssetKey]
 
@@ -78,19 +109,22 @@ class SkelConvertOptions:
             and self.target_version.count(".") == 2
         )
 
+@dataclass(frozen=True)
+class SkelVersionConflict:
+    """skel 版本与预设目标版本不兼容的冲突信息"""
+    name: str               # skel 资源名
+    source_version: str     # 来源 skel 检测到的版本
+    target_version: str     # 预设目标版本
+
 @dataclass
 class AnimCheckOptions:
-    """动画差异比对与校验配置（依赖 SpineViewerCLI）"""
+    """动画差异比对与校验配置（依赖当前渲染后端）"""
     enabled: bool = False
-    viewer_path: Path | None = None
+    backend: "SpineBackend | None" = None
 
     def is_valid(self) -> bool:
         """检查动画检测器是否就绪"""
-        return bool(
-            self.enabled
-            and self.viewer_path
-            and self.viewer_path.exists()
-        )
+        return bool(self.enabled and self.backend is not None)
 
 # 动画差异映射：{skel名称: [缺失动画列表]}
 AnimDiffMap = dict[str, list[str]]
@@ -136,45 +170,6 @@ class PatchResult(NamedTuple):
     def is_success(self) -> bool:
         """是否有资源匹配成功（无论是否实际修改）"""
         return self.matched_count > 0
-
-class ParsedFilename(NamedTuple):
-    """
-    解析后的文件名结构。
-
-    Attributes:
-        category: 资源分类 (如 spinecharacters)，可能为 None
-        core: 核心名称 (如 ch0808_spr)，必须有值
-        res_type: 资源类型 (如 textassets)，可能为 None
-        date: 日期字符串 (YYYY-MM-DD)
-        crc: CRC32 校验码
-        prefix: 用于搜索新版文件的前缀
-    """
-    category: str | None
-    core: str
-    res_type: str | None
-    date: str
-    crc: str
-    prefix: str
-
-@dataclass
-class BundleFileInfo:
-    """扫描结果中单个 bundle 文件的信息"""
-    path: Path
-    file_size: int
-    modified_time: float = 0.0
-    trailing_bytes: int | None = None
-    trailing_content: bytes | None = None
-    parsed_name: ParsedFilename | None = None
-    crc_actual: int | None = None
-    # ADB 支持
-    local_cache_path: Path | None = None  # ADB 模式下的本地缓存路径
-    source: str = "local"                  # "local" | "adb"
-
-    @property
-    def effective_path(self) -> Path:
-        """获取实际用于文件操作的本地路径"""
-        return self.local_cache_path if self.local_cache_path is not None else self.path
-
 
 # 可替换的资源类型白名单
 REPLACEABLE_ASSET_TYPES: set[AssetType] = {

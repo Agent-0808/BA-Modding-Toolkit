@@ -13,6 +13,7 @@ from ..components import UIComponents
 from ..windows.report_dialog import ReportDialog
 from ..windows.abnormal_check_dialog import AbnormalCheckDialog
 from ..windows.backup_dialog import BackupDialog
+from ..windows.batch_preview_dialog import BatchRenderDialog
 from .base_tab import TabFrame
 
 
@@ -63,6 +64,16 @@ class ToolsTab(TabFrame):
         backup_btn.pack(fill=tk.X, pady=10)
         ToolTip(backup_btn, text=t("ui.tools.backup.info"), wraplength=400)
 
+        # 批量渲染预览图按钮
+        batch_preview_btn = UIComponents.create_button(
+            button_frame,
+            text=t("ui.tools.batch_preview.title"),
+            command=self._open_batch_preview_dialog,
+            bootstyle="secondary",
+        )
+        batch_preview_btn.pack(fill=tk.X, pady=10)
+        ToolTip(batch_preview_btn, text=t("ui.tools.batch_preview.info"), wraplength=400)
+
     def _open_report_dialog(self):
         """打开报告生成对话框"""
         dialog = ReportDialog(self.master, self.app)
@@ -76,4 +87,9 @@ class ToolsTab(TabFrame):
     def _open_backup_dialog(self):
         """打开 Mod 备份对话框"""
         dialog = BackupDialog(self.master, self.app)
+        self.master.wait_window(dialog)
+
+    def _open_batch_preview_dialog(self):
+        """打开批量渲染预览图对话框"""
+        dialog = BatchRenderDialog(self.master, self.app)
         self.master.wait_window(dialog)

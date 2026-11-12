@@ -27,7 +27,7 @@ class AssetPackerTab(TabFrame):
             file_list=self.asset_paths,
             placeholder_text=t("ui.packer.placeholder_assets"),
             height=5,
-            allowed_suffixes={".png", ".skel", ".atlas", ".bytes"},
+            allowed_suffixes={".png", ".skel", ".atlas", ".bytes", ".dat"},
             logger=self.logger,
             on_files_added=self._on_assets_added
         )
@@ -63,6 +63,17 @@ class AssetPackerTab(TabFrame):
             label=t("option.enable_bleed"),
             variable=self.app.enable_bleed_var,
             tooltip=t("option.enable_bleed_info")
+        )
+
+        # Bleed 的 alpha 阈值：不超过该值的像素按透明处理
+        SettingRow.create_spinbox_row(
+            options_frame,
+            label=t("option.bleed_alpha_threshold"),
+            int_var=self.app.bleed_alpha_threshold_var,
+            from_=0,
+            to=32,
+            tooltip=t("option.bleed_alpha_threshold_info"),
+            app=self.app,
         )
 
         # 操作按钮区域
@@ -188,6 +199,7 @@ class AssetPackerTab(TabFrame):
             spine_options = spine_options,
             enable_rename_fix = self.app.enable_spine38_namefix_var.get(),
             enable_bleed = self.app.enable_bleed_var.get(),
+            bleed_alpha_threshold = self.app.bleed_alpha_threshold_var.get(),
             skip_unchanged = self.app.skip_unchanged_var.get(),
             anim_check=self.app.build_anim_check_options(),
             log = self.logger.log

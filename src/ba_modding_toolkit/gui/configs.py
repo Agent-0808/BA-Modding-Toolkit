@@ -1,16 +1,18 @@
 # gui/configs.py
 
+import os
 import tkinter as tk
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Annotated, Any, TYPE_CHECKING
+from typing import Annotated, Any, TYPE_CHECKING, get_type_hints
 import toml
 
 if TYPE_CHECKING:
     from .app import App
 
-from ..utils import get_BA_path, EXE_DIR
-from ..i18n import t
+from ..utils import DEFAULT_BLEED_ALPHA_THRESHOLD, get_BA_path, EXE_DIR
+from ..i18n import t, i18n_manager
+from ..naming import CharacterInternalIDMap
 
 
 @dataclass
@@ -64,6 +66,7 @@ class ConfigMixin:
     # AppSettings
     language_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", "")]
     output_dir_var: Annotated[tk.StringVar, ConfigMeta("AppSettings", str(EXE_DIR / "output"))]
+    max_workers_var: Annotated[tk.IntVar, ConfigMeta("AppSettings", 4)]
     
     # SaveOptions (原 GlobalOptions)
     extra_bytes_var: Annotated[tk.StringVar, ConfigMeta("SaveOptions", "0x08080808")]
@@ -76,12 +79,14 @@ class ConfigMixin:
     replace_texture2d_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_textasset_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_mesh_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
+    replace_animationclip_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
+    replace_font_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", True)]
     replace_all_var: Annotated[tk.BooleanVar, ConfigMeta("ResourceTypes", False)]
     
     # SpineConverter
     spine_converter_path_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "")]
     enable_spine_conversion_var: Annotated[tk.BooleanVar, ConfigMeta("SpineConverter", False, depends_on="spine_converter_path_var")]
-    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33", depends_on="enable_spine_conversion_var")]
+    target_spine_version_var: Annotated[tk.StringVar, ConfigMeta("SpineConverter", "4.2.33")]
     
     # SpineDowngrade
     enable_spine_downgrade_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="spine_converter_path_var")]
@@ -89,8 +94,12 @@ class ConfigMixin:
     scale_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("SpineDowngrade", False, depends_on="enable_spine_downgrade_var")]
 
     # SpineViewer
+    render_backend_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "spine_viewer")]
     spine_viewer_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
+    spine2dump_path_var: Annotated[tk.StringVar, ConfigMeta("SpineViewer", "")]
     check_animations_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", False, depends_on="spine_viewer_path_var")]
+    preview_thumbnail_size_var: Annotated[tk.IntVar, ConfigMeta("SpineViewer", 768)]
+    mod_install_render_preview_var: Annotated[tk.BooleanVar, ConfigMeta("SpineViewer", True, depends_on="spine_viewer_path_var")]
 
     # Mod Backup
     mod_backup_path_var: Annotated[tk.StringVar, ConfigMeta("Directories", str(EXE_DIR / "output" / "backup"))]
@@ -98,11 +107,12 @@ class ConfigMixin:
     # CharacterMap
     bacii_map_path_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", str(EXE_DIR / "Addons" / "BA-Characters-Internal-ID.csv"))]
     character_index_column_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "file_id")]
-    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", "full_name")]
+    character_name_field_var: Annotated[tk.StringVar, ConfigMeta("BACIIMap", CharacterInternalIDMap.DEFAULT_NAME_FIELD)]
 
     # Tabs
     enable_spine38_namefix_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_bleed_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
+    bleed_alpha_threshold_var: Annotated[tk.IntVar, ConfigMeta("Tabs", DEFAULT_BLEED_ALPHA_THRESHOLD, depends_on="enable_bleed_var")]
     unpack_atlas_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     enable_spine_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False)]
     render_preview_var: Annotated[tk.BooleanVar, ConfigMeta("Tabs", False, depends_on="spine_viewer_path_var")]
@@ -114,7 +124,44 @@ class ConfigMixin:
     # ADB
     adb_path_var: Annotated[tk.StringVar, ConfigMeta("ADB", "adb")]
     adb_device_var: Annotated[tk.StringVar, ConfigMeta("ADB", "")]
-    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "adb_cache"))]
+    adb_cache_dir_var: Annotated[tk.StringVar, ConfigMeta("ADB", str(EXE_DIR / "Addons" / "adb_cache"))]
+
+    # --- 配置变量反射机制 ---
+
+    def init_shared_variables(self):
+        """初始化所有配置变量 - 通过 Annotated 类型提示自动处理"""
+        self._config_specs: dict[str, ConfigMeta] = {}
+
+        hints = get_type_hints(type(self), include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+
+            var_type = hint.__origin__
+            meta: ConfigMeta = hint.__metadata__[0]
+
+            var_instance = var_type()
+            setattr(self, var_name, var_instance)
+            self._config_specs[var_name] = meta
+
+            default = meta.default() if callable(meta.default) else meta.default
+            var_instance.set(default)
+
+        # 特殊处理：语言设置
+        self.language_var.set(i18n_manager.lang)
+        self.available_languages = i18n_manager.get_available_languages()
+
+    def _set_default_values(self):
+        """重置所有配置变量为默认值"""
+        hints = get_type_hints(type(self), include_extras=True)
+        for var_name, hint in hints.items():
+            if not hasattr(hint, '__metadata__'):
+                continue
+
+            meta: ConfigMeta = hint.__metadata__[0]
+            var = getattr(self, var_name)
+            default = meta.default() if callable(meta.default) else meta.default
+            var.set(default)
 
 
 class ConfigManager:

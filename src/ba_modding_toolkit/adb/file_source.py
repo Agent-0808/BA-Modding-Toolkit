@@ -7,7 +7,7 @@ from typing import Callable
 
 from ..i18n import t
 from ..utils import no_log
-from ..models import BundleFileInfo
+from ..bundle import BundleFileInfo
 from .manager import ADBManager
 from .index import ADBFileIndex, RemoteFileInfo
 from .cache import ADBCache

@@ -8,7 +8,7 @@ import shutil
 
 from ...i18n import t
 from ...models import FileType
-from ...utils import CRCUtils
+from ...utils import check_crc_match, compute_crc32, manipulate_file_crc
 from ...searching import get_search_dirs
 from ...naming import parse_filename
 from ..components import DropZone, UIComponents, SettingRow
@@ -172,7 +172,7 @@ class CrcToolTab(TabFrame):
                 return False
             
             # 检测当前文件 CRC 是否已匹配目标
-            current_crc = CRCUtils.compute_crc32(self.modified_zone.path)
+            current_crc = compute_crc32(self.modified_zone.path)
             
             if current_crc == target_crc:
                 self.logger.log(f'⚠️ {t("log.crc.match_no_correction_needed")}')
@@ -188,7 +188,7 @@ class CrcToolTab(TabFrame):
             shutil.copy2(self.modified_zone.path, output_path)
             self.logger.log(t("log.file.saved", path=output_path))
             
-            success = CRCUtils.manipulate_file_crc(output_path, target_crc, self.app.get_extra_bytes())
+            success = manipulate_file_crc(output_path, target_crc, self.app.get_extra_bytes())
             
             if success:
                 self.final_output_path = output_path
@@ -215,7 +215,7 @@ class CrcToolTab(TabFrame):
         try:
             target_path = self.modified_zone.path if self.modified_zone.path else self.original_zone.path
 
-            crc_value = CRCUtils.compute_crc32(target_path)
+            crc_value = compute_crc32(target_path)
             crc_str = f"{crc_value}(0x{crc_value:08X})"
 
             self.logger.log(t("log.crc.file_crc32", crc=crc_str))
@@ -231,7 +231,7 @@ class CrcToolTab(TabFrame):
         """计算两个文件的CRC32值，并判断是否匹配"""
         self.logger.status(t("common.processing"))
         try:
-            is_match, original_crc_value, modified_crc_value = CRCUtils.check_crc_match(
+            is_match, original_crc_value, modified_crc_value = check_crc_match(
                 self.original_zone.path, self.modified_zone.path
             )
 

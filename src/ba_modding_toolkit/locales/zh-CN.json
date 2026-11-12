@@ -44,6 +44,10 @@
 		"refresh": "刷新",
 		"filter": "筛选",
 		"analyze": "分析",
+		"install": "安装",
+		"skip": "跳过",
+		"install_all": "全部安装",
+		"skip_all": "全部跳过",
 		"open_in_explorer": "打开所在目录",
 		"copy_filename": "复制文件名",
 		"render_preview": "渲染预览图",
@@ -78,12 +82,18 @@
 		"replace_textasset_info": ".skel 与 .atlas 文件，Spine 动画相关",
 		"replace_mesh": "Mesh",
 		"replace_mesh_info": "3D 模型文件",
+		"replace_animationclip": "AnimationClip",
+		"replace_animationclip_info": "3D 模型的动画片段资源",
+		"replace_font": "Font",
+		"replace_font_info": "字体资源文件\n仅搬运字体数据与家族名，保留目标字体的度量字段",
 		"replace_all": "ALL",
 		"replace_all_info": "替换所有类型资源\n测试性，不建议启用",
 		"spine_conversion": "启用 Spine 版本转换",
 		"spine_conversion_info": "（可选扩展功能）\n调用外部程序，将 .skel 文件转换为支持的版本\n需要配置 Skel 转换器的路径。",
 		"spine_target_version": "目标版本",
-		"spine_target_version_info": "格式应为 \"A.B.C\" 形式",
+		"spine_target_version_info": "格式应为 \"A.B.C\" 形式\n资源中与配置版本不匹配的 skel 将被拒绝处理\n配置并启用 Skel 转换器时会自动转换到该版本",
+		"preview_thumbnail_size": "预览图缩略图尺寸",
+		"preview_thumbnail_size_info": "预览窗口中缩略图的最大边长（像素）",
 		"spine_downgrade": "启用 Spine 降级",
 		"spine_downgrade_info": "（可选扩展功能）\n调用外部程序，导出支持旧版 Spine 的文件（.skel 与 .atlas）\n需要配置 Skel 转换器的路径。",
 		"spine_downgrade_target_version": "目标版本",
@@ -108,12 +118,22 @@
 		"skel_converter_path_info": "SpineSkeletonDataConverter.exe 文件的路径",
 		"spine_viewer_path": "SpineViewerCLI 路径",
 		"spine_viewer_path_info": "SpineViewerCLI.exe 文件的路径（用于渲染预览图）",
+		"render_backend": "渲染后端",
+		"render_backend_info": "渲染预览图与动画差异检测使用的程序后端\nspine2dump 仅支持 4.x skel，3.8（降级产物）请使用 SpineViewer",
+		"render_backend_spine_viewer": "SpineViewer",
+		"render_backend_spine2dump": "Spine2Dump",
+		"spine2dump_path": "spine2dump 路径",
+		"spine2dump_path_info": "spine2dump.exe 文件的路径",
 		"check_animations": "检测动画差异",
 		"check_animations_info": "在替换 .skel 文件时，检测目标是否包含来源中不存在的动画\n需要配置 SpineViewerCLI 路径",
+		"mod_install_render_preview": "渲染预览图",
+		"mod_install_render_preview_info": "在 Mod 安装确认弹窗中后台渲染 Spine 预览图与贴图\n关闭后仅展示文件与资产，弹窗秒开\n需要配置 SpineViewerCLI 路径",
 		"match_strategy": "匹配策略",
 		"match_strategy_info": "选择资源匹配策略：\n- path_id: 适用于同版本文件，替换最准确\n- cont_name_type: 使用容器+名称+类型匹配，适用于跨版本迁移（国际服与日服之间）\n- name_type: 使用名称+类型匹配",
 		"enable_bleed": "溢出",
 		"enable_bleed_info": "为图片文件进行 Bleed 操作\n如果打包后的图片在游戏中出现黑色、锯齿状边缘，建议开启此选项。",
+		"bleed_alpha_threshold": "溢出阈值",
+		"bleed_alpha_threshold_info": "alpha 不超过该值的像素按透明处理，其颜色由周边像素扩散覆盖\n用于消除线性过滤与 mipmap 产生的黑边\n0 表示只处理完全透明像素，一般保持 5 即可",
 		"enable_spine38_name_fix": "重命名旧版 Spine 文件名",
 		"enable_spine38_name_fix_info": "将旧版 Spine 导出的文件名格式重命名为新版本格式\n例如：CH0808_home2.png → CH0808_home_2.png",
 		"enable_spine_preview": "生成 Spine 预览图",
@@ -128,8 +148,14 @@
 		"report_render_preset_info": "选择预览图的渲染画质。\n更高的画质可能会消耗更长的时间来渲染。",
 		"report_render_preset_low": "低画质",
 		"report_render_preset_high": "高画质",
+		"render_characters": "渲染角色立绘",
+		"render_characters_info": "渲染 spinecharacters 分类的 Spine 资源预览图",
+		"render_lobbies": "渲染记忆大厅",
+		"render_lobbies_info": "渲染 spinelobbies 分类的 Spine 资源预览图",
+		"render_background": "渲染其它 Spine 资源",
+		"render_background_info": "渲染 spinebackground 分类的 Spine 资源预览图",
 		"max_workers": "并行线程数",
-		"max_workers_info": "同时处理的 Mod 文件数量。\n增加数量可提高处理速度，但会增加内存占用。",
+		"max_workers_info": "批量处理任务（批量更新 / 批量预览渲染等）的并行线程数。\n增加数量可提高处理速度，但会增加内存与 CPU 占用。",
 		"character_id_map": "角色ID映射表",
 		"character_id_map_info": "角色内部ID与名称的映射表，用于显示文件对应的角色实际名称",
 		"character_index_column": "索引列",
@@ -150,7 +176,8 @@
 		"bundle_backup": "AssetBundle 备份",
 		"folder": "文件夹",
 		"skel_converter": "SpineSkeletonConverter.exe",
-		"spine_viewer": "SpineViewerCLI.exe"
+		"spine_viewer": "SpineViewerCLI.exe",
+		"spine2dump": "spine2dump.exe"
 	},
 	"message": {
 		"confirm_replace_file": "此操作将覆盖文件：{path}\n\n建议确保已开启备份功能。\n确定要继续吗？",
@@ -191,7 +218,7 @@
 			"load_target_bundle_failed": "无法加载目标 Bundle 文件，即使在尝试移除潜在的 CRC 补丁后也是如此。请检查文件是否损坏。",
 			"no_supported_files_found": "在指定文件夹中没有找到任何支持的文件 ({extensions})。",
 			"no_matching_assets_to_pack": "没有找到任何名称匹配的资源进行打包。",
-			"process_complete": "处理完成！\n成功打包 {count} 个资源。\n\n文件已保存至工作目录，现在可以点击“{button}”按钮应用更改。"
+			"process_complete": "处理完成！\n成功打包 {count} 个文件。\n\n文件已保存至输出目录，现在可以点击“{button}”按钮应用更改。"
 		},
 		"crc": {
 			"provide_at_least_one_file": "请至少提供一个文件路径。",
@@ -206,8 +233,16 @@
 			"match_no": "CRC值匹配: ❌否",
 			"correction_failed_file_not_generated": "CRC 修正失败。最终文件 \"{name}\" 未能生成。"
 		},
-		"spine": {},
+		"spine": {
+			"version_conflict_header": "以下 .skel 文件的 Spine 版本与目标版本 ({major_minor}.x) 不一致，已拒绝替换：",
+			"version_conflict_item": "  - {name}（来源版本 {source}）",
+			"version_conflict_hint": "请检查 Spine 转换器设置。"
+		},
 		"report_open_prompt": "报告已生成！\n是否打开报告文件？",
+		"batch_preview_open_prompt": "批量渲染完成！\n成功 {rendered} / {total} 组，是否打开输出目录？",
+		"batch_preview": {
+			"no_category": "请至少选择一个需要渲染的分类。"
+		},
 		"search": {
 			"check_file_exists": "请检查 \"{path}\" 是否存在。",
 			"no_matching_files_in_dir": "在指定目录中未找到任何匹配的文件。",
@@ -227,6 +262,15 @@
 			"no_targets_processed": "没有目标文件被成功处理",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
 		},
+		"mod_install": {
+			"filename_parse_failed": "无法解析文件名: {filename}",
+			"target_conflict": "多个 Mod 组命中同一目标文件: {filename}",
+			"no_game_dir": "未设置游戏资源目录，无法分析 Mod 与游戏文件的关系。",
+			"adb_unsupported": "Mod 安装暂不支持 ADB 模式，请切换到本地文件来源。",
+			"nothing_selected": "尚未选择任何要安装的组。",
+			"summary": "安装完成！\n成功: {installed} 组\n跳过（已安装）: {skipped} 组\n失败: {failed} 组",
+			"failed_detail": "失败明细:\n{details}"
+		},
 		"save_error": "保存文件时发生错误: {error}",
 		"replace_result": "已完成替换！成功：{success}，失败：{fail}",
 		"batch": {
@@ -238,7 +282,8 @@
 		"3rd_party": {
 			"download_guide": "是否前往下载 {program}？\n{url}",
 			"skel_converter_not_configured": "SpineSkeletonDataConverter 未配置。\n请在设置页面配置 SpineSkeletonDataConverter 的路径。",
-			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。"
+			"spine_viewer_required": "SpineViewerCLI 程序未设置或路径无效。\n如果要启用该功能，请您自行下载 SpineViewer 程序，并遵守其协议。\n\n请在设置中配置 SpineViewerCLI 的路径。",
+			"spine2dump_required": "spine2dump 程序未设置或路径无效。\n\n请在设置中配置 spine2dump 的路径（程序内置 Addons/spine2dump 目录）。"
 		},
 		"download_confirm": "将从此地址下载文件：\n{url}\n\n保存至：{path}",
 		"adb": {
@@ -279,7 +324,8 @@
 		"error": "错误：{error}",
 		"loaded": "已加载 {type}",
 		"calculation_done": "计算完成",
-		"extracting": "正在提取资源..."
+		"extracting": "正在提取资源...",
+		"render_progress": "渲染预览 ({done}/{total})..."
 	},
 	"log": {
 		"file": {
@@ -317,6 +363,7 @@
 		"spine": {
 			"skel_converter_set": "已设置 Skel 转换器: {path}",
 			"spine_viewer_set": "已设置 SpineViewerCLI: {path}",
+			"spine2dump_set": "已设置 spine2dump: {path}",
 			"character_map_set": "已设置角色ID映射表: {path}",
 			"skel_version_detection_failed": "无法检测当前 .skel 文件版本",
 			"converting_skel": "正在转换 .skel 文件: {name}",
@@ -326,6 +373,8 @@
 			"skel_conversion_failed": "skel 转换失败",
 			"skel_detected": "检测到 .skel 文件: {name}",
 			"version_mismatch_converting": "检测到Spine版本不匹配（当前{current}，目标{target}），将进行转换。",
+			"version_mismatch_no_convert": "检测到Spine版本不匹配（当前{current}，目标{target}），且 Spine 转换器未启用。",
+			"version_conflict_rejected": "检测到 {count} 个 .skel 版本冲突，已拒绝替换",
 			"converting_atlas": "正在转换 Atlas: {name}",
 			"version_detected_downgrading": "检测到Spine版本: {version}，尝试降级...",
 			"atlas_downgrade_success": "Atlas 降级成功",
@@ -334,6 +383,8 @@
 			"unpacking_atlas": "正在解包 Atlas: {name}",
 			"atlas_unpack_success": "Atlas 解包成功，帧已保存至: {path}",
 			"atlas_unpack_failed": "Atlas 解包失败",
+			"unsafe_atlas_name": "atlas 包含不安全的名称：{name}，已拒绝处理",
+			"unsafe_atlas_page": "跳过名称不安全的 atlas 页：{name}",
 			"querying_info": "正在查询动画信息: {name}",
 			"query_success": "查询成功，找到 {anim_count} 个动画，{skin_count} 个皮肤",
 			"query_failed": "查询动画信息失败",
@@ -341,6 +392,7 @@
 			"render_success": "预览图渲染成功: {path}",
 			"render_failed": "预览图渲染失败: {error}",
 			"render_file_not_found": "渲染完成但未找到输出文件",
+			"bounds_unavailable": "无法获取骨架 bounds，画布尺寸回退为 {size}",
 			"no_skel_found": "未找到 .skel 文件",
 			"no_animation_found": "未找到可用动画: {name}",
 			"using_first_animation": "未找到 Idle_01 或 Dummy，使用第一个动画: {anim}",
@@ -393,6 +445,12 @@
 			"saved": "报告已保存至: {path}",
 			"success": "报告生成成功，共 {count} 个 Mod"
 		},
+		"batch_preview": {
+			"scan_start": "开始批量渲染扫描",
+			"no_spine_found": "未找到 Spine 资源",
+			"group_count": "共 {count} 组 Spine 资源待渲染",
+			"render_count": "批量渲染完成，成功 {count} / {total} 组"
+		},
 		"section": {
 			"extract_to_temp": "提取资源到临时目录",
 			"move_to_output": "移动提取的文件到输出目录",
@@ -423,8 +481,12 @@
 			"extraction_types": "提取类型: {types}",
 			"using_temp_dir": "使用临时目录: {path}",
 			"skipping_unnamed": "跳过一个未命名的 {type} 资源",
+			"skipping_unsafe_name": "跳过名称不安全的资源：{name}",
 			"extraction_failed": "提取资源 {name} 时发生错误: {error}",
-			"processing_file": "正在处理：{name}"
+			"processing_file": "正在处理：{name}",
+			"stream_ref_dangling": "跳过提取 [{name}]：序列化数据引用了 bundle 内不存在的流数据文件（.resS），替换将导致资源损坏",
+			"no_image_data": "跳过提取 [{name}]：纹理无像素数据（空 StreamData 且无内联数据），疑似残缺资源",
+			"stream_ref_export_unsupported": "跳过导出 [{name}]：含 .resS 流式引用的资源暂不支持导出为可重打包的 dump"
 		},
 		"mod_update": {
 			"all_processes_complete": "全部流程处理完成！共处理 {count} 个资源。",
@@ -435,6 +497,21 @@
 			"target_unchanged": "目标文件内容未变化: {name}（{count} 个资源），跳过",
 			"target_processed": "目标文件处理完成: {name}（替换 {applied} 个资源）",
 			"all_targets_unchanged": "所有目标文件内容均未变化，无需更新"
+		},
+		"mod_install": {
+			"plan_start": "开始分析 {count} 个 Mod 文件...",
+			"group_info": "分组 [{core}]（{count} 个文件）",
+			"same_name_found": "找到同名文件: {filename}，将直接替换",
+			"update_targets": "需要更新，匹配到 {count} 个目标文件: {names}",
+			"target_conflict": "目标文件冲突: {filename}",
+			"plan_done": "分析完成: 共 {total} 个文件 / {groups} 组（直接替换 {direct}，需更新 {update}，未找到 {not_found}，错误 {error}）",
+			"execute_start": "开始安装 {count} 个 Mod 组...",
+			"execute_group": "开始安装组 [{core}]...",
+			"crc_resave": "需 CRC 碰撞修正，重新保存: {filename}",
+			"replace_failed": "替换文件失败: {path} ({error})",
+			"already_installed": "组 [{core}] 所有资源均未变化，视为已安装，跳过",
+			"execute_done": "安装完成: 成功 {installed} 组 / 跳过 {skipped} 组 / 失败 {failed} 组",
+			"list_cleaned": "已从列表移除 {count} 个已安装文件"
 		},
 		"batch": {
 			"summary": "批量处理完成！总计: {total}，成功: {success}，失败: {fail}",
@@ -464,7 +541,11 @@
 		"replace_original": "现在可以按下\"{button}\"按钮来覆盖原始文件",
 		"generated_file_not_found": "操作提示成功，但在输出目录中找不到生成的文件。",
 		"replace_resource_failed": "替换资源 [{type}] {name} 时发生错误: {error}",
+		"replace_applied": "已替换 [{type}] {name}",
 		"replace_skipped_same_content": "跳过替换 [{type}] {name}：内容与原始文件相同",
+		"replace_companion_exists": "附属流文件 {name} 已存在，跳过附加",
+		"replace_companion_attached": "companion: {names}",
+		"stream_prefix_skip": "流引用前缀 {src} 与目标 SF 名 {dst} 长度不一致，跳过改写",
 		"platform_info": "目标平台: {platform} (Unity {version})",
 		"unnamed_resource": "未命名的 {type} 资源",
 		"adb": {
@@ -490,7 +571,8 @@
 		"backup": {
 			"start": "开始备份 Mod",
 			"found_mods": "发现 {count} 个 mod 文件",
-			"copying": "正在备份 ({current}/{total}): {filename}",
+			"companion_checking": "正在检查关联 textassets：{filename}",
+			"companion_matched": "发现需补充备份的 textassets：{filename}",
 			"done": "备份完成，共 {count} 个文件"
 		}
 	},
@@ -499,6 +581,7 @@
 		"tabs": {
 			"mod_update": "Mod 更新",
 			"batch_update": "批量更新",
+			"mod_install": "Mod 安装",
 			"crc_tool": "CRC 工具",
 			"asset_packer": "资源打包",
 			"asset_extractor": "资源提取",
@@ -525,6 +608,11 @@
 			"backup": {
 				"title": "备份 Mod",
 				"info": "将游戏目录中检测到的全部 Mod 文件复制到指定备份目录，并保留原始目录结构。"
+			},
+			"batch_preview": {
+				"title": "批量渲染预览图",
+				"info": "渲染指定游戏资源目录下全部 Spine 资源（角色立绘、记忆大厅、Spine 背景）的预览图，不限于 Mod 文件。输出到输出目录的 batch_preview 子目录。",
+				"game_dir": "游戏资源目录"
 			}
 		},
 		"settings": {
@@ -532,7 +620,10 @@
 			"button_text": "设置",
 			"group_save": "保存设置",
 			"group_assets": "资源处理选项",
-			"group_spine": "Spine 工具设置",
+			"group_skel_converter": "Skel 转换器",
+			"group_render_backend": "Spine 渲染工具",
+			"group_bacii": "角色名称",
+			"group_performance": "性能",
 			"group_app": "应用设置",
 			"group_paths": "路径设置",
 			"group_adb": "ADB 设置",
@@ -561,6 +652,38 @@
 			"placeholder_new": "选择修改后文件后将自动查找原始文件\n或手动拖放/浏览文件",
 			"placeholder_batch": "将文件或文件夹拖放到此处...",
 			"status_not_found": "未找到匹配资源：{message}"
+		},
+		"mod_install": {
+			"placeholder": "将待安装的 mod 文件拖放到此处...",
+			"view_details": "查看详情",
+			"dialog_title": "Mod 安装确认",
+			"likely_installed": "疑似已安装",
+			"prev_group": "◀ 上一组",
+			"next_group": "下一组 ▶",
+			"preview_current": "现有文件",
+			"preview_new": "待安装",
+			"preview_none": "暂无预览",
+			"preview_similarity": "相似度 {value}% · MSE {mse} · {size}",
+			"preview_similarity_scaled": "相似度 {value}% · MSE {mse} · {left} → {right}（缩放后比较）",
+			"preview_size_mismatch": "尺寸不同，未做像素比较：{left} → {right}",
+			"preview_one_side": "仅一侧有图，无法比较",
+			"sync_view": "同步视角",
+			"preview_tag_render": "[渲染]",
+			"preview_tag_extract": "[提取]",
+			"meta_title": "文件与资产",
+			"confirm_install": "确认安装 ({install}/{total})",
+			"action_direct_replace": "直接替换",
+			"action_update": "更新后替换",
+			"action_not_found": "未找到对应文件",
+			"action_error": "错误",
+			"action_mixed": "混合",
+			"meta_size": "{mod_size} → {existing_size}",
+			"diff_content_changed": "内容有变化",
+			"diff_similarity": "相似度 {value}%",
+			"diff_unchanged": "无变化",
+			"diff_missing_anims": "缺失 {count} 个动画",
+			"diff_will_replace": "将被替换",
+			"preview_rendering": "渲染中..."
 		},
 		"crc_tool": {
 			"placeholder_modified": "拖放待修正CRC值的 Bundle\n或点击下方按钮选择",
@@ -615,6 +738,7 @@
 				"modified_time": "修改时间",
 				"trailing_bytes": "尾部字节",
 				"trailing_content": "尾部内容",
+				"category": "类型",
 				"core": "Core",
 				"character": "角色名称",
 				"res_type": "资源类型",

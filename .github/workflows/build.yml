@@ -84,7 +84,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Path "publish" -Force
           Copy-Item -Path "build/BA-Modding-Toolkit.exe" -Destination "publish/"
-          Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
+        # Copy-Item -Path "src/ba_modding_toolkit/locales" -Destination "publish/locales" -Recurse
         shell: powershell
 
       # 内置角色ID映射表（BA-Characters-Internal-ID，CC BY-SA 4.0）

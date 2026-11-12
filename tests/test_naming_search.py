@@ -1,18 +1,11 @@
-import pytest
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ba_modding_toolkit.naming import get_category_prefix, parse_filename
+from ba_modding_toolkit.naming import get_category_prefix, parse_filename, parse_asset_core, parse_typed_dump_name
 from ba_modding_toolkit.searching import search_prefix, search_core
 
-from conftest import (
-    PACKER_DIR,
-    has_mod_update_samples,
-    has_legacy_format_samples,
-    has_sample_skel,
-    has_sample_image,
-    has_sample_atlas,
-    has_sample_bundle,
-)
+if TYPE_CHECKING:
+    from conftest import SampleCase, UpdateCase
 
 class TestParseFilename:
     def test_parse_filename_jp(self):
@@ -79,6 +72,50 @@ class TestParseFilename:
         assert parsed.date == "2088-07-07"
         assert parsed.crc == "87654321"
         assert parsed.prefix.startswith("uis-09_common-99_minigame-cardgame")
+
+
+class TestTypedDumpName:
+    def test_parse_mesh_bytes(self):
+        name, asset_type = parse_typed_dump_name("ch0001_body.mesh.bytes")
+        assert name == "ch0001_body"
+        assert asset_type == "Mesh"
+
+    def test_parse_texture2d_dat(self):
+        name, asset_type = parse_typed_dump_name("ch0001_body.texture2d.dat")
+        assert name == "ch0001_body"
+        assert asset_type == "Texture2D"
+
+    def test_parse_animationclip_dat(self):
+        name, asset_type = parse_typed_dump_name("xxx.anim.animationclip.dat")
+        assert name == "xxx.anim"
+        assert asset_type == "AnimationClip"
+
+    def test_parse_textasset_dat(self):
+        name, asset_type = parse_typed_dump_name("some_text.textasset.dat")
+        assert name == "some_text"
+        assert asset_type == "TextAsset"
+
+    def test_parse_case_insensitive(self):
+        name, asset_type = parse_typed_dump_name("Body.Mesh.DAT")
+        assert name == "Body"
+        assert asset_type == "Mesh"
+
+    def test_parse_invalid_returns_none(self):
+        assert parse_typed_dump_name("plain.dat") is None
+        assert parse_typed_dump_name("no_second_ext.bytes") is None
+        assert parse_typed_dump_name("foo.unknown.dat") is None
+        assert parse_typed_dump_name("onlyname") is None
+
+    def test_parse_asset_core_strips_dump_ext(self):
+        """parse_asset_core 对 dump 散件应剥离二级扩展名，保证 core 与资源名一致"""
+        assert parse_asset_core("ch0001_body.mesh.dat") == "ch0001_body"
+        assert parse_asset_core("ch0001_body.mesh.bytes") == "ch0001_body"
+        assert parse_asset_core("xxx.anim.animationclip.dat") == "xxx.anim"
+
+    def test_parse_asset_core_loose_assets(self):
+        """parse_asset_core 对 png/skel 等无类型标记散件应正确提取 core"""
+        assert parse_asset_core("ch1437_home.skel") == "ch1437_home"
+        assert parse_asset_core("ch0808_spr.png") == "ch0808_spr"
 
     def test_parse_filename_no_type(self):
         filename = "assets-_mx-category-corename-2024-01-01_11111111.bundle"
@@ -189,23 +226,15 @@ class TestSearchPrefix:
         assert candidates == []
         assert err != ""
 
-    @pytest.mark.skipif(
-        not has_mod_update_samples(),
-        reason="old_mod.bundle AND new_original.bundle ARE REQUIRED"
-    )
-    def test_search_mod_update_real_files(
-        self,
-        old_mod_bundle_path: Path,
-        new_original_bundle_path: Path,
-    ):
+    def test_search_mod_update_real_files(self, update_case: "UpdateCase"):
         """使用真实测试文件测试 mod update 搜索"""
-        # 从旧 bundle 搜索新 bundle（使用 new 目录作为搜索目录）
-        candidates, err = search_prefix(old_mod_bundle_path, [new_original_bundle_path.parent])
+        # 从旧 bundle 搜索新 bundle（使用 new 案例目录作为搜索目录）
+        candidates, err = search_prefix(update_case.old_paths[0], [update_case.new_paths[0].parent])
 
         assert err == ""
         assert len(candidates) >= 1
         # 新文件应该在结果中
-        assert new_original_bundle_path in candidates
+        assert update_case.new_paths[0] in candidates
 
 
 class TestSearchCore:
@@ -328,95 +357,48 @@ class TestSearchCore:
         assert candidates == []
         assert err != ""
 
-    @pytest.mark.skipif(
-        not has_mod_update_samples(),
-        reason="old_mod.bundle AND new_original.bundle ARE REQUIRED"
-    )
-    def test_search_mod_update_by_core(
-        self,
-        old_mod_bundle_path: Path,
-        new_original_bundle_path: Path,
-    ):
-        """使用真实测试文件测试 core 搜索（mod update 场景）"""
-        # 从旧 bundle 搜索新 bundle
-        candidates, err = search_core(old_mod_bundle_path, [new_original_bundle_path.parent])
+    def test_search_mod_update_by_core(self, update_case: "UpdateCase"):
+        """使用真实测试文件测试 core 搜索（打包器自动定位场景）
+
+        search_core 的源是散件资产而非 bundle（bundle→bundle 场景由 search_prefix 覆盖），
+        故从旧 bundle 名提取 core 构造散件作为搜索源。
+        """
+        core = parse_filename(update_case.old_paths[0].name).core
+        source = update_case.old_paths[0].parent / f"{core}.png"
+        source.write_bytes(b"fake asset")
+
+        candidates, err = search_core(source, [update_case.new_paths[0].parent])
 
         assert err == ""
         assert len(candidates) >= 1
-        assert new_original_bundle_path in candidates
-
-    @pytest.mark.skipif(
-        not has_legacy_format_samples(),
-        reason="legacy AND modern bundles ARE REQUIRED"
-    )
-    def test_search_legacy_to_modern(
-        self,
-        legacy_bundle_path: Path,
-        modern_bundles_path: list[Path],
-    ):
-        """使用真实测试文件测试 legacy 格式搜索 modern bundle"""
-        if not modern_bundles_path:
-            pytest.skip("No modern bundles found")
-
-        # 从 legacy bundle 搜索 modern bundle
-        modern_dir = modern_bundles_path[0].parent
-        candidates, err = search_core(legacy_bundle_path, [modern_dir])
-
-        assert err == ""
-        assert len(candidates) >= 1
-        # 至少有一个 modern bundle 应该匹配
-        assert any(c in modern_bundles_path for c in candidates)
+        assert update_case.new_paths[0] in candidates
 
     class TestWithPackerSamples:
-        """使用 packer 目录真实文件的搜索测试"""
+        """使用 sample 组真实文件的搜索测试"""
 
-        @pytest.mark.skipif(
-            not (has_sample_skel() and has_sample_bundle()),
-            reason=".skel AND .bundle files ARE REQUIRED"
-        )
-        def test_search_skel_to_bundle_real(
-            self,
-            sample_skel_path: Path,
-            sample_bundle_path: Path,
-        ):
+        def test_search_skel_to_bundle_real(self, sample_case: "SampleCase"):
             """使用真实的 .skel 文件搜索 bundle"""
-            candidates, err = search_core(sample_skel_path, [PACKER_DIR])
+            candidates, err = search_core(sample_case.skel_path, [sample_case.bundle_paths[0].parent])
 
             assert err == ""
             assert len(candidates) >= 1
-            assert sample_bundle_path in candidates
+            assert sample_case.bundle_paths[0] in candidates
 
-        @pytest.mark.skipif(
-            not (has_sample_image() and has_sample_bundle()),
-            reason=".png AND .bundle files ARE REQUIRED"
-        )
-        def test_search_png_to_bundle_real(
-            self,
-            sample_image_path: Path,
-            sample_bundle_path: Path,
-        ):
+        def test_search_png_to_bundle_real(self, sample_case: "SampleCase"):
             """使用真实的 .png 文件搜索 bundle"""
-            candidates, err = search_core(sample_image_path, [PACKER_DIR])
+            candidates, err = search_core(sample_case.image_path, [sample_case.bundle_paths[0].parent])
 
             assert err == ""
             assert len(candidates) >= 1
-            assert sample_bundle_path in candidates
+            assert sample_case.bundle_paths[0] in candidates
 
-        @pytest.mark.skipif(
-            not (has_sample_atlas() and has_sample_bundle()),
-            reason=".atlas AND .bundle files ARE REQUIRED"
-        )
-        def test_search_atlas_to_bundle_real(
-            self,
-            sample_atlas_path: Path,
-            sample_bundle_path: Path,
-        ):
+        def test_search_atlas_to_bundle_real(self, sample_case: "SampleCase"):
             """使用真实的 .atlas 文件搜索 bundle"""
-            candidates, err = search_core(sample_atlas_path, [PACKER_DIR])
+            candidates, err = search_core(sample_case.atlas_path, [sample_case.bundle_paths[0].parent])
 
             assert err == ""
             assert len(candidates) >= 1
-            assert sample_bundle_path in candidates
+            assert sample_case.bundle_paths[0] in candidates
 
 
 class TestParseAndSearchRoundtrip:
@@ -501,23 +483,15 @@ class TestParseAndSearchRoundtrip:
         assert bundle_v2 in candidates
         assert bundle_v3 in candidates
 
-    @pytest.mark.skipif(
-        not (has_sample_skel() and has_sample_bundle()),
-        reason=".skel AND .bundle files ARE REQUIRED"
-    )
-    def test_roundtrip_with_real_bundle(
-        self,
-        sample_bundle_path: Path,
-        sample_skel_path: Path,
-    ):
+    def test_roundtrip_with_real_bundle(self, sample_case: "SampleCase"):
         """使用真实 bundle 文件测试往返"""
         # 1. 解析真实 bundle 文件名
-        parsed = parse_filename(sample_bundle_path.name)
+        parsed = parse_filename(sample_case.bundle_paths[0].name)
         assert parsed.core is not None
 
         # 2. 使用已有的真实 .skel 文件搜索
-        candidates, err = search_core(sample_skel_path, [PACKER_DIR])
+        candidates, err = search_core(sample_case.skel_path, [sample_case.bundle_paths[0].parent])
 
         # 3. 应找到原 bundle
         assert err == ""
-        assert sample_bundle_path in candidates
+        assert sample_case.bundle_paths[0] in candidates

@@ -10,17 +10,13 @@ from ttkbootstrap.widgets.scrolled import ScrolledFrame
 
 from ...i18n import t
 from ..utils import open_in_os, reveal_in_explorer
-from .base import StoppableDialog
 
 if TYPE_CHECKING:
     from ..app import App
 
 
-class PreviewWindow(StoppableDialog):
+class PreviewWindow(tb.Toplevel):
     """预览图查看窗口：纵向滚动展示多张图片"""
-
-    # 缩略图最大边长（像素）
-    MAX_THUMBNAIL_SIZE = 512
 
     def __init__(self, master, app_instance: "App", image_paths: list[Path]):
         super().__init__(master)
@@ -28,9 +24,6 @@ class PreviewWindow(StoppableDialog):
         self._photos: list[ImageTk.PhotoImage] = []  # 保持引用防止图片被 GC
 
         self.title(t("action.render_preview"))
-        # 多图时固定尺寸滚动浏览；单图时不调用 geometry，让窗口高度自适应图片
-        if len(image_paths) > 1:
-            self.geometry("520x680")
         self.app.setup_icon(self)
         self.transient(master)
 
@@ -58,9 +51,9 @@ class PreviewWindow(StoppableDialog):
             image_label = tb.Label(container, image=photo)
             image_label.pack()
 
-            # 双击文件名在文件管理器中定位文件，双击图片用系统默认看图工具打开
+            # 单击文件名在文件管理器中定位文件，双击图片用系统默认看图工具打开
             name_label.configure(cursor="hand2")
-            name_label.bind("<Double-Button-1>", lambda e, p=path: reveal_in_explorer(p))
+            name_label.bind("<Button-1>", lambda e, p=path: reveal_in_explorer(p))
             image_label.configure(cursor="hand2")
             image_label.bind("<Double-Button-1>", lambda e, p=path: open_in_os(p))
 
@@ -68,7 +61,8 @@ class PreviewWindow(StoppableDialog):
         """加载图片并缩放到预览尺寸"""
         try:
             with Image.open(path) as image:
-                image.thumbnail((self.MAX_THUMBNAIL_SIZE, self.MAX_THUMBNAIL_SIZE))
+                size = self.app.preview_thumbnail_size_var.get()
+                image.thumbnail((size, size))
                 return ImageTk.PhotoImage(image)
         except OSError:
             return None
