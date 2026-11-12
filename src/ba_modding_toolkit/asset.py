@@ -9,10 +9,11 @@ from UnityPy.files import File as UnityFile
 from .i18n import t
 from .models import (
     AssetContent, AssetType, AnimCheckOptions, LogFunc,
-    RawAssetBytes, SkelConvertOptions, SkelVersionConflict,
+    NameTypeKey, Patch, RawAssetBytes,
+    SkelConvertOptions, SkelVersionConflict,
     FontAssetData,
 )
-from .spine import SkelConverter, check_skel_animation_diff
+from .spine import SkelConverter, SkelRef, check_skel_animation_diff
 from .utils import is_same_texture, no_log
 
 
@@ -32,6 +33,7 @@ class ApplyContext:
     env: Env                                        # 目标 bundle 环境（companion 写入用）
     anim_check: AnimCheckOptions | None             # skel 动画差异检测选项
     log: LogFunc
+    patch: Patch | None = None                      # 来源补丁（动画差异检测时为来源 skel 找同 patch 的 mod atlas）
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,22 @@ def find_sibling_atlas_text(env: Env, skel_name: str) -> str | None:
         data = obj.read()
         if getattr(data, "m_Name", "").lower() == target:
             return data.m_Script
+    return None
+
+
+def find_patch_atlas_text(patch: Patch, skel_name: str) -> str | None:
+    """查找补丁内与 skel 同名的 atlas 文本（mod 自带图集）
+
+    动画差异校验时为来源 skel 配对其真正的图集：mod 常重排图集，
+    配目标 bundle 的 atlas 会使 spine2dump 原生崩溃。
+    """
+    stem = skel_name.rsplit(".", 1)[0].lower()
+    for key, content in patch.items():
+        if (isinstance(key, NameTypeKey) and key.type == AssetType.TextAsset.name
+                and key.name.lower().endswith(".atlas")
+                and key.name.rsplit(".", 1)[0].lower() == stem
+                and isinstance(content, bytes)):
+            return content.decode("utf-8", "surrogateescape")
     return None
 
 
@@ -245,10 +263,9 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
         if ctx.anim_check and ctx.anim_check.is_valid() and resource_name.lower().endswith('.skel'):
             ctx.log(f"  🔍 {t('log.spine.anim_check_comparing', name=resource_name)}")
             missing_anims = check_skel_animation_diff(
-                source_skel=content,
-                target_skel=target_bytes,
+                source=SkelRef(content, find_patch_atlas_text(ctx.patch, resource_name) if ctx.patch else None),
+                target=SkelRef(target_bytes, find_sibling_atlas_text(ctx.env, resource_name)),
                 backend=ctx.anim_check.backend,
-                atlas_text=find_sibling_atlas_text(ctx.env, resource_name),
                 log=ctx.log
             )
             if missing_anims:

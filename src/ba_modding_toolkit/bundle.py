@@ -560,7 +560,7 @@ class Bundle:
         applied_assets_log = []
         matched_keys: list[AssetKey] = []
         anim_diffs: dict[str, list[str]] = {}
-        ctx = ApplyContext(env=self.env, anim_check=anim_check, log=self.log)
+        ctx = ApplyContext(env=self.env, anim_check=anim_check, log=self.log, patch=patch)
         
         tasks = patch.copy()
         

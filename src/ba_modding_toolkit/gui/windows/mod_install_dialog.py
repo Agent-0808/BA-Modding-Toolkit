@@ -30,7 +30,7 @@ from ...utils import (
 from ...models import AnimCheckOptions, AssetType, LogFunc
 from ...bundle import Bundle
 from ...core.mod_install import ACTION_KEYS, InstallAction, ModGroup
-from ...spine import SpineBackend, RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
+from ...spine import SkelRef, SpineBackend, RENDER_PRESET_HIGH, get_skel_version, check_skel_animation_diff
 from ...core import extract_assets_from_bundle, render_spine_preview_from_bundle
 from ..components import UIComponents, DualZoomableCanvas
 from .base import StoppableDialog
@@ -288,7 +288,7 @@ def _process_group(
                             detail += f" · {similarity}"
                     # skel 行预检动画差异（缺失动画是执行阶段最常见的警告来源，提前可见）
                     if a.fname.endswith(".skel") and anim_check.is_valid():
-                        missing = check_skel_animation_diff(b.path, a.path, anim_check.backend, log=log)
+                        missing = check_skel_animation_diff(SkelRef(b.path), SkelRef(a.path), anim_check.backend, log=log)
                         if missing:
                             detail += f" · {t('ui.mod_install.diff_missing_anims', count=len(missing))}"
                     rows.append((a.type, a.fname, f"[{a.type}] {a.fname} — {detail}", _RowTag.DIFF))

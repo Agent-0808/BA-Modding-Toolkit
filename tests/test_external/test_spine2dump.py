@@ -14,6 +14,7 @@ from PIL import Image
 
 from ba_modding_toolkit.spine import (
     RENDER_PRESET_LOW,
+    SkelRef,
     Spine2Dump,
     SpineViewer,
     check_skel_animation_diff,
@@ -118,7 +119,7 @@ class TestSelectAnimation:
 class TestSpine2Dump:
     def test_query_42(self, skel_42: Path, spine2dump_path: Path):
         """4.x skel query 成功：animations 非空且为列表，skins 非空"""
-        ok, info = Spine2Dump(spine2dump_path).query(skel_42)
+        ok, info = Spine2Dump(spine2dump_path).query(SkelRef(skel_42))
         assert ok, info
         assert isinstance(info.get("animations"), list)
         assert info["animations"]
@@ -126,7 +127,7 @@ class TestSpine2Dump:
 
     def test_query_38_unsupported(self, skel_38: Path, spine2dump_path: Path):
         """3.x skel 加载失败（v100 spine-c 运行时仅支持 4.x），失败而非崩溃"""
-        ok, _ = Spine2Dump(spine2dump_path).query(skel_38)
+        ok, _ = Spine2Dump(spine2dump_path).query(SkelRef(skel_38))
         assert not ok
 
     def test_render_preview_42(self, skel_42: Path, spine2dump_path: Path, tmp_path: Path):
@@ -159,15 +160,16 @@ class TestAnimDiff:
         """bytes 目标与来源相同（含 atlas_text 占位写入路径）时无新增动画"""
         backend = Spine2Dump(spine2dump_path)
         atlas_text = skel_42.with_suffix(".atlas").read_text(encoding="utf-8")
-        assert check_skel_animation_diff(skel_42, skel_42.read_bytes(), backend, atlas_text=atlas_text) == []
+        assert check_skel_animation_diff(
+            SkelRef(skel_42), SkelRef(skel_42.read_bytes(), atlas_text=atlas_text), backend) == []
 
     def test_diff_between_skels(self, skel_42: Path, large_skel_path: Path, spine2dump_path: Path):
         """两个不同 skel 的差异与 query 结果的集合差一致"""
         backend = Spine2Dump(spine2dump_path)
-        _, info_src = backend.query(skel_42)
-        _, info_tgt = backend.query(large_skel_path)
+        _, info_src = backend.query(SkelRef(skel_42))
+        _, info_tgt = backend.query(SkelRef(large_skel_path))
         expected = sorted(set(info_tgt["animations"]) - set(info_src["animations"]))
-        assert check_skel_animation_diff(skel_42, large_skel_path, backend) == expected
+        assert check_skel_animation_diff(SkelRef(skel_42), SkelRef(large_skel_path), backend) == expected
 
 
 class TestBackendAgreement:
