@@ -26,7 +26,7 @@ class SettingsDialog(tb.Toplevel):
 
         self._setup_window()
 
-        self.scroll_frame = ScrolledFrame(self, autohide=True)
+        self.scroll_frame = ScrolledFrame(self, auto_hide=True)
         self.scroll_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         self.content_area = tb.Frame(self.scroll_frame)
         self.content_area.pack(fill=tk.BOTH, expand=True, padx=(0, 15))

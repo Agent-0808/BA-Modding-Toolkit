@@ -35,7 +35,7 @@ class PreviewWindow(tb.Toplevel):
         # ScrolledFrame 内部的 Canvas 不会，导致窗口高度无法自适应）
         if len(image_paths) > 1:
             self.geometry("520x680")
-            container: tb.Frame = ScrolledFrame(self, autohide=True, padding=10)
+            container: tb.Frame = ScrolledFrame(self, auto_hide=True, padding=10)
         else:
             container = tb.Frame(self, padding=10)
         container.pack(fill=tk.BOTH, expand=True)

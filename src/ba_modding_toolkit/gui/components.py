@@ -83,7 +83,7 @@ def create_log_area(parent: tk.Widget) -> ScrolledText:
         log_frame,
         padding=0,
         height=8,
-        autohide=True,    # 自动隐藏滚动条
+        auto_hide=True,    # 自动隐藏滚动条
         bootstyle="round" # 滚动条样式
     )
     st.pack(fill=tk.BOTH, expand=True)
@@ -368,7 +368,7 @@ class DropZone(tb.Labelframe):
             justify="center",
             padding=10,
             font=Theme.DROP_ZONE_FONT,
-            bootstyle="inverse-light"
+            bootstyle="@light"
         )
         self.label.pack(fill=tk.X, pady=(0, 8))
         self.label.drop_target_register(DND_FILES)
@@ -477,7 +477,7 @@ class DropZone(tb.Labelframe):
     def clear(self) -> None:
         """清除状态，恢复初始状态，并调用外部清理回调"""
         self._paths = []
-        self.label.config(text=self.placeholder_text, bootstyle="inverse-light")
+        self.label.config(text=self.placeholder_text, bootstyle="@light")
         self._update_btn_state()
         if self._clear_cmd:
             self._clear_cmd()
@@ -962,7 +962,7 @@ class SettingRow:
                 text=text,
                 variable=text_var,
                 value=value,
-                bootstyle="outline-toolbutton",
+                bootstyle="primary-outline-toolbutton",
                 command=command
             ).pack(side=tk.LEFT, padx=3)
         
