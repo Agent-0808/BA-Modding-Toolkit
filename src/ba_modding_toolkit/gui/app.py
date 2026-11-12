@@ -149,7 +149,7 @@ class App(tb.Frame, ConfigMixin):
 
         # 底部状态栏 - 固定在窗口底部
         self.status_label = tb.Label(self.master, relief=tk.SUNKEN, padding=(5,0),
-                                     font=Theme.STATUS_BAR_FONT, bootstyle="inverse-bg")
+                                     font=Theme.STATUS_BAR_FONT, bootstyle="inverse")
         self.status_label.grid(row=1, column=0, sticky="ew", padx=0, pady=0)  # 使用grid固定在底部，无边距
         
         self.logger = Logger(self.master, self.log_text, self.status_label)

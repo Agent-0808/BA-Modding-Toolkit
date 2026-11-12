@@ -446,7 +446,7 @@ class FileListWindow(StoppableDialog):
 
         self._status_label = tb.Label(
             status_frame, relief=tk.SUNKEN, padding=(5, 2),
-            font=Theme.STATUS_BAR_FONT, bootstyle="inverse-bg",
+            font=Theme.STATUS_BAR_FONT, bootstyle="inverse",
         )
         self._status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
 

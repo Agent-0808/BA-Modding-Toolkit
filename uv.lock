@@ -55,7 +55,6 @@ dependencies = [
     { name = "pillow" },
     { name = "spineatlas" },
     { name = "toml" },
-    { name = "ttkbootstrap" },
     { name = "typed-argument-parser" },
     { name = "unitypy" },
 ]
@@ -83,8 +82,7 @@ requires-dist = [
     { name = "spineatlas", git = "https://github.com/Agent-0808/SpineAtlas.git?rev=fix%2Fbounds-not-first" },
     { name = "tkinterdnd2", marker = "extra == 'gui'", specifier = ">=0.4.3" },
     { name = "toml", specifier = ">=0.10.2" },
-    { name = "ttkbootstrap", specifier = ">=2.0" },
-    { name = "ttkbootstrap", marker = "extra == 'gui'", specifier = ">=1.10.1" },
+    { name = "ttkbootstrap", marker = "extra == 'gui'", specifier = ">=2.2.7" },
     { name = "typed-argument-parser", specifier = ">=1.12.0" },
     { name = "typed-argument-parser", marker = "extra == 'cli'", specifier = ">=1.12.0" },
     { name = "unitypy", specifier = "==1.23.0" },
@@ -95,7 +93,7 @@ provides-extras = ["gui", "cli"]
 dev = [
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "tkinterdnd2", specifier = ">=0.4.3" },
-    { name = "ttkbootstrap", specifier = ">=1.10.1" },
+    { name = "ttkbootstrap", specifier = ">=2.2.7" },
     { name = "typed-argument-parser", specifier = ">=1.12.0" },
 ]
 
@@ -449,14 +447,14 @@ wheels = [
 
 [[package]]
 name = "ttkbootstrap"
-version = "2.2.2"
+version = "2.2.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pillow" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/94/25/2f432d4bf0a04ed783d3e6d913295f6163bffb158a0bb3fbd9d3e1fc903b/ttkbootstrap-2.2.2.tar.gz", hash = "sha256:b3bd4e615b3462bc3201d09cf22a87692a6d67f9de53127967ed726a4be24d2d", size = 603324, upload-time = "2026-08-17T12:36:52.872Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/95/7d6a573cf5ad9377caa9adc84117ab5ed2c3c3c5dc198655bb8150998ae8/ttkbootstrap-2.2.7.tar.gz", hash = "sha256:902f2212d8f51460beb0cabbe952ab68d87c7035d8d462411a32220a05c9cf8c", size = 605710, upload-time = "2026-11-05T14:26:33.837Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/15/d6/5e63a7b0da1d5a1e61d6651dac99a761544a75ed97c5d58cbcce0d0abb90/ttkbootstrap-2.2.2-py3-none-any.whl", hash = "sha256:b268daf53e73fb3d50482ec743a675e325ec644afe7fb706b6bbee35fda489f8", size = 552812, upload-time = "2026-08-17T12:36:51.486Z" },
+    { url = "https://files.pythonhosted.org/packages/5b/42/51f8a86782a7937709b9c4cf2f22da26598c41018ade54f0e4c1737a0eeb/ttkbootstrap-2.2.7-py3-none-any.whl", hash = "sha256:e5a258c4b565d0bb4ff2fdbe7e343b3f922a3cb858a669e65d6bf963fb34b911", size = 554358, upload-time = "2026-11-05T14:26:32.231Z" },
 ]
 
 [[package]]
