@@ -64,10 +64,12 @@ jobs:
           # 包含代码依赖包
           include-package: |
             ba_modding_toolkit
+            ttkbootstrap
             UnityPy.resources
           # 包含依赖包的数据文件
           include-package-data: |
             ba_modding_toolkit
+            ttkbootstrap
             UnityPy
             archspec
           # 包含资源目录
