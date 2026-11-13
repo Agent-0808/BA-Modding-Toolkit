@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from PIL import Image
 
-from ba_modding_toolkit.spine import SpineViewer
+from ba_modding_toolkit.spine import SkelRef, SpineViewer
 from conftest import require_render_support
 
 if TYPE_CHECKING:
@@ -30,7 +30,7 @@ class TestSpineViewer:
         """query 返回 (True, dict)，animations 非空且为列表"""
         skel_path = _require_skel(sample_case)
 
-        ok, info = SpineViewer(spine_viewer_path).query(skel_path)
+        ok, info = SpineViewer(spine_viewer_path).query(SkelRef(skel_path))
         assert ok, info
         animations = info.get("animations")
         assert isinstance(animations, list)

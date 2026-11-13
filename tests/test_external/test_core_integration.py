@@ -16,7 +16,7 @@ from ba_modding_toolkit.core import (
     render_spine_preview_from_bundle,
 )
 from ba_modding_toolkit.models import AnimCheckOptions, SaveOptions, SkelConvertOptions
-from ba_modding_toolkit.spine import SpineViewer, get_skel_version
+from ba_modding_toolkit.spine import SkelRef, SpineViewer, get_skel_version
 from conftest import EDIT_SPINE_VERSION, GAME_SPINE_VERSION, require_render_support
 
 if TYPE_CHECKING:
@@ -146,7 +146,7 @@ class TestExternalCoreIntegration:
 
         version = get_skel_version(packed_skel)
         assert version and version.startswith(_major_minor(target))
-        query_ok, info = SpineViewer(spine_viewer_path).query(packed_skel)
+        query_ok, info = SpineViewer(spine_viewer_path).query(SkelRef(packed_skel))
         assert query_ok
         assert info["animations"]
 
