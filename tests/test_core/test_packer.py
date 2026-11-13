@@ -15,7 +15,7 @@ from ba_modding_toolkit.bundle import Bundle
 from conftest import compare_images_mse
 
 if TYPE_CHECKING:
-    from conftest import SampleCase, LegacyRenameCase
+    from conftest import SampleCase, LegacyRenameCase, RessRegressCase
 
 MSE_THRESHOLD = 20.0
 
@@ -203,6 +203,55 @@ class TestAssetPacking:
             name in msg for name in ("unknown_name.bytes", "plain_dump.dat")
         ), msg
         assert not list(output_dir.glob("*.bundle")), "报错时不应产生任何输出"
+
+
+class TestDumpAssetPacking:
+    """带类型标记的 dump 文件（{name}.{type}.dat）打包流程"""
+
+    def test_pack_mesh_dump_roundtrip(
+        self,
+        ress_regress_case: "RessRegressCase",
+        tmp_path: Path,
+    ):
+        """从含 Mesh 的 bundle 导出 .mesh.dat 再打包回去，内容应保持不变。
+
+        回归点：dump 文件名解析结果直接是类型字符串，构建 NameTypeKey 时不能用 .name。
+        同时覆盖 Mesh 与 Texture2D 混合 bundle 的打包路径。
+        """
+        dump_dir = tmp_path / "dump"
+        dump_dir.mkdir()
+
+        extract_assets_from_bundle([ress_regress_case.original_path], dump_dir, {"Mesh"})
+        mesh_dumps = list(dump_dir.glob("*.mesh.dat"))
+        if not mesh_dumps:
+            pytest.skip("该案例 bundle 的 Mesh 均含流引用，无法生成独立 dump")
+
+        dump_bytes = {
+            p.name.removesuffix(".mesh.dat"): p.read_bytes() for p in mesh_dumps
+        }
+
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        save_options = SaveOptions(perform_crc=False, compression="none")
+
+        success, msg, _ = process_asset_packing(
+            target_bundle_path=[ress_regress_case.original_path],
+            assets=[dump_dir],
+            output_dir=output_dir,
+            save_options=save_options,
+        )
+        assert success is True, msg
+
+        packed_bundle = output_dir / ress_regress_case.original_path.name
+        assert packed_bundle.exists()
+
+        verify_dir = tmp_path / "verify"
+        verify_dir.mkdir()
+        extract_assets_from_bundle([packed_bundle], verify_dir, {"Mesh"})
+        for name, data in dump_bytes.items():
+            packed_dump = verify_dir / f"{name}.mesh.dat"
+            assert packed_dump.exists(), f"打包后缺少 Mesh: {name}"
+            assert packed_dump.read_bytes() == data, f"Mesh 内容不一致: {name}"
 
 
 class TestLegacyRenameAssetPacking:

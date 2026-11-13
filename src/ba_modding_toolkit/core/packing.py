@@ -129,8 +129,11 @@ def process_asset_packing(
             log(f"⚠️ {t('common.warning')}: {msg}")
             return False, msg, []
 
+        # 预构建原始文件名映射（用于未匹配文件日志），键与 patch 一致
+        original_filenames: dict[NameTypeKey, str] = {}
+
         for file_path in input_files:
-            asset_key: AssetKey
+            asset_key: NameTypeKey
             content: AssetContent
             suffix: str = file_path.suffix.lower()
             if suffix == ".png":
@@ -147,7 +150,7 @@ def process_asset_packing(
                 if file_path.suffix.lower() == '.skel':
                     content, conflict = SkelConverter.ensure_version(
                         skel_bytes=content,
-                        resource_name=asset_key.name,
+                        resource_name=file_path.name,
                         options=spine_options,
                         log=log
                     )
@@ -181,6 +184,7 @@ def process_asset_packing(
             else:
                 raise TypeError(f"Unsupported suffix: {suffix}")
             patch[asset_key] = content
+            original_filenames[asset_key] = file_path.name
 
         if skel_conflicts:
             # skel 版本与预设目标版本不兼容：终止流程，不处理任何目标 Bundle（详情见失败消息）
@@ -190,19 +194,6 @@ def process_asset_packing(
 
         original_tasks_count = len(patch)
         log(t("log.packer.found_files_to_process", count=original_tasks_count))
-
-        # 预构建原始文件名映射（用于未匹配文件日志）
-        original_filenames: dict[NameTypeKey, str] = {}
-        for f in input_files:
-            s = f.suffix.lower()
-            if s == '.png':
-                original_filenames[NameTypeKey(f.stem, AssetType.Texture2D.name)] = f.name
-            elif s in {'.skel', '.atlas'}:
-                original_filenames[NameTypeKey(f.name, AssetType.TextAsset.name)] = f.name
-            elif s in DUMP_FILE_EXTENSIONS:
-                parsed = parse_typed_dump_name(f.name)
-                if parsed:
-                    original_filenames[NameTypeKey(parsed[0], parsed[1].name)] = f.name
 
         strategy_name = 'name_type'
 
@@ -257,11 +248,14 @@ def process_asset_packing(
             success_count += 1
 
         # 3. 汇总输出所有bundle都未匹配的资源
-        never_matched_keys = set(patch.keys()) - all_matched_keys
+        never_matched_keys: set[NameTypeKey] = {
+            key for key in patch
+            if isinstance(key, NameTypeKey) and key not in all_matched_keys
+        }
         if never_matched_keys:
             log(f"⚠️ {t('common.warning')}: {t('log.packer.unmatched_files_warning')}:")
             for key in sorted(never_matched_keys):
-                log(f"  - {original_filenames.get(key, key)} ({t('log.packer.attempted_match', key=str(key))})")
+                log(f"  - {original_filenames.get(key, str(key))} ({t('log.packer.attempted_match', key=str(key))})")
 
         # 3. 输出动画缺失警告报告
         _log_anim_diff_report({k: sorted(v) for k, v in anim_diffs.items()}, log)
