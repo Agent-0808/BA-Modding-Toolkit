@@ -74,10 +74,16 @@ class App(tb.Frame, ConfigMixin):
 
     def setup_main_window(self):
         # 窗口标题带上版本号（如 "BA Modding Toolkit v1.2.3"）
-        version = get_version_info().get("version", "")
+        # 非 release 构建时附带短 commit hash
+        info = get_version_info()
+        version = info.get("version", "")
         title = t("ui.app_title")
         if version:
             title += f" v{version}"
+        if not info.get("tag", ""):
+            commit_short = info.get("commit_hash_short", "")
+            if commit_short:
+                title += f" ({commit_short})"
         self.master.title(title)
         self.master.geometry("800x1000")
 
