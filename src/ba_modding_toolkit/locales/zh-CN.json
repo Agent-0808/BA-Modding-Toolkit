@@ -611,8 +611,7 @@
 			},
 			"batch_preview": {
 				"title": "批量渲染预览图",
-				"info": "渲染指定游戏资源目录下全部 Spine 资源（角色立绘、记忆大厅、Spine 背景）的预览图，不限于 Mod 文件。输出到输出目录的 batch_preview 子目录。",
-				"game_dir": "游戏资源目录"
+				"info": "渲染指定游戏资源目录下全部 Spine 资源（角色立绘、记忆大厅、Spine 背景）的预览图，不限于 Mod 文件。输出到输出目录的 batch_preview 子目录。"
 			}
 		},
 		"settings": {
@@ -725,7 +724,9 @@
 			"options": "选项",
 			"adb_cache": "ADB缓存",
 			"target_crc": "目标 CRC",
-			"mod_info": "关于 Mod 的判定"
+			"mod_info": "关于 Mod 的判定",
+			"game_dir": "游戏资源目录",
+			"game_dir_info": "临时指定本次操作的来源目录，仅对本次生效\n默认为当前文件来源对应的游戏目录"
 		},
 		"log_area": "日志",
 		"status_label": "状态：",

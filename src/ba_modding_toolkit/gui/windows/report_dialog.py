@@ -26,13 +26,20 @@ class ReportDialog(StoppableDialog):
         super().__init__(master)
         self.app = app_instance
 
+        # 来源目录（仅对话框内使用，不保存配置），默认为当前游戏目录
+        # ADB 模式下默认值为设备路径，本地不存在时留空由用户指定
+        default_dir = self.app.get_current_resource_dir() or ""
+        self.game_dir_var: tk.StringVar = tk.StringVar(
+            value=default_dir if Path(default_dir).is_dir() else ""
+        )
+
         self._setup_window()
         self._create_widgets()
 
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.tools.report.title"))
-        self.geometry("800x400")
+        self.geometry("800x440")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -44,6 +51,14 @@ class ReportDialog(StoppableDialog):
         # 选项区域
         options_frame = tb.Labelframe(main_frame, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(0, 10))
+
+        # 来源目录选择
+        SettingRow.create_path_selector(
+            options_frame,
+            label=t("ui.label.game_dir"),
+            path_var=self.game_dir_var,
+            tooltip=t("ui.label.game_dir_info")
+        )
 
         # Spine 预览开关
         SettingRow.create_switch(
@@ -130,8 +145,8 @@ class ReportDialog(StoppableDialog):
     def _generate_report(self):
         """生成报告"""
 
-        # 检查游戏目录
-        game_dir = self.app.get_current_resource_dir()
+        # 检查来源目录
+        game_dir = self.game_dir_var.get()
         if not game_dir:
             messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return

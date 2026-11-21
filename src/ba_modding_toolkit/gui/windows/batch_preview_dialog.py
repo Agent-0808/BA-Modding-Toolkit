@@ -54,11 +54,12 @@ class BatchRenderDialog(StoppableDialog):
         options_frame = tb.Labelframe(main_frame, text=t("ui.label.options"), padding=10)
         options_frame.pack(fill=tk.X, pady=(0, 10))
 
-        # 预览渲染预设选择
+        # 游戏资源目录选择
         SettingRow.create_path_selector(
             parent=options_frame,
-            label=t("ui.tools.batch_preview.game_dir"),
+            label=t("ui.label.game_dir"),
             path_var=self.game_dir_var,
+            tooltip=t("ui.label.game_dir_info")
         )
 
         SettingRow.create_combobox_row(

@@ -16,6 +16,7 @@ from ...i18n import t
 from ...searching import list_bundle_files
 from ...utils import compute_crc32, manipulate_file_crc, throttle_progress
 from ...bundle import analyze_trailing, analyze_naming
+from ..components import SettingRow
 from .base import StoppableDialog
 
 
@@ -38,13 +39,20 @@ class AbnormalCheckDialog(StoppableDialog):
 
         self._mismatch_items: list[MismatchItem] = []
 
+        # 来源目录（仅对话框内使用，不保存配置），默认为当前游戏目录
+        # ADB 模式下默认值为设备路径，本地不存在时留空由用户指定
+        default_dir = self.app.get_current_resource_dir() or ""
+        self.game_dir_var: tk.StringVar = tk.StringVar(
+            value=default_dir if Path(default_dir).is_dir() else ""
+        )
+
         self._setup_window()
         self._create_widgets()
 
     def _setup_window(self):
         """设置窗口基本属性"""
         self.title(t("ui.tools.abnormal_check.title"))
-        self.geometry("1200x400")
+        self.geometry("1200x440")
         self.app.setup_icon(self)
         self.transient(self.master)
 
@@ -53,9 +61,17 @@ class AbnormalCheckDialog(StoppableDialog):
         main_frame = tb.Frame(self, padding=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # 来源目录选择
+        SettingRow.create_path_selector(
+            main_frame,
+            label=t("ui.label.game_dir"),
+            path_var=self.game_dir_var,
+            tooltip=t("ui.label.game_dir_info")
+        )
+
         # 进度区域
         progress_frame = tb.Frame(main_frame)
-        progress_frame.pack(fill=tk.X, pady=(0, 10))
+        progress_frame.pack(fill=tk.X, pady=(10, 10))
 
         self.progress_bar = tb.Progressbar(
             progress_frame,
@@ -131,8 +147,8 @@ class AbnormalCheckDialog(StoppableDialog):
 
     def _start_scan(self):
         """开始扫描"""
-        # 检查游戏目录
-        game_dir = self.app.get_current_resource_dir()
+        # 检查来源目录
+        game_dir = self.game_dir_var.get()
         if not game_dir:
             messagebox.showerror(t("common.error"), t("message.missing_paths"))
             return
