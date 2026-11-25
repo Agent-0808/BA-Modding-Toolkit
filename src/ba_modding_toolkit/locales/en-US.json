@@ -132,6 +132,8 @@
 		"match_strategy_info": "Select the strategy for matching resources:\n- path_id: Best for same-version files, exact match\n- cont_name_type: Best for cross-version migration (between Global and Japanese servers) with container+name+type matching\n- name_type: name+type matching",
 		"enable_bleed": "Bleed",
 		"enable_bleed_info": "Applies bleed operations to image files.\nRecommended if packed images show black or jagged edges in-game.",
+		"bleed_alpha_threshold": "Bleed Threshold",
+		"bleed_alpha_threshold_info": "Pixels with alpha not exceeding this value are treated as transparent, and their colors are filled by spreading from surrounding pixels.\nUsed to remove black edges caused by linear filtering and mipmaps.\n0 means only fully transparent pixels are processed; keeping 5 is usually fine.",
 		"enable_spine38_name_fix": "Rename Old Spine Filenames",
 		"enable_spine38_name_fix_info": "Rename the filename format exported by older Spine versions to the new format.\nExample: CH0808_home2.png → CH0808_home_2.png",
 		"enable_spine_preview": "Generate Spine Preview",
@@ -500,7 +502,6 @@
 			"plan_start": "Analyzing {count} Mod files...",
 			"group_info": "Group [{core}] ({count} files)",
 			"same_name_found": "Found a file with the same name: {filename}; will replace directly",
-			"filter_latest_date": "Multiple dated versions found; using the latest: {date}",
 			"update_targets": "Update needed; matched {count} target files: {names}",
 			"target_conflict": "Target file conflict: {filename}",
 			"plan_done": "Analysis complete: {total} files / {groups} groups (direct replace {direct}, update {update}, not found {not_found}, error {error})",
@@ -610,8 +611,7 @@
 			},
 			"batch_preview": {
 				"title": "Batch Render Previews",
-				"info": "Render preview images for all Spine assets (character art, memory lobby, Spine backgrounds) in the specified game resource directory, not limited to mod files. Output to the batch_preview subdirectory of the output directory.",
-				"game_dir": "Game Resource Directory"
+				"info": "Render preview images for all Spine assets (character art, memory lobby, Spine backgrounds) in the specified game resource directory, not limited to mod files. Output to the batch_preview subdirectory of the output directory."
 			}
 		},
 		"settings": {
@@ -662,6 +662,10 @@
 			"preview_current": "Current",
 			"preview_new": "After Install",
 			"preview_none": "No preview yet",
+			"preview_similarity": "Similarity {value}% · MSE {mse} · {size}",
+			"preview_similarity_scaled": "Similarity {value}% · MSE {mse} · {left} → {right} (compared after scaling)",
+			"preview_size_mismatch": "Sizes differ; pixel comparison skipped: {left} → {right}",
+			"preview_one_side": "Only one side has an image; cannot compare",
 			"sync_view": "Sync View",
 			"preview_tag_render": "[Render]",
 			"preview_tag_extract": "[Extract]",
@@ -674,6 +678,7 @@
 			"action_mixed": "Mixed",
 			"meta_size": "{mod_size} → {existing_size}",
 			"diff_content_changed": "Content changed",
+			"diff_similarity": "Similarity {value}%",
 			"diff_unchanged": "Unchanged",
 			"diff_missing_anims": "Missing {count} animations",
 			"diff_will_replace": "Will be replaced",
@@ -719,7 +724,9 @@
 			"options": "Options",
 			"adb_cache": "ADB Cache",
 			"target_crc": "Target CRC Value",
-			"mod_info": "About Mod Detection"
+			"mod_info": "About Mod Detection",
+			"game_dir": "Game Resource Directory",
+			"game_dir_info": "Temporarily specify the source directory for this operation; applies only this time.\nDefaults to the game directory corresponding to the current file source."
 		},
 		"log_area": "Log",
 		"status_label": "Status: ",
