@@ -14,6 +14,7 @@ from .models import (
     FontAssetData,
 )
 from .spine import SkelConverter, SkelRef, check_skel_animation_diff
+from .tree_upgrade import UPGRADE_TYPES, carry_across_releases, releases_differ
 from .utils import is_same_texture, no_log
 
 
@@ -236,6 +237,14 @@ def extract_asset(obj, ctx: ExtractContext) -> tuple[AssetContent | None, list[S
         return None, []
     # 有流引用时附带 companion 随 patch 走，apply 侧写入目标 bundle
     content: AssetContent = RawAssetBytes(raw, companions) if companions else raw
+    if obj.type.name in UPGRADE_TYPES:
+        # Keep the source's values too, for a target of another Unity release
+        try:
+            source_tree = obj.read_typetree()
+        except Exception:
+            source_tree = None  # no embedded typetree: raw replacement only
+        if source_tree is not None:
+            content = RawAssetBytes(raw, companions, source_tree, obj.assets_file.unity_version)
     return content, []
 
 
@@ -248,6 +257,9 @@ def apply_asset(obj, content: AssetContent, ctx: ApplyContext) -> ApplyOutcome:
     resource_name = data.m_Name
 
     if isinstance(content, RawAssetBytes):
+        if content.source_tree is not None and releases_differ(content.unity_version, obj.assets_file.unity_version):
+            # Serialized bytes are only valid in their own release's layout
+            return ApplyOutcome(applied=carry_across_releases(obj, content, ctx.env, ctx.log))
         if obj.get_raw_data() == content:
             return ApplyOutcome(applied=False)
         obj.set_raw_data(install_raw_content(content, ctx.env, ctx.log))

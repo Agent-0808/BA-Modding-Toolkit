@@ -59,10 +59,22 @@ class RawAssetBytes(bytes):
     # bytes 子类不支持 __slots__，动态属性无法存储实例槽位；
     # 仅作类型声明（供 IDE/类型检查器），实际赋值在 __new__
     companions: dict[str, bytes]
+    # Values read with the source's own typetree and the source's Unity version. Set for types
+    # that can be carried into a bundle of another Unity release (see tree_upgrade).
+    source_tree: dict | None
+    unity_version: str
 
-    def __new__(cls, data: bytes = b"", companions: dict[str, bytes] | None = None) -> "RawAssetBytes":
+    def __new__(
+        cls,
+        data: bytes = b"",
+        companions: dict[str, bytes] | None = None,
+        source_tree: dict | None = None,
+        unity_version: str = "",
+    ) -> "RawAssetBytes":
         obj = super().__new__(cls, data)
         obj.companions = companions if companions is not None else {}
+        obj.source_tree = source_tree
+        obj.unity_version = unity_version
         return obj
 
 # 补丁，用于描述向Bundle文件进行的资源替换操作
