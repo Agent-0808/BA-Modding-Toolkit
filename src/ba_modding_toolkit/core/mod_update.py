@@ -13,7 +13,7 @@ from ..models import (
     AnimDiffMap, ModUpdateResult, BatchUpdateResult, SkelVersionConflict,
     ReplaceAssetType,
 )
-from ..bundle import Bundle
+from ..bundle import Bundle, with_original_crc
 from ..searching import find_target_bundles
 
 
@@ -116,7 +116,7 @@ def process_mod_update(
 
             if result.is_success:
                 output_path = output_dir / tgt.name
-                save_ok, save_message = tgt_bundle.save(output_path, save_options)
+                save_ok, save_message = tgt_bundle.save(output_path, with_original_crc(save_options, tgt))
                 if save_ok:
                     file_pairs.append(FilePair(output_path, tgt))
                     log(f"  ✅ {t('log.mod_update.target_processed', name=tgt.name, applied=result.applied_count)}")

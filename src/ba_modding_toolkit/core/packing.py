@@ -21,7 +21,7 @@ from ..models import (
     SkelVersionConflict,
 )
 from ..asset import find_stream_refs
-from ..bundle import Bundle
+from ..bundle import Bundle, with_original_crc
 from ..naming import DUMP_FILE_EXTENSIONS, DUMP_TYPE_EXTENSIONS, parse_typed_dump_name
 from .mod_update import _format_skel_conflicts
 
@@ -237,7 +237,7 @@ def process_asset_packing(
             all_matched_keys.update(result.matched_keys)
 
             output_path = output_dir / bundle_path.name
-            save_ok, save_message = target_bundle.save(output_path, save_options)
+            save_ok, save_message = target_bundle.save(output_path, with_original_crc(save_options, bundle_path))
 
             if not save_ok:
                 log(f"⚠️ {save_message}")
