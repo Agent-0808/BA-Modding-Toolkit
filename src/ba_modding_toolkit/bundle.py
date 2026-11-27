@@ -1,5 +1,6 @@
 # bundle.py
 
+import re
 import struct
 import traceback
 from dataclasses import dataclass
@@ -25,6 +26,10 @@ from .models import (
     ProgressCallback, SkelVersionConflict,
     RawAssetBytes, REPLACEABLE_ASSET_TYPES
 )
+
+
+# Bundle names ending in a 32-hex hash instead of a decimal CRC
+_HASH_SUFFIX = re.compile(r"_[0-9a-fA-F]{32}\.bundle$")
 
 
 @dataclass
@@ -201,6 +206,11 @@ class Bundle:
         #     return False
         
         # 牛魔的为什么新版国际服的也用textures而不是003了？？？
+
+        # JP bundles named with a 32-hex hash (Unity 6 client) carry no CRC, and the JP PC
+        # client loads modified bundles without correction
+        if _HASH_SUFFIX.search(self.name):
+            return False
 
         platform_name, _ = self.platform_info
         return platform_name == "StandaloneWindows64"
