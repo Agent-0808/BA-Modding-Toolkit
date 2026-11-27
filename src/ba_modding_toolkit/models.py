@@ -102,9 +102,6 @@ class SaveOptions:
     perform_crc: bool = True
     extra_bytes: bytes | None = None
     compression: CompressionType = "lzma"
-    # Explicit target CRC; None takes it from the output file name. New JP file names end in a
-    # 32-hex hash instead of a decimal CRC, so the CRC comes from the official file there.
-    target_crc: int | None = None
 
 
 @dataclass

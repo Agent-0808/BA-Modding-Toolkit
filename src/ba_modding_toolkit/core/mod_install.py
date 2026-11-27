@@ -22,7 +22,7 @@ from ..models import (
     SaveOptions,
     SkelConvertOptions,
 )
-from ..bundle import Bundle, with_original_crc
+from ..bundle import Bundle
 from .mod_update import process_mod_update
 from ..naming import parse_filename, ParsedFilename
 from ..searching import find_target_bundles
@@ -263,11 +263,8 @@ def _backup_and_replace(src: Path, dst: Path, create_backup: bool, log: LogFunc)
 
 def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bool, log: LogFunc) -> bool:
     """DIRECT_REPLACE 执行：需 CRC 碰撞修正时重存临时文件后替换，否则纯拷贝（§2.2）"""
-    # A name without a CRC (new JP hash names) takes the replaced file's CRC as the target
-    if f.need_crc_fix:
-        save_options = with_original_crc(dc_replace(save_options, perform_crc=True), f.existing_path)
     # 无需修正，或实际 CRC 已与文件名一致 → 纯拷贝即可
-    if not f.need_crc_fix or Bundle.check_crc_match(f.mod_path, save_options.target_crc):
+    if not f.need_crc_fix or Bundle.check_crc_match(f.mod_path):
         return _backup_and_replace(f.mod_path, f.existing_path, create_backup, log)
 
     # 临时文件放系统临时目录（保持原文件名含扩展名），避免污染游戏目录且自动清理
@@ -277,7 +274,7 @@ def _direct_replace(f: ModFilePlan, save_options: SaveOptions, create_backup: bo
         if bundle is None:
             log(f"❌ {t('message.load_failed')}: {f.mod_path.name}")
             return False
-        ok, msg = bundle.save(tmp_path, save_options)
+        ok, msg = bundle.save(tmp_path, dc_replace(save_options, perform_crc=True))
         if not ok:
             log(f"❌ {t('log.file.save_failed', path=tmp_path, error=msg)}")
             return False

@@ -2,7 +2,7 @@
 
 import struct
 import traceback
-from dataclasses import dataclass, replace as dc_replace
+from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Callable
@@ -415,19 +415,15 @@ class Bundle:
         return bundle.need_crc()
 
     @classmethod
-    def check_crc_match(cls, bundle_path: Path, target_crc: int | None = None) -> bool:
+    def check_crc_match(cls, bundle_path: Path) -> bool:
         """
         检查 bundle 实际 CRC 是否已与文件名中的 CRC 一致（一致则无需修正重存）。
         仅需文件名解析与整文件 CRC 计算，无需加载 bundle。
-
-        target_crc, when given, replaces the CRC from the file name (for names without one).
         """
-        if target_crc is None:
-            crc_str = parse_filename(bundle_path.name).crc
-            if not crc_str or not crc_str.isdigit():
-                return False
-            target_crc = int(crc_str)
-        return compute_crc32(bundle_path) == target_crc
+        crc_str = parse_filename(bundle_path.name).crc
+        if not crc_str or not crc_str.isdigit():
+            return False
+        return compute_crc32(bundle_path) == int(crc_str)
 
     @classmethod
     def list_asset_names(
@@ -513,12 +509,10 @@ class Bundle:
             success_message = t("message.save_success")
             
             if save_options.perform_crc:
-                target_crc = save_options.target_crc
-                if target_crc is None:
-                    crc_str = parse_filename(output_path.name).crc
-                    if not crc_str or not crc_str.isdigit():
-                        return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
-                    target_crc = int(crc_str)
+                crc_str = parse_filename(output_path.name).crc
+                if not crc_str or not crc_str.isdigit():
+                    return False, t("message.crc.correction_failed_file_not_generated", name=output_path.name)
+                target_crc = int(crc_str)
                 
                 if save_options.extra_bytes:
                     compressed_data += save_options.extra_bytes
@@ -691,24 +685,6 @@ def analyze_trailing(item: BundleFileInfo) -> None:
 def analyze_naming(item: BundleFileInfo) -> None:
     """分析文件名"""
     item.parsed_name = parse_filename(item.path.name)
-
-
-def with_original_crc(save_options: SaveOptions, original_path: Path) -> SaveOptions:
-    """Give the save an explicit target CRC when the original's name carries none.
-
-    New JP file names end in a 32-hex hash instead of a decimal CRC, so the CRC fix targets
-    the official file's own CRC. Options are returned unchanged when the name has a CRC, a
-    target CRC is already set, or no CRC fix is done.
-
-    Args:
-        save_options: Save options.
-        original_path: The official file being replaced.
-    """
-    if not save_options.perform_crc or save_options.target_crc is not None:
-        return save_options
-    if parse_filename(original_path.name).crc:
-        return save_options
-    return dc_replace(save_options, target_crc=compute_crc32(original_path))
 
 
 def analyze_crc(item: BundleFileInfo) -> None:

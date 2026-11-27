@@ -71,9 +71,6 @@ class CrcToolTab(TabFrame):
         """原始文件选中后的处理"""
         self.logger.log(t("log.crc.loaded_original", file=path))
         self.logger.status(t("status.loaded", type="original"))
-        # Names ending in a hash (new JP files) carry no CRC: target the original's own CRC
-        if not parse_filename(path.name).crc:
-            self.target_crc_var.set(f"{compute_crc32(path):08X}")
 
     def _on_file_source_changed(self, event=None):
         """文件来源变化时更新搜索路径"""
@@ -88,8 +85,6 @@ class CrcToolTab(TabFrame):
         if parsed_crc:
             target_crc = int(parsed_crc)
             self.target_crc_var.set(f"{target_crc:08X}")
-        else:
-            self.target_crc_var.set("")
         
         # 清除旧的 original_file，准备重新搜索
         self.original_zone.clear()
