@@ -202,6 +202,11 @@ class Bundle:
         
         # 牛魔的为什么新版国际服的也用textures而不是003了？？？
 
+        # Names with a hash but no CRC (Unity 6 naming, JP for now) carry no CRC to target,
+        # and the JP PC client loads modified bundles without correction
+        if self.parsed_name.hash and not self.parsed_name.crc:
+            return False
+
         platform_name, _ = self.platform_info
         return platform_name == "StandaloneWindows64"
 
