@@ -75,6 +75,7 @@ def parse_asset_core(filename: str) -> str:
     return (parsed[0] if parsed else filename.rsplit('.', 1)[0]).strip('-_')
 
 # -------- 预编译正则（避免 per-call 编译开销）--------
+_RE_HASH = re.compile(r'[0-9a-fA-F]{32}')
 _RE_DATE = re.compile(r'(\d{4}-\d{2}-\d{2})')
 _RE_MX = re.compile(r'[-_](?:mxdependency|mxload|mxprolog)')
 
@@ -118,6 +119,8 @@ class ParsedFilename(NamedTuple):
         date:     日期字符串 (YYYY-MM-DD)
         crc:      CRC32 校验码
         prefix:   用于搜索同组文件的前缀
+        hash:     File name suffix: the decimal CRC in the old naming, the 32-hex hash in
+                  the Unity 6 naming (no CRC there)
     """
     category: str | None
     core: str
@@ -125,6 +128,7 @@ class ParsedFilename(NamedTuple):
     date: str
     crc: str
     prefix: str
+    hash: str = ""
 
 
 def parse_filename(filename: str) -> ParsedFilename:
@@ -145,6 +149,8 @@ def parse_filename(filename: str) -> ParsedFilename:
         candidate_crc = stem[crc_idx + 1:]
         if candidate_crc.isdigit():
             crc = candidate_crc
+    # Old names end in the decimal CRC, Unity 6 names in a 32-hex hash
+    hash_ = crc or (candidate_crc if crc_idx != -1 and _RE_HASH.fullmatch(candidate_crc) else "")
 
     # 2. 定位 Date 中轴
     match_date = _RE_DATE.search(filename)
@@ -163,7 +169,7 @@ def parse_filename(filename: str) -> ParsedFilename:
         category = None
         if '-' in core:
             category, core = core.split('-', 1)
-        return ParsedFilename(category=category, core=core, res_type=None, date="", crc=crc, prefix="")
+        return ParsedFilename(category=category, core=core, res_type=None, date="", crc=crc, prefix="", hash=hash_)
 
     date = match_date.group(1)
     date_start = match_date.start()
@@ -220,7 +226,8 @@ def parse_filename(filename: str) -> ParsedFilename:
         res_type=res_type,
         date=date,
         crc=crc,
-        prefix=prefix
+        prefix=prefix,
+        hash=hash_,
     )
 
 
